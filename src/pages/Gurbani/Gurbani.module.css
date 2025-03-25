@@ -1,0 +1,650 @@
+/* General Styles */
+.container {
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+}
+
+/* Header Section */
+.header {
+  position: relative;
+  height: 400px;
+  margin-bottom: 30px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.headerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.headerText {
+  position: absolute;
+  top: 35%;
+  left: 5%;
+  color: var(--headline-color);
+}
+
+.headerText h1 {
+  font-size: 3.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  text-align: left;
+  margin: 0;
+}
+
+.headerText p {
+  font-size: 1rem;
+  margin: 10px 0 0;
+  text-align: left;
+}
+
+/* Breadcrumb Section */
+.breadcrumb {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin: 0 2rem;
+  background: var(--section-bg-color);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb span {
+  color: var(--text-color);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+a {
+  text-decoration: none;
+  list-style: none;
+}
+
+/* Search Bar and Filters Section */
+.searchFilterContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2rem auto;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  width: 80%;
+  margin-right: 20px;
+}
+
+.searchBar input {
+  flex: 1;
+  padding: 10px;
+  margin-right: 10px;
+  font-size: 16px;
+  border: 1px solid var(--secondary-text-color);
+  border-radius: 5px;
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+}
+
+.searchButton {
+  padding: 10px 15px;
+  font-size: 15px;
+  border: 1px solid var(--secondary-text-color);
+  border-radius: 5px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.searchButton:hover {
+  background-color: var(--button-hover-bg-color);
+  border: 1px solid var(--button-hover-text-color);
+  color: var(--button-hover-text-color);
+}
+
+.searchText {
+  display: inline;
+}
+
+.searchIcon {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .searchText {
+    display: none;
+  }
+
+  .searchIcon {
+    display: inline;
+  }
+}
+
+.filterButton {
+  padding: 10px 15px;
+  font-size: 16px;
+  border: 1px solid var(--secondary-text-color);
+  border-radius: 5px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  cursor: pointer;
+}
+
+.filterButton:hover {
+  background-color: var(--button-hover-bg-color);
+  border: 1px solid var(--button-hover-text-color);
+  color: var(--button-hover-text-color);
+}
+
+/* Filters Sidebar */
+.filtersSidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100%;
+  background-color: var(--header-bg-color);
+  color: var(--text-color);
+  padding: 2rem;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.closeButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.filtersSidebar h3 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.filterOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filterItem {
+  padding: 10px;
+  border-bottom: 1px solid var(--secondary-text-color);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.filterItem.selected {
+  background-color: var(--button-bg-color);
+  color: var(--section-bg-color);
+}
+
+.filterItem:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-bg-color);
+}
+
+.filterActions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.saveButton,
+.clearButton {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  cursor: pointer;
+}
+
+.saveButton:hover,
+.clearButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-bg-color);
+  border: 1px solid var(--button-bg-color)
+}
+.saveButton{
+  margin-right: 15px;
+}
+
+/* Main Content - Modern Cards */
+.mainContent {
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+  background: var(--card-bg-color);
+  box-shadow: 0 4px 8px rgba(250, 250, 250, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.05); /* Move up and scale slightly */
+  box-shadow: 0 8px 16px rgba(250, 250, 250, 0.2);
+  z-index: 10; /* Bring the card forward */
+}
+
+.cardGlass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  padding: 20px;
+  transition: all 0.3s ease;
+  height: 100%; /* Ensure the card expands fully */
+}
+
+.cardImage {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.cardTitle {
+  font-size: 18px;
+  margin: 10px 0;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+
+.premiumIcon {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  color: gold;
+  font-size: 24px;
+}
+
+/* Hidden by default, shown on hover */
+.cardHoverContent {
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: center; /* Center the button horizontally */
+  align-items: center; /* Center the button vertically */
+}
+
+.card:hover .cardHoverContent {
+  opacity: 1;
+  height: auto;
+  margin-top: 10px;
+}
+
+.actionButton {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.actionButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-bg-color);
+  border: 1px solid var(--button-bg-color);
+}
+
+/* Expand card on hover */
+.card:hover .cardGlass {
+  height: auto; /* Allow the card to expand */
+}
+
+.card:hover .cardImage {
+  height: 220px; /* Increase image height on hover */
+}
+
+.card:hover .cardTitle {
+  font-size: 20px; /* Increase title font size on hover */
+}
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.pagination button {
+  padding: 10px 15px;
+  border: 1px solid var(--secondary-text-color);
+  border-radius: 5px;
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.pagination button:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color-);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+.pagination .activePage {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+/* New Section: Text + Button on Left, Image on Right */
+.sectionWithImage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4rem;
+  padding: 2rem;
+  background: var(--card-bg-color);
+  backdrop-filter: blur(10px);
+  margin: 0;
+}
+
+.sectionText {
+  flex: 1;
+  max-width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.sectionText h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.sectionText p {
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.sectionButton {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  cursor: pointer;
+}
+
+.sectionButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-bg-color);
+  border: 1px solid var(--button-bg-color);
+}
+
+.sectionImage {
+  flex: 1;
+  max-width: 50%;
+  text-align: right;
+}
+
+.sectionImage img {
+  width: 100%;
+  height: 400px;
+  border-radius: 10px;
+}
+/* Because You Watched Section */
+.becauseYouWatched {
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  margin: 0 2rem;
+  border-radius: 20px;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  color: var(--text-color);
+  text-align: left;
+  margin-bottom: 2rem;
+}
+
+/* Shape Container */
+.shapeContainer {
+  display: grid;
+  gap: 20px; /* Space between shapes */
+  padding: 20px;
+  position: relative; /* Required for z-index to work */
+  overflow: visible; /* Allow shapes to overflow */
+}
+
+/* Responsive Grid Layout */
+.shapeContainer {
+  grid-template-columns: repeat(6, 1fr); /* 6 shapes in a row for full width */
+}
+
+@media (max-width: 1200px) {
+  .shapeContainer {
+    grid-template-columns: repeat(4, 1fr); /* 4 shapes in a row */
+  }
+}
+
+@media (max-width: 992px) {
+  .shapeContainer {
+    grid-template-columns: repeat(3, 1fr); /* 3 shapes in a row */
+  }
+}
+
+@media (max-width: 768px) {
+  .shapeContainer {
+    grid-template-columns: repeat(2, 1fr); /* 2 shapes in a row */
+  }
+}
+
+@media (max-width: 445px) {
+  .shapeContainer {
+    grid-template-columns: repeat(1, 1fr); /* 1 shape in a row */
+  }
+}
+
+/* Shape Styles */
+.shape {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: all 0.5s ease;
+  cursor: pointer;
+  padding: 20px;
+  box-sizing: border-box;
+  transform-style: preserve-3d; /* Enable 3D effects */
+  perspective: 1000px; /* Add perspective for 3D */
+  opacity: 0.9; /* Slight transparency */
+  margin: 0 auto; /* Center the shape */
+  width: 100%; /* Use 100% width */
+  height: 200px; /* Initial height */
+  aspect-ratio: 1 / 1; /* Maintain aspect ratio */
+}
+
+.shapeContent {
+  text-align: center;
+  transition: all 0.5s ease;
+  backface-visibility: hidden; /* Hide the backface for 3D effects */
+  overflow: visible; /* Allow shapes to overflow */
+
+}
+
+.shapeContent h3 {
+  font-size: 1rem;
+  margin: 0;
+  color: black;
+}
+
+.shapeHoverContent {
+  opacity: 0;
+  height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  transition: all 0.5s ease;
+  transform: translateZ(20px); /* Bring content forward in 3D space */
+}
+
+.shape:hover .shapeHoverContent {
+  opacity: 1;
+  height: auto;
+}
+
+.shapeHoverContent p {
+  font-size: 0.75rem;
+  margin: 10px 0;
+  color: black;
+}
+
+.shapeButton {
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shapeButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color-);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Different Shapes with Unique Background Colors */
+.shape0 {
+  /* Circle */
+  border-radius: 50%;
+  background-color: #f7d0d0; /* Red */
+}
+
+.shape1 {
+  /* Square */
+  border-radius: 10px;
+  background-color: #b0f5f0; /* Teal */
+}
+
+.shape2 {
+  /* Pentagon */
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  background-color: #b4a4db; /* Purple */
+}
+
+.shape3 {
+  /* Rectangle */
+  aspect-ratio: 4 / 2; /* Adjust aspect ratio for rectangle */
+  background-color: #d6cd9b; /* Yellow */
+}
+
+
+.shape4 {
+  /* Hexagon */
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  background-color: #88D8B0; /* Mint */
+}
+
+.shape5 {
+  /* Diamond */
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  background-color: #fbd4d0; /* Coral */
+}
+
+/* Hover Effects */
+.shape:hover {
+  transform: scale(1.2); /* Scale up the shape */
+  opacity: 1; /* Remove transparency on hover */
+  z-index: 10; /* Bring the hovered shape to the front */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); /* Add shadow for depth */
+}
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .cardGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .cardGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .headerText h1 {
+    font-size: 3rem;
+  }
+  .headerText p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .headerText h1 {
+    font-size: 2rem;
+  }
+  .headerText p {
+    font-size: 0.9rem;
+  }
+  .sectionWithImage {
+    flex-direction: column;
+    text-align: center;
+  }
+  .sectionText {
+    max-width: 100%;
+  }
+  .sectionImage {
+    max-width: 100%;
+    margin-top: 2rem;
+  }
+  .sectionTitle{
+    font: 1.75rem;
+  }
+}
+
+@media (max-width: 475px) {
+  .cardGrid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .headerText h1 {
+    font-size: 1.5rem;
+  }
+  .header{
+    height: 300px;
+  }
+  .headerText p {
+    font-size: 0.7rem;
+  }
+}

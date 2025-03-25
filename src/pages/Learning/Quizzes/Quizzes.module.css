@@ -1,0 +1,490 @@
+
+/* Base Styles */
+.quizzContainer {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+/* Header Section */
+.headerSection {
+  height: 400px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  padding: 2rem;
+  position: relative;
+}
+
+.textOverlay {
+  color: var(--text-color);
+}
+
+.headerTitle {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--headline-color);
+}
+
+.headerDescription {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  color: var(--text-color);
+}
+
+.headerButton {
+  padding: 0.75rem 1.5rem;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.headerButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+
+/* Breadcrumb Section */
+.breadcrumb {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin: 2rem;
+  background: var(--section-bg-color);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb span {
+  color: var(--text-color);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+a {
+  text-decoration: none;
+  list-style: none;
+}
+
+
+
+/* Quiz Dropdown */
+.quizDropdownContainer {
+  padding: 1rem 2rem;
+}
+
+.quizDropdown {
+  padding: 0.5rem;
+  background: var(--section-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-color);
+}
+
+/* Main Content */
+.mainContent {
+  display: flex;
+  gap: 5rem;
+  padding: 2rem;
+}
+
+.quizSection {
+  flex: 2;
+}
+
+.sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Question Section */
+.questionSection {
+  background: var(--section-bg-color);
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.questionNumber {
+  font-size: 1.2rem;
+  color: var(--secondary-text-color);
+}
+
+.questionText {
+  font-size: 1.5rem;
+  margin: 1rem 0;
+  color: var(--text-color);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.optionButton {
+  padding: 1rem;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  color: var(--text-color);
+}
+
+.optionButton:hover {
+  background: var(--section-bg-color);
+}
+
+/* Navigation Buttons */
+.navigationButtons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.prevButton, .nextButton, .submitButton {
+  padding: 0.5rem 1rem;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+.prevButton:hover, .nextButton:hover, .submitButton:hover{
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+.prevButton:disabled, .nextButton:disabled {
+  background: var(--secondary-text-color);
+  cursor: not-allowed;
+}
+
+/* Achievement Options Section */
+.achievementOptions {
+  margin-top: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  margin-top: 4rem;
+  color: var(--headline-color);
+}
+
+.achievementGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.achievementCard {
+  background: var(--card-bg-color);
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.achievementIcon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.achievementTitle {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.achievementDescription {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+}
+
+/* Today's Top Scorers Section */
+.topScorersSection {
+  margin-top: 2rem;
+}
+
+.scorersList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.scorerCard {
+  background: var(--card-bg-color);
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scorerName {
+  font-size: 1.2rem;
+  color: var(--text-color);
+}
+
+.scorerScore {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+}
+
+/* Sidebar Sections */
+.sidebarTitle {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--headline-color);
+  margin-top: 0;
+}
+
+.tournamentCard, .badgeCard {
+  background: var(--card-bg-color);
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+}
+
+.tournamentTitle, .badgeTitle {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.tournamentTime, .tournamentParticipants, .badgeDescription {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+}
+
+.joinButton {
+  padding: 0.5rem 1rem;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.joinButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Participate in These Games Section */
+.gamesSection {
+  padding: 2rem;
+  background: var(--section-bg-color);
+}
+
+.gamesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem; /* Adjusted margin */
+}
+
+.gameCard {
+  position: relative;
+  perspective: 1000px;
+  height: 300px;
+}
+
+.gameFront, .gameBack {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.6s ease;
+}
+
+.gameFront {
+  background: var(--card-bg-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.gameBack {
+  background: var(--card-bg-color);
+  transform: rotateY(180deg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.gameCard:hover .gameFront {
+  transform: rotateY(180deg);
+}
+
+.gameCard:hover .gameBack {
+  transform: rotateY(0deg);
+}
+
+.gameImage {
+  width: 100%;
+  height: 80%; /* Adjusted height */
+  object-fit: cover;
+}
+
+.gameTitle {
+  font-size: 1.5rem;
+  margin-top: 1rem; /* Adjusted margin */
+  color: var(--text-color);
+}
+
+.gameDescription {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin-bottom: 1rem;
+}
+
+/* Summary Popup */
+.summaryPopup {
+  position: fixed;
+  top: 10%;
+  display: flex;
+
+  justify-content: center;
+  width: 80%;
+  height: 600px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.summaryContent {
+  background: var(--background-color);
+  border: 1px solid var(--button-bg-color);
+  padding: 6rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.circularProgress {
+  margin-bottom: 1rem;
+}
+
+.circularChart {
+  width: 100px;
+  height: 100px;
+}
+
+.circleBg {
+  fill: none;
+  stroke: var(--border-color);
+  stroke-width: 3.8;
+}
+
+.circle {
+  fill: none;
+  stroke: var(--button-bg-color);
+  stroke-width: 3.8;
+  stroke-linecap: round;
+  animation: progress 1s ease-out forwards;
+}
+
+@keyframes progress {
+  0% {
+    stroke-dasharray: 0, 100;
+  }
+}
+
+.summaryTitle {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--headline-color);
+}
+
+.summaryScore, .summaryBadge {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.closeButton {
+  padding: 0.5rem 1rem;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.closeButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .headerSection {
+    height: 300px;
+  }
+
+  .headerTitle {
+    font-size: 2rem;
+  }
+
+  .headerDescription {
+    font-size: 1rem;
+  }
+
+  .mainContent {
+    flex-direction: column;
+  }
+
+  .gamesGrid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .headerSection {
+    height: 300px;
+  }
+
+  .headerTitle {
+    font-size: 1.5rem;
+  }
+
+  .headerDescription {
+    font-size: 0.9rem;
+  }
+
+  .quizDropdownContainer {
+    padding: 1rem;
+  }
+
+  .gamesGrid {
+    grid-template-columns: 1fr;
+  }
+}

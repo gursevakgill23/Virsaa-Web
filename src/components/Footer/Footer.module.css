@@ -1,0 +1,187 @@
+/* General Footer Styles */
+.footerContainer {
+  background-color: var(--footer-bg-color); /* Dynamic background color */
+  color: var(--footer-text-color); /* Dynamic text color */
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+}
+
+.footer {
+  background-color: var(--footer-bg-color); /* Dynamic background color */
+  color: var(--footer-text-color); /* Dynamic text color */
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.footerContent {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin: 0 auto;
+  gap: 80px;
+}
+
+.footerColumn {
+  flex: 1;
+  min-width: 300px;
+  margin: 10px 0;
+}
+
+.footerColumn h3 {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: var(--footer-text-color); /* Dynamic text color */
+}
+
+/* Logo and Description */
+.logo img {
+  max-width: 150px;
+  height: auto;
+  margin-bottom: 15px;
+}
+
+.description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--footer-text-color); /* Dynamic text color */
+}
+
+/* Newsletter Form */
+.newsletterForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.newsletterForm input {
+  padding: 10px;
+  border: 1px solid var(--footer-input-border-color); /* Dynamic border color */
+  border-radius: 5px;
+  font-size: 14px;
+  background-color: transparent;
+  color: var(--footer-text-color); /* Dynamic text color */
+}
+
+.newsletterForm button {
+  padding: 10px;
+  background-color: transparent;
+  color: var(--footer-text-color); /* Dynamic text color */
+  border: 1px solid var(--footer-text-color); /* Dynamic border color */
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.newsletterForm button:hover {
+  background-color: var(--footer-button-hover-bg); /* Dynamic hover background */
+  color: var(--footer-button-hover-text); /* Dynamic hover text color */
+  border-color: var(--footer-button-hover-border); /* Dynamic hover border color */
+}
+
+/* Feedback Form */
+.feedbackForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedbackForm textarea {
+  padding: 10px;
+  border: 1px solid var(--footer-input-border-color); /* Dynamic border color */
+  border-radius: 5px;
+  font-size: 14px;
+  resize: vertical;
+  background-color: transparent;
+  color: var(--footer-text-color); /* Dynamic text color */
+}
+
+.feedbackForm button {
+  padding: 10px;
+  background-color: transparent;
+  color: var(--footer-text-color); /* Dynamic text color */
+  border: 1px solid var(--footer-text-color); /* Dynamic border color */
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.feedbackForm button:hover {
+  background-color: var(--footer-button-hover-bg); /* Dynamic hover background */
+  color: var(--footer-button-hover-text); /* Dynamic hover text color */
+  border-color: var(--footer-button-hover-border); /* Dynamic hover border color */
+}
+
+/* Social Links */
+.socialLinks {
+  display: flex;
+  gap: 15px;
+}
+
+.socialLinks a {
+  color: var(--footer-text-color); /* Dynamic text color */
+  font-size: 24px;
+  transition: color 0.3s ease;
+}
+
+.socialLinks a:hover {
+  color: var(--footer-link-hover-color); /* Dynamic hover color */
+}
+
+/* Footer Bottom */
+.footerBottom {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid var(--footer-border-color); /* Dynamic border color */
+  font-size: 14px;
+  color: var(--footer-text-color); /* Dynamic text color */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .footerColumn {
+    width: 100%;
+  }
+
+  .footerContent {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .logo img {
+    display: block;
+    margin: 0 auto;
+    padding-bottom: 20px;
+  }
+}
+
+:root {
+  /* Light Mode */
+  --footer-bg-color: #f9f9f9; /* Light gray background */
+  --footer-text-color: #1a2a4f; /* Dark text */
+  --footer-input-border-color: #1a2a4f; /* Dark border */
+  --footer-button-hover-bg: #1a2a4f; /* Dark background on hover */
+  --footer-button-hover-text: #ffffff; /* White text on hover */
+  --footer-button-hover-border: #1a2a4f; /* Dark border on hover */
+  --footer-link-hover-color: #eed4d4; /* Light hover color */
+  --footer-border-color: #ddd; /* Light border color */
+}
+
+[data-theme='dark'] {
+  /* Dark Mode */
+  --footer-bg-color: #1a0e16; /* Dark background */
+  --footer-text-color: #ffffff; /* White text */
+  --footer-input-border-color: #ffffff; /* White border */
+  --footer-button-hover-bg: #ffffff; /* White background on hover */
+  --footer-button-hover-text: #1a0e16; /* Dark text on hover */
+  --footer-button-hover-border: #ffffff; /* White border on hover */
+  --footer-link-hover-color: #eed4d4; /* Light hover color */
+  --footer-border-color: #ffffff; /* White border color */
+}

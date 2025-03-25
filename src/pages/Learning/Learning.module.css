@@ -1,0 +1,495 @@
+/* General Styles */
+.learningPage {
+  font-family: 'Arial', sans-serif;
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+}
+
+/* Header Section */
+.header {
+  position: relative;
+  text-align: left;
+  padding: 60px 20px;
+  background-size: cover;
+  background-position: center;
+  height:400px;
+}
+
+.header h1 {
+  font-size: 3.5rem;
+  margin: 0;
+  text-transform: uppercase;
+  position: absolute;
+  left: 5%;
+  top: 35%;
+  transform: translateY(-50%);
+  color: var(--headline-color);
+}
+
+.header p {
+  font-size: 1.2rem;
+  margin: 10px 0 0;
+  position: absolute;
+  left: 5%;
+  top: 45%;
+  color: var(--headline-color);
+}
+
+/* Breadcrumb Section */
+.breadcrumb {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin: 2rem;
+  background: var(--section-bg-color);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb span {
+  color: var(--text-color);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+a {
+  text-decoration: none;
+  list-style: none;
+}
+
+
+/* Tab Buttons and Filters Icon */
+.tabContainer {
+  display: flex;
+  align-items: center;
+  margin: 2rem;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabContainer::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.tabButton {
+  padding: 8px 15px;
+  border: 1px solid var(--button-bg-color);
+  border-radius: 5px;
+  font-size: 15px;
+  background: var(--section-bg-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.tabButton.activeTab {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+.filterButton {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  cursor: pointer;
+}
+.filterButton:hover{
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Filters Sidebar */
+.filtersSidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100%;
+  background: var(--header-bg-color);
+  color: var(--text-color);
+  padding: 2rem;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.closeButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.filterOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filterItem {
+  padding: 10px;
+  border-bottom: 1px solid var(--secondary-text-color);
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.filterItem.selected {
+  background: var(--button-bg-color);
+  color: var(--section-bg-color);
+}
+
+.filterItem:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-bg-color);
+}
+
+.filterActions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.saveButton,
+.clearButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  cursor: pointer;
+}
+
+.saveButton:hover,
+.clearButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-bg-color);
+  border: 1px solid var(--button-bg-color)
+}
+
+/* Main Content */
+.mainContent {
+  padding: 0 2rem;
+}
+
+/* Cards Grid */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 20px;
+}
+
+
+.card {
+  background: var(--section-bg-color);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
+  overflow: hidden;
+}
+
+.cardImageContainer {
+  position: relative;
+  width: 100%;
+  height: 350px;
+  overflow: hidden;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.cardOverlay {
+  position: absolute;
+  bottom: -100%;
+  left: 0;
+  width: 100%;
+  padding: 20px;
+  background: rgba(252, 251, 251, 0.7);
+  color: black;
+  transition: bottom 0.3s ease;
+}
+
+.card:hover .cardOverlay {
+  bottom: 0;
+}
+
+.card:hover .cardImage {
+  transform: scale(1.1);
+}
+
+.card h3 {
+  font-size: 1.5rem;
+  margin: 0 0 10px;
+}
+
+.card p {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.cardCategory {
+  font-size: 0.9rem;
+  margin-top: 10px;
+  color: red;
+}
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+  gap: 10px;
+}
+
+.pageButton {
+  padding: 8px 12px;
+  border: 1px solid var(--button-text-color);
+  border-radius: 5px;
+  background: var(--button-text-color);
+  color: var(--button-bg-color);
+  cursor: pointer;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.pageButton:hover {
+  background: var(--button-bg-hover--color);
+  color: var(--button-text-hover--color);
+  border: none;
+}
+
+.activePage {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+/* Games Section */
+.gamesSection {
+  margin: 40px 0;
+  text-align: center;
+}
+
+.gamesSection h2 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: var(--headline-color);
+  text-align: left;
+}
+
+.gamesCarousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  position: relative;
+}
+.gamesDesc{
+  color: var(--text-color);
+  margin: 2rem;
+}
+
+.carouselContent {
+  width: 70%;
+  text-align: center;
+}
+
+.carouselContent img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.carouselContent h3 {
+  font-size: 1.5rem;
+  margin: 10px 0;
+}
+
+.carouselContent p {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+}
+
+.carouselButton {
+  background: var(--button-bg-color);
+  border: none;
+  color: var(--button-text-color);
+  padding: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.carouselButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Quizzes Section */
+.quizzesSection {
+  margin-top:  40px;
+  text-align: center;
+}
+
+.quizzesSection h2 {
+  font-size: 2rem;
+  color: var(--headline-color);
+  text-align: left;
+}
+
+.quizzesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.quizCard {
+  perspective: 1000px;
+  height: 250px;
+}
+.quizzesSection a{
+  text-decoration: none;
+  color: white;
+}
+
+.quizCard .quizFront,
+.quizCard .quizBack {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  transition: transform 0.6s ease;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quizCard .quizFront {
+  background: var(--section-bg-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.quizCard .quizFront img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 10px 10px 0 0;
+}
+
+.quizCard .quizFront h3 {
+  font-size: 1.2rem;
+  margin: 10px 0;
+}
+
+.quizCard .quizBack {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.quizCard:hover .quizFront {
+  transform: rotateY(180deg);
+}
+
+.quizCard:hover .quizBack {
+  transform: rotateY(0deg);
+}
+
+.quizCard .quizBack button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background: var(--button-hover-bg-color);
+  color: var(--button-bg-color);
+  cursor: pointer;
+}
+
+.quizCard .quizBack button:hover {
+  background: var(--button-bg-color);
+  color: var(--button-hover-bg-color);
+  border: 1px solid var(--button-hover-bg-color);
+}
+
+@media (max-width: 1200px) {
+  .cardGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .cardGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .header h1 {
+    font-size: 2.5rem;
+  }
+  .header p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .header h1 {
+    font-size: 2rem;
+  }
+  .header p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 475px) {
+  .cardGrid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .header h1 {
+    font-size: 1.5rem;
+  }
+  .header p {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width:1200px) {
+  .quizzesGrid{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width:768px) {
+  .carouselContent{
+    width: 100%;
+  }  
+}
+@media (max-width:576px) 
+{
+  .header{
+    height: 300px;
+  }
+  .quizzesGrid{
+    grid-template-columns: 1fr;
+  }
+}

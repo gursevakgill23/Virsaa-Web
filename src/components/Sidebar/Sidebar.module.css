@@ -1,0 +1,135 @@
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -350px; /* Hidden by default */
+    width: 350px;
+    height: 100%;
+    background-color: black;
+    color: white;
+    transition: left 0.3s ease; /* Smooth transition */
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .sidebar.open {
+    left: 0; /* Visible when open */
+  }
+  
+  .sidebarContent {
+    width: 100%;
+  }
+  
+  .sidebarLarge {
+    display: none;
+    padding: 20px;
+  }
+  
+  .sidebarSmall {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+    padding: 6rem 0;
+    width: 100%;
+  }
+  
+  .sidebarSmall a {
+    color: white;
+    text-decoration: none;
+    padding: 8px 0;
+  }
+  .sidebarSmall a:hover{
+    background-color: #f1f1f1;
+    color: black;
+  }
+  /* Dropdown Container */
+.dropdown {
+  position: relative;
+}
+
+/* Dropdown Button */
+.dropdownButton {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  color: white;
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* Dropdown Arrow */
+.arrow {
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  display: inline-block;
+  padding: 4px;
+  margin-left: 10px;
+  transform: rotate(45deg);
+  transition: transform 0.3s ease;
+  margin-bottom: 8px;
+}
+
+.arrow.open {
+  transform: rotate(-135deg);
+}
+
+/* Dropdown Content */
+.dropdownContent {
+  display: flex;
+  flex-direction: column;
+  background-color: black;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 5px;
+  color: white;
+}
+
+.dropdownContent a {
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  color: white;
+  text-decoration: none;
+}
+
+.dropdownContent a:hover ~ .arrow{
+  background-color: #f1f1f1;
+  color: black;
+}
+  
+  .sidebarImage {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  
+  .sidebarLarge h3 {
+    margin: 10px 0;
+    font-size: 1.5rem;
+  }
+  
+  .sidebarLarge p, .sidebarLarge li {
+    margin-bottom: 20px;
+    font-size: 10px;
+  }
+  
+  @media (min-width: 992px) {
+    .sidebarLarge {
+      display: block;
+    }
+  
+    .sidebarSmall {
+      display: none;
+    }
+  }
+  @media(max-width:768px){
+    .sidebar{
+      width: 250px;
+    }
+  }

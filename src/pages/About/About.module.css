@@ -1,0 +1,410 @@
+/* Base Styles */
+.aboutContainer {
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  text-align: left;
+  margin-bottom: 2rem;
+  color: var(--text-color);
+}
+
+/* Hero Section */
+.heroSection {
+  height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  color: var(--text-color);
+}
+
+.heroOverlay {
+  position: absolute;
+  top: 15%;
+  left: 5%;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.heroTagline {
+  font-size: 3rem;
+  font-family: serif;
+  text-transform: uppercase;
+  text-align: left;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.heroDescription {
+  font-size: 1.5rem;
+  text-align: left;
+  margin-top: 0;
+  color: var(--text-color);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Breadcrumb Section */
+.breadcrumb {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin: 2rem;
+  background: var(--section-bg-color);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb span {
+  color: var(--text-color);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+a {
+  text-decoration: none;
+  list-style: none;
+}
+
+
+/* Story Section */
+.storySection {
+  padding: 0 2rem;
+  background-color: var(--section-bg-color);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  position: relative;
+}
+
+.timelineItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.timelineIcon {
+  font-size: 2.5rem;
+  background-color: var(--icon-color);
+  padding: 1rem;
+  border-radius: 50%;
+  color: var(--text-color);
+}
+
+.timelineContent {
+  flex: 1;
+}
+
+.timelineContent h3 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.timelineContent p {
+  font-size: 1.1rem;
+  color: var(--secondary-text-color);
+}
+
+/* Mission and Community Container */
+.missionCommunityContainer {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  background-color: var(--section-bg-color);
+}
+
+/* Mission Section */
+.missionSection {
+  flex: 1;
+}
+
+.missionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  
+
+}
+
+.missionImage {
+  width: 100%;
+  height: 300px; /* Limit height */
+  object-fit: cover;
+  border-radius: 10px;
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+
+}
+
+.missionText {
+  flex: 1;
+  font-size: 1.1rem;
+  color: var(--secondary-text-color);
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+}
+
+/* Community Section */
+.communitySection {
+  flex: 1;
+}
+
+.communityContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.communityImage {
+  width: 100%;
+  height: 300px; /* Limit height */
+  object-fit: cover;
+  border-radius: 10px;
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+}
+
+.communityText {
+  flex: 1;
+  font-size: 1.1rem;
+  color: var(--secondary-text-color);
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+}
+
+/* Values Section */
+.valuesSection {
+  padding: 2rem;
+  background-color: var(--section-bg-color);
+}
+
+.valuesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.valueItem {
+  text-align: center;
+  padding: 1.5rem;
+  background-color: var(--card-bg-color);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.valueIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--icon-color);
+}
+
+.valueTitle {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.valueDescription {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+}
+
+@keyframes  appear{
+  from{
+  opacity: 0;
+  scale:0.5;
+  }
+  to{
+    opacity: 1;
+    scale: 1;
+  }
+  
+}
+
+
+/* Team Section */
+.teamSection {
+  padding: 2rem;
+  background-color: var(--section-bg-color);
+}
+
+.teamGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.teamMember {
+  text-align: center;
+  padding: 1.5rem;
+  background-color: var(--card-bg-color);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.memberImage {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+}
+
+.memberName {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.memberRole {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+}
+
+/* Digitization Section */
+.digitizationSection {
+  padding: 2rem;
+  background-color: var(--section-bg-color);
+}
+
+.digitizationContent {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.digitizationImage {
+  width: 50%;
+  height: 300px; /* Limit height */
+  object-fit: cover;
+  border-radius: 10px;
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+}
+
+.digitizationText {
+  flex: 1;
+  font-size: 1.1rem;
+  color: var(--secondary-text-color);
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+}
+
+/* CTA Section */
+.ctaSection {
+  padding: 4rem 0;
+  text-align: center;
+  background-color: var(--section-bg-color);
+}
+
+.ctaTitle {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.ctaButton {
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.ctaButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Appear Animation */
+@keyframes appear {
+  from {
+      opacity: 0;
+      transform: translateY(20px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+.appearAnimation {
+  animation: appear 1s ease-out;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+  .heroTagline {
+      font-size: 2.5rem;
+  }
+
+  .heroDescription {
+      font-size: 1.2rem;
+  }
+
+  .sectionTitle {
+      font-size: 2rem;
+  }
+
+  .missionCommunityContainer {
+      flex-direction: column;
+  }
+
+  .missionImage,
+  .communityImage,
+  .digitizationImage {
+      width: 100%;
+  }
+
+  .digitizationContent {
+      flex-direction: column;
+  }
+
+  .digitizationImage {
+      width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .heroTagline {
+      font-size: 1.5rem;
+  }
+
+  .heroDescription {
+      font-size: 0.9rem;
+  }
+
+  .sectionTitle {
+      font-size: 2rem;
+  }
+
+  .missionCommunityContainer {
+      flex-direction: column;
+  }
+
+  .heroSection{
+    height: 300px;
+  }
+}

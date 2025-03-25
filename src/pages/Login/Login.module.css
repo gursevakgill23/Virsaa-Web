@@ -1,0 +1,354 @@
+/* Container */
+.container {
+  width: 100%;
+  min-height: 150vh;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* Header Section */
+.header {
+  position: relative;
+  height: 400px; /* Increased height */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 2rem;
+  overflow: hidden;
+}
+
+.headerImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.headerContent {
+  z-index: 1;
+  text-align: right;
+  color: white;
+  max-width: 600px;
+}
+
+.headerText h1 {
+  font-size: 3.5rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1rem;
+  color: var(--headline-color);
+}
+
+.headerText p {
+  font-size: 1.2rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Form Container */
+.formContainer {
+  display: flex;
+  max-width: 1200px;
+  margin: 2rem auto;
+  background: var(--card-bg-color);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Left Section - Login Form */
+.leftSection {
+  flex: 1;
+  padding: 2rem;
+}
+
+.formTitle {
+  font-size: 2rem;
+  color: var(--headline-color);
+  margin-bottom: 1.5rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+}
+
+.input {
+  padding: 0.8rem;
+  border: 1px solid var(--input-border-color);
+  border-radius: 5px;
+  font-size: 1rem;
+  background: var(--input-bg-color);
+  color: var(--text-color);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--input-focus-border-color);
+}
+
+.forgotPassword {
+  text-align: right;
+}
+
+.link {
+  color: var(--link-color);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.loginButton {
+  padding: 0.8rem;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.loginButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+.socialLogin {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.googleButton,
+.facebookButton {
+  padding: 0.8rem;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.googleButton {
+  background: #db4437;
+  color: white;
+}
+
+.googleButton:hover {
+  background: #c23321;
+}
+
+.facebookButton {
+  background: #3b5998;
+  color: white;
+}
+
+.facebookButton:hover {
+  background: #2d4373;
+}
+
+/* Right Section - Signup Prompt */
+.rightSection {
+  flex: 1;
+  background: var(--card-bg-color);
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.rightContent {
+  text-align: center;
+}
+
+.rightImage {
+  width: 350px;
+  height: 250px;
+  object-fit: cover;
+  margin-bottom: 0;
+  margin-top: 4rem;
+}
+
+.rightText {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.signupButton {
+  color: var(--button-text-color);
+  background-color: var(--button-bg-color);
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.signupButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+  .headerText h1 {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .formContainer {
+    flex-direction: column;
+  }
+
+  .rightSection {
+    order: -1; /* Move the right section to the top */
+    padding: 1.5rem;
+    height: 300px;
+    background-color: var(--section-bg-color);
+  }
+  .rightContent {
+    margin-top: 0;
+  }
+  .rightImage {
+    display: none;
+  }
+  .rightText {
+    font-size: 0.75rem;
+    color: var(--text-color);
+  }
+  .signupButton {
+    padding: 0.5rem 0.8rem;
+    font-size: 15px;
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+  }
+}
+
+@media (max-width: 1292px) {
+  .formContainer {
+    margin: 2rem;
+  }
+}
+
+/* Latest Content and Popular in Kids Sections */
+.latestContent,
+.popularInKids {
+  padding: 2rem;
+  padding-bottom: 5rem;
+  background: var(--section-bg-color);
+}
+
+.latestContent {
+  background-color: var(--section-bg-color);
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  color: var(--headline-color);
+  text-align: left;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  background: var(--card-bg-color);
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+}
+
+@keyframes  appear{
+  from{
+  opacity: 0;
+  scale:0.5
+  }
+  to{
+    opacity: 1;
+    scale: 1;
+  }
+  
+}
+
+.cardImage {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.cardTitle {
+  font-size: 1.2rem;
+  color: var(--text-color);
+  margin: 10px 0;
+}
+
+.cardDescription,
+.cardInfo {
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+  margin: 5px 0;
+}
+
+.cardInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Responsive Design for Cards */
+@media (max-width: 768px) {
+  .cardGrid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .header{
+    height: 300px;
+  }
+  .cardGrid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  .cardImage{
+    height: 300px;
+  }
+
+  .sectionTitle{
+    font-size: 1.75rem;
+  }
+
+}
+

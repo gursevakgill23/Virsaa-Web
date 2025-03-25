@@ -1,0 +1,411 @@
+
+/* Page container */
+.page {
+  padding-bottom: 20px;
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+}
+
+/* Header */
+.header {
+  position: relative;
+  width: 100%;
+  height: 400px; /* Adjust height as needed */
+  margin-bottom: 20px;
+}
+
+.headerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensure the image covers the header */
+}
+
+.headerText {
+  position: absolute;
+  left: 2rem;
+  top: 25%;
+  padding: 1rem;
+  opacity: 0.8;
+  border-radius: 10px;
+}
+
+.headerText h1 {
+  font-size: 3rem;
+  margin-bottom: 0;
+  color: var(--headline-color);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.headerText p {
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+/* Breadcrumb Section */
+.breadcrumb {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin: 2rem;
+  background: var(--section-bg-color);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb span {
+  color: var(--text-color);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+a {
+  text-decoration: none;
+  list-style: none;
+}
+
+/* Main content container */
+.mainContainer {
+  margin: 2rem;
+}
+
+/* Left section (full width) */
+.leftSection {
+  width: 100%; /* Full width */
+}
+
+/* Right section (below the map) */
+.rightSection {
+  margin-top: 20px;
+  background-color: var(--section-bg-color);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.rightSection h2 {
+  margin-top: 0;
+  font-size: 2.5rem;
+  color: var(--headline-color);
+  border-bottom: 2px solid var(--headline-color);
+  padding-bottom: 10px;
+}
+
+/* Services List */
+.servicesList {
+  list-style-type: none;
+  padding: 0;
+}
+
+.servicesList li {
+  margin: 15px 0;
+  font-size: 16px;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+}
+
+.serviceItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.triangleIcon {
+  font-size: 16px;
+  transition: transform 0.3s ease;
+  color: var(--icon-color);
+}
+
+.rotateIcon {
+  transform: rotate(90deg); /* Rotate icon when service is selected */
+}
+
+.serviceDescription {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: var(--card-bg-color);
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.availButton {
+  margin-top: 10px;
+  padding: 10px 20px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.availButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Search container */
+.searchContainer {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* Search input */
+.input {
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  flex: 1;
+  font-size: 16px;
+  background-color: var(--card-bg-color);
+  color: var(--text-color);
+  transition: border-color 0.3s ease;
+}
+
+.input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Search button */
+.searchButton {
+  padding: 10px 20px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: 1px solid var(--button-text-color);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.searchButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* List container */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* List item */
+.listItem {
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 15px;
+  background-color: var(--card-bg-color);
+  transition: box-shadow 0.3s ease;
+}
+
+.listItem:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Item header */
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.itemHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--headline-color);
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dots {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--icon-color);
+  transition: color 0.3s ease;
+}
+
+.dots:hover {
+  color: var(--button-hover-bg-color);
+}
+
+.dropdownContent {
+  position: absolute;
+  right: 0;
+  background-color: var(--card-bg-color);
+  min-width: 120px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  z-index: 1;
+  border: 1px solid var(--border-color);
+}
+
+.dropdownContent button {
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-color);
+  transition: background-color 0.3s ease;
+}
+
+.dropdownContent button:hover {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+/* Details */
+.details {
+  margin-top: 10px;
+}
+
+.details p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: var(--secondary-text-color);
+}
+
+/* Contact */
+.contact {
+  margin-top: 10px;
+}
+
+.contact a {
+  color: var(--headline-color);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.contact a:hover {
+  text-decoration: underline;
+}
+
+/* Map container */
+.mapContainer {
+  margin-top: 20px;
+  height: 400px;
+  width: 100%; /* Map takes full width */
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+/* History Section */
+.historySection {
+  margin-top: 40px;
+}
+
+.historySection h2 {
+  font-size: 2.5rem;
+  color: var(--headline-color);
+  margin-bottom: 20px;
+}
+
+.historyContent {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.historyImage {
+  width: 50%;
+  height: 300px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.historyText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.historyText p {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  line-height: 1.6;
+}
+
+.readMoreButton {
+  margin-top: 10px;
+  padding: 10px 20px;
+  width: 50%;
+  margin: 0 auto;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.readMoreButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .headerText h1 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .headerText {
+    left: 2rem;
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .headerText h1 {
+    font-size: 1.5rem;
+  }
+  .headerText p {
+    text-align: left;
+  }
+  .historySection h2, .rightSection h2 {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .header {
+    height: 300px;
+  }
+  .headerText h1 {
+    font-size: 1.5rem;
+  }
+
+  .headerText p {
+    font-size: 0.9rem;
+  }
+  .historyContent{
+    display: flex;
+    flex-direction: column;
+  }
+  .historyImage, .historyText{
+    width: 100%;
+    text-align: center;
+  }
+
+}

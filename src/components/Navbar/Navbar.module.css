@@ -1,0 +1,264 @@
+:root {
+  /* Light Theme */
+  --navbar-bg: #1a2a4f;
+  --search-button-bg:#1a2a4f;
+  --search-button-text: #fff;
+  --text-color: #1a2a4f;
+  --dropdown-bg: white;
+  --dropdown-text: black;
+  --button-bg: white;
+  --button-text: #1a2a4f;
+  --button-hover-bg: #1a2a4f;
+  --button-hover-text: white;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme */
+  --navbar-bg: transparent;
+  --text-color: white;
+  --dropdown-bg: white;
+  --search-button-bg:#1a0e16;
+  --search-button-text: #fff;
+  --dropdown-text: black;
+  --button-bg: white;
+  --button-text: #1a0e16;
+  --button-hover-bg: #1a0e16;
+  --button-hover-text: white;
+}
+
+/* Navbar Styles */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.logo {
+  height: 60px;
+  width: 60px;
+}
+
+.logo img {
+  height: 100%;
+  width: 100%;
+}
+
+.navLinks {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.navLinks a {
+  color: var(--text-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdownContent {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: var(--dropdown-bg);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.dropdownContent a {
+  color: var(--dropdown-text);
+  text-decoration: none;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchIcon,
+.menuIcon,
+.themeToggle {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+.noScroll {
+  overflow: hidden;
+}
+
+/* Search Section */
+.searchSection {
+  width: 100%;
+  background-color: white;
+  padding: 50px 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.searchForm {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.searchButton {
+  padding: 10px 20px;
+  background-color: var(--search-button-bg);
+  color: var(--search-button-text);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.searchButton:hover {
+  background-color: white;
+  color: var(--search-button-bg);
+  border: 1px solid var(--search-button-bg);
+}
+
+.closeButton {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  background: none;
+  padding: 5px;
+  top: 4%;
+  border: none;
+  font-size: 1.5rem;
+  font-family: serif;
+  color: #555;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  color: #333;
+}
+
+/* Results List */
+.resultsList {
+  overflow-y: auto;
+  scrollbar-width: none;
+  max-height: 500px;
+}
+
+.resultsList::-webkit-scrollbar {
+  display: none;
+}
+
+.resultItem {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.resultItem:last-child {
+  border-bottom: none;
+}
+
+.resultImage {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.resultContent {
+  flex: 1;
+}
+
+.resultContent h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.resultContent p {
+  margin: 5px 0 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Buttons */
+.loginButton {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--button-text);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.loginButton:hover {
+  background-color: var(--button-hover-bg);
+  border: 1px solid var(--text-color);
+  color: var(--button-hover-text);
+}
+
+.getPremiumButton {
+  background-color: var(--button-hover-bg);
+  color: var(--button-hover-text);
+  border: 1px solid var(--text-color);
+  border-radius: 4px;
+  font-size: 15px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.getPremiumButton:hover {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+}
+
+/* Media Queries */
+@media (max-width: 992px) {
+  .navLinks {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .getPremiumButton,
+  .loginButton {
+    padding: 8px;
+    font-size: 10px;
+  }
+  .logo {
+    height: 50px;
+    width: 50px;
+  }
+}
+  

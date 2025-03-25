@@ -1,0 +1,535 @@
+/* Base Styles */
+.homeContainer {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.header {
+  height: 700px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--header-bg-color);
+}
+
+.imageSlider {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.imageSlide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.textOverlay {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 60%;
+  position: absolute;
+  top: 20%;
+  left: 5%;
+  width: 100%;
+  color: var(--text-color);
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.headline {
+  font-family: serif;
+  color: var(--headline-color);
+  font-size: 4.5rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.description {
+  font-size: 1.2rem;
+}
+
+.playButtonContainer {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  text-align: center;
+}
+
+.playButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-color);
+  font-size: 1.2rem;
+  text-decoration: none;
+  position: relative;
+}
+
+.playIconWrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.playIcon {
+  font-size: 3.5rem;
+  color: var(--icon-color);
+  z-index: 1;
+}
+
+.rotatingBorder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top-color: var(--icon-color);
+  border-radius: 50%;
+  animation: rotateBorder 2s linear infinite;
+}
+
+@keyframes rotateBorder {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.playText {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  width: 100%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  color: var(--section-bg-color);
+  background-color: var(--icon-color);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.playButton:hover .playText {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+.navigationButtons {
+  position: absolute;
+  top: 80%;
+  right: 20px;
+  transform: translateY(-50%);
+}
+
+.navButton {
+  background-color: var(--button-bg-color);
+  border-radius: 50%;
+  margin: 10px;
+  color: var(--button-text-color);
+  border: none;
+  padding: 10px 9px;
+  font-size: 1.25rem;
+  transition: background-color 0.3s ease;
+}
+
+.navButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+}
+
+/* Explore Books Section with Floating Effect */
+.exploreBooksSection {
+  margin: 0 auto;
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--section-bg-color);
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  font-family: serif;
+  text-align: left;
+  color: var(--headline-color);
+}
+
+.booksGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 40px;
+  justify-content: center;
+  perspective: 1000px; /* Adds depth for 3D effect */
+}
+
+.bookCard {
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform-style: preserve-3d;
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Staggered floating animation for each book card */
+.bookCard:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.bookCard:nth-child(2) {
+  animation-delay: 1s;
+}
+
+.bookCard:nth-child(3) {
+  animation-delay: 2s;
+}
+
+.bookCard:nth-child(4) {
+  animation-delay: 3s;
+}
+
+.bookCard:nth-child(5) {
+  animation-delay: 4s;
+}
+
+.bookCard:nth-child(6) {
+  animation-delay: 5s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotateY(0);
+  }
+  50% {
+    transform: translateY(-20px) rotateY(5deg);
+  }
+}
+
+.imageContainer {
+  width: 100%;
+  height: 350px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bookImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 1s ease-in-out, transform 1s ease-in-out;
+}
+
+.bookImage:hover {
+  transform: scale(2.05);
+  transition: transform 0.3s ease-in-out;
+}
+
+.bookName {
+  font-size: 1.5rem;
+  margin: 15px 0 10px;
+  font-weight: 550;
+  font-family: serif;
+  color: var(--text-color);
+}
+
+.bookName:hover {
+  text-decoration: underline;
+}
+
+.writerName {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin-bottom: 10px;
+}
+
+.allBooksButton {
+  margin-top: 30px;
+  padding: 22px 80px;
+  font-size: 1.5rem;
+  color: var(--button-text-color);
+  background-color: var(--button-bg-color);
+  border: 1px solid var(--button-bg-color);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.allBooksButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Heritage Section */
+.heritageSection {
+  padding: 2rem ;
+  background-color: var(--section-bg-color);
+}
+
+.heritageHeading {
+  font-size: 2.5rem;
+  font-family: serif;
+  text-align: left;
+  color: var(--headline-color);
+}
+
+.heritageContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
+.heritageImage {
+  flex: 1 1 30%;
+  display: flex;
+  align-items: stretch;
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+}
+
+.heritageImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.heritageContent {
+  flex: 1 1 55%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
+
+}
+
+.heritageItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.heritageIcon {
+  font-size: 2.5rem;
+  margin-top: 0.5rem;
+  color: var(--icon-color);
+}
+
+.heritageText h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.heritageText p {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  line-height: 1.6;
+}
+@keyframes  appear{
+  from{
+  opacity: 0;
+  scale:0.5
+  }
+  to{
+    opacity: 1;
+    scale: 1;
+  }
+  
+}
+
+
+/* Listen, Learn, and Play Section */
+.section {
+  padding: 2rem;
+  background-color: var(--section-bg-color);
+  text-align: center;
+}
+
+.cardContainer {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2rem;
+  margin: 0 auto;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cardImage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+}
+
+.cardImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.cardOverlay {
+  position: absolute;
+  bottom: -100%;
+  left: 0;
+  right: 0;
+  background: var(--card-overlay-bg);
+  padding: 1.5rem;
+  transition: bottom 0.3s ease;
+  border-radius: 0 0 10px 10px;
+}
+
+.card:hover .cardOverlay {
+  bottom: 0;
+}
+
+.cardOverlay h3 {
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.cardOverlay p {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  line-height: 1.6;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .cardContainer {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .booksGrid, .cardContainer {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .sectionTitle, .heritageHeading {
+    font-size: 2rem;
+  }
+
+  .heritageContainer {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 992px) {
+  .booksGrid, .cardContainer {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .sectionTitle, .heritageHeading {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: 400px;
+  }
+  .booksGrid, .cardContainer {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .headline {
+    font-size: 2.5rem;
+  }
+
+  .description {
+    font-size: 1rem;
+  }
+
+  .exploreBooksSection {
+    padding: 40px 40px;
+  }
+  .heritageContainer {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 576px) {
+  .booksGrid, .cardContainer {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .headline {
+    font-size: 2rem;
+  }
+}
+
+/* Theme Variables */
+:root {
+  --background-color: #ffffff;
+  --header-bg-color: #f9f9f9;
+  --section-bg-color: #f9f9f9;
+  --text-color: #1a2a4f;
+  --headline-color: #1a2a4f;
+  --icon-color: #1a2a4f;
+  --primary-color: #1a2a4f;
+  --button-bg-color: #1a2a4f;
+  --button-text-color: #ffffff;
+  --button-hover-bg-color: #ffffff;
+  --button-hover-text-color: #1a2a4f;
+  --card-bg-color: #ffffff;
+  --input-border-color: rgb(60, 60, 60);
+  --card-overlay-bg: rgba(255, 255, 255, 0.9);
+  --border-color: #787777;
+  --table-header-bg: #f1f1f1;
+  --secondary-text-color: #555;
+}
+
+[data-theme='dark'] {
+  --background-color: #1A0E16;
+  --header-bg-color: #4f4e4f;
+  --section-bg-color: #1a0e16;
+  --text-color: #e0e0e0;
+  --headline-color: #e0e0e0;
+  --icon-color: #e0e0e0;
+  --primary-color: #e0e0e0;
+  --button-bg-color: #e0e0e0;
+  --button-text-color: #1a0e16;
+  --input-border-color: rgb(230, 228, 228);
+  --button-hover-bg-color: #1a0e16;
+  --button-hover-text-color: #e0e0e0;
+  --card-bg-color: #2a1a24;
+  --card-overlay-bg: rgba(42, 26, 36, 0.9);
+  --border-color: #444;
+  --table-header-bg: #3a2a34;
+  --secondary-text-color: #b0b0b0;
+}

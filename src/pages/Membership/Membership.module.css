@@ -1,0 +1,261 @@
+
+/* Base Styles */
+.premiumContainer {
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+}
+
+/* Header Section */
+.header {
+  height: 400px;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  color: var(--text-color);
+}
+
+.textOverlay {
+  position: absolute;
+  top: 5%;
+  left: 5%;
+  padding: 2rem;
+  border-radius: 10px;
+}
+
+.headline {
+  font-size: 3rem;
+  font-family: serif;
+  color: var(--headline-color);
+  margin-bottom: 1rem;
+}
+
+.description {
+  font-size: 1.2rem;
+  color: var(--secondary-text-color);
+  margin-bottom: 2rem;
+}
+
+.ctaButton {
+  background-color: var(--primary-color);
+  color: var(--button-text-color);
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.ctaButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Pricing Plans Section */
+.pricingSection {
+  padding: 2rem;
+}
+
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.planCard {
+  background: var(--card-bg-color);
+  border-radius: 10px;
+  padding: 2rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.planCard:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.popular {
+  border: 2px solid var(--primary-color);
+}
+
+.popularBadge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: var(--primary-color);
+  color: var(--button-text-color);
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  font-size: 0.9rem;
+}
+
+.planTitle {
+  font-size: 2rem;
+  font-family: serif;
+  color: var(--headline-color);
+  margin-bottom: 1rem;
+}
+
+.planPrice {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+}
+
+.featuresList {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 2rem;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.featureIcon {
+  color: var(--primary-color);
+}
+
+.subscribeButton {
+  background-color: var(--primary-color);
+  color: var(--button-text-color);
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.subscribeButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Comparison Table Section */
+.comparisonSection {
+  padding: 2rem;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  font-family: serif;
+  color: var(--headline-color);
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.comparisonTable {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+
+th {
+  background-color: var(--table-header-bg);
+  color: var(--text-color);
+}
+
+/* Testimonials Section */
+.testimonialsSection {
+  padding: 2rem;
+}
+
+.testimonialsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.testimonialCard {
+  background: var(--card-bg-color);
+  border-radius: 10px;
+  padding: 2rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.userName {
+  font-weight: bold;
+  margin-top: 1rem;
+  text-align: right;
+}
+
+/* FAQ Section */
+.faqSection {
+  padding: 2rem;
+}
+
+.faqList {
+  display: grid;
+  gap: 1rem;
+}
+
+.faqItem {
+  background: var(--card-bg-color);
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer Call-to-Action */
+.footerCta {
+  text-align: center;
+  padding: 2rem;
+  background: var(--card-bg-color);
+  border-radius: 10px;
+}
+
+.footerCta h2 {
+  color: var(--secondary-color);
+  margin-bottom: 1rem;
+}
+
+.ctaButton {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.ctaButton:hover {
+  background-color: var(--button-hover-bg-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .plansGrid {
+    grid-template-columns: 1fr;
+  }
+  .sectionTitle{
+    font-size: 1.75rem;
+  }
+}
+@media(max-width:576px){
+  .header{
+    height: 300px;
+  }
+  .headline{
+    font-size: 1.5rem;
+  }
+  .description{
+    font-size: 0.9rem;
+  }
+}
