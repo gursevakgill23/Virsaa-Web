@@ -294,7 +294,7 @@
 
 .cardImage {
   width: 100%;
-  height: 400px;
+  height: 250px;
   object-fit: cover;
   border-radius: 10px;
 }
@@ -319,9 +319,20 @@
 }
 
 /* Responsive Design for Cards */
+@media (max-width:1200px) {
+  .cardGrid {
+    grid-template-columns: repeat(4,1fr);
+  }
+}
+
+@media (max-width:992px) {
+  .cardGrid {
+    grid-template-columns: repeat(3,1fr);
+  }
+}
 @media (max-width: 768px) {
   .cardGrid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2,1fr);
   }
 }
 
@@ -333,10 +344,10 @@
     font-size: 1.75rem;
   }
   .cardGrid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: 1fr;
   }
   .cardImage{
-    height: 300px;
+    height: 200px;
   }
 }
 
