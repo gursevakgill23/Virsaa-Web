@@ -1,10 +1,19 @@
 {
-    "version": 2,
-    "builds": [{
+  "version": 2,
+  "builds": [
+    {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": { 
-        "installCommand": "npm install --legacy-peer-deps"
+      "config": {
+        "distDir": "build",
+        "cleanUrls": true
       }
-    }]
-  }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/build/index.html"
+    }
+  ]
+}
