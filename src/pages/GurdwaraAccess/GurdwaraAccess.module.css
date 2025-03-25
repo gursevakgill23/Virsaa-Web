@@ -84,7 +84,7 @@ a {
 
 .rightSection h2 {
   margin-top: 0;
-  font-size: 2.5rem;
+  font-size: 2rem;
   color: var(--headline-color);
   border-bottom: 2px solid var(--headline-color);
   padding-bottom: 10px;
@@ -311,7 +311,7 @@ a {
 }
 
 .historySection h2 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   color: var(--headline-color);
   margin-bottom: 20px;
 }

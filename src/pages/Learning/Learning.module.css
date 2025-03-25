@@ -203,7 +203,7 @@ a {
 .cardImageContainer {
   position: relative;
   width: 100%;
-  height: 350px;
+  height: 280px;
   overflow: hidden;
 }
 
@@ -317,6 +317,7 @@ a {
 .carouselContent h3 {
   font-size: 1.5rem;
   margin: 10px 0;
+  color: var(--secondary-text-color-);
 }
 
 .carouselContent p {
@@ -396,6 +397,7 @@ a {
 .quizCard .quizFront h3 {
   font-size: 1.2rem;
   margin: 10px 0;
+  color: var(--secondary-text-color);
 }
 
 .quizCard .quizBack {
@@ -459,6 +461,9 @@ a {
   }
   .header p {
     font-size: 0.9rem;
+  }
+  .gamesSection{
+    margin: 20px o;
   }
 }
 

@@ -63,6 +63,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
       phone: '(905) 457-5757',
     },
   ];
+  
 
   // Services list with descriptions
   const servicesList = [
@@ -186,23 +187,29 @@ const GurdwaraAccess = ({ isDarkMode }) => {
 
           {/* Map with pinned locations */}
           <div className={styles.mapContainer}>
-            <MapContainer
-              center={[43.7156, -79.7607]}
-              zoom={12}
-              style={{ height: '400px', width: '100%' }}
-              whenCreated={(map) => console.log('Map instance:', map)}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              <Marker position={[43.7156, -79.7607]}>
-                <Popup>
-                  Gurdwara Sikh Sangat Brampton
-                </Popup>
-              </Marker>
-            </MapContainer>
-          </div>
+      <MapContainer
+        center={[43.7156, -79.7607]} // Default center of the map
+        zoom={12}
+        style={{ height: '400px', width: '100%' }}
+        whenCreated={(map) => console.log('Map instance:', map)}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        
+        {gurdwaras.map((gurdwara) => (
+          <Marker key={gurdwara.id} position={gurdwara.coordinates}>
+            <Popup>
+              <div>
+                <h3>{gurdwara.name}</h3>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
+
 
           {/* History of Nearest Gurdwara Section */}
           <div className={styles.historySection}>

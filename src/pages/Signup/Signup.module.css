@@ -2,7 +2,7 @@
 .container {
   width: 100%;
   min-height: 150vh;
-  background-color: var(--background-color);
+  background-color: var(--section-bg-color);
   color: var(--text-color);
 }
 
@@ -203,7 +203,7 @@
 /* Responsive Design */
 @media (max-width: 992px) {
   .headerText h1 {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 }
 
@@ -247,7 +247,7 @@
 /* Latest Content and Popular in Kids Sections */
 .latestContent,
 .popularInKids {
-  padding: 2rem;
+  padding: 0 2rem;
   padding-bottom: 5rem;
   background: var(--section-bg-color);
 }
@@ -257,7 +257,7 @@
 }
 
 .sectionTitle {
-  font-size: 2.5rem;
+  font-size: 2rem;
   color: var(--headline-color);
   text-align: left;
 }

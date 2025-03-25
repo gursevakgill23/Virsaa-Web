@@ -59,6 +59,7 @@
   color: var(--text-color);
   text-decoration: none;
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .dropdown {
@@ -94,7 +95,7 @@
 .themeToggle {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: 1rem;
   cursor: pointer;
   color: var(--text-color);
 }
@@ -218,7 +219,7 @@
   border: 1px solid var(--button-text);
   padding: 8px 16px;
   border-radius: 4px;
-  font-size: 15px;
+  font-size: 0.9;
   cursor: pointer;
 }
 
@@ -233,7 +234,7 @@
   color: var(--button-hover-text);
   border: 1px solid var(--text-color);
   border-radius: 4px;
-  font-size: 15px;
+  font-size: 0.9rem;
   padding: 8px 16px;
   cursor: pointer;
 }
