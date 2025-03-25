@@ -2,9 +2,9 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import styles from "./Collections.module.css";
-import book_image from "../../images/book-image.jpg";
-import header_image_light from "../../images/header-image.png"; // Light mode image
-import header_image_dark from "../../images/header-image-dark.png"; // Dark mode image
+import book_image from "./images/book-image.jpg";
+import header_image_light from "./images/header-image.png"; // Light mode image
+import header_image_dark from "./images/header-image-dark.png"; // Dark mode image
 import { FaFilter, FaTimes } from "react-icons/fa";
 
 const Collections = ({ isDarkMode }) => {
