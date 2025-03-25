@@ -6,7 +6,8 @@
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build",
-        "cleanUrls": true
+        "cleanUrls": true,
+        "includeFiles": ["src/images/**"]
       }
     }
   ],
