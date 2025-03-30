@@ -487,10 +487,7 @@ const Collections = ({ isDarkMode }) => {
                 <h3>{card.title}</h3>
                 <p className={styles.pages}>{card.pages} pages</p>
               </div>
-              <div className={styles.cardHoverActions}>
-                <button className={styles.readNowButton}>Read</button>
-                <button className={styles.likeButton}>Like</button>
-              </div>
+              
             </div>
           ))}
         </div>

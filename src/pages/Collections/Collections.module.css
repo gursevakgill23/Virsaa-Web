@@ -205,37 +205,9 @@
   text-align: left;
   overflow: hidden;
   padding: 10px;
-  transition: transform 0.2s, box-shadow 0.2s;
-  animation: float 6s ease-in-out infinite;
 }
-/* Staggered floating animation for each book card */
-.card:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.card:nth-child(2) {
-  animation-delay: 1s;
-}
-
-.card:nth-child(3) {
-  animation-delay: 2s;
-}
-
-.card:nth-child(4) {
-  animation-delay: 3s;
-}
-
-.card:nth-child(5) {
-  animation-delay: 4s;
-}
-
-.card:nth-child(6) {
-  animation-delay: 5s;
-}
-
-
 .card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-10px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -244,6 +216,7 @@
   height: 280px;
   border-radius: 10px;
   object-fit: cover;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .cardContent {
@@ -265,50 +238,6 @@
   color: var(--secondary-text-color);
 }
 
-.cardHoverActions {
-  position: absolute;
-  top: 73%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: none;
-  gap: 10px;
-}
-
-.card:hover .cardHoverActions {
-  display: flex;
-}
-
-.readNowButton,
-.likeButton {
-  padding: 8px 12px;
-  background-color: var(--button-bg-color);
-  color: var(--button-text-color);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.readNowButton:hover {
-  background-color: var(--button-hover-bg-color);
-  border: 1px solid var(--button-hover-text-color);
-  color: var(--button-hover-text-color);
-}
-
-.likeButton {
-  background-color: #ff4757;
-}
-
-.likeButton:hover {
-  background-color: #ff6b81;
-}
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) rotateY(0);
-  }
-  50% {
-    transform: translateY(-20px) rotateY(30deg);
-  }
-}
 
 
 /* Pagination */
@@ -428,6 +357,15 @@
   }
   .headerText p{
     font-size: 0.9rem;
+  }
+  .featuredAuthors h2{
+    font-size: 1.75rem;
+  }
+  .cardContent h3, .featuredAuthors h3{
+    font-size: 1rem;
+  }
+  .cardContent p{
+    font-size: 0.75rem;
   }
 }
 

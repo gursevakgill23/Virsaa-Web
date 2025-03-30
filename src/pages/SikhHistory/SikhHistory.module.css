@@ -249,33 +249,23 @@ a {
   background-color: var(--background-color);
   border-radius: 10px;
 }
-  .inspiringImage {
-    width: 100%;
-    height: 400px;
-    border-radius: 10px;
-    object-fit: cover;
-    
-  }
-  
-
 .inspiringImageContainer {
   flex: 1;
   overflow: hidden; /* Ensure the image doesn't overflow */
+  animation: appear linear;
+  animation-timeline: view();
+  animation-range: entry 0;
 }
-
 .inspiringImage {
   width: 100%;
   height: 280px;
   border-radius: 10px;
   object-fit: cover; /* Ensure the image covers the container */
-  animation: appear linear;
-  animation-timeline: view();
-  animation-range: entry 0;
 }
 @keyframes  appear{
   from{
   opacity: 0;
-  scale:0;
+  scale:0.5;
   }
   to{
     opacity: 1;
@@ -316,18 +306,6 @@ a {
   border: 1px solid var(--button-hover-text-color);
 }
 
-/* Keyframes for the appear animation */
-@keyframes  appear{
-  from{
-  opacity: 0;
-  scale:0.5
-  }
-  to{
-    opacity: 1;
-    scale: 1;
-  }
-  
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -389,7 +367,7 @@ a {
     grid-template-columns: repeat(2, 1fr);
   }
   .sikhHistoryHeading h1, .sectionTitle {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
 }
 
