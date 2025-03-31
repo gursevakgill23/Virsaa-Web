@@ -238,8 +238,8 @@
 
 .allBooksButton {
   margin-top: 30px;
-  padding: 20px;
-  font-size: 1.5rem;
+  padding: 10px 40px;
+  font-size: 1rem;
   color: var(--button-text-color);
   background-color: var(--button-bg-color);
   border: 1px solid var(--button-bg-color);
