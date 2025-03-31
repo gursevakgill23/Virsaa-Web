@@ -254,7 +254,7 @@ a {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 10px;
-  padding: 20px;
+  padding: 10px;
   transition: all 0.3s ease;
   height: 100%; /* Ensure the card expands fully */
 }
@@ -268,7 +268,7 @@ a {
 }
 
 .cardTitle {
-  font-size: 18px;
+  font-size: 1rem;
   margin: 10px 0;
   color: var(--text-color);
   transition: all 0.3s ease;
@@ -279,7 +279,7 @@ a {
   bottom: 10px;
   right: 10px;
   color: gold;
-  font-size: 24px;
+  font-size: 20px;
 }
 
 /* Hidden by default, shown on hover */
@@ -296,12 +296,12 @@ a {
 .card:hover .cardHoverContent {
   opacity: 1;
   height: auto;
-  margin-top: 10px;
+  margin-top: 5px;
 }
 
 .actionButton {
-  padding: 8px 12px;
-  font-size: 14px;
+  padding: 8px ;
+  font-size: 0.75rem;
   border: none;
   border-radius: 5px;
   background-color: var(--button-bg-color);
@@ -329,7 +329,7 @@ a {
 }
 
 .card:hover .cardTitle {
-  font-size: 20px; /* Increase title font size on hover */
+  font-size: 1rem; /* Increase title font size on hover */
 }
 /* Pagination */
 .pagination {
@@ -514,8 +514,9 @@ a {
 }
 
 .shapeContent h3 {
-  font-size: 0.9rem;
-  margin: 0;
+  font-size: 0.75rem;
+  margin-top: 15px;
+  margin-bottom: 0;
   color: black;
 }
 
@@ -537,14 +538,14 @@ a {
 }
 
 .shapeHoverContent p {
-  font-size: 0.75rem;
+  font-size: 0.5rem;
   margin: 10px 0;
   color: black;
 }
 
 .shapeButton {
-  padding: 8px 12px;
-  font-size: 0.7rem;
+  padding: 8px;
+  font-size: 0.5rem;
   border: none;
   border-radius: 5px;
   background-color: var(--button-bg-color);

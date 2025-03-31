@@ -205,10 +205,12 @@
   text-align: left;
   overflow: hidden;
   padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
 }
 .card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .cardImage {
@@ -220,21 +222,22 @@
 }
 
 .cardContent {
-  padding: 10px;
+  padding: 0 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 0;
 }
 
 .cardContent h3 {
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: bold;
   margin: 0;
   color: var(--text-color);
 }
 
 .cardContent .pages {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: var(--secondary-text-color);
 }
 
@@ -289,11 +292,12 @@
   padding: 10px;
   text-align: center;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
 }
 
 .authorCard:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .authorImage {
@@ -305,7 +309,7 @@
 }
 
 .authorCard h3 {
-  font-size: 1.5rem;
+  font-size: 1rem;
   margin-top: 5px;
   margin-bottom: 0;
   color: var(--text-color);

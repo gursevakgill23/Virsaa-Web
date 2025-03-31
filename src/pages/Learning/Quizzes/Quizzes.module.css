@@ -1,7 +1,7 @@
 
 /* Base Styles */
 .quizzContainer {
-  background-color: var(--background-color);
+  background-color: var(--section-bg-color);
   color: var(--text-color);
   min-height: 100vh;
   font-family: Arial, sans-serif;
