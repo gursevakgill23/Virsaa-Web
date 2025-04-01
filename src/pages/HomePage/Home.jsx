@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdPlayArrow } from "react-icons/md";
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
+import skeltonImage from '../../images/skelton-image.png';
 
 // Light mode images
 import slide1Light from '../../images/header-slide1.jpg';
@@ -25,6 +26,7 @@ import styles from './Home.module.css';
 
 const Home = ({ isDarkMode }) => {
   const [imageIndex, setImageIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const imageRefs = useRef([]);
   const navigate = useNavigate();
 
@@ -33,28 +35,39 @@ const Home = ({ isDarkMode }) => {
     return isDarkMode
       ? [slide1Dark, slide2Dark, slide3Dark]
       : [slide1Light, slide2Light, slide3Light];
-  }, [isDarkMode]); // Only recalculate when isDarkMode changes
+  }, [isDarkMode]);
 
+  useEffect(() => {
+    // Simulate loading for 2 seconds
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 4000);
+
+    return () => clearTimeout(loadingTimer);
+  }, []);
 
   // Function to change the image automatically
   useEffect(() => {
     const interval = setInterval(() => {
       setImageIndex((prevIndex) => (prevIndex + 1) % bgImages.length);
-    }, 5000); // Change image every 5 seconds
+    }, 3000);
 
-    // Cleanup interval on unmount or when dependencies change
     return () => clearInterval(interval);
-  }, [bgImages.length]); // Only depend on bgImages.length
+  }, [bgImages.length]);
 
   // Add animation on page load for book images
   useEffect(() => {
-    imageRefs.current.forEach((image, index) => {
-      setTimeout(() => {
-        image.style.opacity = 1;
-        image.style.transform = 'scale(1)';
-      }, index * 200); // Staggered animation delay
-    });
-  }, []);
+    if (!isLoading) {
+      imageRefs.current.forEach((image, index) => {
+        setTimeout(() => {
+          if (image) {
+            image.style.opacity = 1;
+            image.style.transform = 'scale(1)';
+          }
+        }, index * 200);
+      });
+    }
+  }, [isLoading]);
 
   const handleImageChange = (direction) => {
     if (direction === 'up') {
@@ -67,7 +80,6 @@ const Home = ({ isDarkMode }) => {
   const goToCollections = () => {
     navigate('/collections/ebooks');
   };
-
   const textContent = [
     {
       h1: 'Ebooks and Audiobooks',
@@ -199,20 +211,36 @@ const Home = ({ isDarkMode }) => {
       <div className={styles.exploreBooksSection}>
         <h2 className={styles.sectionTitle}>Explore Our Latest Books</h2>
         <div className={styles.booksGrid}>
-          {books.slice(0, 10).map((book, index) => (
-            <div key={book.id} className={styles.bookCard}>
-              <div className={styles.imageContainer}>
-                <img
-                  ref={(el) => (imageRefs.current[index] = el)}
-                  src={book.image}
-                  alt={book.name}
-                  className={styles.bookImage}
-                />
+          {isLoading ? (
+            // Skeleton loading state
+            Array(10).fill().map((_, index) => (
+              <div key={`skeleton-${index}`} className={styles.bookCardSkeleton}>
+                <div className={styles.skeletonImageContainer}>
+                  <div className={styles.skeletonImage}>
+                    <img src={skeltonImage} alt='Card skeleton' className={styles.skeletonImg} />
+                  </div>
+                </div>
+                <div className={styles.skeletonText}></div>
+                <div className={styles.skeletonTextSmall}></div>
               </div>
-              <h3 className={styles.bookName}>{book.name}</h3>
-              <p className={styles.writerName}>By {book.writer}</p>
-            </div>
-          ))}
+            ))
+          ) : (
+            // Actual book cards
+            books.slice(0, 10).map((book, index) => (
+              <div key={book.id} className={styles.bookCard}>
+                <div className={styles.imageContainer}>
+                  <img
+                    ref={(el) => (imageRefs.current[index] = el)}
+                    src={book.image}
+                    alt={book.name}
+                    className={styles.bookImage}
+                  />
+                </div>
+                <h3 className={styles.bookName}>{book.name}</h3>
+                <p className={styles.writerName}>By {book.writer}</p>
+              </div>
+            ))
+          )}
         </div>
         <button className={styles.allBooksButton} onClick={goToCollections}>
           All Books

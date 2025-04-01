@@ -1,26 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaCrown, FaSearch, FaFilter, FaTimes, FaPlayCircle, FaVideo, FaHeadphones } from 'react-icons/fa';
 import styles from './Gurbani.module.css';
-
-
-// Import images
-import header_image_light from '../../images/Gurbani/header-image.png'; // Light mode image
-import header_image_dark from '../../images/Gurbani/header-image-dark.png'; // Dark mode image
+import header_image_light from '../../images/Gurbani/header-image.png';
+import header_image_dark from '../../images/Gurbani/header-image-dark.png';
 import gurbaniImage from '../../images/Gurbani/gurbani.png';
 import audioKirtanImage from '../../images/Gurbani/audio-kirtan.jpg';
 import videoKirtanImage from '../../images/Gurbani/video-kirtan.jpg';
-import sectionImage from '../../images/Gurbani/section-image.jpg'; // Image for the new section
+import sectionImage from '../../images/Gurbani/section-image.jpg';
+import skeleton_image from '../../images/skelton-image.png';
 
 const Gurbani = ({ isDarkMode }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const [cardsPerPage] = useState(12);
 
- // Dummy data for Gurbani Shabad, Audio Kirtan, and Video Kirtan
- const gurbaniData = [
+  useEffect(() => {
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(loadingTimer);
+  }, []);
+
+// Dummy data for Gurbani Shabad, Audio Kirtan, and Video Kirtan
+const gurbaniData = [
   {
     id: 1,
     type: 'shabad',
@@ -182,8 +189,6 @@ const Gurbani = ({ isDarkMode }) => {
     isPremium: false,
   },
 ];
-
-  // Pagination logic
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
   const currentCards = gurbaniData.slice(indexOfFirstCard, indexOfLastCard);
@@ -212,7 +217,6 @@ const Gurbani = ({ isDarkMode }) => {
 
   return (
     <div className={styles.container}>
-      {/* Header Section */}
       <div className={styles.header}>
         <img
           src={isDarkMode ? header_image_dark : header_image_light}
@@ -225,13 +229,11 @@ const Gurbani = ({ isDarkMode }) => {
         </div>
       </div>
 
-      {/* Breadcrumb Section */}
       <div className={styles.breadcrumb}>
         <Link to={'/'}><span>Home</span></Link> / 
         <Link to={'/gurbani'}><span> Gurbani</span></Link>
       </div>
 
-      {/* Search Bar and Filters Section */}
       <div className={styles.searchFilterContainer}>
         <div className={styles.searchBar}>
           <input
@@ -252,7 +254,6 @@ const Gurbani = ({ isDarkMode }) => {
         </button>
       </div>
 
-      {/* Filters Sidebar */}
       {showFilters && (
         <div className={styles.filtersSidebar}>
           <button className={styles.closeButton} onClick={toggleFilters}>
@@ -310,91 +311,124 @@ const Gurbani = ({ isDarkMode }) => {
         </div>
       )}
 
-      {/* Main Content - Modern Cards */}
       <div className={styles.mainContent}>
-  <div className={styles.cardGrid}>
-    {currentCards.map((item) => (
-      <div key={item.id} className={styles.card}>
-        <div className={styles.cardGlass}>
-          <img src={item.image} alt={item.title} className={styles.cardImage} />
-          <h3 className={styles.cardTitle}>{item.title}</h3>
-          {item.isPremium && (
-            <div className={styles.premiumIcon}>
-              <FaCrown />
-            </div>
+        <div className={styles.cardGrid}>
+          {isLoading ? (
+            Array(cardsPerPage).fill().map((_, index) => (
+              <div key={`skeleton-${index}`} className={styles.card}>
+                <div className={styles.cardGlass}>
+                  <div className={styles.cardImageSkeleton}>
+                    <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
+                  </div>
+                  <div className={styles.skeletonTitle}></div>
+                  <div className={styles.skeletonPremium}></div>
+                  <div className={styles.skeletonHoverContent}>
+                    <div className={styles.skeletonButton}></div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            currentCards.map((item) => (
+              <div key={item.id} className={styles.card}>
+                <div className={styles.cardGlass}>
+                  <img src={item.image} alt={item.title} className={styles.cardImage} />
+                  <h3 className={styles.cardTitle}>{item.title}</h3>
+                  {item.isPremium && (
+                    <div className={styles.premiumIcon}>
+                      <FaCrown />
+                    </div>
+                  )}
+                  <div className={styles.cardHoverContent}>
+                    {item.type === 'shabad' && (
+                      <button className={styles.actionButton}>
+                        <FaPlayCircle /> Read Now
+                      </button>
+                    )}
+                    {item.type === 'audio' && (
+                      <button className={styles.actionButton}>
+                        <FaHeadphones /> Listen Now
+                      </button>
+                    )}
+                    {item.type === 'video' && (
+                      <button className={styles.actionButton}>
+                        <FaVideo /> Watch Now
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
           )}
-          {/* Hidden by default, shown on hover */}
-          <div className={styles.cardHoverContent}>
-            {item.type === 'shabad' && (
-              <button className={styles.actionButton}>
-                <FaPlayCircle /> Read Now
-              </button>
-            )}
-            {item.type === 'audio' && (
-              <button className={styles.actionButton}>
-                <FaHeadphones /> Listen Now
-              </button>
-            )}
-            {item.type === 'video' && (
-              <button className={styles.actionButton}>
-                <FaVideo /> Watch Now
-              </button>
-            )}
-          </div>
         </div>
-      </div>
-    ))}
-  </div>
 
-  {/* Pagination */}
-  <div className={styles.pagination}>
-    {Array.from({ length: Math.ceil(gurbaniData.length / cardsPerPage) }, (_, i) => (
-      <button
-        key={i + 1}
-        onClick={() => paginate(i + 1)}
-        className={currentPage === i + 1 ? styles.activePage : ''}
-      >
-        {i + 1}
-      </button>
-    ))}
-  </div>
-</div>
-
-      {/* New Section: Text + Button on Left, Image on Right */}
-      <div className={styles.sectionWithImage}>
-        <div className={styles.sectionText}>
-          <h2>Explore the Divine Wisdom</h2>
-          <p>Immerse yourself in the sacred hymns and teachings of Guru Granth Sahib Ji. Discover the essence of Gurbani and elevate your spiritual journey.</p>
-          <button className={styles.sectionButton}>Start Exploring</button>
-        </div>
-        <div className={styles.sectionImage}>
-          <img src={sectionImage} alt="Section" />
-        </div>
-      </div>
-
-  {/* Because You Watched Section */}
-  <div className={styles.becauseYouWatched}>
-  <h2 className={styles.sectionTitle}>Because You Viewed Rehraas Sahib</h2>
-  <div className={styles.shapeContainer}>
-    {currentCards.slice(0,6).map((item, index) => (
-      <div
-        key={item.id}
-        className={`${styles.shape} ${styles[`shape${index % 6}`]}`}
-        style={{ backgroundColor: item.bgColor }}
-      >
-        <div className={styles.shapeContent}>
-          <h3>{item.title}</h3>
-          <div className={styles.shapeHoverContent}>
-            <p>{item.description}</p>
-            <button className={styles.shapeButton}>
-              {item.type === 'shabad' ? 'Read Now' : item.type === 'audio' ? 'Listen Now' : 'Watch Now'}
+        <div className={styles.pagination}>
+          {Array.from({ length: Math.ceil(gurbaniData.length / cardsPerPage) }, (_, i) => (
+            <button
+              key={i + 1}
+              onClick={() => paginate(i + 1)}
+              className={currentPage === i + 1 ? styles.activePage : ''}
+            >
+              {i + 1}
             </button>
-          </div>
+          ))}
         </div>
       </div>
-    ))}
-  </div>
-</div>
+
+      <div className={styles.sectionWithImage}>
+        {isLoading ? (
+          <div className={styles.sectionTextSkeleton}>
+            <div className={styles.skeletonHeading}></div>
+            <div className={styles.skeletonParagraph}></div>
+            <div className={styles.skeletonSectionButton}></div>
+          </div>
+        ) : (
+          <div className={styles.sectionText}>
+            <h2>Explore the Divine Wisdom</h2>
+            <p>Immerse yourself in the sacred hymns and teachings of Guru Granth Sahib Ji. Discover the essence of Gurbani and elevate your spiritual journey.</p>
+            <button className={styles.sectionButton}>Start Exploring</button>
+          </div>
+        )}
+        {isLoading ? (
+          <div className={styles.sectionImageSkeleton}>
+            <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
+          </div>
+        ) : (
+          <div className={styles.sectionImage}>
+            <img src={sectionImage} alt="Section" />
+          </div>
+        )}
+      </div>
+
+      <div className={styles.becauseYouWatched}>
+        <h2 className={styles.sectionTitle}>Because You Viewed Rehraas Sahib</h2>
+        <div className={styles.shapeContainer}>
+          {isLoading ? (
+            Array(6).fill().map((_, index) => (
+              <div key={`shape-skeleton-${index}`} className={`${styles.shapeSkeleton} ${styles[`shape${index % 6}`]}`}>
+                <div className={styles.skeletonShapeContent}></div>
+              </div>
+            ))
+          ) : (
+            currentCards.slice(0,6).map((item, index) => (
+              <div
+                key={item.id}
+                className={`${styles.shape} ${styles[`shape${index % 6}`]}`}
+              >
+                <div className={styles.shapeContent}>
+                  <h3>{item.title}</h3>
+                  <div className={styles.shapeHoverContent}>
+                    <p>{item.description}</p>
+                    <button className={styles.shapeButton}>
+                      {item.type === 'shabad' ? 'Read Now' : item.type === 'audio' ? 'Listen Now' : 'Watch Now'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 };

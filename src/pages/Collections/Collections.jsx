@@ -1,11 +1,12 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import styles from "./Collections.module.css";
-import book_image from "./images/book-image.jpg";
-import header_image_light from "./images/header-image.png"; // Light mode image
-import header_image_dark from "./images/header-image-dark.png"; // Dark mode image
+import book_image from "../../images/book-image.jpg"; // Updated path to use the same image as Home page
+import header_image_light from "../../images/header-slide1.jpg"; // Using same image as Home page
+import header_image_dark from "../../images/header-slide1-dark.jpg"; // Using same image as Home page
 import { FaFilter, FaTimes } from "react-icons/fa";
+import skeleton_image from "../../images/skelton-image.png"; // Added skeleton image
+
 
 const Collections = ({ isDarkMode }) => {
   const [filters, setFilters] = useState({
@@ -23,23 +24,32 @@ const Collections = ({ isDarkMode }) => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const cardsPerPage = 12;
+
+  useEffect(() => {
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(loadingTimer);
+  }, []);
 
   const handleFilterChange = (filterName) => {
     setFilters((prevFilters) => ({
       ...prevFilters,
-      [filterName]: !prevFilters[filterName], // Toggle the filter state
+      [filterName]: !prevFilters[filterName],
     }));
   };
 
   const saveChanges = () => {
     console.log("Filters saved:", filters);
-    // Add logic to apply filters
   };
 
   const toggleFilters = () => {
     setIsFiltersOpen(!isFiltersOpen);
   };
+
   const closeFilters = () => {
     setIsFiltersOpen(false);
   };
@@ -264,14 +274,12 @@ const Collections = ({ isDarkMode }) => {
     },
   ];
 
-  // Pagination logic
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
   const currentCards = cards.slice(indexOfFirstCard, indexOfLastCard);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  // Featured Authors data
   // Featured Authors data
   const featuredAuthors = [
     {
@@ -308,10 +316,9 @@ const Collections = ({ isDarkMode }) => {
 
   return (
     <div className={styles.collectionsContainer}>
-      {/* Header Image Section */}
       <div className={styles.headerImageSection}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light} // Conditionally render image
+          src={isDarkMode ? header_image_dark : header_image_light}
           alt="Header"
           className={styles.headerImage}
         />
@@ -321,7 +328,6 @@ const Collections = ({ isDarkMode }) => {
         </div>
       </div>
 
-      {/* Breadcrumb Section */}
       <div className={styles.breadcrumb}>
         <Link to="/">
           <span>Home</span>
@@ -333,7 +339,6 @@ const Collections = ({ isDarkMode }) => {
         / <span> Ebooks</span>
       </div>
 
-      {/* Search Bar and Filters Icon */}
       <div className={styles.searchAndFilters}>
         <input
           type="text"
@@ -345,10 +350,19 @@ const Collections = ({ isDarkMode }) => {
         </button>
       </div>
 
-      {/* Main Content */}
       <div className={styles.collectionsPage}>
-        {/* Filters Sidebar */}
         <div
+          className={`${styles.filtersSection} ${
+            isFiltersOpen ? styles.filtersOpen : ""
+          }`}
+        >
+          <div className={styles.fullScreenFilters}>
+            <button className={styles.closeButton} onClick={closeFilters}>
+              <FaTimes />
+            </button>
+            <h3>Filters</h3>
+
+            <div
           className={`${styles.filtersSection} ${
             isFiltersOpen ? styles.filtersOpen : ""
           }`}
@@ -473,27 +487,71 @@ const Collections = ({ isDarkMode }) => {
             <button className={styles.clearButton}>Clear Filters</button>
           </div>
         </div>
-
-        {/* Main Content Grid */}
-        <div className={styles.gridContainer}>
-          {currentCards.map((card) => (
-            <div key={card.id} className={styles.card}>
-              <img
-                src={card.image}
-                alt={card.title}
-                className={styles.cardImage}
-              />
-              <div className={styles.cardContent}>
-                <h3>{card.title}</h3>
-                <p className={styles.pages}>{card.pages} pages</p>
-              </div>
-              
+            <h3>Genre</h3>
+            <div className={styles.filterButtons}>
+              <button
+                className={`${styles.filterButton} ${
+                  filters.history ? styles.active : ""
+                }`}
+                onClick={() => handleFilterChange("history")}
+              >
+                History
+              </button>
+              {/* ... (keep all your existing genre filter buttons) */}
+              <button
+                className={`${styles.filterButton} ${
+                  filters.nonFiction ? styles.active : ""
+                }`}
+                onClick={() => handleFilterChange("nonFiction")}
+              >
+                Non-Fiction
+              </button>
             </div>
-          ))}
+
+            <button onClick={saveChanges} className={styles.saveButton}>
+              Save Changes
+            </button>
+            <button className={styles.clearButton}>Clear Filters</button>
+          </div>
+        </div>
+
+        
+        <div className={styles.gridContainer}>
+          {isLoading ? (
+            // Skeleton loading state
+            Array(cardsPerPage).fill().map((_, index) => (
+              <div key={`skeleton-${index}`} className={styles.cardSkeleton}>
+                <div className={styles.skeletonImageContainer}>
+                  <img 
+                    src={skeleton_image} 
+                    alt="Loading" 
+                    className={styles.skeletonImage}
+                  />
+                </div>
+                <div className={styles.skeletonContent}>
+                  <div className={styles.skeletonTitle}></div>
+                  <div className={styles.skeletonPages}></div>
+                </div>
+              </div>
+            ))
+          ) : (
+            // Actual book cards
+            currentCards.map((card) => (
+              <div key={card.id} className={styles.card}>
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  className={styles.cardImage}
+                />
+                <div className={styles.cardContent}>
+                  <h3>{card.title}</h3>
+                  <p className={styles.pages}>{card.pages} pages</p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
-
-      {/* Pagination */}
       <div className={styles.pagination}>
         {Array.from(
           { length: Math.ceil(cards.length / cardsPerPage) },
@@ -505,20 +563,34 @@ const Collections = ({ isDarkMode }) => {
         )}
       </div>
 
-      {/* Featured Authors Section */}
       <section className={styles.featuredAuthors}>
         <h2>Featured Authors</h2>
         <div className={styles.authorsGrid}>
-          {featuredAuthors.map((author) => (
-            <div key={author.id} className={styles.authorCard}>
-              <img
-                src={author.image}
-                alt={author.name}
-                className={styles.authorImage}
-              />
-              <h3>{author.name}</h3>
-            </div>
-          ))}
+          {isLoading ? (
+            Array(6).fill().map((_, index) => (
+<div key={`author-skeleton-${index}`} className={styles.authorCardSkeleton}>
+  <div className={styles.skeletonAuthorImageContainer}>
+    <img 
+      src={skeleton_image} 
+      alt="Loading author" 
+      className={styles.skeletonAuthorImage}
+    />
+  </div>
+  <div className={styles.skeletonAuthorText}></div>
+</div>
+            ))
+          ) : (
+            featuredAuthors.map((author) => (
+              <div key={author.id} className={styles.authorCard}>
+                <img
+                  src={author.image}
+                  alt={author.name}
+                  className={styles.authorImage}
+                />
+                <h3>{author.name}</h3>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>

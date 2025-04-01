@@ -1,4 +1,3 @@
-/* General Styles */
 .container {
   margin: 0 auto;
   background-color: var(--section-bg-color);
@@ -6,7 +5,6 @@
   overflow-x: hidden;
 }
 
-/* Header Section */
 .header {
   position: relative;
   text-align: center;  
@@ -42,7 +40,6 @@
   text-align: left;
 }
 
-/* Breadcrumb */
 .breadcrumb {
   font-size: 1rem;
   background: var(--section-bg-color);
@@ -62,8 +59,6 @@ a {
   cursor: pointer;
 }
 
-
-/* Scrollable Images Section */
 .scrollableSection {
   display: flex;
   overflow-x: auto;
@@ -96,7 +91,6 @@ a {
   margin-top: 5px;
 }
 
-/* Sikh History Section */
 .sikhHistorysection {
   margin-bottom: 30px;
   padding: 2rem;
@@ -110,7 +104,6 @@ a {
   margin-top: 0;
 }
 
-/* Card Grid Section */
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -151,7 +144,8 @@ a {
   z-index: 1;
   margin-bottom: 20px;
 }
-.cardBody:hover{
+
+.cardBody:hover {
   border: 1px solid var(--button-hover-text-color);
 }
 
@@ -171,7 +165,6 @@ a {
   color: var(--secondary-text-color);
 }
 
-/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
@@ -201,7 +194,6 @@ a {
   cursor: pointer;
 }
 
-/* Recommended For You Section */
 .recommendedSection {
   margin: 0 auto;
   padding: 2rem;
@@ -239,7 +231,6 @@ a {
   text-align: center;
 }
 
-/* New Section: Most Inspiring in Sikhism */
 .inspiringSection {
   display: flex;
   align-items: center;
@@ -249,30 +240,32 @@ a {
   background-color: var(--background-color);
   border-radius: 10px;
 }
+
 .inspiringImageContainer {
   flex: 1;
-  overflow: hidden; /* Ensure the image doesn't overflow */
+  overflow: hidden;
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
 }
+
 .inspiringImage {
   width: 100%;
   height: 280px;
   border-radius: 10px;
-  object-fit: cover; /* Ensure the image covers the container */
+  object-fit: cover;
 }
-@keyframes  appear{
-  from{
-  opacity: 0;
-  scale:0.5;
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    scale: 0.5;
   }
-  to{
+  to {
     opacity: 1;
     scale: 1;
   }  
 }
-
 
 .inspiringContent {
   flex: 1;
@@ -306,35 +299,212 @@ a {
   border: 1px solid var(--button-hover-text-color);
 }
 
+/* Skeleton Loading Styles */
+.scrollableImageSkeleton {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: var(--skeleton-bg-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .inspiringSection {
-    flex-direction: column; /* Stack image and content vertically */
-    text-align: center;
+.scrollableTextSkeleton {
+  width: 80%;
+  height: 16px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 4px;
+  margin: 8px auto 0;
+}
+
+.cardImageSkeleton {
+  width: 100%;
+  height: 280px;
+  background-color: var(--skeleton-bg-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.cardBodySkeleton {
+  position: absolute;
+  top: 90%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  width: 80%;
+  background: var(--section-bg-color);
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.skeletonTitle {
+  width: 70%;
+  height: 20px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.skeletonDescription {
+  width: 90%;
+  height: 16px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.skeletonDate {
+  width: 50%;
+  height: 14px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 4px;
+}
+
+.inspiringImageContainerSkeleton {
+  flex: 1;
+  height: 280px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.skeletonHeading {
+  width: 60%;
+  height: 32px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.skeletonParagraph {
+  width: 100%;
+  height: 60px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.skeletonButton {
+  width: 120px;
+  height: 40px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 5px;
+}
+
+.recommendedImageSkeleton {
+  width: 100%;
+  height: 280px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.recommendedTitleSkeleton {
+  width: 80%;
+  height: 20px;
+  background-color: var(--skeleton-bg-color);
+  border-radius: 4px;
+  margin: 10px auto 0;
+}
+
+.skeletonImage {
+  width: 40%;
+  height: 40%;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+.scrollableImageSkeleton,
+.scrollableTextSkeleton,
+.cardImageSkeleton,
+.skeletonTitle,
+.skeletonDescription,
+.skeletonDate,
+.inspiringImageContainerSkeleton,
+.skeletonHeading,
+.skeletonParagraph,
+.skeletonButton,
+.recommendedImageSkeleton,
+.recommendedTitleSkeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.scrollableImageSkeleton::after,
+.scrollableTextSkeleton::after,
+.cardImageSkeleton::after,
+.skeletonTitle::after,
+.skeletonDescription::after,
+.skeletonDate::after,
+.inspiringImageContainerSkeleton::after,
+.skeletonHeading::after,
+.skeletonParagraph::after,
+.skeletonButton::after,
+.recommendedImageSkeleton::after,
+.recommendedTitleSkeleton::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-shine-color),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
   }
-
-  .inspiringContent {
-    align-items: center; /* Center-align content on smaller screens */
-  }
-
-  .inspiringContent h3 {
-    font-size: 1.5rem; /* Reduce font size for smaller screens */
-  }
-
-  .readNowButton {
-    width: 100%; /* Full-width button on smaller screens */
-    max-width: 200px; /* Limit button width */
+  100% {
+    transform: translateX(100%);
   }
 }
 
-@media (max-width: 576px) {
-  .inspiringContent h3 {
-    font-size: 1.25rem; /* Further reduce font size for very small screens */
-  }
+:root {
+  --skeleton-bg-color: #e0e0e0;
+  --skeleton-shine-color: rgba(255, 255, 255, 0.4);
+  --background-color: #ffffff;
+  --section-bg-color: #f9f9f9;
+  --text-color: #1a2a4f;
+  --headline-color: #1a2a4f;
+  --secondary-text-color: #555;
+  --button-bg-color: #1a2a4f;
+  --button-text-color: #ffffff;
+  --button-hover-bg-color: #ffffff;
+  --button-hover-text-color: #1a2a4f;
 }
 
-/* Responsive Design */
+[data-theme='dark'] {
+  --skeleton-bg-color: #3a2a34;
+  --skeleton-shine-color: rgba(255, 255, 255, 0.1);
+  --background-color: #1A0E16;
+  --section-bg-color: #1a0e16;
+  --text-color: #e0e0e0;
+  --headline-color: #e0e0e0;
+  --secondary-text-color: #b0b0b0;
+  --button-bg-color: #e0e0e0;
+  --button-text-color: #1a0e16;
+  --button-hover-bg-color: #1a0e16;
+  --button-hover-text-color: #e0e0e0;
+}
+
 @media (max-width: 1300px) {
   .cardGrid {
     grid-template-columns: repeat(4, 1fr);
@@ -369,21 +539,6 @@ a {
   .sikhHistoryHeading h1, .sectionTitle {
     font-size: 1.75rem;
   }
-}
-
-@media (max-width: 475px) {
-  .cardGrid {
-    grid-template-columns: repeat(1, 1fr);
-  }
-  .recommendedGrid {
-    grid-template-columns: repeat(1, 1fr);
-  }
-  .sikhHistoryHeading h1, .sectionTitle {
-    font-size: 1.5rem;
-  }
-}
-
-@media (max-width: 768px) {
   .headerTitle {
     font-size: 2.25rem;
     top: 38%;
@@ -393,10 +548,33 @@ a {
     font-size: 0.9rem;
     left: 8%;
   }
+  .inspiringSection {
+    flex-direction: column;
+    text-align: center;
+  }
+  .inspiringContent {
+    align-items: center;
+  }
+  .inspiringContent h3 {
+    font-size: 1.5rem;
+  }
+  .readNowButton {
+    width: 100%;
+    max-width: 200px;
+  }
 }
 
 @media (max-width: 576px) {
-  .header{
+  .cardGrid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .recommendedGrid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .sikhHistoryHeading h1, .sectionTitle {
+    font-size: 1.5rem;
+  }
+  .header {
     height: 300px;
   }
   .headerTitle {
@@ -413,7 +591,15 @@ a {
     height: 60px;
     width: 60px;
   }
-  .imageContainer {
-    height: 300px;
+  .inspiringContent h3 {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .loginButton,
+  .getPremiumButton {
+    padding: 4px 8px;
+    font-size: 0.65rem;
   }
 }

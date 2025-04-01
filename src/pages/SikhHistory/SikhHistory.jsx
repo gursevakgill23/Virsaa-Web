@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './SikhHistory.module.css';
-import header_image_light from '../../images/sikhHistory/header-image.png'; // Light mode image
-import header_image_dark from '../../images/sikhHistory/header-image-dark.png'; // Dark mode image
+import header_image_light from '../../images/sikhHistory/header-image.png';
+import header_image_dark from '../../images/sikhHistory/header-image-dark.png';
 import filter_image from '../../images/sikhHistory/filter_image.jpeg';
 import sikh_history from '../../images/sikhHistory/sikh_history1.jpg';
 import book_image from '../../images/book-image.jpg';
-import inspiring_image from '../../images/sikhHistory/inspiring.jpg'; // New image for the section
+import inspiring_image from '../../images/sikhHistory/inspiring.jpg';
+import skeleton_image from '../../images/skelton-image.png';
 import ComingSoon from '../../elements/ComingSoon/ComingSoon';
 
-// Dummy data for scrollable images
 const scrollableImages = [
   { id: 1, src: filter_image, text: 'Guru Nanak Dev Ji' },
   { id: 2, src: filter_image, text: 'Foundation of Sikhism' },
@@ -29,7 +29,6 @@ const scrollableImages = [
   { id: 16, src: filter_image, text: 'Youngest Guru' },
 ];
 
-// Dummy data for Sikh History cards
 const sikhHistoryData = [
   { id: 1, image: sikh_history, title: 'Guru Nanak Dev Ji', description: 'Founder of Sikhism', date: '1469 - 1539' },
   { id: 2, image: sikh_history, title: 'Guru Angad Dev Ji', description: 'Second Sikh Guru', date: '1504 - 1552' },
@@ -60,31 +59,42 @@ const recommendedItems = [
 
 const SikhHistory = ({ isDarkMode }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const cardsPerPage = 12;
+  const imageRefs = useRef([]);
 
-  // Pagination logic
+  useEffect(() => {
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(loadingTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      imageRefs.current.forEach((image, index) => {
+        setTimeout(() => {
+          if (image) {
+            image.style.opacity = 1;
+            image.style.transform = 'scale(1)';
+          }
+        }, index * 200);
+      });
+    }
+  }, [isLoading]);
+
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
   const currentCards = sikhHistoryData.slice(indexOfFirstCard, indexOfLastCard);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
-  const imageRefs = useRef([]);
-
-  useEffect(() => {
-    imageRefs.current.forEach((image, index) => {
-      setTimeout(() => {
-        image.style.opacity = 1;
-        image.style.transform = 'scale(1)';
-      }, index * 200); // Staggered animation delay
-    });
-  }, []);
 
   return (
     <div className={styles.container}>
-      {/* Header Section */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light} // Conditionally render image
+          src={isDarkMode ? header_image_dark : header_image_light}
           alt="Sikh History Header"
           className={styles.headerImage}
         />
@@ -92,44 +102,73 @@ const SikhHistory = ({ isDarkMode }) => {
         <p className={styles.headerText}>Explore Sikh history: timeless teachings, inspiring legacy, and profound wisdom for all.</p>
       </div>
 
-      {/* Breadcrumb */}
       <div className={styles.breadcrumb}>
         <Link to={'/'}><span>Home</span></Link> / 
         <Link to={'/sikh-history'}><span> Sikh History</span></Link>
       </div>
 
-      {/* Scrollable Images Section */}
       <div className={styles.scrollableSection}>
-        {scrollableImages.map((item) => (
-          <div key={item.id} className={styles.scrollableItem}>
-            <img src={item.src} alt={item.text} className={styles.scrollableImage} />
-            <p className={styles.scrollableText}>{item.text}</p>
-          </div>
-        ))}
+        {isLoading ? (
+          Array(16).fill().map((_, index) => (
+            <div key={`scroll-skeleton-${index}`} className={styles.scrollableItem}>
+              <div className={styles.scrollableImageSkeleton}>
+                <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
+              </div>
+              <div className={styles.scrollableTextSkeleton}></div>
+            </div>
+          ))
+        ) : (
+          scrollableImages.map((item) => (
+            <div key={item.id} className={styles.scrollableItem}>
+              <img src={item.src} alt={item.text} className={styles.scrollableImage} />
+              <p className={styles.scrollableText}>{item.text}</p>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Sikh History Section */}
       <section className={styles.sikhHistorysection}>
         <div className={styles.sikhHistoryHeading}>
           <h1>Explore Sikh History : Roots Of Sikhism</h1>
         </div>
         <div className={styles.cardGrid}>
-          {currentCards.map((card) => (
-            <div key={card.id} className={styles.card}>
-              <div className={styles.cardImageContainer}>
-                <img src={card.image} alt={card.title} className={styles.cardImage} />
-                <div className={styles.cardBody}>
-                  <h3 className={styles.cardTitle}>{card.title}</h3>
-                  <p className={styles.cardDescription}>{card.description}</p>
-                  <p className={styles.cardDate}>{card.date}</p>
+          {isLoading ? (
+            Array(cardsPerPage).fill().map((_, index) => (
+              <div key={`history-skeleton-${index}`} className={styles.card}>
+                <div className={styles.cardImageContainer}>
+                  <div className={styles.cardImageSkeleton}>
+                    <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
+                  </div>
+                  <div className={styles.cardBodySkeleton}>
+                    <div className={styles.skeletonTitle}></div>
+                    <div className={styles.skeletonDescription}></div>
+                    <div className={styles.skeletonDate}></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            currentCards.map((card, index) => (
+              <div key={card.id} className={styles.card}>
+                <div className={styles.cardImageContainer}>
+                  <img 
+                    ref={(el) => (imageRefs.current[index] = el)}
+                    src={card.image} 
+                    alt={card.title} 
+                    className={styles.cardImage} 
+                  />
+                  <div className={styles.cardBody}>
+                    <h3 className={styles.cardTitle}>{card.title}</h3>
+                    <p className={styles.cardDescription}>{card.description}</p>
+                    <p className={styles.cardDate}>{card.date}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
-      {/* Pagination */}
       <div className={styles.pagination}>
         {Array.from({ length: Math.ceil(sikhHistoryData.length / cardsPerPage) }, (_, i) => (
           <button
@@ -142,28 +181,53 @@ const SikhHistory = ({ isDarkMode }) => {
         ))}
       </div>
 
-      {/* New Section: Most Inspiring in Sikhism */}
       <div className={styles.inspiringSection}>
-        <div className={styles.inspiringImageContainer}>
-          <img src={inspiring_image} alt="Most Inspiring in Sikhism" className={styles.inspiringImage} />
-        </div>
+        {isLoading ? (
+          <div className={styles.inspiringImageContainerSkeleton}>
+            <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
+          </div>
+        ) : (
+          <div className={styles.inspiringImageContainer}>
+            <img src={inspiring_image} alt="Most Inspiring in Sikhism" className={styles.inspiringImage} />
+          </div>
+        )}
         <div className={styles.inspiringContent}>
-          <h3>Most Inspiring in Sikhism</h3>
-          <p>Discover the most inspiring stories, quotes, and lessons from the Sikh religion. Whether you're a beginner or a seasoned scholar, this resource will help you deepen your understanding of the divine teachings.</p>
-          <button className={styles.readNowButton}>Read Now</button>
+          {isLoading ? (
+            <>
+              <div className={styles.skeletonHeading}></div>
+              <div className={styles.skeletonParagraph}></div>
+              <div className={styles.skeletonButton}></div>
+            </>
+          ) : (
+            <>
+              <h3>Most Inspiring in Sikhism</h3>
+              <p>Discover the most inspiring stories, quotes, and lessons from the Sikh religion.</p>
+              <button className={styles.readNowButton}>Read Now</button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Recommended For You Section */}
       <div className={styles.recommendedSection}>
         <h2 className={styles.sectionTitle}>Recommended For You</h2>
         <div className={styles.recommendedGrid}>
-          {recommendedItems.map((item) => (
-            <div key={item.id} className={styles.recommendedCard}>
-              <img src={item.image} alt={item.title} className={styles.recommendedImage} />
-              <h3 className={styles.recommendedTitle}>{item.title}</h3>
-            </div>
-          ))}
+          {isLoading ? (
+            Array(10).fill().map((_, index) => (
+              <div key={`recommended-skeleton-${index}`} className={styles.recommendedCard}>
+                <div className={styles.recommendedImageSkeleton}>
+                  <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
+                </div>
+                <div className={styles.recommendedTitleSkeleton}></div>
+              </div>
+            ))
+          ) : (
+            recommendedItems.map((item) => (
+              <div key={item.id} className={styles.recommendedCard}>
+                <img src={item.image} alt={item.title} className={styles.recommendedImage} />
+                <h3 className={styles.recommendedTitle}>{item.title}</h3>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
