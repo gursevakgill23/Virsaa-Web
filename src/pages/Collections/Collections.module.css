@@ -246,6 +246,7 @@
   transform-style: preserve-3d;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   animation: appear linear;
+  padding: 10px;
   animation-timeline: view();
   animation-range: entry 0;
 }

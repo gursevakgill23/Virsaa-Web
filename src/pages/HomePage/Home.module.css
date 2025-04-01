@@ -257,6 +257,7 @@
 /* Skeleton Loading Styles */
 /* Skeleton Loading Styles */
 .bookCardSkeleton {
+  padding: 10px;
   overflow: hidden;
   transform-style: preserve-3d;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
