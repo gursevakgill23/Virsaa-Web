@@ -5,7 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar/Navbar';
 import Sidebar from './components/Sidebar/Sidebar';
 import Home from './pages/HomePage/Home';
-import Collections from './pages/Collections/Collections';
+import Collections from './pages/Collection/Collections';
 import Loader from './components/Loader';
 import { CssBaseline } from '@mui/material';
 import Footer from './components/Footer/Footer';
@@ -22,7 +22,7 @@ import Cookies from 'js-cookie';
 import News from './pages/News/News';
 import About from './pages/About/About';
 import Quizzes from './pages/Learning/Quizzes/Quizzes';
-import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
+import EbookDetail from './pages/Collection/EbookDetail/EbookDetail';
 
 // Define your API base URL
 const API_STRING = "http://localhost:5118";
