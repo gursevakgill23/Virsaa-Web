@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate,Link } from 'react-router-dom';
 import { MdPlayArrow } from "react-icons/md";
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
 import skeltonImage from '../../images/skelton-image.png';
@@ -227,6 +227,7 @@ const Home = ({ isDarkMode }) => {
           ) : (
             // Actual book cards
             books.slice(0, 10).map((book, index) => (
+              <Link to={`/collections/ebooks/ebook/${book.id}`} key={book.id}>
               <div key={book.id} className={styles.bookCard}>
                 <div className={styles.imageContainer}>
                   <img
@@ -239,6 +240,7 @@ const Home = ({ isDarkMode }) => {
                 <h3 className={styles.bookName}>{book.name}</h3>
                 <p className={styles.writerName}>By {book.writer}</p>
               </div>
+              </Link>
             ))
           )}
         </div>
@@ -290,6 +292,7 @@ const Home = ({ isDarkMode }) => {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Listen, Learn, And Play</h2>
         <div className={styles.cardContainer}>
+          <Link to={'/collections'}>
           <div className={styles.card}>
             <div className={styles.cardImage}>
               <img src={audiobooks_kirtan} alt="Audiobooks and Kirtan" />
@@ -299,6 +302,8 @@ const Home = ({ isDarkMode }) => {
               </div>
             </div>
           </div>
+          </Link>
+          <Link to={'/learning'}>
           <div className={styles.card}>
             <div className={styles.cardImage}>
               <img src={learning_resources} alt="Learning Resources" />
@@ -308,6 +313,8 @@ const Home = ({ isDarkMode }) => {
               </div>
             </div>
           </div>
+          </Link>
+          <Link to={'/learning'}>
           <div className={styles.card}>
             <div className={styles.cardImage}>
               <img src={games_quizzes} alt="Games and Quizzes" />
@@ -317,7 +324,9 @@ const Home = ({ isDarkMode }) => {
               </div>
             </div>
           </div>
+          </Link>
           <div className={styles.card}>
+          <Link to={'/sikh-history'}>
             <div className={styles.cardImage}>
               <img src={sikh_history} alt="Sikh History" />
               <div className={styles.cardOverlay}>
@@ -325,8 +334,10 @@ const Home = ({ isDarkMode }) => {
                 <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
               </div>
             </div>
+            </Link>
           </div>
           <div className={styles.card}>
+          <Link to={'/news'}>
             <div className={styles.cardImage}>
               <img src={recent_news} alt="Recent News" />
               <div className={styles.cardOverlay}>
@@ -334,8 +345,11 @@ const Home = ({ isDarkMode }) => {
                 <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
               </div>
             </div>
+            </Link>
+
           </div>
           <div className={styles.card}>
+          <Link to={'/gurbani'}>
             <div className={styles.cardImage}>
               <img src={gurbani} alt="Gurbani" />
               <div className={styles.cardOverlay}>
@@ -343,6 +357,7 @@ const Home = ({ isDarkMode }) => {
                 <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
               </div>
             </div>
+            </Link>
           </div>
         </div>
       </section>

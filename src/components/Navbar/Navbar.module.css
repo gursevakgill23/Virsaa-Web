@@ -135,7 +135,7 @@
   padding: 50px 20px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   position: absolute;
-  top: 50px;
+  top: 0;
   left: 0;
   bottom: 0;
   z-index: 1000;

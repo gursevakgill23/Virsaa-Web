@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar/Navbar';
 import Sidebar from './components/Sidebar/Sidebar';
 import Home from './pages/HomePage/Home';
@@ -20,6 +22,10 @@ import Cookies from 'js-cookie';
 import News from './pages/News/News';
 import About from './pages/About/About';
 import Quizzes from './pages/Learning/Quizzes/Quizzes';
+import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
+
+// Define your API base URL
+const API_STRING = "http://localhost:5118";
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -61,32 +67,59 @@ const App = () => {
   return (
     <Router>
       <CssBaseline />
+      {/* ToastContainer should be placed here at the root level */}
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={isDarkMode ? "dark" : "light"}
+      />
+      
       {isLoading ? (
         <Loader onLoadingComplete={handleLoadingComplete} />
       ) : (
         <>
-          <Navbar toggleSidebar={toggleSidebar} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-          <Sidebar open={isSidebarOpen} closeSidebar={closeSidebar} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+          <Navbar 
+            toggleSidebar={toggleSidebar} 
+            isDarkMode={isDarkMode} 
+            toggleTheme={toggleTheme} 
+            apiString={API_STRING}
+          />
+          <Sidebar 
+            open={isSidebarOpen} 
+            closeSidebar={closeSidebar} 
+            isDarkMode={isDarkMode} 
+            toggleTheme={toggleTheme} 
+            apiString={API_STRING}
+          />
           <Routes>
-            <Route path="/" element={<Home isDarkMode={isDarkMode} />} />
-            <Route path="/home" element={<Home isDarkMode={isDarkMode} />} />
-            <Route path="/collections/ebooks" element={<Collections isDarkMode={isDarkMode} />} />
-            <Route path="/collections/audiobooks" element={<Collections isDarkMode={isDarkMode} />} />
-            <Route path="/collections/authors" element={<Collections isDarkMode={isDarkMode} />} />
-            <Route path="/sikh-history" element={<SikhHistory isDarkMode={isDarkMode} />} />
-            <Route path="/gurbani" element={<Gurbani isDarkMode={isDarkMode} />} />
-            <Route path="/learning" element={<Learning isDarkMode={isDarkMode} />} />
-            <Route path="/login" element={<Login isDarkMode={isDarkMode} />} />
-            <Route path="/signup" element={<Signup isDarkMode={isDarkMode} />} />
-            <Route path="/membership" element={<Membership isDarkMode={isDarkMode} />} />
-            <Route path="/gurdwara-access" element={<GurdwaraAccess isDarkMode={isDarkMode} />} />
-            <Route path="/news" element={<News isDarkMode={isDarkMode} />} />
-            <Route path="/about" element={<About isDarkMode={isDarkMode} />} />
-            <Route path="/quizzes/:id" element={<Quizzes isDarkMode={isDarkMode} />} />
+            <Route path="/" element={<Home isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/home" element={<Home isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/collections" element={<Collections isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/collections/ebooks" element={<Collections isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/collections/audiobooks" element={<Collections isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/collections/authors" element={<Collections isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/sikh-history" element={<SikhHistory isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/gurbani" element={<Gurbani isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/learning" element={<Learning isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/login" element={<Login isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/signup" element={<Signup isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/membership" element={<Membership isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/gurdwara-access" element={<GurdwaraAccess isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/news" element={<News isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/about" element={<About isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/quizzes/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/collections/ebooks/ebook/:id" element={<EbookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
 
           </Routes>
-          <Footer isDarkMode={isDarkMode} />
-          <GurdwaraAccessButton isDarkMode={isDarkMode} />
+          <Footer isDarkMode={isDarkMode} apiString={API_STRING} />
+          <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />
         </>
       )}
     </Router>

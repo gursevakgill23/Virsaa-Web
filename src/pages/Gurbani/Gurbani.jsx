@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaCrown, FaSearch, FaFilter, FaTimes, FaPlayCircle, FaVideo, FaHeadphones } from 'react-icons/fa';
+import { FaCrown, FaSearch, FaFilter, FaTimes, FaPlayCircle, FaVideo, FaHeadphones, FaLock } from 'react-icons/fa';
 import styles from './Gurbani.module.css';
 import header_image_light from '../../images/Gurbani/header-image.png';
 import header_image_dark from '../../images/Gurbani/header-image-dark.png';
@@ -16,7 +17,7 @@ const Gurbani = ({ isDarkMode }) => {
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [cardsPerPage] = useState(12);
+  const [cardsPerPage] = useState(10);
 
   useEffect(() => {
     const loadingTimer = setTimeout(() => {
@@ -26,169 +27,169 @@ const Gurbani = ({ isDarkMode }) => {
     return () => clearTimeout(loadingTimer);
   }, []);
 
-// Dummy data for Gurbani Shabad, Audio Kirtan, and Video Kirtan
-const gurbaniData = [
-  {
-    id: 1,
-    type: 'shabad',
-    image: gurbaniImage,
-    title: 'Shabad 1',
-    description: 'This is a description of the first shabad.',
-    isPremium: true,
-  },
-  {
-    id: 2,
-    type: 'audio',
-    image: audioKirtanImage,
-    title: 'Anand Sahib',
-    description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.',
-    isPremium: false,
-  },
-  {
-    id: 3,
-    type: 'video',
-    image: videoKirtanImage,
-    title: 'Rehras Sahib',
-    description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.',
-    isPremium: true,
-  },
-  {
-    id: 4,
-    type: 'shabad',
-    image: gurbaniImage,
-    title: 'Shabad 2',
-    description: 'This is a description of the second shabad.',
-    isPremium: false,
-  },
-  {
-    id: 5,
-    type: 'audio',
-    image: audioKirtanImage,
-    title: 'Japji Sahib',
-    description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.',
-    isPremium: true,
-  },
-  {
-    id: 6,
-    type: 'video',
-    image: videoKirtanImage,
-    title: 'Kirtan Sohila',
-    description: 'Enjoy the peaceful Kirtan Sohila by Bhai Jarnail Singh.',
-    isPremium: false,
-  },
-  {
-    id: 7,
-    type: 'shabad',
-    image: gurbaniImage,
-    title: 'Shabad 3',
-    description: 'This is a description of the third shabad.',
-    isPremium: true,
-  },
-  {
-    id: 8,
-    type: 'audio',
-    image: audioKirtanImage,
-    title: 'Rehras Sahib',
-    description: 'Meditate with the soothing Rehras Sahib by Bhai Balbir Singh.',
-    isPremium: false,
-  },
-  {
-    id: 9,
-    type: 'video',
-    image: videoKirtanImage,
-    title: 'Asa Di Var',
-    description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.',
-    isPremium: true,
-  },
-  {
-    id: 10,
-    type: 'shabad',
-    image: gurbaniImage,
-    title: 'Shabad 4',
-    description: 'This is a description of the fourth shabad.',
-    isPremium: false,
-  },
-  {
-    id: 11,
-    type: 'audio',
-    image: audioKirtanImage,
-    title: 'Sukhmani Sahib',
-    description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.',
-    isPremium: true,
-  },
-  {
-    id: 12,
-    type: 'video',
-    image: videoKirtanImage,
-    title: 'Japji Sahib',
-    description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.',
-    isPremium: false,
-  },
-  {
-    id: 13,
-    type: 'shabad',
-    image: gurbaniImage,
-    title: 'Shabad 5',
-    description: 'This is a description of the fifth shabad.',
-    isPremium: true,
-  },
-  {
-    id: 14,
-    type: 'audio',
-    image: audioKirtanImage,
-    title: 'Anand Sahib',
-    description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.',
-    isPremium: false,
-  },
-  {
-    id: 15,
-    type: 'video',
-    image: videoKirtanImage,
-    title: 'Rehras Sahib',
-    description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.',
-    isPremium: true,
-  },
-  {
-    id: 16,
-    type: 'shabad',
-    image: gurbaniImage,
-    title: 'Shabad 6',
-    description: 'This is a description of the sixth shabad.',
-    isPremium: false,
-  },
-  {
-    id: 17,
-    type: 'audio',
-    image: audioKirtanImage,
-    title: 'Kirtan Sohila',
-    description: 'End your day with the peaceful Kirtan Sohila by Bhai Jarnail Singh.',
-    isPremium: true,
-  },
-  {
-    id: 18,
-    type: 'video',
-    image: videoKirtanImage,
-    title: 'Asa Di Var',
-    description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.',
-    isPremium: false,
-  },
-  {
-    id: 19,
-    type: 'shabad',
-    image: gurbaniImage,
-    title: 'Shabad 7',
-    description: 'This is a description of the seventh shabad.',
-    isPremium: true,
-  },
-  {
-    id: 20,
-    type: 'audio',
-    image: audioKirtanImage,
-    title: 'Sukhmani Sahib',
-    description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.',
-    isPremium: false,
-  },
-];
+  const gurbaniData = [
+    {
+      id: 1,
+      type: 'shabad',
+      image: gurbaniImage,
+      title: 'Shabad 1',
+      description: 'This is a description of the first shabad.',
+      isPremium: true,
+    },
+    {
+      id: 2,
+      type: 'audio',
+      image: audioKirtanImage,
+      title: 'Anand Sahib',
+      description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.',
+      isPremium: false,
+    },
+    {
+      id: 3,
+      type: 'video',
+      image: videoKirtanImage,
+      title: 'Rehras Sahib',
+      description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.',
+      isPremium: true,
+    },
+    {
+      id: 4,
+      type: 'shabad',
+      image: gurbaniImage,
+      title: 'Shabad 2',
+      description: 'This is a description of the second shabad.',
+      isPremium: false,
+    },
+    {
+      id: 5,
+      type: 'audio',
+      image: audioKirtanImage,
+      title: 'Japji Sahib',
+      description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.',
+      isPremium: true,
+    },
+    {
+      id: 6,
+      type: 'video',
+      image: videoKirtanImage,
+      title: 'Kirtan Sohila',
+      description: 'Enjoy the peaceful Kirtan Sohila by Bhai Jarnail Singh.',
+      isPremium: false,
+    },
+    {
+      id: 7,
+      type: 'shabad',
+      image: gurbaniImage,
+      title: 'Shabad 3',
+      description: 'This is a description of the third shabad.',
+      isPremium: true,
+    },
+    {
+      id: 8,
+      type: 'audio',
+      image: audioKirtanImage,
+      title: 'Rehras Sahib',
+      description: 'Meditate with the soothing Rehras Sahib by Bhai Balbir Singh.',
+      isPremium: false,
+    },
+    {
+      id: 9,
+      type: 'video',
+      image: videoKirtanImage,
+      title: 'Asa Di Var',
+      description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.',
+      isPremium: true,
+    },
+    {
+      id: 10,
+      type: 'shabad',
+      image: gurbaniImage,
+      title: 'Shabad 4',
+      description: 'This is a description of the fourth shabad.',
+      isPremium: false,
+    },
+    {
+      id: 11,
+      type: 'audio',
+      image: audioKirtanImage,
+      title: 'Sukhmani Sahib',
+      description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.',
+      isPremium: true,
+    },
+    {
+      id: 12,
+      type: 'video',
+      image: videoKirtanImage,
+      title: 'Japji Sahib',
+      description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.',
+      isPremium: false,
+    },
+    {
+      id: 13,
+      type: 'shabad',
+      image: gurbaniImage,
+      title: 'Shabad 5',
+      description: 'This is a description of the fifth shabad.',
+      isPremium: true,
+    },
+    {
+      id: 14,
+      type: 'audio',
+      image: audioKirtanImage,
+      title: 'Anand Sahib',
+      description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.',
+      isPremium: false,
+    },
+    {
+      id: 15,
+      type: 'video',
+      image: videoKirtanImage,
+      title: 'Rehras Sahib',
+      description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.',
+      isPremium: true,
+    },
+    {
+      id: 16,
+      type: 'shabad',
+      image: gurbaniImage,
+      title: 'Shabad 6',
+      description: 'This is a description of the sixth shabad.',
+      isPremium: false,
+    },
+    {
+      id: 17,
+      type: 'audio',
+      image: audioKirtanImage,
+      title: 'Kirtan Sohila',
+      description: 'End your day with the peaceful Kirtan Sohila by Bhai Jarnail Singh.',
+      isPremium: true,
+    },
+    {
+      id: 18,
+      type: 'video',
+      image: videoKirtanImage,
+      title: 'Asa Di Var',
+      description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.',
+      isPremium: false,
+    },
+    {
+      id: 19,
+      type: 'shabad',
+      image: gurbaniImage,
+      title: 'Shabad 7',
+      description: 'This is a description of the seventh shabad.',
+      isPremium: true,
+    },
+    {
+      id: 20,
+      type: 'audio',
+      image: audioKirtanImage,
+      title: 'Sukhmani Sahib',
+      description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.',
+      isPremium: false,
+    },
+  ];
+
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
   const currentCards = gurbaniData.slice(indexOfFirstCard, indexOfLastCard);
@@ -217,6 +218,7 @@ const gurbaniData = [
 
   return (
     <div className={styles.container}>
+      {/* Header Section - remains unchanged */}
       <div className={styles.header}>
         <img
           src={isDarkMode ? header_image_dark : header_image_light}
@@ -229,11 +231,13 @@ const gurbaniData = [
         </div>
       </div>
 
+      {/* Breadcrumb - remains unchanged */}
       <div className={styles.breadcrumb}>
         <Link to={'/'}><span>Home</span></Link> / 
         <Link to={'/gurbani'}><span> Gurbani</span></Link>
       </div>
 
+      {/* Search and Filter - remains unchanged */}
       <div className={styles.searchFilterContainer}>
         <div className={styles.searchBar}>
           <input
@@ -254,6 +258,7 @@ const gurbaniData = [
         </button>
       </div>
 
+      {/* Filters Sidebar - remains unchanged */}
       {showFilters && (
         <div className={styles.filtersSidebar}>
           <button className={styles.closeButton} onClick={toggleFilters}>
@@ -311,6 +316,7 @@ const gurbaniData = [
         </div>
       )}
 
+      {/* Main Content - Updated card rendering */}
       <div className={styles.mainContent}>
         <div className={styles.cardGrid}>
           {isLoading ? (
@@ -330,29 +336,40 @@ const gurbaniData = [
             ))
           ) : (
             currentCards.map((item) => (
-              <div key={item.id} className={styles.card}>
-                <div className={styles.cardGlass}>
+              <div key={item.id} className={`${styles.card} ${item.isPremium ? styles.premiumCard : ''}`}>
+                <div className={`${styles.cardGlass} ${item.isPremium ? styles.premiumGlass : ''}`}>
+                  {item.isPremium && (
+                    <>
+                      <div className={styles.premiumRibbon}>Premium</div>
+                    </>
+                  )}
                   <img src={item.image} alt={item.title} className={styles.cardImage} />
                   <h3 className={styles.cardTitle}>{item.title}</h3>
                   {item.isPremium && (
-                    <div className={styles.premiumIcon}>
+                    <div className={styles.premiumBadge}>
                       <FaCrown />
                     </div>
                   )}
                   <div className={styles.cardHoverContent}>
+                    {item.isPremium && (
+                      <div className={styles.premiumLock}>
+                        <FaLock />
+                        <span>Premium Content</span>
+                      </div>
+                    )}
                     {item.type === 'shabad' && (
-                      <button className={styles.actionButton}>
-                        <FaPlayCircle /> Read Now
+                      <button className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}>
+                        <FaPlayCircle /> {item.isPremium ? 'Unlock to Read' : 'Read Now'}
                       </button>
                     )}
                     {item.type === 'audio' && (
-                      <button className={styles.actionButton}>
-                        <FaHeadphones /> Listen Now
+                      <button className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}>
+                        <FaHeadphones /> {item.isPremium ? 'Unlock to Listen' : 'Listen Now'}
                       </button>
                     )}
                     {item.type === 'video' && (
-                      <button className={styles.actionButton}>
-                        <FaVideo /> Watch Now
+                      <button className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}>
+                        <FaVideo /> {item.isPremium ? 'Unlock to Watch' : 'Watch Now'}
                       </button>
                     )}
                   </div>
@@ -362,6 +379,7 @@ const gurbaniData = [
           )}
         </div>
 
+        {/* Pagination - remains unchanged */}
         <div className={styles.pagination}>
           {Array.from({ length: Math.ceil(gurbaniData.length / cardsPerPage) }, (_, i) => (
             <button
@@ -375,6 +393,7 @@ const gurbaniData = [
         </div>
       </div>
 
+      {/* Section with Image - remains unchanged */}
       <div className={styles.sectionWithImage}>
         {isLoading ? (
           <div className={styles.sectionTextSkeleton}>
@@ -400,6 +419,7 @@ const gurbaniData = [
         )}
       </div>
 
+      {/* Because You Watched - remains unchanged */}
       <div className={styles.becauseYouWatched}>
         <h2 className={styles.sectionTitle}>Because You Viewed Rehraas Sahib</h2>
         <div className={styles.shapeContainer}>
@@ -413,13 +433,14 @@ const gurbaniData = [
             currentCards.slice(0,6).map((item, index) => (
               <div
                 key={item.id}
-                className={`${styles.shape} ${styles[`shape${index % 6}`]}`}
+                className={`${styles.shape} ${styles[`shape${index % 6}`]} ${item.isPremium ? styles.premiumShape : ''}`}
               >
+                {item.isPremium && <div className={styles.shapePremiumBadge}><FaCrown /></div>}
                 <div className={styles.shapeContent}>
                   <h3>{item.title}</h3>
                   <div className={styles.shapeHoverContent}>
                     <p>{item.description}</p>
-                    <button className={styles.shapeButton}>
+                    <button className={`${styles.shapeButton} ${item.isPremium ? styles.premiumShapeButton : ''}`}>
                       {item.type === 'shabad' ? 'Read Now' : item.type === 'audio' ? 'Listen Now' : 'Watch Now'}
                     </button>
                   </div>

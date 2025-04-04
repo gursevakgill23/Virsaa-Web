@@ -238,7 +238,7 @@ a {
 }
 
 .dots:hover {
-  color: var(--button-hover-bg-color);
+  opacity: 0.3;
 }
 
 .dropdownContent {

@@ -23,6 +23,8 @@
     "react-loader-spinner": "^5.4.5",
     "react-router-dom": "^7.2.0",
     "react-scripts": "^5.0.1",
+    "react-toast": "^1.0.3",
+    "react-toastify": "^11.0.5",
     "react-tsparticles": "^2.12.2",
     "react-typed": "^2.0.12",
     "swiper": "^11.2.6",

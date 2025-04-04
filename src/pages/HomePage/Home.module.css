@@ -189,7 +189,6 @@
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
-
 }
 .imageContainer {
   width: 100%;
@@ -254,8 +253,7 @@
   border: 1px solid var(--button-hover-text-color);
 }
 
-/* Skeleton Loading Styles */
-/* Skeleton Loading Styles */
+/* Skeleton Loading Styles with Shimmer Effect */
 .bookCardSkeleton {
   padding: 10px;
   overflow: hidden;
@@ -292,9 +290,33 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  opacity: 0.2; /* Make the skeleton image slightly transparent */
+  opacity: 0.2;
 }
 
+/* Shimmer Effect */
+.skeletonShimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-shine-color),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
 
 .skeletonText {
   width: 80%;
@@ -303,6 +325,22 @@
   position: relative;
   margin: 10px auto;
   overflow: hidden;
+}
+
+.skeletonText::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-shine-color),
+    transparent
+  );
+  animation: shimmer 2s infinite;
 }
 
 .skeletonTextSmall {
@@ -314,8 +352,37 @@
   margin: 0 auto;
   margin-bottom: 10px;
 }
+.skeletonImageContainer::after{
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-shine-color),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
 
-
+.skeletonTextSmall::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-shine-color),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
 
 /* Heritage Section */
 .heritageSection {
@@ -363,7 +430,6 @@
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
-
 }
 
 .heritageItem {
@@ -549,7 +615,6 @@
   --secondary-text-color: #555;
   --skeleton-bg-color: #e0e0e0;
   --skeleton-shine-color: rgba(255, 255, 255, 0.4);
-
 }
 
 [data-theme='dark'] {

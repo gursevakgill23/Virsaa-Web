@@ -185,10 +185,10 @@
 .loginButton {
   color: var(--button-text-color);
   background-color: var(--button-bg-color);
-  padding: 0.8rem 1.5rem;
+  padding: 8px 15px;
   border: none;
   border-radius: 5px;
-  font-size: 1rem;
+  font-size: 15px;
   cursor: pointer;
   text-decoration: none;
 }
@@ -235,6 +235,34 @@
     background-color: var(--button-bg-color);
     color: var(--button-text-color);
   }
+}
+/* Error styles */
+.errorInput {
+  border-color: #ff4444 !important;
+}
+
+.errorMessage {
+  color: #ff4444;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  padding: 0.25rem;
+  background-color: rgba(255, 68, 68, 0.1);
+  border-radius: 4px;
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 1292px) {
@@ -317,6 +345,7 @@
   align-items: center;
   gap: 0.5rem;
 }
+
 
 /* Responsive Design for Cards */
 @media (max-width:1200px) {

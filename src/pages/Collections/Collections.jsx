@@ -1,20 +1,38 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import styles from "./Collections.module.css";
-import book_image from "../../images/book-image.jpg"; // Updated path to use the same image as Home page
-import header_image_light from "../../images/header-slide1.jpg"; // Using same image as Home page
-import header_image_dark from "../../images/header-slide1-dark.jpg"; // Using same image as Home page
+import book_image from "../../images/Collections/book-image.jpg";
+import header_image_light from "../../images/Collections/header-image.png";
+import header_image_dark from "../../images/Collections/header-image-dark.png";
 import { FaFilter, FaTimes } from "react-icons/fa";
-import skeleton_image from "../../images/skelton-image.png"; // Added skeleton image
-
+import skeleton_image from "../../images/skelton-image.png";
 
 const Collections = ({ isDarkMode }) => {
+  const location = useLocation();
+  const pathSegments = location.pathname.split('/').filter(segment => segment);
+  const currentSection = pathSegments.length > 1 ? pathSegments[1] : 'ebooks';
+  
+  const getHeaderSubtitle = () => {
+    switch(currentSection) {
+      case 'ebooks':
+        return 'Ebooks';
+      case 'audiobooks':
+        return 'Audiobooks';
+      case 'authors':
+        return 'Authors';
+      default:
+        return 'Ebooks';
+    }
+  };
+
   const [filters, setFilters] = useState({
     title: false,
     highRatings: false,
     lessRatings: false,
     author: false,
+    dateAdded: false,
     hasAudiobook: false,
+    premiumOnly: false,
     history: false,
     novel: false,
     biography: false,
@@ -44,6 +62,7 @@ const Collections = ({ isDarkMode }) => {
 
   const saveChanges = () => {
     console.log("Filters saved:", filters);
+    setIsFiltersOpen(false);
   };
 
   const toggleFilters = () => {
@@ -52,6 +71,23 @@ const Collections = ({ isDarkMode }) => {
 
   const closeFilters = () => {
     setIsFiltersOpen(false);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      title: false,
+      highRatings: false,
+      lessRatings: false,
+      author: false,
+      dateAdded: false,
+      hasAudiobook: false,
+      premiumOnly: false,
+      history: false,
+      novel: false,
+      biography: false,
+      fiction: false,
+      nonFiction: false,
+    });
   };
 
   // Dummy data for Punjabi books
@@ -273,12 +309,110 @@ const Collections = ({ isDarkMode }) => {
       pages: 250,
     },
   ];
+  
+  // Trending Ebooks data
+  const trendingEbooks = [
+    {
+      id: 101,
+      title: "Punjab Di Kahani",
+      author: "Sant Singh Sekhon",
+      rating: 4.6,
+      image: book_image,
+      pages: 280,
+    },
+    {
+      id: 102,
+      title: "Loona",
+      author: "Shiv Kumar Batalvi",
+      rating: 4.8,
+      image: book_image,
+      pages: 320,
+    },
+    {
+      id: 103,
+      title: "Punjabi Lok Dhara",
+      author: "Devinder Satyarthi",
+      rating: 4.4,
+      image: book_image,
+      pages: 250,
+    },
+    {
+      id: 104,
+      title: "Sadda Pind",
+      author: "Gurdial Singh",
+      rating: 4.7,
+      image: book_image,
+      pages: 350,
+    },
+    {
+      id: 105,
+      title: "Ik Si Anita",
+      author: "Nanak Singh",
+      rating: 4.5,
+      image: book_image,
+      pages: 280,
+    },
+    {
+      id: 106,
+      title: "Heer Waris Shah",
+      author: "Waris Shah",
+      rating: 4.9,
+      image: book_image,
+      pages: 200,
+    },
+  ];
 
-  const indexOfLastCard = currentPage * cardsPerPage;
-  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentCards = cards.slice(indexOfFirstCard, indexOfLastCard);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // Audiobooks data
+  const audiobooks = [
+    {
+      id: 201,
+      title: "Punjab Di Kahani",
+      author: "Sant Singh Sekhon",
+      rating: 4.7,
+      image: book_image,
+      duration: "5h 20m",
+    },
+    {
+      id: 202,
+      title: "Loona",
+      author: "Shiv Kumar Batalvi",
+      rating: 4.9,
+      image: book_image,
+      duration: "6h 15m",
+    },
+    {
+      id: 203,
+      title: "Sadda Pind",
+      author: "Gurdial Singh",
+      rating: 4.6,
+      image: book_image,
+      duration: "7h 30m",
+    },
+    {
+      id: 204,
+      title: "Heer Waris Shah",
+      author: "Waris Shah",
+      rating: 4.8,
+      image: book_image,
+      duration: "4h 45m",
+    },
+    {
+      id: 205,
+      title: "Ik Si Anita",
+      author: "Nanak Singh",
+      rating: 4.5,
+      image: book_image,
+      duration: "5h 10m",
+    },
+    {
+      id: 206,
+      title: "Punjabi Lok Dhara",
+      author: "Devinder Satyarthi",
+      rating: 4.4,
+      image: book_image,
+      duration: "4h 20m",
+    },
+  ];
 
   // Featured Authors data
   const featuredAuthors = [
@@ -314,6 +448,24 @@ const Collections = ({ isDarkMode }) => {
     },
   ];
 
+  // Apply filters
+  const filteredCards = cards.filter((card) => {
+    if (filters.history && card.genre !== "History") return false;
+    if (filters.novel && card.genre !== "Novel") return false;
+    if (filters.biography && card.genre !== "Biography") return false;
+    if (filters.fiction && card.genre !== "Fiction") return false;
+    if (filters.nonFiction && card.genre !== "Non-Fiction") return false;
+    if (filters.highRatings && card.rating < 4) return false;
+    if (filters.lessRatings && card.rating >= 3) return false;
+    return true;
+  });
+
+  const indexOfLastCard = currentPage * cardsPerPage;
+  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
+  const currentCards = filteredCards.slice(indexOfFirstCard, indexOfLastCard);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   return (
     <div className={styles.collectionsContainer}>
       <div className={styles.headerImageSection}>
@@ -324,7 +476,7 @@ const Collections = ({ isDarkMode }) => {
         />
         <div className={styles.headerText}>
           <h1>COLLECTIONS</h1>
-          <p>EBOOKS</p>
+          <p>{getHeaderSubtitle()}</p>
         </div>
       </div>
 
@@ -336,7 +488,7 @@ const Collections = ({ isDarkMode }) => {
         <Link to="/collections">
           <span> Collections</span>
         </Link>{" "}
-        / <span> Ebooks</span>
+        / <span> {getHeaderSubtitle()}</span>
       </div>
 
       <div className={styles.searchAndFilters}>
@@ -351,6 +503,7 @@ const Collections = ({ isDarkMode }) => {
       </div>
 
       <div className={styles.collectionsPage}>
+        {/* Filters Section */}
         <div
           className={`${styles.filtersSection} ${
             isFiltersOpen ? styles.filtersOpen : ""
@@ -362,19 +515,6 @@ const Collections = ({ isDarkMode }) => {
             </button>
             <h3>Filters</h3>
 
-            <div
-          className={`${styles.filtersSection} ${
-            isFiltersOpen ? styles.filtersOpen : ""
-          }`}
-        >
-          <div className={styles.fullScreenFilters}>
-            {/* Close Button */}
-            <button className={styles.closeButton} onClick={closeFilters}>
-              <FaTimes />
-            </button>
-            <h3>Filters</h3>
-
-            {/* Basic Filters */}
             <div className={styles.filterButtons}>
               <button
                 className={`${styles.filterButton} ${
@@ -434,7 +574,6 @@ const Collections = ({ isDarkMode }) => {
               </button>
             </div>
 
-            {/* Genre Filters */}
             <h3>Genre</h3>
             <div className={styles.filterButtons}>
               <button
@@ -479,46 +618,18 @@ const Collections = ({ isDarkMode }) => {
               </button>
             </div>
 
-            {/* Save Changes Button */}
             <button onClick={saveChanges} className={styles.saveButton}>
               Save Changes
             </button>
-            {/* Clear Filters Button */}
-            <button className={styles.clearButton}>Clear Filters</button>
-          </div>
-        </div>
-            <h3>Genre</h3>
-            <div className={styles.filterButtons}>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.history ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("history")}
-              >
-                History
-              </button>
-              {/* ... (keep all your existing genre filter buttons) */}
-              <button
-                className={`${styles.filterButton} ${
-                  filters.nonFiction ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("nonFiction")}
-              >
-                Non-Fiction
-              </button>
-            </div>
-
-            <button onClick={saveChanges} className={styles.saveButton}>
-              Save Changes
+            <button onClick={clearFilters} className={styles.clearButton}>
+              Clear Filters
             </button>
-            <button className={styles.clearButton}>Clear Filters</button>
           </div>
         </div>
 
-        
+        {/* Books Grid */}
         <div className={styles.gridContainer}>
           {isLoading ? (
-            // Skeleton loading state
             Array(cardsPerPage).fill().map((_, index) => (
               <div key={`skeleton-${index}`} className={styles.cardSkeleton}>
                 <div className={styles.skeletonImageContainer}>
@@ -535,49 +646,57 @@ const Collections = ({ isDarkMode }) => {
               </div>
             ))
           ) : (
-            // Actual book cards
             currentCards.map((card) => (
-              <div key={card.id} className={styles.card}>
-                <img
-                  src={card.image}
-                  alt={card.title}
-                  className={styles.cardImage}
-                />
-                <div className={styles.cardContent}>
-                  <h3>{card.title}</h3>
-                  <p className={styles.pages}>{card.pages} pages</p>
+              <Link to={`/collections/ebooks/ebook/${card.id}`} key={card.id}>
+                <div className={styles.card}>
+                  <img
+                    src={card.image}
+                    alt={card.title}
+                    className={styles.cardImage}
+                  />
+                  <div className={styles.cardContent}>
+                    <h3>{card.title}</h3>
+                    <p className={styles.pages}>{card.pages} pages</p>
+                  </div>
                 </div>
-              </div>
+              </Link>
             ))
           )}
         </div>
-      </div>
-      <div className={styles.pagination}>
-        {Array.from(
-          { length: Math.ceil(cards.length / cardsPerPage) },
-          (_, i) => (
-            <button key={i + 1} onClick={() => paginate(i + 1)}>
-              {i + 1}
-            </button>
-          )
-        )}
+
+        {/* Pagination */}
+        <div className={styles.pagination}>
+          {Array.from(
+            { length: Math.ceil(filteredCards.length / cardsPerPage) },
+            (_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => paginate(i + 1)}
+                className={currentPage === i + 1 ? styles.activePage : ""}
+              >
+                {i + 1}
+              </button>
+            )
+          )}
+        </div>
       </div>
 
+      {/* Featured Authors Section */}
       <section className={styles.featuredAuthors}>
         <h2>Featured Authors</h2>
         <div className={styles.authorsGrid}>
           {isLoading ? (
             Array(6).fill().map((_, index) => (
-<div key={`author-skeleton-${index}`} className={styles.authorCardSkeleton}>
-  <div className={styles.skeletonAuthorImageContainer}>
-    <img 
-      src={skeleton_image} 
-      alt="Loading author" 
-      className={styles.skeletonAuthorImage}
-    />
-  </div>
-  <div className={styles.skeletonAuthorText}></div>
-</div>
+              <div key={`author-skeleton-${index}`} className={styles.authorCardSkeleton}>
+                <div className={styles.skeletonAuthorImageContainer}>
+                  <img 
+                    src={skeleton_image} 
+                    alt="Loading author" 
+                    className={styles.skeletonAuthorImage}
+                  />
+                </div>
+                <div className={styles.skeletonAuthorText}></div>
+              </div>
             ))
           ) : (
             featuredAuthors.map((author) => (
@@ -589,6 +708,80 @@ const Collections = ({ isDarkMode }) => {
                 />
                 <h3>{author.name}</h3>
               </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* Trending Ebooks Section */}
+      <section className={styles.trendingSection}>
+        <h2>Trending Ebooks</h2>
+        <div className={styles.trendingGrid}>
+          {isLoading ? (
+            Array(6).fill().map((_, index) => (
+              <div key={`trending-skeleton-${index}`} className={styles.trendingCardSkeleton}>
+                <div className={styles.skeletonTrendingImageContainer}>
+                  <img 
+                    src={skeleton_image} 
+                    alt="Loading trending" 
+                    className={styles.skeletonTrendingImage}
+                  />
+                </div>
+                <div className={styles.skeletonTrendingText}></div>
+              </div>
+            ))
+          ) : (
+            trendingEbooks.map((ebook) => (
+              <Link to={`/collections/ebooks/ebook/${ebook.id}`} key={ebook.id}>
+                <div className={styles.trendingCard}>
+                  <img
+                    src={ebook.image}
+                    alt={ebook.title}
+                    className={styles.trendingImage}
+                  />
+                  <div className={styles.trendingContent}>
+                    <h3>{ebook.title}</h3>
+                    <p className={styles.pages}>{ebook.pages} pages</p>
+                  </div>
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* Audiobooks Section */}
+      <section className={styles.audiobooksSection}>
+        <h2>Latest Audiobooks</h2>
+        <div className={styles.audiobooksGrid}>
+          {isLoading ? (
+            Array(6).fill().map((_, index) => (
+              <div key={`audiobook-skeleton-${index}`} className={styles.audiobookCardSkeleton}>
+                <div className={styles.skeletonAudiobookImageContainer}>
+                  <img 
+                    src={skeleton_image} 
+                    alt="Loading audiobook" 
+                    className={styles.skeletonAudiobookImage}
+                  />
+                </div>
+                <div className={styles.skeletonAudiobookText}></div>
+              </div>
+            ))
+          ) : (
+            audiobooks.map((audiobook) => (
+              <Link to={`/collections/audiobooks/audiobook/${audiobook.id}`} key={audiobook.id}>
+                <div className={styles.audiobookCard}>
+                  <img
+                    src={audiobook.image}
+                    alt={audiobook.title}
+                    className={styles.audiobookImage}
+                  />
+                  <div className={styles.audiobookContent}>
+                    <h3>{audiobook.title}</h3>
+                    <p className={styles.duration}>{audiobook.duration}</p>
+                  </div>
+                </div>
+              </Link>
             ))
           )}
         </div>

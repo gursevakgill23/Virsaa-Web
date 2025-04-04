@@ -281,7 +281,6 @@ a {
   }
 }
 
-
 @media (max-width: 768px) {
   .searchText {
     display: none;
@@ -411,9 +410,115 @@ a {
 }
 
 .card:hover {
-  transform: translateY(-10px) scale(1.05); /* Move up and scale slightly */
+  transform: translateY(-10px) scale(1.05);
   box-shadow: 0 8px 16px rgba(250, 250, 250, 0.2);
-  z-index: 10; /* Bring the card forward */
+  z-index: 10;
+}
+
+/* Premium Card Styles */
+.premiumCard {
+  position: relative;
+  overflow: visible;
+}
+
+.premiumGlass {
+  background: 
+    linear-gradient(135deg, rgba(255,215,0,0.05) 0%, rgba(255,215,0,0.1) 100%),
+    var(--card-bg-color);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 30px rgba(255, 215, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.premiumGlass::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255,215,0,0.05) 10px,
+      rgba(255,215,0,0.05) 20px
+    );
+  z-index: 1;
+  animation: rotate 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.premiumRibbon {
+  position: absolute;
+  top: 10px;
+  right: -10px;
+  background: linear-gradient(135deg, #FFD700, #D4AF37);
+  color: #000;
+  padding: 5px 15px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  z-index: 2;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 10px 50%);
+}
+
+.premiumBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: linear-gradient(135deg, #FFD700, #D4AF37);
+  color: #000;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.premiumLock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #FFD700;
+  padding: 8px 15px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  z-index: 3;
+  backdrop-filter: blur(5px);
+}
+
+.premiumButton {
+  background: linear-gradient(135deg, #FFD700, #D4AF37);
+  color: #000 !important;
+  font-weight: bold;
+}
+
+.premiumButton:hover {
+  background: linear-gradient(135deg, #D4AF37, #FFD700);
+  color: #000 !important;
+  border: 1px solid #000 !important;
 }
 
 .cardGlass {
@@ -422,7 +527,7 @@ a {
   border-radius: 10px;
   padding: 10px;
   transition: all 0.3s ease;
-  height: 100%; /* Ensure the card expands fully */
+  height: 100%;
 }
 
 .cardImage {
@@ -440,23 +545,14 @@ a {
   transition: all 0.3s ease;
 }
 
-.premiumIcon {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  color: gold;
-  font-size: 20px;
-}
-
-/* Hidden by default, shown on hover */
 .cardHoverContent {
   opacity: 0;
   height: 0;
   overflow: hidden;
   transition: all 0.3s ease;
   display: flex;
-  justify-content: center; /* Center the button horizontally */
-  align-items: center; /* Center the button vertically */
+  justify-content: center;
+  align-items: center;
 }
 
 .card:hover .cardHoverContent {
@@ -466,7 +562,7 @@ a {
 }
 
 .actionButton {
-  padding: 8px ;
+  padding: 8px;
   font-size: 0.75rem;
   border: none;
   border-radius: 5px;
@@ -485,18 +581,18 @@ a {
   border: 1px solid var(--button-bg-color);
 }
 
-/* Expand card on hover */
 .card:hover .cardGlass {
-  height: auto; /* Allow the card to expand */
+  height: auto;
 }
 
 .card:hover .cardImage {
-  height: 220px; /* Increase image height on hover */
+  height: 220px;
 }
 
 .card:hover .cardTitle {
-  font-size: 1rem; /* Increase title font size on hover */
+  font-size: 1rem;
 }
+
 /* Pagination */
 .pagination {
   display: flex;
@@ -535,10 +631,6 @@ a {
   background: var(--card-bg-color);
   backdrop-filter: blur(10px);
   margin: 0;
-  /* animation: appear linear;
-  animation-timeline: view();
-  animation-range: entry 0; */
-
 }
 
 .sectionText {
@@ -551,7 +643,6 @@ a {
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
-
 }
 
 .sectionText h2 {
@@ -587,25 +678,25 @@ a {
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
-
 }
-@keyframes  appear{
-  from{
-  opacity: 0;
-  scale:0.5
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    scale: 0.5
   }
-  to{
+  to {
     opacity: 1;
     scale: 1;
   }  
 }
-
 
 .sectionImage img {
   width: 100%;
   height: 300px;
   border-radius: 10px;
 }
+
 /* Because You Watched Section */
 .becauseYouWatched {
   padding: 2rem;
@@ -621,41 +712,72 @@ a {
   margin-bottom: 2rem;
 }
 
+/* Premium Shape Styles */
+.premiumShape {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.shapePremiumBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #FFD700, #D4AF37);
+  color: #000;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.premiumShapeButton {
+  background: linear-gradient(135deg, #FFD700, #D4AF37);
+  color: #000 !important;
+}
+
+.premiumShapeButton:hover {
+  background: linear-gradient(135deg, #D4AF37, #FFD700);
+  color: #000 !important;
+  border: 1px solid #000 !important;
+}
+
 /* Shape Container */
 .shapeContainer {
   display: grid;
-  gap: 20px; /* Space between shapes */
+  gap: 20px;
   padding: 20px;
-  position: relative; /* Required for z-index to work */
-  overflow: visible; /* Allow shapes to overflow */
+  position: relative;
+  overflow: visible;
 }
 
-/* Responsive Grid Layout */
 .shapeContainer {
-  grid-template-columns: repeat(6, 1fr); /* 6 shapes in a row for full width */
+  grid-template-columns: repeat(6, 1fr);
 }
 
 @media (max-width: 1200px) {
   .shapeContainer {
-    grid-template-columns: repeat(4, 1fr); /* 4 shapes in a row */
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 @media (max-width: 992px) {
   .shapeContainer {
-    grid-template-columns: repeat(3, 1fr); /* 3 shapes in a row */
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 768px) {
   .shapeContainer {
-    grid-template-columns: repeat(2, 1fr); /* 2 shapes in a row */
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 445px) {
   .shapeContainer {
-    grid-template-columns: repeat(1, 1fr); /* 1 shape in a row */
+    grid-template-columns: repeat(1, 1fr);
   }
 }
 
@@ -670,21 +792,20 @@ a {
   cursor: pointer;
   padding: 20px;
   box-sizing: border-box;
-  transform-style: preserve-3d; /* Enable 3D effects */
-  perspective: 1000px; /* Add perspective for 3D */
-  opacity: 0.9; /* Slight transparency */
-  margin: 0 auto; /* Center the shape */
-  width: 100%; /* Use 100% width */
-  height: 200px; /* Initial height */
-  aspect-ratio: 1 / 1; /* Maintain aspect ratio */
+  transform-style: preserve-3d;
+  perspective: 1000px;
+  opacity: 0.9;
+  margin: 0 auto;
+  width: 100%;
+  height: 200px;
+  aspect-ratio: 1 / 1;
 }
 
 .shapeContent {
   text-align: center;
   transition: all 0.5s ease;
-  backface-visibility: hidden; /* Hide the backface for 3D effects */
-  overflow: visible; /* Allow shapes to overflow */
-
+  backface-visibility: hidden;
+  overflow: visible;
 }
 
 .shapeContent h3 {
@@ -703,7 +824,7 @@ a {
   align-items: center;
   overflow: hidden;
   transition: all 0.5s ease;
-  transform: translateZ(20px); /* Bring content forward in 3D space */
+  transform: translateZ(20px);
 }
 
 .shape:hover .shapeHoverContent {
@@ -736,48 +857,42 @@ a {
 
 /* Different Shapes with Unique Background Colors */
 .shape0 {
-  /* Circle */
   border-radius: 50%;
-  background: linear-gradient(135deg, #ff5900, #ee0979); /* Warm Sunset Blend */
+  background: linear-gradient(135deg, #ff5900, #ee0979);
 }
 
 .shape1 {
-  /* Square */
   border-radius: 10px;
-  background: linear-gradient(135deg, #6a11cb, #2575fc); /* Purple to Blue */
+  background: linear-gradient(135deg, #6a11cb, #2575fc);
 }
 
 .shape2 {
-  /* Pentagon */
   clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
-  background: linear-gradient(135deg, #674bf6, #fa3e48); /* Deep Purple Blend */
+  background: linear-gradient(135deg, #674bf6, #fa3e48);
 }
 
 .shape3 {
-  /* Rectangle */
   aspect-ratio: 4 / 2;
-  background: linear-gradient(135deg, #f90359, #5b8af8); /* Soft Pink to Peach */
+  background: linear-gradient(135deg, #f90359, #5b8af8);
 }
 
 .shape4 {
-  /* Hexagon */
   clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-  background: linear-gradient(135deg, #ff0141, #00f2fe); /* Cool Blue Gradient */
+  background: linear-gradient(135deg, #ff0141, #00f2fe);
 }
 
 .shape5 {
-  /* Diamond */
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  background: linear-gradient(135deg, #ff5900, #ee0979); /* Warm Sunset Blend */
+  background: linear-gradient(135deg, #ff5900, #ee0979);
 }
 
-/* Hover Effects */
 .shape:hover {
-  transform: scale(1.2); /* Scale up the shape */
-  opacity: 1; /* Remove transparency on hover */
-  z-index: 10; /* Bring the hovered shape to the front */
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); /* Add shadow for depth */
+  transform: scale(1.2);
+  opacity: 1;
+  z-index: 10;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
+
 /* Responsive Design */
 @media (max-width: 1200px) {
   .cardGrid {
@@ -818,7 +933,7 @@ a {
     max-width: 100%;
     margin-top: 2rem;
   }
-  .sectionTitle{
+  .sectionTitle {
     font: 1.75rem;
   }
 }
@@ -830,7 +945,7 @@ a {
   .headerText h1 {
     font-size: 1.5rem;
   }
-  .header{
+  .header {
     height: 300px;
   }
   .headerText p {

@@ -199,10 +199,10 @@
 .signupButton {
   color: var(--button-text-color);
   background-color: var(--button-bg-color);
-  padding: 0.8rem 1.5rem;
+  padding: 8px 15px;
   border: none;
   border-radius: 5px;
-  font-size: 1rem;
+  font-size: 15px;
   cursor: pointer;
   text-decoration: none;
 }
@@ -242,7 +242,7 @@
     color: var(--text-color);
   }
   .signupButton {
-    padding: 0.5rem 0.8rem;
+    padding: 8px 15px;
     font-size: 15px;
     background-color: var(--button-bg-color);
     color: var(--button-text-color);
