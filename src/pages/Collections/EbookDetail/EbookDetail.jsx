@@ -5,8 +5,8 @@ import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 
 import skeletonImage from '../../../images/skelton-image.png';
-import header_image_dark from '../../../images/EbookDetail/header-image-dark.png';
-import header_image_light from '../../../images/EbookDetail/header-image.png';
+import header_image_dark from '../../../images/sikhHistory/header-image-dark.png';
+import header_image_light from '../../../images/sikhHistory/header-image.png';
 import styles from './EbookDetail.module.css';
 import bookImage from '../../../images/book-image.jpg';
 
