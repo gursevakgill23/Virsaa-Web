@@ -5,10 +5,10 @@ import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 
 import skeletonImage from '../../images/skelton-image.png';
-import header_image_dark from '../../images/Collections/header-image-dark.png';
-import header_image_light from '../../images/Collections/header-image.png';
+import header_image_dark from '../../images/Details/header-image-dark.png';
+import header_image_light from '../../images/Details/header-image.png';
 import styles from './EbookDetail.module.css';
-import bookImage from '../../images/book-image.jpg';
+import bookImage from '../../images/Details/book-image.jpg';
 
 const EbookDetail = ({ isDarkMode }) => {
   const { id } = useParams();

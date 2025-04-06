@@ -4,10 +4,10 @@ import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLe
 import { Link } from 'react-router-dom';
 
 import skeletonImage from '../../images/skelton-image.png';
-import header_image_dark from '../../images/Collections/header-image-dark.png';
-import header_image_light from '../../images/Collections/header-image.png';
+import header_image_dark from '../../images/Details/header-image-dark.png';
+import header_image_light from '../../images/Details/header-image.png';
 import styles from './AuthorDetail.module.css';
-import authorImage from '../../images/Collections/author-image.jpg';
+import authorImage from '../../images/Details/author-image.jpg';
 
 const AuthorDetail = ({ isDarkMode }) => {
   const { id } = useParams();
