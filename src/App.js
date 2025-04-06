@@ -5,7 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar/Navbar';
 import Sidebar from './components/Sidebar/Sidebar';
 import Home from './pages/HomePage/Home';
-import Collections from './pages/Collection/Collections';
+import Collections from './pages/Collections/Collections';
 import Loader from './components/Loader';
 import { CssBaseline } from '@mui/material';
 import Footer from './components/Footer/Footer';
@@ -22,7 +22,8 @@ import Cookies from 'js-cookie';
 import News from './pages/News/News';
 import About from './pages/About/About';
 import Quizzes from './pages/Learning/Quizzes/Quizzes';
-import EbookDetail from './pages/Collection/EbookDetail/EbookDetail';
+import EbookDetail from './pages/EbookDetail/EbookDetail';
+import AuthorDetail from './pages/AuthorDetail/AuthorDetail';
 
 // Define your API base URL
 const API_STRING = "http://localhost:5118";
@@ -116,7 +117,7 @@ const App = () => {
             <Route path="/about" element={<About isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/quizzes/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/ebooks/ebook/:id" element={<EbookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
-
+            <Route path="/collections/authors/author/:id" element={<AuthorDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
           </Routes>
           <Footer isDarkMode={isDarkMode} apiString={API_STRING} />
           <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />

@@ -4,11 +4,11 @@ import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLe
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 
-import skeletonImage from '../../../images/skelton-image.png';
-import header_image_dark from '../../../images/Collections/header-image-dark.png';
-import header_image_light from '../../../images/Collections/header-image.png';
+import skeletonImage from '../../images/skelton-image.png';
+import header_image_dark from '../../images/Collections/header-image-dark.png';
+import header_image_light from '../../images/Collections/header-image.png';
 import styles from './EbookDetail.module.css';
-import bookImage from '../../../images/book-image.jpg';
+import bookImage from '../../images/book-image.jpg';
 
 const EbookDetail = ({ isDarkMode }) => {
   const { id } = useParams();
@@ -542,8 +542,10 @@ const RelatedCardSkeleton = () => {
       <div className={styles.skeletonRelatedImageContainer}>
         <img src={skeletonImage} alt="Loading" className={styles.skeletonImg} />
       </div>
+      <div className={styles.relatedCardText}>
       <div className={styles.skeletonRelatedTitle}></div>
       <div className={styles.skeletonRelatedAuthor}></div>
+      </div>
     </div>
   );
 };
