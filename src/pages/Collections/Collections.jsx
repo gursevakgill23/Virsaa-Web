@@ -700,18 +700,23 @@ const Collections = ({ isDarkMode }) => {
             ))
           ) : (
             featuredAuthors.map((author) => (
-              <div key={author.id} className={styles.authorCard}>
+              <Link 
+                to={`/collections/authors/author/${author.id}`} 
+                key={author.id} 
+                className={styles.authorCard}
+              >
                 <img
                   src={author.image}
                   alt={author.name}
                   className={styles.authorImage}
                 />
                 <h3>{author.name}</h3>
-              </div>
+              </Link>
             ))
           )}
         </div>
       </section>
+
 
       {/* Trending Ebooks Section */}
       <section className={styles.trendingSection}>
