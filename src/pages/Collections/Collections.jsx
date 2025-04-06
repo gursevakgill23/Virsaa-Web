@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import styles from "./Collections.module.css";
 import book_image from "../../images/book-image.jpg";
-import header_image_light from "../../images/collections/header-image.png";
+import header_image_light from "../../images/collections/book-image.png";
 import header_image_dark from "../../images/collections/header-image-dark.png";
 import { FaFilter, FaTimes } from "react-icons/fa";
 import skeleton_image from "../../images/skelton-image.png";
