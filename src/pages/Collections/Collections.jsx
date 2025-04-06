@@ -1,17 +1,41 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import styles from "./Collections.module.css";
-import book_image from "../../images/Collections/book-image.jpg";
-import header_image_light from "../../images/Collections/header-image-light.png";
-import header_image_dark from "../../images/Collections/header-image-dark.png";
 import { FaFilter, FaTimes } from "react-icons/fa";
-import skeleton_image from "../../images/skelton-image.png";
+
+// Utility function to handle production image paths
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 
 const Collections = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(segment => segment);
   const currentSection = pathSegments.length > 1 ? pathSegments[1] : 'ebooks';
   
+  // Image paths - now using public folder
+  const header_image_light = "/images/Collections/header-image-light.png";
+  const header_image_dark = "/images/Collections/header-image-dark.png";
+  const book_image = "/images/Collections/book-image.jpg";
+  const skeleton_image = "/images/skelton-image.png";
+
   const getHeaderSubtitle = () => {
     switch(currentSection) {
       case 'ebooks':
@@ -91,362 +115,69 @@ const Collections = ({ isDarkMode }) => {
   };
 
   // Dummy data for Punjabi books
-  const cards = [
-    {
-      id: 1,
-      title: "Punjab Diyan Lok Kathavan",
-      author: "Sohan Singh Sital",
-      rating: 4.5,
-      image: book_image,
-      genre: "History",
-      pages: 320,
-    },
-    {
-      id: 2,
-      title: "Ik Si Anita",
-      author: "Nanak Singh",
-      rating: 4.2,
-      image: book_image,
-      genre: "Novel",
-      pages: 280,
-    },
-    {
-      id: 3,
-      title: "Punjab Da Itihas",
-      author: "Kirpal Singh",
-      rating: 4.7,
-      image: book_image,
-      genre: "History",
-      pages: 450,
-    },
-    {
-      id: 4,
-      title: "Heer Ranjha",
-      author: "Waris Shah",
-      rating: 4.8,
-      image: book_image,
-      genre: "Poetry",
-      pages: 200,
-    },
-    {
-      id: 5,
-      title: "Nanak Singh Diyan Kahaniyan",
-      author: "Nanak Singh",
-      rating: 4.1,
-      image: book_image,
-      genre: "Short Stories",
-      pages: 150,
-    },
-    {
-      id: 6,
-      title: "Punjabi Virsa",
-      author: "Gurbachan Singh Bhullar",
-      rating: 4.6,
-      image: book_image,
-      genre: "Culture",
-      pages: 300,
-    },
-    {
-      id: 7,
-      title: "Sadda Punjab",
-      author: "Kartar Singh Duggal",
-      rating: 4.3,
-      image: book_image,
-      genre: "Biography",
-      pages: 400,
-    },
-    {
-      id: 8,
-      title: "Punjabi Lok Geet",
-      author: "Devinder Satyarthi",
-      rating: 4.4,
-      image: book_image,
-      genre: "Music",
-      pages: 250,
-    },
-    {
-      id: 9,
-      title: "Punjab Diyan Lok Kathavan",
-      author: "Sohan Singh Sital",
-      rating: 4.5,
-      image: book_image,
-      genre: "History",
-      pages: 320,
-    },
-    {
-      id: 10,
-      title: "Ik Si Anita",
-      author: "Nanak Singh",
-      rating: 4.2,
-      image: book_image,
-      genre: "Novel",
-      pages: 280,
-    },
-    {
-      id: 11,
-      title: "Punjab Da Itihas",
-      author: "Kirpal Singh",
-      rating: 4.7,
-      image: book_image,
-      genre: "History",
-      pages: 450,
-    },
-    {
-      id: 12,
-      title: "Heer Ranjha",
-      author: "Waris Shah",
-      rating: 4.8,
-      image: book_image,
-      genre: "Poetry",
-      pages: 200,
-    },
-    {
-      id: 13,
-      title: "Nanak Singh Diyan Kahaniyan",
-      author: "Nanak Singh",
-      rating: 4.1,
-      image: book_image,
-      genre: "Short Stories",
-      pages: 150,
-    },
-    {
-      id: 14,
-      title: "Punjabi Virsa",
-      author: "Gurbachan Singh Bhullar",
-      rating: 4.6,
-      image: book_image,
-      genre: "Culture",
-      pages: 300,
-    },
-    {
-      id: 15,
-      title: "Sadda Punjab",
-      author: "Kartar Singh Duggal",
-      rating: 4.3,
-      image: book_image,
-      genre: "Biography",
-      pages: 400,
-    },
-    {
-      id: 16,
-      title: "Punjabi Lok Geet",
-      author: "Devinder Satyarthi",
-      rating: 4.4,
-      image: book_image,
-      genre: "Music",
-      pages: 250,
-    },
-    {
-      id: 17,
-      title: "Punjab Diyan Lok Kathavan",
-      author: "Sohan Singh Sital",
-      rating: 4.5,
-      image: book_image,
-      genre: "History",
-      pages: 320,
-    },
-    {
-      id: 18,
-      title: "Ik Si Anita",
-      author: "Nanak Singh",
-      rating: 4.2,
-      image: book_image,
-      genre: "Novel",
-      pages: 280,
-    },
-    {
-      id: 19,
-      title: "Punjab Da Itihas",
-      author: "Kirpal Singh",
-      rating: 4.7,
-      image: book_image,
-      genre: "History",
-      pages: 450,
-    },
-    {
-      id: 20,
-      title: "Heer Ranjha",
-      author: "Waris Shah",
-      rating: 4.8,
-      image: book_image,
-      genre: "Poetry",
-      pages: 200,
-    },
-    {
-      id: 21,
-      title: "Nanak Singh Diyan Kahaniyan",
-      author: "Nanak Singh",
-      rating: 4.1,
-      image: book_image,
-      genre: "Short Stories",
-      pages: 150,
-    },
-    {
-      id: 22,
-      title: "Punjabi Virsa",
-      author: "Gurbachan Singh Bhullar",
-      rating: 4.6,
-      image: book_image,
-      genre: "Culture",
-      pages: 300,
-    },
-    {
-      id: 23,
-      title: "Sadda Punjab",
-      author: "Kartar Singh Duggal",
-      rating: 4.3,
-      image: book_image,
-      genre: "Biography",
-      pages: 400,
-    },
-    {
-      id: 24,
-      title: "Punjabi Lok Geet",
-      author: "Devinder Satyarthi",
-      rating: 4.4,
-      image: book_image,
-      genre: "Music",
-      pages: 250,
-    },
-  ];
-  
+  const cards = Array.from({ length: 24 }, (_, i) => ({
+    id: i + 1,
+    title: [
+      "Punjab Diyan Lok Kathavan",
+      "Ik Si Anita",
+      "Punjab Da Itihas",
+      "Heer Ranjha",
+      "Nanak Singh Diyan Kahaniyan",
+      "Punjabi Virsa",
+      "Sadda Punjab",
+      "Punjabi Lok Geet"
+    ][i % 8],
+    author: [
+      "Sohan Singh Sital",
+      "Nanak Singh",
+      "Kirpal Singh",
+      "Waris Shah",
+      "Nanak Singh",
+      "Gurbachan Singh Bhullar",
+      "Kartar Singh Duggal",
+      "Devinder Satyarthi"
+    ][i % 8],
+    rating: 4.0 + (i % 10) * 0.1,
+    image: book_image,
+    genre: [
+      "History",
+      "Novel",
+      "History",
+      "Poetry",
+      "Short Stories",
+      "Culture",
+      "Biography",
+      "Music"
+    ][i % 8],
+    pages: [320, 280, 450, 200, 150, 300, 400, 250][i % 8],
+  }));
+
   // Trending Ebooks data
   const trendingEbooks = [
-    {
-      id: 101,
-      title: "Punjab Di Kahani",
-      author: "Sant Singh Sekhon",
-      rating: 4.6,
-      image: book_image,
-      pages: 280,
-    },
-    {
-      id: 102,
-      title: "Loona",
-      author: "Shiv Kumar Batalvi",
-      rating: 4.8,
-      image: book_image,
-      pages: 320,
-    },
-    {
-      id: 103,
-      title: "Punjabi Lok Dhara",
-      author: "Devinder Satyarthi",
-      rating: 4.4,
-      image: book_image,
-      pages: 250,
-    },
-    {
-      id: 104,
-      title: "Sadda Pind",
-      author: "Gurdial Singh",
-      rating: 4.7,
-      image: book_image,
-      pages: 350,
-    },
-    {
-      id: 105,
-      title: "Ik Si Anita",
-      author: "Nanak Singh",
-      rating: 4.5,
-      image: book_image,
-      pages: 280,
-    },
-    {
-      id: 106,
-      title: "Heer Waris Shah",
-      author: "Waris Shah",
-      rating: 4.9,
-      image: book_image,
-      pages: 200,
-    },
-  ];
+    { id: 101, title: "Punjab Di Kahani", author: "Sant Singh Sekhon", rating: 4.6, pages: 280 },
+    { id: 102, title: "Loona", author: "Shiv Kumar Batalvi", rating: 4.8, pages: 320 },
+    { id: 103, title: "Punjabi Lok Dhara", author: "Devinder Satyarthi", rating: 4.4, pages: 250 },
+    { id: 104, title: "Sadda Pind", author: "Gurdial Singh", rating: 4.7, pages: 350 },
+    { id: 105, title: "Ik Si Anita", author: "Nanak Singh", rating: 4.5, pages: 280 },
+    { id: 106, title: "Heer Waris Shah", author: "Waris Shah", rating: 4.9, pages: 200 },
+  ].map(item => ({ ...item, image: book_image }));
 
   // Audiobooks data
   const audiobooks = [
-    {
-      id: 201,
-      title: "Punjab Di Kahani",
-      author: "Sant Singh Sekhon",
-      rating: 4.7,
-      image: book_image,
-      duration: "5h 20m",
-    },
-    {
-      id: 202,
-      title: "Loona",
-      author: "Shiv Kumar Batalvi",
-      rating: 4.9,
-      image: book_image,
-      duration: "6h 15m",
-    },
-    {
-      id: 203,
-      title: "Sadda Pind",
-      author: "Gurdial Singh",
-      rating: 4.6,
-      image: book_image,
-      duration: "7h 30m",
-    },
-    {
-      id: 204,
-      title: "Heer Waris Shah",
-      author: "Waris Shah",
-      rating: 4.8,
-      image: book_image,
-      duration: "4h 45m",
-    },
-    {
-      id: 205,
-      title: "Ik Si Anita",
-      author: "Nanak Singh",
-      rating: 4.5,
-      image: book_image,
-      duration: "5h 10m",
-    },
-    {
-      id: 206,
-      title: "Punjabi Lok Dhara",
-      author: "Devinder Satyarthi",
-      rating: 4.4,
-      image: book_image,
-      duration: "4h 20m",
-    },
-  ];
+    { id: 201, title: "Punjab Di Kahani", author: "Sant Singh Sekhon", rating: 4.7, duration: "5h 20m" },
+    { id: 202, title: "Loona", author: "Shiv Kumar Batalvi", rating: 4.9, duration: "6h 15m" },
+    { id: 203, title: "Sadda Pind", author: "Gurdial Singh", rating: 4.6, duration: "7h 30m" },
+    { id: 204, title: "Heer Waris Shah", author: "Waris Shah", rating: 4.8, duration: "4h 45m" },
+    { id: 205, title: "Ik Si Anita", author: "Nanak Singh", rating: 4.5, duration: "5h 10m" },
+    { id: 206, title: "Punjabi Lok Dhara", author: "Devinder Satyarthi", rating: 4.4, duration: "4h 20m" },
+  ].map(item => ({ ...item, image: book_image }));
 
   // Featured Authors data
-  const featuredAuthors = [
-    {
-      id: 1,
-      name: "Nanak Singh",
-      image: book_image,
-    },
-    {
-      id: 2,
-      name: "Amrita Pritam",
-      image: book_image,
-    },
-    {
-      id: 3,
-      name: "Gurdial Singh",
-      image: book_image,
-    },
-    {
-      id: 4,
-      name: "Nanak Singh",
-      image: book_image,
-    },
-    {
-      id: 5,
-      name: "Amrita Pritam",
-      image: book_image,
-    },
-    {
-      id: 6,
-      name: "Gurdial Singh",
-      image: book_image,
-    },
-  ];
+  const featuredAuthors = [1, 2, 3, 4, 5, 6].map(id => ({
+    id,
+    name: ["Nanak Singh", "Amrita Pritam", "Gurdial Singh"][id % 3],
+    image: book_image
+  }));
 
   // Apply filters
   const filteredCards = cards.filter((card) => {
@@ -470,7 +201,7 @@ const Collections = ({ isDarkMode }) => {
     <div className={styles.collectionsContainer}>
       <div className={styles.headerImageSection}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Header"
           className={styles.headerImage}
         />
@@ -481,14 +212,9 @@ const Collections = ({ isDarkMode }) => {
       </div>
 
       <div className={styles.breadcrumb}>
-        <Link to="/">
-          <span>Home</span>
-        </Link>{" "}
-        /{" "}
-        <Link to="/collections">
-          <span> Collections</span>
-        </Link>{" "}
-        / <span> {getHeaderSubtitle()}</span>
+        <Link to="/"><span>Home</span></Link> /{" "}
+        <Link to="/collections"><span> Collections</span></Link> /{" "}
+        <span> {getHeaderSubtitle()}</span>
       </div>
 
       <div className={styles.searchAndFilters}>
@@ -504,11 +230,7 @@ const Collections = ({ isDarkMode }) => {
 
       <div className={styles.collectionsPage}>
         {/* Filters Section */}
-        <div
-          className={`${styles.filtersSection} ${
-            isFiltersOpen ? styles.filtersOpen : ""
-          }`}
-        >
+        <div className={`${styles.filtersSection} ${isFiltersOpen ? styles.filtersOpen : ""}`}>
           <div className={styles.fullScreenFilters}>
             <button className={styles.closeButton} onClick={closeFilters}>
               <FaTimes />
@@ -516,106 +238,28 @@ const Collections = ({ isDarkMode }) => {
             <h3>Filters</h3>
 
             <div className={styles.filterButtons}>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.title ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("title")}
-              >
-                Title
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.highRatings ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("highRatings")}
-              >
-                High Ratings
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.lessRatings ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("lessRatings")}
-              >
-                Less Ratings
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.author ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("author")}
-              >
-                Author
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.dateAdded ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("dateAdded")}
-              >
-                Date added
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.hasAudiobook ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("hasAudiobook")}
-              >
-                Has Audiobook
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.premiumOnly ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("premiumOnly")}
-              >
-                Premium Only
-              </button>
+              {['title', 'highRatings', 'lessRatings', 'author', 'dateAdded', 'hasAudiobook', 'premiumOnly'].map(filter => (
+                <button
+                  key={filter}
+                  className={`${styles.filterButton} ${filters[filter] ? styles.active : ""}`}
+                  onClick={() => handleFilterChange(filter)}
+                >
+                  {filter.split(/(?=[A-Z])/).join(' ')}
+                </button>
+              ))}
             </div>
 
             <h3>Genre</h3>
             <div className={styles.filterButtons}>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.history ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("history")}
-              >
-                History
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.novel ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("novel")}
-              >
-                Novel
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.biography ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("biography")}
-              >
-                Biography
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.fiction ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("fiction")}
-              >
-                Fiction
-              </button>
-              <button
-                className={`${styles.filterButton} ${
-                  filters.nonFiction ? styles.active : ""
-                }`}
-                onClick={() => handleFilterChange("nonFiction")}
-              >
-                Non-Fiction
-              </button>
+              {['history', 'novel', 'biography', 'fiction', 'nonFiction'].map(genre => (
+                <button
+                  key={genre}
+                  className={`${styles.filterButton} ${filters[genre] ? styles.active : ""}`}
+                  onClick={() => handleFilterChange(genre)}
+                >
+                  {genre.charAt(0).toUpperCase() + genre.slice(1)}
+                </button>
+              ))}
             </div>
 
             <button onClick={saveChanges} className={styles.saveButton}>
@@ -634,7 +278,7 @@ const Collections = ({ isDarkMode }) => {
               <div key={`skeleton-${index}`} className={styles.cardSkeleton}>
                 <div className={styles.skeletonImageContainer}>
                   <img 
-                    src={skeleton_image} 
+                    src={getImagePath(skeleton_image)} 
                     alt="Loading" 
                     className={styles.skeletonImage}
                   />
@@ -650,7 +294,7 @@ const Collections = ({ isDarkMode }) => {
               <Link to={`/collections/ebooks/ebook/${card.id}`} key={card.id}>
                 <div className={styles.card}>
                   <img
-                    src={card.image}
+                    src={getImagePath(card.image)}
                     alt={card.title}
                     className={styles.cardImage}
                   />
@@ -690,7 +334,7 @@ const Collections = ({ isDarkMode }) => {
               <div key={`author-skeleton-${index}`} className={styles.authorCardSkeleton}>
                 <div className={styles.skeletonAuthorImageContainer}>
                   <img 
-                    src={skeleton_image} 
+                    src={getImagePath(skeleton_image)} 
                     alt="Loading author" 
                     className={styles.skeletonAuthorImage}
                   />
@@ -706,7 +350,7 @@ const Collections = ({ isDarkMode }) => {
                 className={styles.authorCard}
               >
                 <img
-                  src={author.image}
+                  src={getImagePath(author.image)}
                   alt={author.name}
                   className={styles.authorImage}
                 />
@@ -717,7 +361,6 @@ const Collections = ({ isDarkMode }) => {
         </div>
       </section>
 
-
       {/* Trending Ebooks Section */}
       <section className={styles.trendingSection}>
         <h2>Trending Ebooks</h2>
@@ -727,7 +370,7 @@ const Collections = ({ isDarkMode }) => {
               <div key={`trending-skeleton-${index}`} className={styles.trendingCardSkeleton}>
                 <div className={styles.skeletonTrendingImageContainer}>
                   <img 
-                    src={skeleton_image} 
+                    src={getImagePath(skeleton_image)} 
                     alt="Loading trending" 
                     className={styles.skeletonTrendingImage}
                   />
@@ -740,7 +383,7 @@ const Collections = ({ isDarkMode }) => {
               <Link to={`/collections/ebooks/ebook/${ebook.id}`} key={ebook.id}>
                 <div className={styles.trendingCard}>
                   <img
-                    src={ebook.image}
+                    src={getImagePath(ebook.image)}
                     alt={ebook.title}
                     className={styles.trendingImage}
                   />
@@ -764,7 +407,7 @@ const Collections = ({ isDarkMode }) => {
               <div key={`audiobook-skeleton-${index}`} className={styles.audiobookCardSkeleton}>
                 <div className={styles.skeletonAudiobookImageContainer}>
                   <img 
-                    src={skeleton_image} 
+                    src={getImagePath(skeleton_image)} 
                     alt="Loading audiobook" 
                     className={styles.skeletonAudiobookImage}
                   />
@@ -777,7 +420,7 @@ const Collections = ({ isDarkMode }) => {
               <Link to={`/collections/audiobooks/audiobook/${audiobook.id}`} key={audiobook.id}>
                 <div className={styles.audiobookCard}>
                   <img
-                    src={audiobook.image}
+                    src={getImagePath(audiobook.image)}
                     alt={audiobook.title}
                     className={styles.audiobookImage}
                   />
