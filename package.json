@@ -1,5 +1,6 @@
 {
   "name": "virsaa",
+  "proxy": "http://localhost:5118",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -57,3 +58,4 @@
   },
   "homepage": "."
 }
+
