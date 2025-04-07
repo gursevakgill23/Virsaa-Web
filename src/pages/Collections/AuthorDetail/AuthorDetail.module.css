@@ -285,6 +285,76 @@
     background-color: var(--section-bg-color);
 }
 
+/* Mobile Tabs Dropdown */
+.mobileTabsDropdown {
+    display: none;
+    position: relative;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.mobileTabsToggle {
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dropdownIcon {
+    transition: transform 0.3s ease;
+}
+
+.rotateIcon {
+    transform: rotate(180deg);
+}
+
+.mobileTabsMenu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobileTabButton {
+    padding: 1rem;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mobileTabButton:last-child {
+    border-bottom: none;
+}
+
+.mobileTabButton:hover {
+    background-color: var(--section-bg-color);
+    color: var(--text-color);
+}
+
+.activeMobileTab {
+    color: var(--text-color);
+    font-weight: 500;
+    background-color: var(--section-bg-color);
+}
+
 /* Biography Content */
 .biographyContent {
     line-height: 1.7;
@@ -382,7 +452,6 @@
     color: var(--secondary-text-color);
 }
 
-
 /* Quote Section */
 .quoteSection {
     background-color: var(--card-bg-color);
@@ -439,6 +508,8 @@
     border-radius: 8px;
     transition: background-color 0.2s ease;
     cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
 }
 
 .relatedCard:hover {
@@ -490,66 +561,70 @@
 .scrollButtons {
     display: none;
 }
-/* Add these styles to your existing CSS module */
 
+/* Reviews Section */
 .reviewsContent {
     padding: 1rem;
-  }
-  
-  .reviewsHeader {
+}
+
+.reviewsHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
-  }
-  
-  .reviewsListContainer {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.reviewsListContainer {
     max-height: 500px;
     overflow-y: auto;
     padding-right: 0.5rem;
     scrollbar-width: thin;
     scrollbar-color: var(--icon-color) var(--section-bg-color);
-  }
-  
-  .reviewsListContainer::-webkit-scrollbar {
+}
+
+.reviewsListContainer::-webkit-scrollbar {
     width: 6px;
-  }
-  
-  .reviewsListContainer::-webkit-scrollbar-track {
+}
+
+.reviewsListContainer::-webkit-scrollbar-track {
     background: var(--section-bg-color);
-  }
-  
-  .reviewsListContainer::-webkit-scrollbar-thumb {
+}
+
+.reviewsListContainer::-webkit-scrollbar-thumb {
     background-color: var(--icon-color);
     border-radius: 3px;
-  }
-  
-  .reviewsList {
+}
+
+.reviewsList {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-  }
-  
-  .reviewItem {
+}
+
+.reviewItem {
     background-color: var(--card-bg-color);
     padding: 1.5rem;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  }
-  
-  .reviewHeader {
+}
+
+.reviewHeader {
     display: flex;
     justify-content: space-between;
     margin-bottom: 1rem;
-  }
-  
-  .reviewerInfo {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.reviewerInfo {
     display: flex;
     align-items: center;
     gap: 1rem;
-  }
-  
-  .reviewerInitial {
+}
+
+.reviewerInitial {
     width: 40px;
     height: 40px;
     background-color: var(--button-bg-color);
@@ -560,35 +635,35 @@
     justify-content: center;
     font-weight: bold;
     font-size: 1.2rem;
-  }
-  
-  .reviewerName {
+}
+
+.reviewerName {
     font-weight: 500;
     color: var(--text-color);
-  }
-  
-  .reviewDate {
+}
+
+.reviewDate {
     font-size: 0.8rem;
     color: var(--secondary-text-color);
-  }
-  
-  .reviewRating {
+}
+
+.reviewRating {
     display: flex;
     gap: 0.2rem;
-  }
-  
-  .reviewContent {
+}
+
+.reviewContent {
     line-height: 1.5;
     color: var(--text-color);
     margin-bottom: 1rem;
-  }
-  
-  .reviewActions {
+}
+
+.reviewActions {
     display: flex;
     justify-content: flex-end;
-  }
-  
-  .helpfulButton {
+}
+
+.helpfulButton {
     background: none;
     border: none;
     color: var(--secondary-text-color);
@@ -598,31 +673,31 @@
     align-items: center;
     gap: 0.3rem;
     transition: color 0.3s ease;
-  }
-  
-  .helpfulButton:hover {
+}
+
+.helpfulButton:hover {
     color: var(--icon-color);
-  }
-  
-  .reviewFormContainer {
+}
+
+.reviewFormContainer {
     background-color: var(--card-bg-color);
     padding: 1.5rem;
     border-radius: 8px;
-  }
-  
-  .formGroup {
+}
+
+.formGroup {
     margin-bottom: 1.5rem;
-  }
-  
-  .formGroup label {
+}
+
+.formGroup label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
     color: var(--text-color);
-  }
-  
-  .formGroup input,
-  .formGroup textarea {
+}
+
+.formGroup input,
+.formGroup textarea {
     width: 100%;
     padding: 0.8rem;
     border: 1px solid var(--border-color);
@@ -631,48 +706,51 @@
     background-color: var(--section-bg-color);
     color: var(--text-color);
     transition: border-color 0.3s ease;
-  }
-  
-  .formGroup input:focus,
-  .formGroup textarea:focus {
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
     outline: none;
     border-color: var(--icon-color);
-  }
-  
-  .formGroup textarea {
+}
+
+.formGroup textarea {
     resize: vertical;
     min-height: 120px;
-  }
-  
-  .ratingInput {
+}
+
+.ratingInput {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-  }
-  
-  .starButton {
+}
+
+.starButton {
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
     font-size: 1.5rem;
     line-height: 1;
-  }
-  
-  .starFilled {
+}
+
+.starFilled {
     color: #FFD700;
-  }
-  
-  .starEmpty {
+}
+
+.starEmpty {
     color: var(--secondary-text-color);
-  }
-  
-  .formActions {
+}
+
+.formActions {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 1rem;
-  }
+}
+.formActions button{
+    padding: 10px;
+}
 
 /* Skeleton Styles */
 .skeletonRelatedImageContainer {
@@ -803,6 +881,30 @@
     }
 }
 
+@media (max-width: 576px) {
+    .tabButtons {
+        display: none;
+    }
+    
+    .mobileTabsDropdown {
+        display: block;
+    }
+    
+    .reviewsHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .reviewHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .reviewRating {
+        margin-top: 0.5rem;
+    }
+}
+
 @media (max-width: 480px) {
     .headerImageSection {
         height: 300px;
@@ -815,17 +917,28 @@
         font-size: 0.9rem;
     }
     
-    .tabButtons {
-        flex-wrap: wrap;
-    }
-    
-    .tabButton {
-        flex: 1 0 50%;
-        padding: 0.8rem;
-        font-size: 0.9rem;
-    }
-    
     .actionButtons {
         justify-content: center;
+    }
+    
+    .formActions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .formActions button {
+        width: 100%;
+    }
+    
+    .reviewFormContainer {
+        padding: 1rem;
+    }
+    
+    .formGroup {
+        margin-bottom: 1rem;
+    }
+    
+    .reviewItem {
+        padding: 1rem;
     }
 }

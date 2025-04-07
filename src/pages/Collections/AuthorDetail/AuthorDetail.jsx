@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar, FaPenFancy, FaBook, FaAward } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar, FaPenFancy, FaBook, FaAward, FaChevronDown } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
 import styles from './AuthorDetail.module.css';
@@ -36,6 +36,7 @@ const AuthorDetail = ({ isDarkMode }) => {
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState('biography');
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showMobileTabs, setShowMobileTabs] = useState(false);
   const header_image_dark = "/images/Collections/header-image-dark.png";
   const header_image_light = "/images/Collections/header-image-light.png";
   const authorImage = "/images/Collections/author-image.jpg";
@@ -167,6 +168,20 @@ const AuthorDetail = ({ isDarkMode }) => {
     container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
   };
 
+  const toggleMobileTabs = () => {
+    setShowMobileTabs(!showMobileTabs);
+  };
+
+  const getActiveTabName = () => {
+    switch(activeTab) {
+      case 'biography': return 'Biography';
+      case 'works': return 'Major Works';
+      case 'awards': return 'Awards';
+      case 'reviews': return 'Reviews';
+      default: return 'Biography';
+    }
+  };
+
   if (isLoading) {
     return <div className={styles.authorDetailContainer}>Loading author details...</div>;
   }
@@ -289,6 +304,57 @@ const AuthorDetail = ({ isDarkMode }) => {
               >
                 Reviews
               </button>
+            </div>
+
+            {/* Mobile Tabs Dropdown */}
+            <div className={styles.mobileTabsDropdown}>
+              <button 
+                className={styles.mobileTabsToggle}
+                onClick={toggleMobileTabs}
+              >
+                {getActiveTabName()}
+                <FaChevronDown className={`${styles.dropdownIcon} ${showMobileTabs ? styles.rotateIcon : ''}`} />
+              </button>
+              {showMobileTabs && (
+                <div className={styles.mobileTabsMenu}>
+                  <button 
+                    className={`${styles.mobileTabButton} ${activeTab === 'biography' ? styles.activeMobileTab : ''}`}
+                    onClick={() => {
+                      setActiveTab('biography');
+                      setShowMobileTabs(false);
+                    }}
+                  >
+                    Biography
+                  </button>
+                  <button 
+                    className={`${styles.mobileTabButton} ${activeTab === 'works' ? styles.activeMobileTab : ''}`}
+                    onClick={() => {
+                      setActiveTab('works');
+                      setShowMobileTabs(false);
+                    }}
+                  >
+                    Major Works
+                  </button>
+                  <button 
+                    className={`${styles.mobileTabButton} ${activeTab === 'awards' ? styles.activeMobileTab : ''}`}
+                    onClick={() => {
+                      setActiveTab('awards');
+                      setShowMobileTabs(false);
+                    }}
+                  >
+                    Awards
+                  </button>
+                  <button 
+                    className={`${styles.mobileTabButton} ${activeTab === 'reviews' ? styles.activeMobileTab : ''}`}
+                    onClick={() => {
+                      setActiveTab('reviews');
+                      setShowMobileTabs(false);
+                    }}
+                  >
+                    Reviews
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className={styles.tabContent}>

@@ -643,13 +643,16 @@
 
 .rightColumn .relatedCard {
     flex: 0 0 auto;
+    padding: 10px;
     width: 100%;
     display: flex;
     gap: 1rem;
     align-items: center;
-    padding: 0.5rem;
+    padding: 15px;
     border-radius: 8px;
     transition: background-color 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
 }
 
 .rightColumn .relatedCard:hover {
@@ -720,13 +723,15 @@
         flex: 0 0 250px;
         flex-direction: column;
         align-items: flex-start;
-        padding: 0;
+        padding: 15px;
         background-color: transparent;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
     }
 
     .rightColumn .relatedImageContainer {
         width: 100%;
-        height: 280px;
+        height: 200px;
     }
 
     .rightColumn .scrollButtons {
