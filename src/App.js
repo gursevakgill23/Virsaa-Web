@@ -22,8 +22,8 @@ import Cookies from 'js-cookie';
 import News from './pages/News/News';
 import About from './pages/About/About';
 import Quizzes from './pages/Learning/Quizzes/Quizzes';
-import EbookDetail from './pages/EbookDetail/EbookDetail';
-import AuthorDetail from './pages/AuthorDetail/AuthorDetail';
+import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
+import AuthorDetail from './pages/Collections/AuthorDetail/AuthorDetail';
 
 // Define your API base URL
 const API_STRING = "http://localhost:5118";
