@@ -4,20 +4,46 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import styles from './GurdwaraLocate.module.css';
-import header_image_light from '../../../images/gurdwaraAccess/header-image.jpg';
-import header_image_dark from '../../../images/gurdwaraAccess/header-image-dark.png';
 
-// Fix for default marker icons in Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require('../../../images/gurdwaraAccess/marker-icon-2x.png'),
-  iconUrl: require('../../../images/gurdwaraAccess/marker-icon.png'),
-  shadowUrl: require('../../../images/gurdwaraAccess/marker-shadow.png'),
-});
+// Utility function to handle production image paths
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 
 const GurdwaraLocate = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
   const { id } = useParams();
   
+  // Image paths - now using public folder
+  const header_image_light = "/images/gurdwaraAccess/header-image.jpg";
+  const header_image_dark = "/images/gurdwaraAccess/header-image-dark.png";
+  const marker_icon = "/images/gurdwaraAccess/marker-icon.png";
+  const marker_icon_2x = "/images/gurdwaraAccess/marker-icon-2x.png";
+  const marker_shadow = "/images/gurdwaraAccess/marker-shadow.png";
+
+  // Fix for default marker icons in Leaflet
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: getImagePath(marker_icon_2x),
+    iconUrl: getImagePath(marker_icon),
+    shadowUrl: getImagePath(marker_shadow),
+  });
+
   // Mock data - in a real app, you would fetch this based on the id
   const gurdwaras = [
     {
@@ -67,7 +93,7 @@ const GurdwaraLocate = ({ isDarkMode }) => {
       {/* Header with image and text */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Gurdwara Locate"
           className={styles.headerImage}
         />

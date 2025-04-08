@@ -1,13 +1,43 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styles from './GurdwaraHistory.module.css';
-import header_image_light from '../../../images/gurdwaraAccess/header-image.jpg';
-import header_image_dark from '../../../images/gurdwaraAccess/header-image-dark.png';
+
+// Utility function to handle production image paths
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 
 const GurdwaraHistory = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
   const { id } = useParams();
   const [mainImage, setMainImage] = useState(0);
   
+  // Image paths - now using public folder
+  const header_image_light = "/images/gurdwaraAccess/header-image.jpg";
+  const header_image_dark = "/images/gurdwaraAccess/header-image-dark.png";
+  const history_images = [
+    "/images/gurdwaraAccess/history/history1.jpg",
+    "/images/gurdwaraAccess/history/history2.jpg",
+    "/images/gurdwaraAccess/history/history3.jpg",
+    "/images/gurdwaraAccess/history/history4.jpg",
+    "/images/gurdwaraAccess/history/history5.jpg"
+  ];
+
   // Mock data - in a real app, you would fetch this based on the id
   const gurdwaras = [
     {
@@ -24,11 +54,11 @@ const GurdwaraHistory = ({ isDarkMode }) => {
         "Today, it serves as one of the largest Sikh places of worship in the Greater Toronto Area with over 5,000 visitors weekly."
       ],
       images: [
-        require('../../../images/gurdwaraAccess/history/history1.jpg'),
-        require('../../../images/gurdwaraAccess/history/history2.jpg'),
-        require('../../../images/gurdwaraAccess/history/history3.jpg'),
-        require('../../../images/gurdwaraAccess/history/history4.jpg'),
-        require('../../../images/gurdwaraAccess/history/history5.jpg')
+        history_images[0],
+        history_images[1],
+        history_images[2],
+        history_images[3],
+        history_images[4]
       ]
     },
     {
@@ -45,9 +75,9 @@ const GurdwaraHistory = ({ isDarkMode }) => {
         "Hosts an annual Nagar Kirtan that attracts thousands of devotees from across North America."
       ],
       images: [
-        require('../../../images/gurdwaraAccess/history/history1.jpg'),
-        require('../../../images/gurdwaraAccess/history/history2.jpg'),
-        require('../../../images/gurdwaraAccess/history/history3.jpg')
+        history_images[0],
+        history_images[1],
+        history_images[2]
       ]
     },
     {
@@ -64,10 +94,10 @@ const GurdwaraHistory = ({ isDarkMode }) => {
         "Added a state-of-the-art community kitchen in 2015 that serves langar to over 1,000 people daily."
       ],
       images: [
-        require('../../../images/gurdwaraAccess/history/history1.jpg'),
-        require('../../../images/gurdwaraAccess/history/history2.jpg'),
-        require('../../../images/gurdwaraAccess/history/history3.jpg'),
-        require('../../../images/gurdwaraAccess/history/history4.jpg')
+        history_images[0],
+        history_images[1],
+        history_images[2],
+        history_images[3]
       ]
     }
   ];
@@ -79,7 +109,7 @@ const GurdwaraHistory = ({ isDarkMode }) => {
       {/* Header with image and text */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Gurdwara History"
           className={styles.headerImage}
         />
@@ -106,7 +136,7 @@ const GurdwaraHistory = ({ isDarkMode }) => {
         {/* Main image display */}
         <div className={styles.mainImageContainer}>
           <img 
-            src={selectedGurdwara.images[mainImage]} 
+            src={getImagePath(selectedGurdwara.images[mainImage])} 
             alt={`${selectedGurdwara.name} history`} 
             className={styles.mainImage}
           />
@@ -121,7 +151,7 @@ const GurdwaraHistory = ({ isDarkMode }) => {
               onClick={() => setMainImage(index)}
             >
               <img 
-                src={image} 
+                src={getImagePath(image)} 
                 alt={`${selectedGurdwara.name} thumbnail ${index + 1}`} 
                 className={styles.thumbnailImage}
               />

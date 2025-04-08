@@ -1,13 +1,36 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styles from './GurdwaraServices.module.css';
-import header_image_light from '../../../images/gurdwaraAccess/header-image.jpg';
-import header_image_dark from '../../../images/gurdwaraAccess/header-image-dark.png';
 import { FaUtensils, FaBed, FaBook, FaClinicMedical, FaMusic } from 'react-icons/fa';
 
+// Utility function to handle production image paths
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
+
 const GurdwaraServices = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
   const { id } = useParams();
   
+  // Image paths - now using public folder
+  const header_image_light = "/images/gurdwaraAccess/header-image.jpg";
+  const header_image_dark = "/images/gurdwaraAccess/header-image-dark.png";
+
   // Mock data - in a real app, you would fetch this based on the id
   const gurdwaras = [
     {
@@ -78,7 +101,7 @@ const GurdwaraServices = ({ isDarkMode }) => {
       {/* Header with image and text */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Gurdwara Services"
           className={styles.headerImage}
         />
