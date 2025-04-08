@@ -10,7 +10,6 @@ import learningCarousel from '../../images/Learning/interactive-carousel.jpg';
 import gameTurnCard from '../../images/Learning/games-turn-card.jpg';
 import header_image_light from '../../images/Learning/header-image.png';
 import header_image_dark from '../../images/Learning/header-image-dark.png';
-import skeltonImage from '../../images/skelton-image.png';
 
 const Learning = ({ isLoggedIn, isDarkMode }) => {
   const [activeTab, setActiveTab] = useState('all');
@@ -240,7 +239,6 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
               <div key={`skeleton-${index}`} className={styles.cardSkeleton}>
                 <div className={styles.skeletonImageContainer}>
                   <div className={styles.skeletonImage}>
-                    <img src={skeltonImage} alt='Card skeleton' className={styles.skeletonImg} />
                   </div>
                 </div>
                 <div className={styles.skeletonText}></div>
@@ -288,7 +286,6 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
             {isLoading ? (
               <div className={styles.carouselSkeleton}>
                 <div className={styles.skeletonImageContainer}>
-                  <img src={skeltonImage} alt='Carousel skeleton' className={styles.skeletonImg} />
                 </div>
                 <div className={styles.skeletonText}></div>
                 <div className={styles.skeletonTextSmall}></div>
@@ -320,7 +317,6 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
                 Array(6).fill().map((_, index) => (
                   <div key={`quiz-skeleton-${index}`} className={styles.quizCardSkeleton}>
                     <div className={styles.skeletonImageContainer}>
-                      <img src={skeltonImage} alt='Quiz skeleton' className={styles.skeletonImg} />
                     </div>
                     <div className={styles.skeletonText}></div>
                   </div>

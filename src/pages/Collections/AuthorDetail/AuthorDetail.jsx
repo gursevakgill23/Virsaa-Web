@@ -604,12 +604,9 @@ const AuthorDetail = ({ isDarkMode }) => {
 };
 
 const RelatedAuthorSkeleton = () => {
-  const getImagePath = useProductionImagePath();
-  const skeletonImage = "/images/skelton-image.png";
   return (
     <div className={styles.relatedCard}>
       <div className={styles.skeletonRelatedImageContainer}>
-        <img src={getImagePath(skeletonImage)} alt="Loading" className={styles.skeletonImg} />
       </div>
       <div className={styles.relatedCardText}>
         <div className={styles.skeletonRelatedTitle}></div>

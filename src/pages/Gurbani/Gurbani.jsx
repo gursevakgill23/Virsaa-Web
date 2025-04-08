@@ -9,7 +9,6 @@ import gurbaniImage from '../../images/Gurbani/gurbani.png';
 import audioKirtanImage from '../../images/Gurbani/audio-kirtan.jpg';
 import videoKirtanImage from '../../images/Gurbani/video-kirtan.jpg';
 import sectionImage from '../../images/Gurbani/section-image.jpg';
-import skeleton_image from '../../images/skelton-image.png';
 
 const Gurbani = ({ isDarkMode }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -324,7 +323,6 @@ const Gurbani = ({ isDarkMode }) => {
               <div key={`skeleton-${index}`} className={styles.card}>
                 <div className={styles.cardGlass}>
                   <div className={styles.cardImageSkeleton}>
-                    <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
                   </div>
                   <div className={styles.skeletonTitle}></div>
                   <div className={styles.skeletonPremium}></div>
@@ -410,7 +408,6 @@ const Gurbani = ({ isDarkMode }) => {
         )}
         {isLoading ? (
           <div className={styles.sectionImageSkeleton}>
-            <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
           </div>
         ) : (
           <div className={styles.sectionImage}>

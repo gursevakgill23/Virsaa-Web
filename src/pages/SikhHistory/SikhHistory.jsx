@@ -7,7 +7,6 @@ import filter_image from '../../images/sikhHistory/filter_image.jpeg';
 import sikh_history from '../../images/sikhHistory/sikh_history1.jpg';
 import book_image from '../../images/book-image.jpg';
 import inspiring_image from '../../images/sikhHistory/inspiring.jpg';
-import skeleton_image from '../../images/skelton-image.png';
 import ComingSoon from '../../elements/ComingSoon/ComingSoon';
 
 const scrollableImages = [
@@ -112,7 +111,6 @@ const SikhHistory = ({ isDarkMode }) => {
           Array(16).fill().map((_, index) => (
             <div key={`scroll-skeleton-${index}`} className={styles.scrollableItem}>
               <div className={styles.scrollableImageSkeleton}>
-                <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
               </div>
               <div className={styles.scrollableTextSkeleton}></div>
             </div>
@@ -137,7 +135,6 @@ const SikhHistory = ({ isDarkMode }) => {
               <div key={`history-skeleton-${index}`} className={styles.card}>
                 <div className={styles.cardImageContainer}>
                   <div className={styles.cardImageSkeleton}>
-                    <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
                   </div>
                   <div className={styles.cardBodySkeleton}>
                     <div className={styles.skeletonTitle}></div>
@@ -184,7 +181,6 @@ const SikhHistory = ({ isDarkMode }) => {
       <div className={styles.inspiringSection}>
         {isLoading ? (
           <div className={styles.inspiringImageContainerSkeleton}>
-            <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
           </div>
         ) : (
           <div className={styles.inspiringImageContainer}>
@@ -215,7 +211,6 @@ const SikhHistory = ({ isDarkMode }) => {
             Array(10).fill().map((_, index) => (
               <div key={`recommended-skeleton-${index}`} className={styles.recommendedCard}>
                 <div className={styles.recommendedImageSkeleton}>
-                  <img src={skeleton_image} alt="Loading" className={styles.skeletonImage} />
                 </div>
                 <div className={styles.recommendedTitleSkeleton}></div>
               </div>

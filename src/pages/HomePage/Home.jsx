@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate,Link } from 'react-router-dom';
 import { MdPlayArrow } from "react-icons/md";
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
-import skeltonImage from '../../images/skelton-image.png';
 
 // Light mode images
 import slide1Light from '../../images/header-slide1.jpg';
@@ -217,7 +216,6 @@ const Home = ({ isDarkMode }) => {
               <div key={`skeleton-${index}`} className={styles.bookCardSkeleton}>
                 <div className={styles.skeletonImageContainer}>
                   <div className={styles.skeletonImage}>
-                    <img src={skeltonImage} alt='Card skeleton' className={styles.skeletonImg} />
                   </div>
                 </div>
                 <div className={styles.skeletonText}></div>

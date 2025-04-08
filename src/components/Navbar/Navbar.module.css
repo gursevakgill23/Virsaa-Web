@@ -109,7 +109,7 @@
 .themeToggle {
   background: none;
   border: none;
-  font-size: 1rem;
+  font-size: 1.25rem;
   cursor: pointer;
   color: var(--text-color);
   padding: 8px;
@@ -247,6 +247,7 @@
 /* Buttons */
 .loginButton {
   background-color: var(--button-bg);
+  border-radius: 5px;
   color: var(--button-text);
   border: 1px solid var(--button-text);
   padding: 5px 10px;
@@ -266,6 +267,7 @@
 .getPremiumButton {
   background-color: var(--button-hover-bg);
   color: var(--button-hover-text);
+  border-radius: 5px;
   border: 1px solid var(--text-color);
   font-size: 0.9rem;
   padding: 5px 10px;
@@ -291,11 +293,7 @@
   .navLinks {
     display: none;
   }
-  
-  .navRight {
-    gap: 12px;
   }
-}
 
 @media (max-width: 768px) {
   .navbar {
@@ -315,7 +313,7 @@
   .searchIcon,
   .menuIcon,
   .themeToggle {
-    font-size: 0.9rem;
+    font-size: 1rem;
     padding: 6px;
   }
   
@@ -350,21 +348,16 @@
     min-width: 45px;
   }
   
-  .navRight {
-    gap: 5px;
-  }
   
   .searchIcon,
   .menuIcon,
   .themeToggle {
-    font-size: 0.8rem;
     padding: 5px;
   }
   
   .loginButton,
   .getPremiumButton {
     padding: 5px 10px;
-    font-size: 0.7rem;
     white-space: nowrap;
   }
   

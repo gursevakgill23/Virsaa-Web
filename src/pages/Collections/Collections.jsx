@@ -34,7 +34,6 @@ const Collections = ({ isDarkMode }) => {
   const header_image_light = "/images/Collections/header-image-light.png";
   const header_image_dark = "/images/Collections/header-image-dark.png";
   const book_image = "/images/Collections/book-image.jpg";
-  const skeleton_image = "/images/skelton-image.png";
 
   const getHeaderSubtitle = () => {
     switch(currentSection) {
@@ -277,11 +276,7 @@ const Collections = ({ isDarkMode }) => {
             Array(cardsPerPage).fill().map((_, index) => (
               <div key={`skeleton-${index}`} className={styles.cardSkeleton}>
                 <div className={styles.skeletonImageContainer}>
-                  <img 
-                    src={getImagePath(skeleton_image)} 
-                    alt="Loading" 
-                    className={styles.skeletonImage}
-                  />
+                  
                 </div>
                 <div className={styles.skeletonContent}>
                   <div className={styles.skeletonTitle}></div>
@@ -333,11 +328,6 @@ const Collections = ({ isDarkMode }) => {
             Array(6).fill().map((_, index) => (
               <div key={`author-skeleton-${index}`} className={styles.authorCardSkeleton}>
                 <div className={styles.skeletonAuthorImageContainer}>
-                  <img 
-                    src={getImagePath(skeleton_image)} 
-                    alt="Loading author" 
-                    className={styles.skeletonAuthorImage}
-                  />
                 </div>
                 <div className={styles.skeletonAuthorText}></div>
               </div>
@@ -369,11 +359,6 @@ const Collections = ({ isDarkMode }) => {
             Array(6).fill().map((_, index) => (
               <div key={`trending-skeleton-${index}`} className={styles.trendingCardSkeleton}>
                 <div className={styles.skeletonTrendingImageContainer}>
-                  <img 
-                    src={getImagePath(skeleton_image)} 
-                    alt="Loading trending" 
-                    className={styles.skeletonTrendingImage}
-                  />
                 </div>
                 <div className={styles.skeletonTrendingText}></div>
               </div>
@@ -406,11 +391,6 @@ const Collections = ({ isDarkMode }) => {
             Array(6).fill().map((_, index) => (
               <div key={`audiobook-skeleton-${index}`} className={styles.audiobookCardSkeleton}>
                 <div className={styles.skeletonAudiobookImageContainer}>
-                  <img 
-                    src={getImagePath(skeleton_image)} 
-                    alt="Loading audiobook" 
-                    className={styles.skeletonAudiobookImage}
-                  />
                 </div>
                 <div className={styles.skeletonAudiobookText}></div>
               </div>
