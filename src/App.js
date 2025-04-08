@@ -16,6 +16,9 @@ import Signup from './pages/Signup/Signup';
 import Membership from './pages/Membership/Membership';
 import GurdwaraAccess from './pages/GurdwaraAccess/GurdwaraAccess';
 import GurdwaraAccessButton from './pages/GurdwaraAccess/GurdwaraAccessButton/GurdwaraAccessButton';
+import GurdwaraLocate from './pages/GurdwaraAccess/GurdwaraLocate/GurdwaraLocate';
+import GurdwaraServices from './pages/GurdwaraAccess/GurdwaraServices/GurdwaraServices';
+import GurdwaraHistory from './pages/GurdwaraAccess/GurdwaraHistory/GurdwaraHistory';
 import Gurbani from './pages/Gurbani/Gurbani';
 import Learning from './pages/Learning/Learning';
 import Cookies from 'js-cookie';
@@ -113,6 +116,9 @@ const App = () => {
             <Route path="/signup" element={<Signup isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/membership" element={<Membership isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/gurdwara-access" element={<GurdwaraAccess isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/gurdwara-access/locate/:id" element={<GurdwaraLocate isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/gurdwara-access/services/:id" element={<GurdwaraServices isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/gurdwara-access/history/:id" element={<GurdwaraHistory isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/news" element={<News isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/about" element={<About isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/quizzes/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />

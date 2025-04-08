@@ -1,0 +1,209 @@
+/* Full width page container */
+.page {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-color);
+  width: 100%;
+  padding-bottom: 40px;
+  background-color: var(--section-bg-color);
+}
+
+
+/* Full width header */
+.header {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  margin-bottom: 30px;
+}
+
+.headerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.headerText {
+  position: absolute;
+  left: 5%;
+  top: 35%;
+  color: white;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.headerText h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  color: var(--headline-color);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.headerText p {
+  margin: 5px 0 0;
+  font-size: 1.2rem;
+  color: var(--text-color);
+}
+
+/* Breadcrumb Section */
+.breadcrumb {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin: 2rem;
+  background: var(--section-bg-color);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb span {
+  color: var(--text-color);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+a {
+  text-decoration: none;
+  list-style: none;
+}
+
+/* Main content container - 1400px max width */
+.mainContainer {
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Gurdwara info section */
+.gurdwaraInfo {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: var(--card-bg-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.gurdwaraInfo h2 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+/* Services grid layout */
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+/* Service card styling */
+.serviceCard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background-color: var(--card-bg-color);
+}
+
+.serviceCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.serviceIcon {
+  background-color: var(--primary-color);
+  color: var(--section-bg-color);
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.serviceContent {
+  padding: 20px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.serviceContent h3 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+.serviceDescription {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  color: var(--secondary-text-color);
+}
+
+.serviceDetails {
+  margin-top: auto;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+}
+
+/* Contact button */
+.contactButton {
+  margin-top: 15px;
+  padding: 10px 15px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.contactButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .headerText h1 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .servicesGrid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: 350px;
+  }
+  
+  .headerText h1 {
+    font-size: 1.8rem;
+  }
+  
+  .headerText p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .header {
+    height: 300px;
+  }
+  
+  .headerText {
+    padding: 15px;
+  }
+  
+  .servicesGrid {
+    grid-template-columns: 1fr;
+  }
+  
+
+}

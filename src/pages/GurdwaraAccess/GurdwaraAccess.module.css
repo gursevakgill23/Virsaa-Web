@@ -145,46 +145,156 @@ a {
   border: 1px solid var(--button-hover-text-color);
 }
 
-/* Search container */
+/* Search Container */
 .searchContainer {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 2rem;
 }
 
-/* Search input */
+.searchForm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.searchInputContainer {
+  position: relative;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--secondary-text-color);
+  z-index: 1;
+}
+
 .input {
-  padding: 10px;
+  width: 100%;
+  padding: 12px 20px 12px 40px;
   border: 1px solid var(--border-color);
-  border-radius: 5px;
-  flex: 1;
-  font-size: 16px;
-  background-color: var(--card-bg-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: var(--section-bg-color);
   color: var(--text-color);
   transition: border-color 0.3s ease;
 }
 
 .input:focus {
-  border-color: var(--primary-color);
   outline: none;
+  border-color: var(--button-bg-color);
+  box-shadow: 0 0 0 2px rgba(var(--button-bg-color-rgb), 0.2);
 }
 
-/* Search button */
 .searchButton {
-  padding: 10px 20px;
+  padding: 12px 20px;
   background-color: var(--button-bg-color);
   color: var(--button-text-color);
-  border: 1px solid var(--button-text-color);
-  border-radius: 5px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
   cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .searchButton:hover {
   background-color: var(--button-hover-bg-color);
   color: var(--button-hover-text-color);
   border: 1px solid var(--button-hover-text-color);
+}
+
+.searchButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.currentLocationButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.currentLocationButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+
+}
+
+.currentLocationButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.locationIcon {
+  font-size: 0.9rem;
+}
+
+/* Suggestions List */
+.suggestionsList {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: var(--section-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-top: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  list-style: none;
+  padding: 0;
+}
+
+.suggestionItem {
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid var(--border-light-color);
+  color: var(--text-color);
+}
+
+.suggestionItem:last-child {
+  border-bottom: none;
+}
+
+.suggestionItem:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+}
+
+/* Error Message */
+.errorMessage {
+  color: white;
+  background-color: rgb(250, 105, 105);
+  border-radius: 5px;
+  padding: 5px;
+  margin-bottom: 1rem;
+}
+
+/* Results Info */
+.resultsInfo {
+  margin-bottom: 1rem;
+  color: var(--secondary-text-color);
+}
+
+.noResults {
+  color: var(--error-color);
 }
 
 /* List container */
@@ -250,25 +360,39 @@ a {
   border-radius: 5px;
   z-index: 1;
   border: 1px solid var(--border-color);
+  padding: 5px 0; /* Added padding for better spacing */
 }
 
-.dropdownContent button {
+.dropdownContent a {
+  display: block; /* Make links behave like block elements */
   width: 100%;
   padding: 10px;
   text-align: left;
+  text-decoration: none; /* Remove underline */
   border: none;
   background: none;
   cursor: pointer;
   font-size: 14px;
   color: var(--text-color);
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.dropdownContent button:hover {
+.dropdownContent a:hover {
   background-color: var(--button-bg-color);
   color: var(--button-text-color);
 }
 
+/* Optional: Add some styling for the active/focused state */
+.dropdownContent a:focus {
+  outline: none;
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+/* Optional: Add some styling for visited links if needed */
+.dropdownContent a:visited {
+  color: var(--text-color); /* Keep same color as regular links */
+}
 /* Details */
 .details {
   margin-top: 10px;
@@ -278,6 +402,23 @@ a {
   margin: 5px 0;
   font-size: 14px;
   color: var(--secondary-text-color);
+}
+.detailLink {
+  display: block;
+  color: var(--text-color);
+  text-decoration: none;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+}
+
+.detailLink:hover {
+  color: var(--primary-color); /* Or any highlight color you prefer */
+  text-decoration: underline;
+}
+
+.detailLink strong {
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* Contact */
@@ -353,6 +494,7 @@ a {
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
+  text-align: center;
   transition: background-color 0.3s ease;
 }
 

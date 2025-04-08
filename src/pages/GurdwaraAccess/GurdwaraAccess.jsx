@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import styles from './GurdwaraAccess.module.css';
-import header_image_light from '../../images/gurdwaraAccess/header-image.jpg'; // Light mode image
-import header_image_dark from '../../images/gurdwaraAccess/header-image-dark.png'; // Dark mode image
+import header_image_light from '../../images/gurdwaraAccess/header-image.jpg';
+import header_image_dark from '../../images/gurdwaraAccess/header-image-dark.png';
 import iconRetinaUrl from '../../images/gurdwaraAccess/marker-icon-2x.png';
 import iconUrl from '../../images/gurdwaraAccess/marker-icon.png';
 import iconShadowUrl from '../../images/gurdwaraAccess/marker-shadow.png';
-import { FaCaretRight } from 'react-icons/fa'; // Triangle icon from react-icons
-import gurdwaraHistoryImage from '../../images/gurdwaraAccess/gurdwara-history.jpg'; // History section image
+import { FaCaretRight, FaSearch, FaLocationArrow } from 'react-icons/fa';
+import gurdwaraHistoryImage from '../../images/gurdwaraAccess/gurdwara-history.jpg';
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -20,50 +20,92 @@ L.Icon.Default.mergeOptions({
   shadowUrl: iconShadowUrl,
 });
 
+// Database of Gurdwaras (can be expanded or moved to an API)
+const gurdwaraDatabase = [
+  {
+    id: 1,
+    name: 'Gurdwara Sikh Sangat Brampton',
+    address: '32 Regan Rd, Brampton, ON, Canada',
+    coordinates: [43.7156, -79.7607],
+    website: 'https://www.gssbrampton.com',
+    phone: '(905) 495-1200',
+    history: 'Established in 1995, Gurdwara Sikh Sangat Brampton has served as a spiritual and cultural hub for thousands of devotees. It was founded by a small group of Sikh immigrants and has grown to become one of the largest Gurdwaras in the region.',
+    services: ['Langar', 'Accommodation', 'Religious Classes']
+  },
+  {
+    id: 2,
+    name: 'Gurudwara Nanaksar-Brampton',
+    address: '64 Timberlane Dr, Brampton, ON, Canada',
+    coordinates: [43.7089, -79.7631],
+    website: 'https://www.nanaksar.com',
+    phone: '(905) 452-1313',
+    history: 'Founded in 2002, Gurudwara Nanaksar-Brampton follows the Nanaksar tradition. It is known for its peaceful atmosphere and strict adherence to Sikh principles. The Gurdwara hosts regular kirtan programs and religious discourses.',
+    services: ['Langar', 'Medical Camps', 'Library']
+  },
+  {
+    id: 3,
+    name: 'Sri Guru Nanak Sikh Centre Brampton',
+    address: '99 Glidden Rd, Brampton, ON, Canada',
+    coordinates: [43.7023, -79.7665],
+    website: 'https://www.sgnsc.com',
+    phone: '(905) 457-5757',
+    history: 'Sri Guru Nanak Sikh Centre was established in 2010 to serve the growing Sikh community in northwest Brampton. It features modern facilities while maintaining traditional Sikh architecture and values.',
+    services: ['Langar', 'Religious Classes', 'Youth Programs']
+  },
+  {
+    id: 4,
+    name: 'Gurdwara Sahib Malton',
+    address: '7085 Airport Rd, Mississauga, ON, Canada',
+    coordinates: [43.6921, -79.6428],
+    website: 'https://www.gsmalton.com',
+    phone: '(905) 677-1111',
+    history: 'One of the oldest Gurdwaras in the region, established in 1985. It played a key role in serving the early Sikh immigrant community and continues to be an important institution.',
+    services: ['Langar', 'Senior Programs', 'Community Services']
+  },
+  {
+    id: 5,
+    name: 'Ontario Khalsa Darbar',
+    address: '7080 Dixie Rd, Mississauga, ON, Canada',
+    coordinates: [43.6845, -79.6553],
+    website: 'https://www.ontariokhalsadarbar.com',
+    phone: '(905) 670-1771',
+    history: 'Known as one of the largest Gurdwaras outside India, Ontario Khalsa Darbar opened in 2007. It features magnificent architecture and can accommodate thousands of devotees.',
+    services: ['Langar', 'Accommodation', 'Library', 'Medical Camps']
+  }
+];
+
+// Helper function to calculate distance between two coordinates in km
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+
 const GurdwaraAccess = ({ isDarkMode }) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [selectedService, setSelectedService] = useState(null); // Track selected service
-
-  // Static list of Gurdwaras
-  const gurdwaras = [
-    {
-      id: 1,
-      name: 'Gurdwara Sikh Sangat Brampton',
-      address: '32 Regan Rd, Brampton, ON, Canada',
-      distance: '3.5 km',
-      timeByBus: '25 mins',
-      timeByWalk: '45 mins',
-      timeByCar: '10 mins',
-      coordinates: [43.7156, -79.7607], // Coordinates for Brampton
-      website: 'https://www.gssbrampton.com',
-      phone: '(905) 495-1200',
-    },
-    {
-      id: 2,
-      name: 'Gurudwara Nanaksar-Brampton',
-      address: '64 Timberlane Dr, Brampton, ON, Canada',
-      distance: '5.2 km',
-      timeByBus: '30 mins',
-      timeByWalk: '1 hour',
-      timeByCar: '15 mins',
-      coordinates: [43.7089, -79.7631], // Coordinates for Brampton
-      website: 'https://www.nanaksar.com',
-      phone: '(905) 452-1313',
-    },
-    {
-      id: 3,
-      name: 'Sri Guru Nanak Sikh Centre Brampton',
-      address: '99 Glidden Rd, Brampton, ON, Canada',
-      distance: '6.8 km',
-      timeByBus: '35 mins',
-      timeByWalk: '1 hour 15 mins',
-      timeByCar: '20 mins',
-      coordinates: [43.7023, -79.7665], // Coordinates for Brampton
-      website: 'https://www.sgnsc.com',
-      phone: '(905) 457-5757',
-    },
-  ];
-  
+  const [selectedService, setSelectedService] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [nearbyGurdwaras, setNearbyGurdwaras] = useState([]);
+  const [nearestGurdwara, setNearestGurdwara] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+  const [searchAddress, setSearchAddress] = useState('');
+  const mapRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const debounceTimeoutRef = useRef(null);
 
   // Services list with descriptions
   const servicesList = [
@@ -94,12 +136,242 @@ const GurdwaraAccess = ({ isDarkMode }) => {
     },
   ];
 
+  // Calculate travel time based on distance and mode
+  const calculateTravelTime = useCallback((distanceKm, mode) => {
+    let speedKmH;
+    switch (mode) {
+      case 'walk':
+        speedKmH = 5; // average walking speed
+        break;
+      case 'bus':
+        speedKmH = 25; // average bus speed with stops
+        break;
+      case 'car':
+        speedKmH = 40; // average car speed in city
+        break;
+      default:
+        speedKmH = 30;
+    }
+    
+    const timeHours = distanceKm / speedKmH;
+    const timeMinutes = Math.round(timeHours * 60);
+    
+    if (timeMinutes < 60) {
+      return timeMinutes + ' mins';
+    } else {
+      const hours = Math.floor(timeMinutes / 60);
+      const mins = timeMinutes % 60;
+      return hours + ' hour' + (hours > 1 ? 's ' : ' ') + (mins > 0 ? mins + ' mins' : '');
+    }
+  }, []);
+
+  // Find Gurdwaras within 10km radius
+  const findNearbyGurdwaras = useCallback((lat, lng) => {
+    const maxDistance = 10; // 10km radius
+    const nearby = [];
+    
+    gurdwaraDatabase.forEach(gurdwara => {
+      const distance = getDistance(lat, lng, gurdwara.coordinates[0], gurdwara.coordinates[1]);
+      if (distance <= maxDistance) {
+        nearby.push({
+          ...gurdwara,
+          distance: distance.toFixed(1) + ' km',
+          timeByWalk: calculateTravelTime(distance, 'walk'),
+          timeByBus: calculateTravelTime(distance, 'bus'),
+          timeByCar: calculateTravelTime(distance, 'car')
+        });
+      }
+    });
+
+    // Sort by distance
+    nearby.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+    
+    setNearbyGurdwaras(nearby);
+    
+    // Set the nearest Gurdwara
+    if (nearby.length > 0) {
+      setNearestGurdwara(nearby[0]);
+    } else {
+      setNearestGurdwara(null);
+    }
+
+    // Center map on user location
+    if (mapRef.current && lat && lng) {
+      mapRef.current.flyTo([lat, lng], 13);
+    }
+  }, [calculateTravelTime]);
+
+  // Get user's current location
+  const getUserLocation = useCallback(() => {
+    setIsLoading(true);
+    setLocationError(null);
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          findNearbyGurdwaras(latitude, longitude);
+          setIsLoading(false);
+          
+          // Reverse geocode to get address
+          reverseGeocode(latitude, longitude);
+        },
+        (error) => {
+          setLocationError('Unable to retrieve your location. Please try again or enter your location manually.');
+          setIsLoading(false);
+          console.error('Error getting location:', error);
+        }
+      );
+    } else {
+      setLocationError('Geolocation is not supported by your browser. Please enter your location manually.');
+      setIsLoading(false);
+    }
+  }, [findNearbyGurdwaras]);
+
+  // Geocode address using Nominatim API
+  const geocodeAddress = async (address) => {
+    try {
+      setIsLoading(true);
+      setLocationError(null);
+      
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=5&countrycodes=ca&addressdetails=1`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Geocoding API request failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data.length === 0) {
+        setLocationError('No results found for this location. Please try a different address.');
+        return null;
+      }
+      
+      // Return the first result (most relevant)
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+        address: data[0].display_name
+      };
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      setLocationError('Error searching for location. Please try again.');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Reverse geocode coordinates to get address
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Reverse geocoding failed');
+      }
+      
+      const data = await response.json();
+      if (data.display_name) {
+        setSearchAddress(data.display_name);
+        setSearchQuery(data.display_name);
+      }
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+    }
+  };
+
+  // Handle search form submission
+  const handleSearch = useCallback(async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    
+    const location = await geocodeAddress(searchQuery);
+    if (location) {
+      setUserLocation({ lat: location.lat, lng: location.lng });
+      setSearchAddress(location.address);
+      findNearbyGurdwaras(location.lat, location.lng);
+    }
+  }, [searchQuery, findNearbyGurdwaras]);
+
+  // Handle input change with debounce for suggestions
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setShowSuggestions(value.length > 2); // Only show suggestions after 3 characters
+    
+    // Clear previous timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    // Set new timeout for debouncing
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (value.length > 2) {
+        fetchLocationSuggestions(value);
+      } else {
+        setFilteredSuggestions([]);
+      }
+    }, 300);
+  };
+
+  // Fetch location suggestions from Nominatim API
+  const fetchLocationSuggestions = async (query) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ca&addressdetails=1`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch suggestions');
+      }
+      
+      const data = await response.json();
+      setFilteredSuggestions(data.map(item => item.display_name));
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setFilteredSuggestions([]);
+    }
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = async (suggestion) => {
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
+    
+    const location = await geocodeAddress(suggestion);
+    if (location) {
+      setUserLocation({ lat: location.lat, lng: location.lng });
+      setSearchAddress(location.address);
+      findNearbyGurdwaras(location.lat, location.lng);
+    }
+  };
+
+  // Initialize with default data
+  useEffect(() => {
+    findNearbyGurdwaras(43.7315, -79.7624); // Default to Brampton area
+  }, [findNearbyGurdwaras]);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const toggleDropdown = (id) => {
     setActiveDropdown(activeDropdown === id ? null : id);
   };
 
   const handleServiceClick = (id) => {
-    setSelectedService(selectedService === id ? null : id); // Toggle selected service
+    setSelectedService(selectedService === id ? null : id);
   };
 
   return (
@@ -107,7 +379,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
       {/* Header with image and text */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light} // Conditionally render image
+          src={isDarkMode ? header_image_dark : header_image_light}
           alt="Gurdwara Header"
           className={styles.headerImage}
         />
@@ -127,19 +399,70 @@ const GurdwaraAccess = ({ isDarkMode }) => {
       <div className={styles.mainContainer}>
         {/* Left section (70% width) */}
         <div className={styles.leftSection}>
-          {/* Search bar */}
+          {/* Search bar with autocomplete */}
           <div className={styles.searchContainer}>
-            <input
-              type="text"
-              placeholder="Enter your location"
-              className={styles.input}
-            />
-            <button className={styles.searchButton}>Search</button>
+            <form onSubmit={handleSearch} className={styles.searchForm}>
+              <div className={styles.searchInputContainer}>
+                <FaSearch className={styles.searchIcon} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Enter your address or location (e.g., 123 Main St, Brampton)"
+                  className={styles.input}
+                  value={searchQuery}
+                  onChange={handleInputChange}
+                  onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                />
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <ul className={styles.suggestionsList}>
+                    {filteredSuggestions.map((suggestion, index) => (
+                      <li 
+                        key={index}
+                        className={styles.suggestionItem}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                      >
+                        {suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <button 
+                type="submit" 
+                className={styles.searchButton}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Searching...' : 'Search'}
+              </button>
+            </form>
+            <button 
+              className={styles.currentLocationButton}
+              onClick={getUserLocation}
+              disabled={isLoading}
+            >
+              <FaLocationArrow className={styles.locationIcon} />
+              Use Current Location
+            </button>
           </div>
 
-          {/* Random content list */}
+          {locationError && (
+            <div className={styles.errorMessage}>{locationError}</div>
+          )}
+
+          {/* Results information */}
+          {userLocation && searchAddress && (
+            <div className={styles.resultsInfo}>
+              <p>Showing Gurdwaras within 10km of: <strong>{searchAddress}</strong></p>
+              {nearbyGurdwaras.length === 0 && (
+                <p className={styles.noResults}>No Gurdwaras found nearby. Try a different location.</p>
+              )}
+            </div>
+          )}
+
+          {/* Gurdwaras list */}
           <div className={styles.list}>
-            {gurdwaras.map((gurdwara) => (
+            {nearbyGurdwaras.map((gurdwara) => (
               <div key={gurdwara.id} className={styles.listItem}>
                 <div className={styles.itemHeader}>
                   <h3>{gurdwara.name}</h3>
@@ -152,9 +475,9 @@ const GurdwaraAccess = ({ isDarkMode }) => {
                     </button>
                     {activeDropdown === gurdwara.id && (
                       <div className={styles.dropdownContent}>
-                        <button>Locate</button>
-                        <button>Services</button>
-                        <button>History</button>
+                        <Link to={`/gurdwara-access/locate/${gurdwara.id}`}>Locate</Link>
+                        <Link to={`/gurdwara-access/services/${gurdwara.id}`}>Services</Link>
+                        <Link to={`/gurdwara-access/history/${gurdwara.id}`}>History</Link>
                       </div>
                     )}
                   </div>
@@ -164,15 +487,24 @@ const GurdwaraAccess = ({ isDarkMode }) => {
                   <p>
                     <strong>Distance:</strong> {gurdwara.distance}
                   </p>
-                  <p>
+                  <Link 
+                    to={`/gurdwara-access/locate/${gurdwara.id}`} 
+                    className={styles.detailLink}
+                  >
                     <strong>Time by Bus:</strong> {gurdwara.timeByBus}
-                  </p>
-                  <p>
+                  </Link>
+                  <Link 
+                    to={`/gurdwara-access/locate/${gurdwara.id}`} 
+                    className={styles.detailLink}
+                  >
                     <strong>Time by Walk:</strong> {gurdwara.timeByWalk}
-                  </p>
-                  <p>
+                  </Link>
+                  <Link 
+                    to={`/gurdwara-access/locate/${gurdwara.id}`} 
+                    className={styles.detailLink}
+                  >
                     <strong>Time by Car:</strong> {gurdwara.timeByCar}
-                  </p>
+                  </Link>
                 </div>
                 <div className={styles.contact}>
                   <a href={gurdwara.website} target="_blank" rel="noopener noreferrer">
@@ -187,53 +519,66 @@ const GurdwaraAccess = ({ isDarkMode }) => {
 
           {/* Map with pinned locations */}
           <div className={styles.mapContainer}>
-      <MapContainer
-        center={[43.7156, -79.7607]} // Default center of the map
-        zoom={12}
-        style={{ height: '400px', width: '100%' }}
-        whenCreated={(map) => console.log('Map instance:', map)}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        
-        {gurdwaras.map((gurdwara) => (
-          <Marker key={gurdwara.id} position={gurdwara.coordinates}>
-            <Popup>
-              <div>
-                <h3>{gurdwara.name}</h3>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
-
-
-          {/* History of Nearest Gurdwara Section */}
-          <div className={styles.historySection}>
-            <h2>History of Nearest Gurdwara</h2>
-            <div className={styles.historyContent}>
-              <img
-                src={gurdwaraHistoryImage}
-                alt="Gurdwara History"
-                className={styles.historyImage}
+            <MapContainer
+              center={[43.7156, -79.7607]}
+              zoom={12}
+              style={{ height: '400px', width: '100%' }}
+              ref={mapRef}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
-              <div className={styles.historyText}>
-                <p>
-                  The nearest Gurdwara, Gurdwara Sikh Sangat, has a rich history
-                  rooted in the Sikh community of Brampton. Established in 1995, it
-                  has served as a spiritual and cultural hub for thousands of
-                  devotees.
-                </p>
-                <button className={styles.readMoreButton}>Read More</button>
-              </div>
+              
+              {/* User location marker */}
+              {userLocation && (
+                <Marker position={[userLocation.lat, userLocation.lng]}>
+                  <Popup>Your Location</Popup>
+                </Marker>
+              )}
+              
+              {/* Gurdwara markers */}
+              {nearbyGurdwaras.map((gurdwara) => (
+                <Marker key={gurdwara.id} position={gurdwara.coordinates}>
+                  <Popup>
+                    <div>
+                      <h3>{gurdwara.name}</h3>
+                      <p>{gurdwara.address}</p>
+                      <p>Distance: {gurdwara.distance}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+            <div className={styles.mapAttribution}>
+              Location data © <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors
             </div>
           </div>
+
+          {/* History of Nearest Gurdwara Section */}
+          {nearestGurdwara && (
+            <div className={styles.historySection}>
+              <h2>History of {nearestGurdwara.name}</h2>
+              <div className={styles.historyContent}>
+                <img
+                  src={gurdwaraHistoryImage}
+                  alt="Gurdwara History"
+                  className={styles.historyImage}
+                />
+                <div className={styles.historyText}>
+                  <p>{nearestGurdwara.history}</p>
+                  <Link 
+                    to={`/gurdwara-access/history/${nearestGurdwara.id}`}
+                    className={styles.readMoreButton}
+                  >
+                    Read More
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Right section (30% width) */}
         <div className={styles.rightSection}>
           <h2>Services in Gurdwara</h2>
           <ul className={styles.servicesList}>

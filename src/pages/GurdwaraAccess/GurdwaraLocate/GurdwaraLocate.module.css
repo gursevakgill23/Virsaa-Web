@@ -1,0 +1,154 @@
+/* Page container - full width */
+.page {
+  padding-bottom: 20px;
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%;
+}
+
+/* Full width header */
+.header {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  margin-bottom: 20px;
+}
+
+.headerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.headerText {
+  position: absolute;
+  top: 30%;
+  left: 5%;
+  color: white;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.headerText h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  color: var(--headline-color);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.headerText p {
+  margin: 5px 0 0;
+  font-size: 1.2rem;
+  color: var(--text-color);
+}
+
+/* Breadcrumb Section */
+.breadcrumb {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  background: var(--section-bg-color);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin: 2rem ;
+}
+
+.breadcrumb a {
+  color: var(--secondary-text-color);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.breadcrumb a:hover {
+  color: var(--primary-color);
+}
+
+.breadcrumb span {
+  color: var(--text-color);
+  margin: 0 5px;
+}
+
+/* Main content container - constrained to 1400px */
+.mainContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Transport selector */
+.transportSelector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.transportButton {
+  flex: 1;
+  padding: 15px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--card-bg-color);
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  color: var(--text-color);
+}
+
+.transportButton:hover {
+  background-color: var(--button-hover-bg-color);
+}
+
+.transportButton.active {
+  background-color: var(--primary-color);
+  color: var(--section-bg-color);
+}
+
+/* Map container */
+.mapContainer {
+  height: 500px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+/* Directions container */
+.directionsContainer {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: var(--card-bg-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header {
+    height: 300px;
+  }
+  
+  .headerText h1 {
+    font-size: 1.8rem;
+  }
+  
+  .transportSelector {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 576px) {
+  .headerText h1 {
+    font-size: 1.5rem;
+  }
+  
+  .headerText {
+    padding: 15px;
+  }
+  }
