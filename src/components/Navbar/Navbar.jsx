@@ -1,14 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './Navbar.module.css';
-import { FaBars, FaSearch, FaTimes, FaMoon, FaSun } from 'react-icons/fa';
+import { 
+  FaBars, 
+  FaSearch, 
+  FaTimes, 
+  FaMoon, 
+  FaSun,
+  FaUser,
+  FaUserCog,
+  FaHeart,
+  FaCrown,
+  FaHistory,
+  FaSignOutAlt,
+  FaBell
+} from 'react-icons/fa';
 import virsaa_logo from '../../images/logo.png';
 import result_image from '../../images/search_result.jpeg';
+import userImage from '../../images/Login/user-placeholder.jpg';
+import { useAuth } from '../../context/AuthContext'; // Import the auth context
 
 const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const navigate = useNavigate();
+  
+  // Get auth state and methods from context
+  const { isLoggedIn, userData, logout } = useAuth();
 
   const handleDropdown = () => {
     setShowDropdown(!showDropdown);
@@ -22,17 +41,19 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
     setShowSearch(false);
   };
 
-  const openLogin = () => {
-    navigate('/login');
+  const toggleProfileSidebar = () => {
+    setShowProfileSidebar(!showProfileSidebar);
   };
 
-  const openMembership = () => {
-    navigate('/membership');
+  const handleLogout = () => {
+    logout(); // Use the logout function from context
+    setShowProfileSidebar(false);
+    navigate('/login');
   };
 
   // Disable main page scroll when search is open
   useEffect(() => {
-    if (showSearch) {
+    if (showSearch || showProfileSidebar) {
       document.body.classList.add(styles.noScroll);
     } else {
       document.body.classList.remove(styles.noScroll);
@@ -41,14 +62,14 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
     return () => {
       document.body.classList.remove(styles.noScroll);
     };
-  }, [showSearch]);
+  }, [showSearch, showProfileSidebar]);
 
   return (
     <>
       <nav className={styles.navbar}>
         {/* Left Side: Logo */}
         <div className={styles.logo}>
-          <img src={virsaa_logo} className="logo-image" alt="" />
+          <img src={virsaa_logo} className="logo-image" alt="Logo" />
         </div>
 
         {/* Center: Nav Links */}
@@ -71,23 +92,36 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
           <Link to="/about">About</Link>
         </div>
 
-        {/* Right Side: Search, Menu Icon, Theme Toggle, and Buttons */}
+        {/* Right Side: Search, Menu Icon, Theme Toggle, and User Profile */}
         <div className={styles.navRight}>
           <button className={styles.searchIcon} onClick={toggleSearch}>
             <FaSearch />
           </button>
           <button className={styles.themeToggle} onClick={toggleTheme}>
-            {isDarkMode ? <FaSun /> : <FaMoon />} {/* Toggle between Moon and Sun icons */}
+            {isDarkMode ? <FaSun /> : <FaMoon />}
           </button>
           <button className={styles.menuIcon} onClick={toggleSidebar}>
             <FaBars />
           </button>
-          <button onClick={openLogin} className={styles.loginButton}>
-            Login
-          </button>
-          <button onClick={openMembership} className={styles.getPremiumButton}>
-            Premium
-          </button>
+          
+          {isLoggedIn ? (
+            <div className={styles.userProfile} onClick={toggleProfileSidebar}>
+              <img 
+                src={userData?.profileImage || userImage} 
+                alt="User" 
+                className={styles.userImage}
+              />
+            </div>
+          ) : (
+            <>
+              <button onClick={() => navigate('/login')} className={styles.loginButton}>
+                Login
+              </button>
+              <button onClick={() => navigate('/premium')} className={styles.getPremiumButton}>
+                Premium
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -119,6 +153,67 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Profile Sidebar */}
+      {showProfileSidebar && (
+        <div className={styles.profileSidebar}>
+          <div className={styles.sidebarHeader}>
+            <button className={styles.closeSidebar} onClick={toggleProfileSidebar}>
+              <FaTimes />
+            </button>
+          </div>
+          
+          <div className={styles.userInfo}>
+            <img 
+              src={userData?.profileImage || userImage} 
+              alt="User" 
+              className={styles.sidebarUserImage}
+            />
+            <h3>{userData?.username || 'User'}</h3>
+            <p>{userData?.email || ''}</p>
+          </div>
+          
+          <div className={styles.sidebarMenu}>
+            <Link to="/account" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+              <span>My Profile</span>
+              <FaUser className={styles.sidebarMenuIcon} />
+            </Link>
+            
+            <Link to="/settings" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+              <span>Account Settings</span>
+              <FaUserCog className={styles.sidebarMenuIcon} />
+            </Link>
+            
+            <Link to="/favorites" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+              <span>My Favorites</span>
+              <FaHeart className={styles.sidebarMenuIcon} />
+            </Link>
+            
+            <Link to="/history" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+              <span>History</span>
+              <FaHistory className={styles.sidebarMenuIcon} />
+            </Link>
+
+            <Link to="/notifications" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+              <span>Notifications</span>
+              <FaBell className={styles.sidebarMenuIcon} />
+            </Link>
+            
+            <Link to="/premium" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+              <span>Get Premium</span>
+              <FaCrown className={styles.sidebarMenuIcon} />
+            </Link>
+            
+            <button 
+              onClick={handleLogout} 
+              className={`${styles.menuItem} ${styles.logoutButton}`}
+            >
+              <span>Logout</span>
+              <FaSignOutAlt className={styles.sidebarMenuIcon} />
+            </button>
           </div>
         </div>
       )}

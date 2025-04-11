@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar, FaPenFancy, FaBook, FaAward, FaChevronDown } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
-
+import Loader from '../../../components/Loader'
 import styles from './AuthorDetail.module.css';
 // Utility function to handle production image paths
 const useProductionImagePath = () => {
@@ -183,7 +183,7 @@ const AuthorDetail = ({ isDarkMode }) => {
   };
 
   if (isLoading) {
-    return <div className={styles.authorDetailContainer}>Loading author details...</div>;
+    return <div className={styles.authorDetailContainer}><Loader/></div>;
   }
 
   return (

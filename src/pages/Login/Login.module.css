@@ -255,6 +255,107 @@
   }
 }
 
+/* Error styles */
+.errorInput {
+  border-color: #ff4444 !important;
+}
+
+.errorMessage {
+  color: #ff4444;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  padding: 0.25rem;
+  background-color: rgba(255, 68, 68, 0.1);
+  border-radius: 4px;
+}
+
+/* Remember Me & Forgot Password Container */
+.rememberForgot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+/* Remember Me Checkbox */
+.rememberMe {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.rememberMe input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--input-border-color);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.rememberMe input[type="checkbox"]:checked {
+  background-color: var(--button-bg-color);
+  border-color: var(--button-bg-color);
+}
+
+.rememberMe input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  color: white;
+  font-size: 14px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.rememberMe label {
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Forgot Password Link */
+.forgotPassword {
+  color: var(--link-color);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.forgotPassword:hover {
+  color: var(--link-hover-color);
+  text-decoration: underline;
+}
+
+/* Loading Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loginButton[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* Latest Content and Popular in Kids Sections */
 .latestContent,
 .popularInKids {

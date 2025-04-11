@@ -1,7 +1,7 @@
 .container {
   position: fixed;
   bottom: 8%;
-  right: 5%;
+  left: 5%;
   z-index: 1000;
 }
 
@@ -25,4 +25,21 @@
   border-bottom: 5px solid var(--button-hover-border-color);
   color: var(--button-hover-text-color);
 }
-
+@media (max-width:992px) {
+  .button{
+    font-size: 14px;
+  }
+  
+}
+@media (max-width:768px) {
+  .button{
+    font-size: 12px;
+  }
+  
+}
+@media (max-width:480px) {
+  .button{
+    font-size: 10px;
+  }
+  
+}

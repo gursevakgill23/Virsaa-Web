@@ -59,7 +59,7 @@ const recommendedItems = [
 const SikhHistory = ({ isDarkMode }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const cardsPerPage = 8;
+  const cardsPerPage = 12;
   const imageRefs = useRef([]);
 
   useEffect(() => {

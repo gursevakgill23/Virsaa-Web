@@ -1,6 +1,6 @@
 :root {
   /* Light Theme */
-  --navbar-bg: #1a2a4f;
+  --navbar-bg:transparent;
   --search-button-bg: #1a2a4f;
   --search-button-text: #fff;
   --text-color: #1a2a4f;
@@ -10,6 +10,11 @@
   --button-text: #1a2a4f;
   --button-hover-bg: #1a2a4f;
   --button-hover-text: white;
+  --sidebar-bg: white;
+  --sidebar-text: #333;
+  --sidebar-hover: #f5f5f5;
+  --sidebar-bg-rgb: 255,255,255;
+
 }
 
 [data-theme="dark"] {
@@ -24,6 +29,11 @@
   --button-text: #1a0e16;
   --button-hover-bg: #1a0e16;
   --button-hover-text: white;
+  --sidebar-bg: #1a0e16;
+  --sidebar-text: white;
+  --sidebar-hover: #2a1e26;
+  --sidebar-bg-rgb: 26, 14, 22;
+
 }
 
 /* Navbar Styles */
@@ -40,9 +50,8 @@
 }
 
 .logo {
-  height: 60px;
   width: 60px;
-  min-width: 60px;
+  height: 60px;
 }
 
 .logo img {
@@ -127,7 +136,184 @@
   overflow: hidden;
 }
 
-/* Search Section */
+/* User Profile */
+.userProfile {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  border: 1px solid var(--text-color);
+}
+
+.userProfile:hover {
+  transform: scale(1.1);
+}
+
+.userImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Profile Sidebar - Modern Version */
+.profileSidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  z-index: 1100;
+  transform: translateX(0);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(10px);
+  background-color: rgba(var(--sidebar-bg-rgb), 0.85);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebarHeader {
+  padding: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.closeSidebar {
+  background: none;
+  border: none;
+  color: var(--sidebar-text);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeSidebar:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(90deg);
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  margin-bottom: 10px;
+}
+
+.sidebarUserImage {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.sidebarUserImage:hover {
+  transform: scale(1.05);
+}
+
+.userInfo h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.userInfo p {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+.sidebarMenu {
+  flex: 1;
+  padding: 16px 0;
+  overflow-y: auto;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  transition: all 0.25s ease;
+  position: relative;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.menuItem:hover {
+  background: var(--sidebar-hover);
+  padding-left: 28px;
+}
+
+.menuItem::after {
+  content: '';
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.menuItem:last-child::after {
+  display: none;
+}
+
+.menuIcon, .sidebarMenuIcon {
+  font-size: 1.1rem;
+  opacity: 0.8;
+  transition: transform 0.2s ease;
+}
+
+.menuItem:hover .menuIcon, .sidebarMenuIcon {
+  opacity: 1;
+  transform: translateX(-3px);
+}
+
+
+/* Logout Button - Styled like link */
+.logoutButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  padding: 14px 24px;
+  font: inherit;
+  color: inherit;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Ensure it matches other menu items hover state */
+.logoutButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  padding-left: 28px;
+}
+
+/* Remove default button focus styles */
+.logoutButton:focus {
+  outline: none;
+}
 /* Search Section */
 .searchSection {
   width: 100%;
@@ -263,7 +449,7 @@
   transform: translateY(-2px);
   border: 1px solid var(--button-hover-text);
 }
-
+/* Premium Button in Navbar */
 .getPremiumButton {
   background-color: var(--button-hover-bg);
   color: var(--button-hover-text);
@@ -282,6 +468,8 @@
   transform: translateY(-2px);
 }
 
+
+
 /* Media Queries */
 @media (max-width: 1200px) {
   .navbar {
@@ -293,7 +481,7 @@
   .navLinks {
     display: none;
   }
-  }
+}
 
 @media (max-width: 768px) {
   .navbar {
@@ -317,10 +505,18 @@
     padding: 6px;
   }
   
-  .loginButton,
-  .getPremiumButton {
+  .loginButton, .getPremiumButton {
     padding: 6px 12px;
     font-size: 0.8rem;
+  }
+  
+  .userProfile {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .profileSidebar {
+    width: 280px;
   }
   
   .searchSection {
@@ -348,15 +544,13 @@
     min-width: 45px;
   }
   
-  
   .searchIcon,
   .menuIcon,
   .themeToggle {
     padding: 5px;
   }
   
-  .loginButton,
-  .getPremiumButton {
+  .loginButton, .getPremiumButton {
     padding: 5px 10px;
     white-space: nowrap;
   }
@@ -379,13 +573,16 @@
 }
 
 @media (max-width: 400px) {
-  .loginButton,
-  .getPremiumButton {
+  .loginButton,.getPremiumButton {
     padding: 4px 8px;
     font-size: 0.65rem;
   }
   
   .navRight {
     gap: 3px;
+  }
+  
+  .profileSidebar {
+    width: 100%;
   }
 }

@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FaCrown, FaSearch, FaFilter, FaTimes, FaPlayCircle, FaVideo, FaHeadphones, FaLock } from 'react-icons/fa';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Link,useNavigate } from 'react-router-dom';
+import { FaCrown, FaSearch, FaFilter, FaTimes, FaPlayCircle, FaVideo, FaHeadphones, FaLock, FaMicrophone, FaPlay, FaPause, FaStepBackward, FaStepForward, FaVolumeUp, FaExpand } from 'react-icons/fa';
 import styles from './Gurbani.module.css';
 import header_image_light from '../../images/Gurbani/header-image.png';
 import header_image_dark from '../../images/Gurbani/header-image-dark.png';
@@ -9,6 +8,9 @@ import gurbaniImage from '../../images/Gurbani/gurbani.png';
 import audioKirtanImage from '../../images/Gurbani/audio-kirtan.jpg';
 import videoKirtanImage from '../../images/Gurbani/video-kirtan.jpg';
 import sectionImage from '../../images/Gurbani/section-image.jpg';
+import bookImage from '../../images/Collections/book-image.jpg';
+import audioFile from "../../images/Gurbani/Nitnem.mp3";
+import videoFile from "../../images/Gurbani/Aarti.mp4";
 
 const Gurbani = ({ isDarkMode }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,187 +18,356 @@ const Gurbani = ({ isDarkMode }) => {
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isListening, setIsListening] = useState(false);
+  const [filteredData, setFilteredData] = useState([]);
   const [cardsPerPage] = useState(10);
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [currentMedia, setCurrentMedia] = useState(null);
+  const [mediaType, setMediaType] = useState(null); // 'audio' or 'video'
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.7);
+  
+  const recognitionRef = useRef(null);
+  const mediaRef = useRef(null);
+  const modalRef = useRef(null);
+  const navigate = useNavigate();
+
+  const gurbaniData = useMemo(() => {
+    return [
+      {
+        id: 1,
+        type: 'shabad',
+        image: gurbaniImage,
+        title: 'Shabad 1',
+        description: 'This is a description of the first shabad.',
+        isPremium: true,
+      },
+      {
+        id: 2,
+        type: 'audio',
+        image: audioKirtanImage,
+        title: 'Anand Sahib',
+        description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.',
+        isPremium: false,
+      },
+      {
+        id: 3,
+        type: 'video',
+        image: videoKirtanImage,
+        title: 'Rehras Sahib',
+        description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.',
+        isPremium: true,
+      },
+      {
+        id: 4,
+        type: 'shabad',
+        image: gurbaniImage,
+        title: 'Shabad 2',
+        description: 'This is a description of the second shabad.',
+        isPremium: false,
+      },
+      {
+        id: 5,
+        type: 'audio',
+        image: audioKirtanImage,
+        title: 'Japji Sahib',
+        description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.',
+        isPremium: true,
+      },
+      {
+        id: 6,
+        type: 'video',
+        image: videoKirtanImage,
+        title: 'Kirtan Sohila',
+        description: 'Enjoy the peaceful Kirtan Sohila by Bhai Jarnail Singh.',
+        isPremium: false,
+      },
+      {
+        id: 7,
+        type: 'shabad',
+        image: gurbaniImage,
+        title: 'Shabad 3',
+        description: 'This is a description of the third shabad.',
+        isPremium: true,
+      },
+      {
+        id: 8,
+        type: 'audio',
+        image: audioKirtanImage,
+        title: 'Rehras Sahib',
+        description: 'Meditate with the soothing Rehras Sahib by Bhai Balbir Singh.',
+        isPremium: false,
+      },
+      {
+        id: 9,
+        type: 'video',
+        image: videoKirtanImage,
+        title: 'Asa Di Var',
+        description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.',
+        isPremium: true,
+      },
+      {
+        id: 10,
+        type: 'shabad',
+        image: gurbaniImage,
+        title: 'Shabad 4',
+        description: 'This is a description of the fourth shabad.',
+        isPremium: false,
+      },
+      {
+        id: 11,
+        type: 'audio',
+        image: audioKirtanImage,
+        title: 'Sukhmani Sahib',
+        description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.',
+        isPremium: true,
+      },
+      {
+        id: 12,
+        type: 'video',
+        image: videoKirtanImage,
+        title: 'Japji Sahib',
+        description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.',
+        isPremium: false,
+      },
+      {
+        id: 13,
+        type: 'shabad',
+        image: gurbaniImage,
+        title: 'Shabad 5',
+        description: 'This is a description of the fifth shabad.',
+        isPremium: true,
+      },
+      {
+        id: 14,
+        type: 'audio',
+        image: audioKirtanImage,
+        title: 'Anand Sahib',
+        description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.',
+        isPremium: false,
+      },
+      {
+        id: 15,
+        type: 'video',
+        image: videoKirtanImage,
+        title: 'Rehras Sahib',
+        description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.',
+        isPremium: true,
+      },
+      {
+        id: 16,
+        type: 'shabad',
+        image: gurbaniImage,
+        title: 'Shabad 6',
+        description: 'This is a description of the sixth shabad.',
+        isPremium: false,
+      },
+      {
+        id: 17,
+        type: 'audio',
+        image: audioKirtanImage,
+        title: 'Kirtan Sohila',
+        description: 'End your day with the peaceful Kirtan Sohila by Bhai Jarnail Singh.',
+        isPremium: true,
+      },
+      {
+        id: 18,
+        type: 'video',
+        image: videoKirtanImage,
+        title: 'Asa Di Var',
+        description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.',
+        isPremium: false,
+      },
+      {
+        id: 19,
+        type: 'shabad',
+        image: gurbaniImage,
+        title: 'Shabad 7',
+        description: 'This is a description of the seventh shabad.',
+        isPremium: true,
+      },
+      {
+        id: 20,
+        type: 'audio',
+        image: audioKirtanImage,
+        title: 'Sukhmani Sahib',
+        description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.',
+        isPremium: false,
+      },
+    ];
+  }, []);
+
+  // Media player functions
+  const togglePlayPause = () => {
+    if (isPlaying) {
+      mediaRef.current.pause();
+    } else {
+      mediaRef.current.play().catch(error => {
+        console.error("Playback failed:", error);
+      });
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleTimeUpdate = () => {
+    setCurrentTime(mediaRef.current.currentTime);
+  };
+
+  const handleLoadedMetadata = () => {
+    setDuration(mediaRef.current.duration);
+  };
+
+  const handleSeek = (e) => {
+    const seekTime = e.target.value;
+    mediaRef.current.currentTime = seekTime;
+    setCurrentTime(seekTime);
+  };
+
+  const handleVolumeChange = (e) => {
+    const newVolume = e.target.value;
+    setVolume(newVolume);
+    mediaRef.current.volume = newVolume;
+  };
+
+  const formatTime = (time) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  const playMedia = (item, type) => {
+    setCurrentMedia(item);
+    setMediaType(type);
+    setShowMediaModal(true);
+    setIsPlaying(false);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeModal = () => {
+    setShowMediaModal(false);
+    setIsPlaying(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  const playNext = () => {
+    const currentIndex = gurbaniData.findIndex(item => item.id === currentMedia.id);
+    const nextIndex = (currentIndex + 1) % gurbaniData.length;
+    playMedia(gurbaniData[nextIndex], mediaType);
+  };
+
+  const playPrevious = () => {
+    const currentIndex = gurbaniData.findIndex(item => item.id === currentMedia.id);
+    const prevIndex = (currentIndex - 1 + gurbaniData.length) % gurbaniData.length;
+    playMedia(gurbaniData[prevIndex], mediaType);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      modalRef.current.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setSearchQuery(transcript);
+        handleSearch({ target: { value: transcript } });
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+
     const loadingTimer = setTimeout(() => {
       setIsLoading(false);
     }, 2000);
 
-    return () => clearTimeout(loadingTimer);
+    return () => {
+      clearTimeout(loadingTimer);
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      document.body.style.overflow = 'auto';
+    };
   }, []);
 
-  const gurbaniData = [
-    {
-      id: 1,
-      type: 'shabad',
-      image: gurbaniImage,
-      title: 'Shabad 1',
-      description: 'This is a description of the first shabad.',
-      isPremium: true,
-    },
-    {
-      id: 2,
-      type: 'audio',
-      image: audioKirtanImage,
-      title: 'Anand Sahib',
-      description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.',
-      isPremium: false,
-    },
-    {
-      id: 3,
-      type: 'video',
-      image: videoKirtanImage,
-      title: 'Rehras Sahib',
-      description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.',
-      isPremium: true,
-    },
-    {
-      id: 4,
-      type: 'shabad',
-      image: gurbaniImage,
-      title: 'Shabad 2',
-      description: 'This is a description of the second shabad.',
-      isPremium: false,
-    },
-    {
-      id: 5,
-      type: 'audio',
-      image: audioKirtanImage,
-      title: 'Japji Sahib',
-      description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.',
-      isPremium: true,
-    },
-    {
-      id: 6,
-      type: 'video',
-      image: videoKirtanImage,
-      title: 'Kirtan Sohila',
-      description: 'Enjoy the peaceful Kirtan Sohila by Bhai Jarnail Singh.',
-      isPremium: false,
-    },
-    {
-      id: 7,
-      type: 'shabad',
-      image: gurbaniImage,
-      title: 'Shabad 3',
-      description: 'This is a description of the third shabad.',
-      isPremium: true,
-    },
-    {
-      id: 8,
-      type: 'audio',
-      image: audioKirtanImage,
-      title: 'Rehras Sahib',
-      description: 'Meditate with the soothing Rehras Sahib by Bhai Balbir Singh.',
-      isPremium: false,
-    },
-    {
-      id: 9,
-      type: 'video',
-      image: videoKirtanImage,
-      title: 'Asa Di Var',
-      description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.',
-      isPremium: true,
-    },
-    {
-      id: 10,
-      type: 'shabad',
-      image: gurbaniImage,
-      title: 'Shabad 4',
-      description: 'This is a description of the fourth shabad.',
-      isPremium: false,
-    },
-    {
-      id: 11,
-      type: 'audio',
-      image: audioKirtanImage,
-      title: 'Sukhmani Sahib',
-      description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.',
-      isPremium: true,
-    },
-    {
-      id: 12,
-      type: 'video',
-      image: videoKirtanImage,
-      title: 'Japji Sahib',
-      description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.',
-      isPremium: false,
-    },
-    {
-      id: 13,
-      type: 'shabad',
-      image: gurbaniImage,
-      title: 'Shabad 5',
-      description: 'This is a description of the fifth shabad.',
-      isPremium: true,
-    },
-    {
-      id: 14,
-      type: 'audio',
-      image: audioKirtanImage,
-      title: 'Anand Sahib',
-      description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.',
-      isPremium: false,
-    },
-    {
-      id: 15,
-      type: 'video',
-      image: videoKirtanImage,
-      title: 'Rehras Sahib',
-      description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.',
-      isPremium: true,
-    },
-    {
-      id: 16,
-      type: 'shabad',
-      image: gurbaniImage,
-      title: 'Shabad 6',
-      description: 'This is a description of the sixth shabad.',
-      isPremium: false,
-    },
-    {
-      id: 17,
-      type: 'audio',
-      image: audioKirtanImage,
-      title: 'Kirtan Sohila',
-      description: 'End your day with the peaceful Kirtan Sohila by Bhai Jarnail Singh.',
-      isPremium: true,
-    },
-    {
-      id: 18,
-      type: 'video',
-      image: videoKirtanImage,
-      title: 'Asa Di Var',
-      description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.',
-      isPremium: false,
-    },
-    {
-      id: 19,
-      type: 'shabad',
-      image: gurbaniImage,
-      title: 'Shabad 7',
-      description: 'This is a description of the seventh shabad.',
-      isPremium: true,
-    },
-    {
-      id: 20,
-      type: 'audio',
-      image: audioKirtanImage,
-      title: 'Sukhmani Sahib',
-      description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.',
-      isPremium: false,
-    },
-  ];
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      // Handle fullscreen change if needed
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    let results = gurbaniData;
+
+    if (searchQuery) {
+      results = results.filter(item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (selectedFilters.length > 0) {
+      results = results.filter(item => {
+        if (selectedFilters.includes('premium') && !item.isPremium) return false;
+        if (selectedFilters.includes('shabad') && item.type !== 'shabad') return false;
+        if (selectedFilters.includes('audio') && item.type !== 'audio') return false;
+        if (selectedFilters.includes('video') && item.type !== 'video') return false;
+        return true;
+      });
+    }
+
+    setFilteredData(results);
+    setCurrentPage(1);
+  }, [searchQuery, selectedFilters, gurbaniData]);
 
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentCards = gurbaniData.slice(indexOfFirstCard, indexOfLastCard);
+  const currentCards = filteredData.length > 0 ? filteredData.slice(indexOfFirstCard, indexOfLastCard) : gurbaniData.slice(indexOfFirstCard, indexOfLastCard);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
+  };
+
+  const toggleVoiceSearch = () => {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      alert("Voice search is not supported in your browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      setIsListening(true);
+      recognitionRef.current.start();
+    }
   };
 
   const toggleFilters = () => {
@@ -217,7 +388,29 @@ const Gurbani = ({ isDarkMode }) => {
 
   return (
     <div className={styles.container}>
-      {/* Header Section - remains unchanged */}
+      {/* Hidden media elements */}
+      {mediaType === 'audio' && (
+        <audio
+          ref={mediaRef}
+          src={audioFile}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={() => setIsPlaying(false)}
+          volume={volume}
+        />
+      )}
+      {mediaType === 'video' && (
+        <video
+          ref={mediaRef}
+          src={videoFile}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={() => setIsPlaying(false)}
+          volume={volume}
+          className={styles.videoElement}
+        />
+      )}
+
       <div className={styles.header}>
         <img
           src={isDarkMode ? header_image_dark : header_image_light}
@@ -230,13 +423,11 @@ const Gurbani = ({ isDarkMode }) => {
         </div>
       </div>
 
-      {/* Breadcrumb - remains unchanged */}
       <div className={styles.breadcrumb}>
         <Link to={'/'}><span>Home</span></Link> / 
         <Link to={'/gurbani'}><span> Gurbani</span></Link>
       </div>
 
-      {/* Search and Filter - remains unchanged */}
       <div className={styles.searchFilterContainer}>
         <div className={styles.searchBar}>
           <input
@@ -245,6 +436,14 @@ const Gurbani = ({ isDarkMode }) => {
             value={searchQuery}
             onChange={handleSearch}
           />
+          <button 
+            className={`${styles.voiceSearchButton} ${isListening ? styles.listening : ''}`}
+            onClick={toggleVoiceSearch}
+            type="button"
+            aria-label="Voice search"
+          >
+            <FaMicrophone />
+          </button>
           <button className={styles.searchButton}>
             <span className={styles.searchText}>Search</span>
             <span className={styles.searchIcon}>
@@ -257,7 +456,6 @@ const Gurbani = ({ isDarkMode }) => {
         </button>
       </div>
 
-      {/* Filters Sidebar - remains unchanged */}
       {showFilters && (
         <div className={styles.filtersSidebar}>
           <button className={styles.closeButton} onClick={toggleFilters}>
@@ -315,15 +513,20 @@ const Gurbani = ({ isDarkMode }) => {
         </div>
       )}
 
-      {/* Main Content - Updated card rendering */}
       <div className={styles.mainContent}>
+        {searchQuery && (
+          <div className={styles.searchResultsHeader}>
+            <h3>Search Results for: "{searchQuery}"</h3>
+            {filteredData.length === 0 && <p>No results found</p>}
+          </div>
+        )}
+        
         <div className={styles.cardGrid}>
           {isLoading ? (
             Array(cardsPerPage).fill().map((_, index) => (
               <div key={`skeleton-${index}`} className={styles.card}>
                 <div className={styles.cardGlass}>
-                  <div className={styles.cardImageSkeleton}>
-                  </div>
+                  <div className={styles.cardImageSkeleton}></div>
                   <div className={styles.skeletonTitle}></div>
                   <div className={styles.skeletonPremium}></div>
                   <div className={styles.skeletonHoverContent}>
@@ -334,7 +537,15 @@ const Gurbani = ({ isDarkMode }) => {
             ))
           ) : (
             currentCards.map((item) => (
-              <div key={item.id} className={`${styles.card} ${item.isPremium ? styles.premiumCard : ''}`}>
+              <div 
+                key={item.id} 
+                className={`${styles.card} ${item.isPremium ? styles.premiumCard : ''}`}
+                onClick={() => {
+                  if (item.isPremium) {
+                    navigate('/premium');
+                  }
+                }}
+              >
                 <div className={`${styles.cardGlass} ${item.isPremium ? styles.premiumGlass : ''}`}>
                   {item.isPremium && (
                     <>
@@ -356,17 +567,45 @@ const Gurbani = ({ isDarkMode }) => {
                       </div>
                     )}
                     {item.type === 'shabad' && (
-                      <button className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}>
+                      <button 
+                        className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (item.isPremium) {
+                            navigate('/premium');
+                          }
+                        }}
+                      >
                         <FaPlayCircle /> {item.isPremium ? 'Unlock to Read' : 'Read Now'}
                       </button>
                     )}
                     {item.type === 'audio' && (
-                      <button className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}>
+                      <button 
+                        className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (item.isPremium) {
+                            navigate('/premium');
+                          } else {
+                            playMedia(item, 'audio');
+                          }
+                        }}
+                      >
                         <FaHeadphones /> {item.isPremium ? 'Unlock to Listen' : 'Listen Now'}
                       </button>
                     )}
                     {item.type === 'video' && (
-                      <button className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}>
+                      <button 
+                        className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (item.isPremium) {
+                            navigate('/premium');
+                          } else {
+                            playMedia(item, 'video');
+                          }
+                        }}
+                      >
                         <FaVideo /> {item.isPremium ? 'Unlock to Watch' : 'Watch Now'}
                       </button>
                     )}
@@ -377,9 +616,8 @@ const Gurbani = ({ isDarkMode }) => {
           )}
         </div>
 
-        {/* Pagination - remains unchanged */}
         <div className={styles.pagination}>
-          {Array.from({ length: Math.ceil(gurbaniData.length / cardsPerPage) }, (_, i) => (
+          {Array.from({ length: Math.ceil((filteredData.length > 0 ? filteredData.length : gurbaniData.length) / cardsPerPage) }, (_, i) => (
             <button
               key={i + 1}
               onClick={() => paginate(i + 1)}
@@ -391,7 +629,98 @@ const Gurbani = ({ isDarkMode }) => {
         </div>
       </div>
 
-      {/* Section with Image - remains unchanged */}
+      {/* Media Player Modal */}
+      {showMediaModal && currentMedia && (
+        <div className={styles.mediaModal} ref={modalRef}>
+          <div className={styles.mediaModalContent}>
+            <button 
+              className={styles.closeModalButton}
+              onClick={closeModal}
+            >
+              <FaTimes />
+            </button>
+            
+            <div className={styles.mediaModalHeader}>
+              <img 
+                src={bookImage} 
+                alt={currentMedia.title} 
+                className={styles.mediaModalImage}
+              />
+              <div className={styles.mediaModalInfo}>
+                <h3>{currentMedia.title}</h3>
+                <p>{currentMedia.description}</p>
+              </div>
+            </div>
+
+            {mediaType === 'video' && (
+              <div className={styles.videoContainer}>
+                <video
+                  ref={mediaRef}
+                  src={videoFile}
+                  className={styles.videoPlayer}
+                  onClick={togglePlayPause}
+                />
+              </div>
+            )}
+
+            <div className={styles.mediaPlayerControls}>
+              <div className={styles.progressContainer}>
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 100}
+                  value={currentTime}
+                  onChange={handleSeek}
+                  className={styles.progressBar}
+                />
+                <div className={styles.timeDisplay}>
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+
+              <div className={styles.mainControls}>
+                <button className={styles.controlButton} onClick={playPrevious}>
+                  <FaStepBackward />
+                </button>
+                <button 
+                  className={styles.playButton} 
+                  onClick={togglePlayPause}
+                >
+                  {isPlaying ? <FaPause /> : <FaPlay />}
+                </button>
+                <button className={styles.controlButton} onClick={playNext}>
+                  <FaStepForward />
+                </button>
+              </div>
+
+              <div className={styles.secondaryControls}>
+                <div className={styles.volumeControls}>
+                  <FaVolumeUp className={styles.volumeIcon} />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={volume}
+                    onChange={handleVolumeChange}
+                    className={styles.volumeSlider}
+                  />
+                </div>
+                {mediaType === 'video' && (
+                  <button 
+                    className={styles.fullscreenButton}
+                    onClick={toggleFullscreen}
+                  >
+                    <FaExpand />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={styles.sectionWithImage}>
         {isLoading ? (
           <div className={styles.sectionTextSkeleton}>
@@ -416,37 +745,61 @@ const Gurbani = ({ isDarkMode }) => {
         )}
       </div>
 
-      {/* Because You Watched - remains unchanged */}
       <div className={styles.becauseYouWatched}>
-        <h2 className={styles.sectionTitle}>Because You Viewed Rehraas Sahib</h2>
-        <div className={styles.shapeContainer}>
-          {isLoading ? (
-            Array(6).fill().map((_, index) => (
-              <div key={`shape-skeleton-${index}`} className={`${styles.shapeSkeleton} ${styles[`shape${index % 6}`]}`}>
-                <div className={styles.skeletonShapeContent}></div>
-              </div>
-            ))
-          ) : (
-            currentCards.slice(0,6).map((item, index) => (
-              <div
-                key={item.id}
-                className={`${styles.shape} ${styles[`shape${index % 6}`]} ${item.isPremium ? styles.premiumShape : ''}`}
-              >
-                {item.isPremium && <div className={styles.shapePremiumBadge}><FaCrown /></div>}
-                <div className={styles.shapeContent}>
-                  <h3>{item.title}</h3>
-                  <div className={styles.shapeHoverContent}>
-                    <p>{item.description}</p>
-                    <button className={`${styles.shapeButton} ${item.isPremium ? styles.premiumShapeButton : ''}`}>
-                      {item.type === 'shabad' ? 'Read Now' : item.type === 'audio' ? 'Listen Now' : 'Watch Now'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+  <h2 className={styles.sectionTitle}>Because You Viewed Rehraas Sahib</h2>
+  <div className={styles.shapeContainer}>
+    {isLoading ? (
+      Array(6).fill().map((_, index) => (
+        <div key={`shape-skeleton-${index}`} className={`${styles.shapeSkeleton} ${styles[`shape${index % 6}`]}`}>
+          <div className={styles.skeletonShapeContent}></div>
         </div>
-      </div>
+      ))
+    ) : (
+      currentCards.slice(0,6).map((item, index) => (
+        <div
+          key={item.id}
+          className={`${styles.shape} ${styles[`shape${index % 6}`]} ${item.isPremium ? styles.premiumShape : ''}`}
+          onClick={() => {
+            if (item.isPremium) {
+              // Navigate to premium page
+              navigate('/premium');
+            }
+          }}
+        >
+          {item.isPremium && <div className={styles.shapePremiumBadge}><FaCrown /></div>}
+          <div className={styles.shapeContent}>
+  <h3>{item.title}</h3>
+  <div className={styles.shapeHoverContent}>
+    <p>{item.description}</p>
+    <button 
+      className={`${styles.shapeButton} ${item.isPremium ? styles.premiumShapeButton : ''}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (item.isPremium) {
+          navigate('/premium');
+        } else {
+          if (item.type === 'shabad') {
+            // Handle PDF viewing differently
+            window.open(item.fileUrl, '_blank'); // or your PDF viewing logic
+          } else {
+            playMedia(item, item.type); // for audio/video
+          }
+        }
+      }}
+    >
+      {item.type === 'shabad' ? 
+        (item.isPremium ? 'Unlock to Read' : 'Read Now') : 
+       item.type === 'audio' ? 
+        (item.isPremium ? 'Unlock to Listen' : 'Listen Now') : 
+        (item.isPremium ? 'Unlock to Watch' : 'Watch Now')}
+    </button>
+  </div>
+</div>
+        </div>
+      ))
+    )}
+  </div>
+</div>
     </div>
   );
 };

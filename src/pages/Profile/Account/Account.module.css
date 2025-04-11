@@ -1,0 +1,569 @@
+/* Reuses all your theme variables */
+.container {
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  padding-bottom: 2rem;
+}
+
+/* Header - Matches Gurbani page */
+.header {
+  position: relative;
+  height: 300px;
+  margin-bottom: 30px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.headerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.headerText {
+  position: absolute;
+  top: 35%;
+  left: 5%;
+  color: var(--headline-color);
+}
+
+.headerText h1 {
+  font-size: 2.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  text-align: left;
+  margin: 0;
+}
+
+.headerText p {
+  font-size: 1rem;
+  margin: 10px 0 0;
+  text-align: left;
+}
+
+/* Breadcrumb - Matches standard */
+.breadcrumb {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  margin: 0 2rem;
+  background: var(--section-bg-color);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb span {
+  color: var(--text-color);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+/* Profile Section */
+.profileSection {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
+  margin: 2rem;
+  background: var(--card-bg-color);
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.avatarWrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--icon-color);
+}
+
+.editButton {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.editButton:hover {
+  transform: scale(1.1);
+}
+
+.profileInfo {
+  flex: 1;
+}
+
+.profileInfo h2 {
+  font-size: 1.8rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--headline-color);
+}
+
+.membershipBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #FFD700, #D4AF37);
+  color: #000;
+  padding: 0.3rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.profileInfo p {
+  margin: 0;
+  color: var(--secondary-text-color);
+}
+
+/* Section Header */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  color: var(--headline-color);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sectionEditButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--icon-color);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.sectionEditButton:hover {
+  color: var(--button-bg-color);
+}
+
+/* Edit Controls */
+.editControls {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+}
+
+.cancelButton, .saveButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.cancelButton {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.cancelButton:hover {
+  background: #e0e0e0;
+}
+
+.saveButton {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+.saveButton:hover {
+  background: var(--button-hover-bg-color);
+}
+
+/* Edit Inputs */
+.editInput, .editSelect, .editTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--section-bg-color);
+  color: var(--text-color);
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.editTextarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.editSelect {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1em;
+}
+
+/* Section Styles */
+.bioSection, .detailsSection, .contentSection, 
+.statsSection, .achievementsSection {
+  margin: 2rem;
+  padding: 1.5rem;
+  background: var(--card-bg-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Bio Section */
+.bioSection p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Details Section */
+.detailRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+}
+
+.detailIcon {
+  color: var(--icon-color);
+  width: 24px;
+  text-align: center;
+}
+
+/* Content Section */
+.contentTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.contentTag {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.contentButton {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--section-bg-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.contentButton.selected {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border-color: var(--button-bg-color);
+}
+
+/* Stats Section */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.statBox {
+  background: var(--card-bg-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.statBox:hover {
+  transform: translateY(-5px);
+}
+
+.statIcon {
+  font-size: 2rem;
+  color: var(--icon-color);
+  margin-bottom: 1rem;
+}
+
+.statBox h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+}
+
+.statBox p {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Achievements Section */
+.achievementsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.achievementCard {
+  background: var(--card-bg-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.achievementIcon {
+  font-size: 1.8rem;
+  color: var(--icon-color);
+  margin-bottom: 1rem;
+}
+
+.achievementCard h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+
+.progressBar {
+  height: 8px;
+  background: var(--skeleton-bg-color);
+  border-radius: 4px;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--icon-color);
+  border-radius: 4px;
+}
+
+.achievementCard span {
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+  display: block;
+  text-align: right;
+}
+
+/* Skeleton Loading States */
+.avatarSkeleton {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--skeleton-bg-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonName {
+  width: 200px;
+  height: 32px;
+  background: var(--skeleton-bg-color);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonStatus {
+  width: 120px;
+  height: 24px;
+  background: var(--skeleton-bg-color);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonBio {
+  height: 80px;
+  background: var(--skeleton-bg-color);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonDetail {
+  height: 24px;
+  flex: 1;
+  background: var(--skeleton-bg-color);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonContent {
+  height: 120px;
+  background: var(--skeleton-bg-color);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonStatIcon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 15px;
+  background: var(--skeleton-bg-color);
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonStatTitle {
+  width: 80%;
+  height: 16px;
+  margin: 0 auto 8px;
+  background: var(--skeleton-bg-color);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonStatValue {
+  width: 60%;
+  height: 24px;
+  margin: 0 auto;
+  background: var(--skeleton-bg-color);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.achievementsSkeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.skeletonAchievement {
+  height: 150px;
+  background: var(--skeleton-bg-color);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer Animation */
+.avatarSkeleton::after,
+.skeletonName::after,
+.skeletonStatus::after,
+.skeletonBio::after,
+.skeletonDetail::after,
+.skeletonContent::after,
+.skeletonStatIcon::after,
+.skeletonStatTitle::after,
+.skeletonStatValue::after,
+.skeletonAchievement::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-shine-color),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profileSection {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .headerText h1 {
+    font-size: 2rem;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .sectionEditButton {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .contentGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .headerText {
+    top: 30%;
+    left: 5%;
+  }
+
+  .headerText h1 {
+    font-size: 1.8rem;
+  }
+
+  .headerText p {
+    font-size: 0.9rem;
+  }
+}

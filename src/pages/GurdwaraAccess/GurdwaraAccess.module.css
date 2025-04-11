@@ -382,17 +382,6 @@ a {
   color: var(--button-text-color);
 }
 
-/* Optional: Add some styling for the active/focused state */
-.dropdownContent a:focus {
-  outline: none;
-  background-color: var(--button-bg-color);
-  color: var(--button-text-color);
-}
-
-/* Optional: Add some styling for visited links if needed */
-.dropdownContent a:visited {
-  color: var(--text-color); /* Keep same color as regular links */
-}
 /* Details */
 .details {
   margin-top: 10px;

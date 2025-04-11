@@ -1,14 +1,27 @@
-import React from 'react';
-import { Link } from 'react-router-dom'; // Import Link from react-router-dom
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import styles from './Login.module.css';
-import { FaGoogle, FaFacebook, FaGamepad, FaCoins } from 'react-icons/fa'; // React Icons
+import { FaGoogle, FaFacebook, FaGamepad, FaCoins } from 'react-icons/fa';
 import latest_content from '../../images/Login/latest_content.jpg';
 import games from '../../images/Login/games.jpg';
-import formSideImage from '../../images/Login/right_section.png'; // Image for the right section of the form
-import headerImageLight from '../../images/Login/background.jpeg'; // Light mode header image
-import headerImageDark from '../../images/Login/background-dark.jpeg'; // Dark mode header image
+import formSideImage from '../../images/Login/right_section.png';
+import headerImageLight from '../../images/Login/background.jpeg';
+import headerImageDark from '../../images/Login/background-dark.jpeg';
+import { useAuth } from '../../context/AuthContext'; // Import the auth context
 
-const Login = ({ isDarkMode }) => {
+const Login = ({ isDarkMode, apiString }) => {
+  const navigate = useNavigate();
+  const { login } = useAuth(); // Get the login function from context
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    rememberMe: false
+  });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Dynamically set the header image based on the theme
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
@@ -28,11 +41,111 @@ const Login = ({ isDarkMode }) => {
     { id: 3, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
     { id: 4, image: games, title: 'Game 4', level: 'Expert', fees: 200 },
     { id: 5, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
-
   ];
+
+  const handleChange = (e) => {
+    const { id, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: type === 'checkbox' ? checked : value
+    }));
+    
+    // Clear error when user types
+    if (errors[id]) {
+      setErrors(prev => ({
+        ...prev,
+        [id]: ''
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch(`${apiString}/api/Auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          rememberMe: formData.rememberMe
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+      
+      // Use the login function from context instead of local storage
+      login(
+        data.data.accessToken, 
+        data.data.user, 
+        formData.rememberMe
+      );
+      
+      // Show success toast
+      toast.success('Login Successful! Redirecting...', {
+        position: "top-center",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: isDarkMode ? "dark" : "light",
+      });
+      
+      // Redirect to home/dashboard after 2 seconds
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    } catch (error) {
+      toast.error(error.message || 'An error occurred during login', {
+        position: "top-center",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: isDarkMode ? "dark" : "light",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className={styles.container} data-theme={isDarkMode ? 'dark' : 'light'}>
+      <ToastContainer />
+      
       {/* Header Section */}
       <div className={styles.header}>
         <div
@@ -42,7 +155,6 @@ const Login = ({ isDarkMode }) => {
         <div className={styles.headerContent}>
           <div className={styles.headerText}>
             <h1>LOGIN HERE</h1>
-            <p></p>
           </div>
         </div>
       </div>
@@ -52,18 +164,21 @@ const Login = ({ isDarkMode }) => {
         {/* Left Section - Login Form */}
         <div className={styles.leftSection}>
           <h2 className={styles.formTitle}>Login</h2>
-          <form className={styles.form}>
-            {/* Username or Email Input */}
+          <form className={styles.form} onSubmit={handleSubmit}>
+            {/* Email Input */}
             <div className={styles.inputGroup}>
-              <label htmlFor="username" className={styles.label}>
-                Username or Email
+              <label htmlFor="email" className={styles.label}>
+                Email
               </label>
               <input
-                type="text"
-                id="username"
-                className={styles.input}
-                placeholder="Enter your username or email"
+                type="email"
+                id="email"
+                className={`${styles.input} ${errors.email ? styles.errorInput : ''}`}
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
               />
+              {errors.email && <div className={styles.errorMessage}>{errors.email}</div>}
             </div>
 
             {/* Password Input */}
@@ -74,21 +189,39 @@ const Login = ({ isDarkMode }) => {
               <input
                 type="password"
                 id="password"
-                className={styles.input}
+                className={`${styles.input} ${errors.password ? styles.errorInput : ''}`}
                 placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
               />
+              {errors.password && <div className={styles.errorMessage}>{errors.password}</div>}
             </div>
 
-            {/* Forget Password Link */}
-            <div className={styles.forgotPassword}>
-              <Link to="/forgot-password" className={styles.link}>
+            {/* Remember Me & Forgot Password */}
+            <div className={styles.rememberForgot}>
+              <div className={styles.rememberMe}>
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                />
+                <label htmlFor="rememberMe">Remember me</label>
+              </div>
+              <Link to="/forgot-password" className={styles.forgotPassword}>
                 Forgot Password?
               </Link>
             </div>
 
             {/* Login Button */}
-            <button type="submit" className={styles.loginButton}>
-              Login
+            <button 
+              type="submit" 
+              className={styles.loginButton}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span className={styles.spinner}></span>
+              ) : 'Login'}
             </button>
 
             {/* Social Login Buttons */}

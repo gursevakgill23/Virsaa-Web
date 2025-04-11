@@ -27,6 +27,12 @@ import About from './pages/About/About';
 import Quizzes from './pages/Learning/Quizzes/Quizzes';
 import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
 import AuthorDetail from './pages/Collections/AuthorDetail/AuthorDetail';
+import { AuthProvider } from './context/AuthContext';
+import ChatButton from './pages/Login/ChatWithUs/ChatButton/ChatButton';
+import AudiobookDetail from './pages/Collections/AudiobookDetail/AudiobookDetail';
+import Account from './pages/Profile/Account/Account';
+import Settings from './pages/Profile/Settings/Settings';
+
 
 // Define your API base URL
 const API_STRING = "http://localhost:5118";
@@ -69,6 +75,7 @@ const App = () => {
   };
 
   return (
+    <AuthProvider>
     <Router>
       <CssBaseline />
       {/* ToastContainer should be placed here at the root level */}
@@ -114,22 +121,28 @@ const App = () => {
             <Route path="/learning" element={<Learning isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/login" element={<Login isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/signup" element={<Signup isDarkMode={isDarkMode} apiString={API_STRING} />} />
-            <Route path="/membership" element={<Membership isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/premium" element={<Membership isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/gurdwara-access" element={<GurdwaraAccess isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/gurdwara-access/locate/:id" element={<GurdwaraLocate isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/gurdwara-access/services/:id" element={<GurdwaraServices isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/gurdwara-access/history/:id" element={<GurdwaraHistory isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/news" element={<News isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/about" element={<About isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/account" element={<Account isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/settings" element={<Settings isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
             <Route path="/quizzes/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/ebooks/ebook/:id" element={<EbookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/authors/author/:id" element={<AuthorDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/collections/audiobooks/audiobook/:id" element={<AudiobookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
           </Routes>
           <Footer isDarkMode={isDarkMode} apiString={API_STRING} />
           <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />
+          <ChatButton isDarkMode={isDarkMode} apiString={API_STRING} />
+
         </>
       )}
     </Router>
+    </AuthProvider>
   );
 };
 

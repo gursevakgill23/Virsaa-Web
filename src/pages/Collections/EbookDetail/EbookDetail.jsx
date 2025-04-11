@@ -4,6 +4,7 @@ import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLe
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 import styles from './EbookDetail.module.css';
+import Loader from '../../../components/Loader'
 
 // Utility function to handle production image paths
 const useProductionImagePath = () => {
@@ -202,7 +203,7 @@ const EbookDetail = ({ isDarkMode }) => {
   const displayedReviews = sortedReviews.slice(0, visibleReviews);
 
   if (isLoading) {
-    return <div className={styles.ebookDetailContainer}>Loading main content...</div>;
+    return <div className={styles.ebookDetailContainer}><Loader/></div>;
   }
 
   return (
