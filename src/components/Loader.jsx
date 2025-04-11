@@ -1,8 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { TailSpin } from 'react-loader-spinner'; // Import the spinner component
 import logo from '../images/logo.png'; // Replace with the path to your logo
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
+
 
 const Loader = ({ onLoadingComplete }) => {
+  const getImagePath = useProductionImagePath();
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +53,7 @@ const Loader = ({ onLoadingComplete }) => {
         <div style={{ position: 'relative', textAlign: 'center' }}>
           {/* Logo */}
           <img
-            src={logo}
+            src={getImagePath(logo)}
             alt="App Logo"
             style={{ width: '100px', height: '100px' }} // Adjust size as needed
             className='loader-image'
