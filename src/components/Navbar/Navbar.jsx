@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './Navbar.module.css';
 import { 
@@ -13,20 +13,21 @@ import {
   FaCrown,
   FaHistory,
   FaSignOutAlt,
-  FaBell
+  FaBell,
 } from 'react-icons/fa';
 import virsaa_logo from '../../images/logo.png';
 import result_image from '../../images/search_result.jpeg';
 import userImage from '../../images/Login/user-placeholder.jpg';
-import { useAuth } from '../../context/AuthContext'; // Import the auth context
+import { useAuth } from '../../context/AuthContext';
 
 const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
+  const [touchStart, setTouchStart] = useState(null);
+  const navbarRef = useRef(null);
   const navigate = useNavigate();
   
-  // Get auth state and methods from context
   const { isLoggedIn, userData, logout } = useAuth();
 
   const handleDropdown = () => {
@@ -46,12 +47,11 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
   };
 
   const handleLogout = () => {
-    logout(); // Use the logout function from context
+    logout();
     setShowProfileSidebar(false);
     navigate('/login');
   };
 
-  // Disable main page scroll when search is open
   useEffect(() => {
     if (showSearch || showProfileSidebar) {
       document.body.classList.add(styles.noScroll);
@@ -64,12 +64,41 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
     };
   }, [showSearch, showProfileSidebar]);
 
+
+  // Touch event handlers for swipe to open
+  const handleTouchStart = (e) => {
+    if (window.innerWidth > 480) return;
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStart || window.innerWidth > 480) return;
+    const touchEnd = e.touches[0].clientX;
+    const difference = touchStart - touchEnd;
+    if (difference > 50) { // Swipe left to right
+      toggleSidebar();
+      setTouchStart(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStart(null);
+  };
+
   return (
     <>
-      <nav className={styles.navbar}>
-        {/* Left Side: Logo */}
-        <div className={styles.logo}>
-          <img src={virsaa_logo} className="logo-image" alt="Logo" />
+      <nav 
+        className={styles.navbar} 
+        ref={navbarRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Left Side: Logo and Arrow Button */}
+        <div className={styles.leftSection}>
+          <div className={styles.logo}>
+            <img src={virsaa_logo} className="logo-image" alt="Logo" />
+          </div>
         </div>
 
         {/* Center: Nav Links */}
