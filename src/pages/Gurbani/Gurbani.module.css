@@ -931,10 +931,21 @@ a {
 }
 
 .mainControls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 2rem;
+  .mainControls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 2rem); /* Responsive gap */
+    padding: 10px 0; /* Add some padding */
+}
+.progressBar {
+  height: 8px; /* Thicker for touch */
+}
+
+.progressBar::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+}
 }
 
 .controlButton {
@@ -955,17 +966,16 @@ a {
   background: var(--button-bg-color);
   color: var(--button-text-color);
   border: none;
-  width: 50px;
-  height: 50px;
+  width: clamp(40px, 8vw, 50px); /* Responsive width */
+  height: clamp(40px, 8vw, 50px); /* Responsive height */
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 1.5rem;
+  font-size: clamp(1.2rem, 4vw, 1.5rem); /* Responsive font size */
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .playButton:hover {
   transform: scale(1.05);
   background: var(--button-hover-bg-color);
@@ -1045,11 +1055,14 @@ a {
   }
   
   .playButton {
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
+    width: 60px;
+    height: 60px;
+    font-size: 1.8rem;
   }
   
+  .controlButton {
+    font-size: 1.5rem;
+  }  
   .mediaModalContent {
     padding: 1rem;
   }
