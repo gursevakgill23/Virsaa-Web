@@ -1,51 +1,47 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom'; // Import Link
+import { Link } from 'react-router-dom';
+import { FaTimes } from 'react-icons/fa';
 import styles from './Sidebar.module.css';
 import sidebar_header from '../../images/sidebar-header.jpg';
 
 const Sidebar = ({ open, closeSidebar }) => {
-  // State to manage dropdown visibility
   const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
-
-  // Reference to the sidebar to detect outside clicks
   const sidebarRef = useRef(null);
 
-  // Toggle dropdown visibility
   const toggleCollections = () => {
     setIsCollectionsOpen(!isCollectionsOpen);
   };
 
-  // Close sidebar and dropdown when a link is clicked
   const handleLinkClick = () => {
     closeSidebar();
-    setIsCollectionsOpen(false); // Close the dropdown
+    setIsCollectionsOpen(false);
   };
 
-  // Close the sidebar if clicked outside
   useEffect(() => {
-    // Function to handle click outside of the sidebar
     const handleClickOutside = (event) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        // Check if the click is below 50px from the top
         if (event.clientY > 50) {
           closeSidebar();
-          setIsCollectionsOpen(false); // Close the dropdown
+          setIsCollectionsOpen(false);
         }
       }
     };
-  
-    // Add event listener to the document
+
     document.addEventListener('mousedown', handleClickOutside);
-  
-    // Cleanup event listener on component unmount
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [closeSidebar]);
+
   return (
-    <div className={`${styles.sidebar} ${open ? styles.open : ''}`} ref={sidebarRef}>
+    <div className={`${styles.sidebar} ${open ? styles.open : ''} ${styles.mobileSidebar}`} ref={sidebarRef}>
+      {/* Close Button (X) - Only visible on mobile */}
+      <button className={styles.closeButton} onClick={closeSidebar}>
+        <FaTimes />
+      </button>
+      
       <div className={styles.sidebarContent}>
-        {/* For screens larger than 992px: Show Image, Did You Know, and Today's Event */}
+        {/* Desktop Content */}
         <div className={styles.sidebarLarge}>
           <img src={sidebar_header} alt="Sidebar" className={styles.sidebarImage} />
           <h3>Did You Know?</h3>
@@ -63,28 +59,29 @@ const Sidebar = ({ open, closeSidebar }) => {
           </ul>
         </div>
 
-        {/* For screens less than 992px: Show Nav Links */}
+        {/* Mobile Navigation */}
         <div className={styles.sidebarSmall}>
-          <Link to="/home" onClick={handleLinkClick}>Home</Link> {/* Use Link instead of <a> */}
+          <Link to="/home" onClick={handleLinkClick} className={styles.navLink}>Home</Link>
+          
           <div className={styles.dropdown}>
             <button onClick={toggleCollections} className={styles.dropdownButton}>
-              Collections
+              <span className={styles.buttonText}>Collections</span>
               <span className={`${styles.arrow} ${isCollectionsOpen ? styles.open : ''}`}></span>
             </button>
             {isCollectionsOpen && (
               <div className={styles.dropdownContent}>
-                <Link to="/collections/ebooks" onClick={handleLinkClick}>Ebooks</Link> {/* Use Link instead of <a> */}
-                <Link to="/collections/audiobooks" onClick={handleLinkClick}>Audiobooks</Link> {/* Use Link instead of <a> */}
-                <Link to="/collections/authors" onClick={handleLinkClick}>Authors</Link> {/* Use Link instead of <a> */}
+                <Link to="/collections/ebooks" onClick={handleLinkClick} className={styles.navLink}>Ebooks</Link>
+                <Link to="/collections/audiobooks" onClick={handleLinkClick} className={styles.navLink}>Audiobooks</Link>
+                <Link to="/collections/authors" onClick={handleLinkClick} className={styles.navLink}>Authors</Link>
               </div>
             )}
           </div>
-          <Link to="/sikh-history" onClick={handleLinkClick}>Sikh History</Link> {/* Use Link instead of <a> */}
-          <Link to="/gurbani" onClick={handleLinkClick}>Gurbani</Link> {/* Use Link instead of <a> */}
-          <Link to="/learning" onClick={handleLinkClick}>Learning</Link> {/* Use Link instead of <a> */}
-          <Link to="/news" onClick={handleLinkClick}>News</Link> {/* Use Link instead of <a> */}
-          <Link to="/about" onClick={handleLinkClick}>About</Link> {/* Use Link instead of <a> */}
-        </div>
+          
+          <Link to="/sikh-history" onClick={handleLinkClick} className={styles.navLink}>Sikh History</Link>
+          <Link to="/gurbani" onClick={handleLinkClick} className={styles.navLink}>Gurbani</Link>
+          <Link to="/learning" onClick={handleLinkClick} className={styles.navLink}>Learning</Link>
+          <Link to="/news" onClick={handleLinkClick} className={styles.navLink}>News</Link>
+          <Link to="/about" onClick={handleLinkClick} className={styles.navLink}>About</Link>        </div>
       </div>
     </div>
   );

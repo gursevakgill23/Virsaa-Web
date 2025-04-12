@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import styles from './Login.module.css';
+import HCaptcha from '@hcaptcha/react-hcaptcha';import styles from './Login.module.css';
 import { FaGoogle, FaFacebook, FaGamepad, FaCoins } from 'react-icons/fa';
 import latest_content from '../../images/Login/latest_content.jpg';
 import games from '../../images/Login/games.jpg';
 import formSideImage from '../../images/Login/right_section.png';
 import headerImageLight from '../../images/Login/background.jpeg';
 import headerImageDark from '../../images/Login/background-dark.jpeg';
-import { useAuth } from '../../context/AuthContext'; // Import the auth context
+import { useAuth } from '../../context/AuthContext';
 
 const Login = ({ isDarkMode, apiString }) => {
   const navigate = useNavigate();
-  const { login } = useAuth(); // Get the login function from context
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -21,27 +21,29 @@ const Login = ({ isDarkMode, apiString }) => {
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const captchaRef = useRef(null);
 
-  // Dynamically set the header image based on the theme
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
-  // Dummy data for Latest Content
-  const latestContent = [
-    { id: 1, image: latest_content, title: 'Content 1', description: 'Description for Content 1' },
-    { id: 2, image: latest_content, title: 'Content 2', description: 'Description for Content 2' },
-    { id: 3, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
-    { id: 4, image: latest_content, title: 'Content 4', description: 'Description for Content 4' },
-    { id: 5, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
-  ];
-
-  // Dummy data for Popular in Kids
-  const popularInKids = [
-    { id: 1, image: games, title: 'Game 1', level: 'Beginner', fees: 50 },
-    { id: 2, image: games, title: 'Game 2', level: 'Intermediate', fees: 100 },
-    { id: 3, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
-    { id: 4, image: games, title: 'Game 4', level: 'Expert', fees: 200 },
-    { id: 5, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
-  ];
+    // Dummy data for Latest Content
+    const latestContent = [
+      { id: 1, image: latest_content, title: 'Content 1', description: 'Description for Content 1' },
+      { id: 2, image: latest_content, title: 'Content 2', description: 'Description for Content 2' },
+      { id: 3, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
+      { id: 4, image: latest_content, title: 'Content 4', description: 'Description for Content 4' },
+      { id: 5, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
+    ];
+  
+    // Dummy data for Popular in Kids
+    const popularInKids = [
+      { id: 1, image: games, title: 'Game 1', level: 'Beginner', fees: 50 },
+      { id: 2, image: games, title: 'Game 2', level: 'Intermediate', fees: 100 },
+      { id: 3, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
+      { id: 4, image: games, title: 'Game 4', level: 'Expert', fees: 200 },
+      { id: 5, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
+    ];
+  
 
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
@@ -50,13 +52,21 @@ const Login = ({ isDarkMode, apiString }) => {
       [id]: type === 'checkbox' ? checked : value
     }));
     
-    // Clear error when user types
     if (errors[id]) {
-      setErrors(prev => ({
-        ...prev,
-        [id]: ''
-      }));
+      setErrors(prev => ({ ...prev, [id]: '' }));
     }
+  };
+
+  const onCaptchaVerify = (token) => {
+    setCaptchaToken(token);
+    if (errors.captcha) {
+      setErrors(prev => ({ ...prev, captcha: '' }));
+    }
+  };
+
+  const onCaptchaError = (error) => {
+    console.error("hCaptcha Error:", error);
+    setErrors(prev => ({ ...prev, captcha: 'Please complete the captcha' }));
   };
 
   const validateForm = () => {
@@ -71,6 +81,10 @@ const Login = ({ isDarkMode, apiString }) => {
     
     if (!formData.password) {
       newErrors.password = 'Password is required';
+    }
+
+    if (!captchaToken) {
+      newErrors.captcha = 'Please complete the captcha';
     }
     
     setErrors(newErrors);
@@ -89,6 +103,7 @@ const Login = ({ isDarkMode, apiString }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'captchaValidated': 'true' // Matches your backend expectation
         },
         body: JSON.stringify({
           email: formData.email,
@@ -103,38 +118,22 @@ const Login = ({ isDarkMode, apiString }) => {
         throw new Error(data.message || 'Login failed');
       }
       
-      // Use the login function from context instead of local storage
-      login(
-        data.data.accessToken, 
-        data.data.user, 
-        formData.rememberMe
-      );
+      login(data.data.accessToken, data.data.user, formData.rememberMe);
       
-      // Show success toast
       toast.success('Login Successful! Redirecting...', {
         position: "top-center",
         autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: isDarkMode ? "dark" : "light",
       });
       
-      // Redirect to home/dashboard after 2 seconds
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
+      setTimeout(() => navigate('/'), 2000);
     } catch (error) {
+      captchaRef.current.resetCaptcha();
+      setCaptchaToken(null);
+      
       toast.error(error.message || 'An error occurred during login', {
         position: "top-center",
         autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: isDarkMode ? "dark" : "light",
       });
     } finally {
@@ -159,9 +158,8 @@ const Login = ({ isDarkMode, apiString }) => {
         </div>
       </div>
 
-      {/* Form Container with Left and Right Sections */}
+      {/* Form Container */}
       <div className={styles.formContainer}>
-        {/* Left Section - Login Form */}
         <div className={styles.leftSection}>
           <h2 className={styles.formTitle}>Login</h2>
           <form className={styles.form} onSubmit={handleSubmit}>
@@ -213,6 +211,18 @@ const Login = ({ isDarkMode, apiString }) => {
               </Link>
             </div>
 
+            {/* hCaptcha Integration */}
+            <div className={styles.captchaContainer}>
+            <HCaptcha
+                ref={captchaRef}
+                sitekey={process.env.REACT_APP_HCAPTCHA_SITE_KEY || "10000000-ffff-ffff-ffff-000000000001"}
+                onVerify={onCaptchaVerify}
+                onError={onCaptchaError}
+                theme={isDarkMode ? "dark" : "light"}
+              />
+              {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
+            </div>
+
             {/* Login Button */}
             <button 
               type="submit" 
@@ -236,13 +246,12 @@ const Login = ({ isDarkMode, apiString }) => {
           </form>
         </div>
 
-        {/* Right Section - Signup Prompt */}
+        {/* Right Section */}
         <div className={styles.rightSection}>
           <div className={styles.rightContent}>
             <img src={formSideImage} alt="Side" className={styles.rightImage} />
             <p className={styles.rightText}>
-              Join our community and explore the latest content and games tailored just for you. If
-              you don't have an account
+              Join our community and explore the latest content and games tailored just for you.
             </p>
             <Link to="/signup" className={styles.signupButton}>
               Signup
@@ -251,7 +260,7 @@ const Login = ({ isDarkMode, apiString }) => {
         </div>
       </div>
 
-      {/* Latest Content Section */}
+      {/* Content Sections */}
       <div className={styles.latestContent}>
         <h2 className={styles.sectionTitle}>Latest Content</h2>
         <div className={styles.cardGrid}>
@@ -265,7 +274,6 @@ const Login = ({ isDarkMode, apiString }) => {
         </div>
       </div>
 
-      {/* Popular in Kids Section */}
       <div className={styles.popularInKids}>
         <h2 className={styles.sectionTitle}>Popular in Kids</h2>
         <div className={styles.cardGrid}>
