@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import HCaptcha from '@hcaptcha/react-hcaptcha';import styles from './Login.module.css';
+import  HCaptcha  from '@hcaptcha/react-hcaptcha';
+import styles from './Login.module.css';
 import { FaGoogle, FaFacebook, FaGamepad, FaCoins } from 'react-icons/fa';
 import latest_content from '../../images/Login/latest_content.jpg';
 import games from '../../images/Login/games.jpg';
@@ -26,24 +27,23 @@ const Login = ({ isDarkMode, apiString }) => {
 
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
-    // Dummy data for Latest Content
-    const latestContent = [
-      { id: 1, image: latest_content, title: 'Content 1', description: 'Description for Content 1' },
-      { id: 2, image: latest_content, title: 'Content 2', description: 'Description for Content 2' },
-      { id: 3, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
-      { id: 4, image: latest_content, title: 'Content 4', description: 'Description for Content 4' },
-      { id: 5, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
-    ];
-  
-    // Dummy data for Popular in Kids
-    const popularInKids = [
-      { id: 1, image: games, title: 'Game 1', level: 'Beginner', fees: 50 },
-      { id: 2, image: games, title: 'Game 2', level: 'Intermediate', fees: 100 },
-      { id: 3, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
-      { id: 4, image: games, title: 'Game 4', level: 'Expert', fees: 200 },
-      { id: 5, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
-    ];
-  
+  // Dummy data for Latest Content
+  const latestContent = [
+    { id: 1, image: latest_content, title: 'Content 1', description: 'Description for Content 1' },
+    { id: 2, image: latest_content, title: 'Content 2', description: 'Description for Content 2' },
+    { id: 3, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
+    { id: 4, image: latest_content, title: 'Content 4', description: 'Description for Content 4' },
+    { id: 5, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
+  ];
+
+  // Dummy data for Popular in Kids
+  const popularInKids = [
+    { id: 1, image: games, title: 'Game 1', level: 'Beginner', fees: 50 },
+    { id: 2, image: games, title: 'Game 2', level: 'Intermediate', fees: 100 },
+    { id: 3, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
+    { id: 4, image: games, title: 'Game 4', level: 'Expert', fees: 200 },
+    { id: 5, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
+  ];
 
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
@@ -213,9 +213,9 @@ const Login = ({ isDarkMode, apiString }) => {
 
             {/* hCaptcha Integration */}
             <div className={styles.captchaContainer}>
-            <HCaptcha
+              <HCaptcha
                 ref={captchaRef}
-                sitekey={process.env.REACT_APP_HCAPTCHA_SITE_KEY || "10000000-ffff-ffff-ffff-000000000001"}
+                sitekey={process.env.REACT_APP_HCAPTCHA_SITE_KEY}
                 onVerify={onCaptchaVerify}
                 onError={onCaptchaError}
                 theme={isDarkMode ? "dark" : "light"}

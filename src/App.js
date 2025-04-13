@@ -52,6 +52,7 @@ const App = () => {
       setIsDarkMode(false);
       document.documentElement.setAttribute('data-theme', 'light');
     }
+    
   }, []);
 
   // Function to toggle theme
@@ -64,6 +65,7 @@ const App = () => {
 
   const handleLoadingComplete = () => {
     setIsLoading(false);
+
   };
 
   const toggleSidebar = () => {

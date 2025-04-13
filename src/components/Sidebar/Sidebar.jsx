@@ -1,28 +1,64 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaHome, FaBook, FaHistory, FaGraduationCap, FaNewspaper, FaRegFileAudio, FaUsers } from 'react-icons/fa';
+import { MdChevronRight } from 'react-icons/md';
 import styles from './Sidebar.module.css';
-import sidebar_header from '../../images/sidebar-header.jpg';
+import { BsCollectionFill } from "react-icons/bs";
+import { IoIosPeople } from "react-icons/io";
+import sidebar_header from '../../images/sidebar-header.png';
 
 const Sidebar = ({ open, closeSidebar }) => {
-  const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState(null);
   const sidebarRef = useRef(null);
 
-  const toggleCollections = () => {
-    setIsCollectionsOpen(!isCollectionsOpen);
-  };
+  const mainTabs = [
+    { id: 'home', icon: <FaHome />, label: 'Home', path: '/home' },
+    { 
+      id: 'collections', 
+      icon: <BsCollectionFill  />, 
+      label: 'Collections',
+      subItems: [
+        { id: 'ebooks', icon: <FaBook />, label: 'Ebooks', path: '/collections/ebooks' },
+        { id: 'audiobooks', icon: <FaRegFileAudio />, label: 'Audiobooks', path: '/collections/audiobooks' },
+        { id: 'authors', icon: <IoIosPeople />, label: 'Authors', path: '/collections/authors' }
+      ]
+    },
+    { 
+      id: 'sikhism', 
+      icon: <FaHistory />, 
+      label: 'Sikhism',
+      subItems: [
+        { id: 'history', icon: <FaHistory />, label: 'History', path: '/sikh-history' },
+        { id: 'gurbani', icon: <FaHistory />, label: 'Gurbani', path: '/gurbani' }
+      ]
+    },
+    { id: 'learning', icon: <FaGraduationCap />, label: 'Learning', path: '/learning' },
+    { id: 'news', icon: <FaNewspaper />, label: 'News', path: '/news' },
+    { id: 'about', icon: <FaUsers />, label: 'About', path: '/about' }
+  ];
 
-  const handleLinkClick = () => {
+  const closeAll = useCallback(() => {
+    setActiveMenu(null);
     closeSidebar();
-    setIsCollectionsOpen(false);
-  };
+  }, [closeSidebar]);
+
+  const handleTabClick = useCallback((tab) => {
+    if (tab.path) {
+      closeAll();
+    } else if (tab.subItems) {
+      setActiveMenu(tab.id);
+    }
+  }, [closeAll]);
+
+  const handleBackClick = useCallback(() => {
+    setActiveMenu(null);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
         if (event.clientY > 50) {
-          closeSidebar();
-          setIsCollectionsOpen(false);
+          closeAll();
         }
       }
     };
@@ -31,18 +67,17 @@ const Sidebar = ({ open, closeSidebar }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [closeSidebar]);
+  }, [closeAll]);
 
   return (
-    <div className={`${styles.sidebar} ${open ? styles.open : ''} ${styles.mobileSidebar}`} ref={sidebarRef}>
-      {/* Close Button (X) - Only visible on mobile */}
-      <button className={styles.closeButton} onClick={closeSidebar}>
-        <FaTimes />
-      </button>
-      
-      <div className={styles.sidebarContent}>
-        {/* Desktop Content */}
-        <div className={styles.sidebarLarge}>
+    <>
+      {/* Sidebar with only informational content */}
+      <div className={`${styles.sidebar} ${open ? styles.open : ''}`} ref={sidebarRef}>
+        <button className={styles.closeButton} onClick={closeAll}>
+          <FaTimes />
+        </button>
+        
+        <div className={styles.sidebarContent}>
           <img src={sidebar_header} alt="Sidebar" className={styles.sidebarImage} />
           <h3>Did You Know?</h3>
           <p>Fun facts about Punjabi culture and Sikhism:</p>
@@ -58,32 +93,57 @@ const Sidebar = ({ open, closeSidebar }) => {
             <li>On this day, Sikhs visit Gurdwaras, participate in Nagar Kirtan (processions), and engage in community service.</li>
           </ul>
         </div>
-
-        {/* Mobile Navigation */}
-        <div className={styles.sidebarSmall}>
-          <Link to="/home" onClick={handleLinkClick} className={styles.navLink}>Home</Link>
-          
-          <div className={styles.dropdown}>
-            <button onClick={toggleCollections} className={styles.dropdownButton}>
-              <span className={styles.buttonText}>Collections</span>
-              <span className={`${styles.arrow} ${isCollectionsOpen ? styles.open : ''}`}></span>
-            </button>
-            {isCollectionsOpen && (
-              <div className={styles.dropdownContent}>
-                <Link to="/collections/ebooks" onClick={handleLinkClick} className={styles.navLink}>Ebooks</Link>
-                <Link to="/collections/audiobooks" onClick={handleLinkClick} className={styles.navLink}>Audiobooks</Link>
-                <Link to="/collections/authors" onClick={handleLinkClick} className={styles.navLink}>Authors</Link>
-              </div>
-            )}
-          </div>
-          
-          <Link to="/sikh-history" onClick={handleLinkClick} className={styles.navLink}>Sikh History</Link>
-          <Link to="/gurbani" onClick={handleLinkClick} className={styles.navLink}>Gurbani</Link>
-          <Link to="/learning" onClick={handleLinkClick} className={styles.navLink}>Learning</Link>
-          <Link to="/news" onClick={handleLinkClick} className={styles.navLink}>News</Link>
-          <Link to="/about" onClick={handleLinkClick} className={styles.navLink}>About</Link>        </div>
       </div>
-    </div>
+
+      {/* Bottom Tab Navigation */}
+      <div className={styles.tabNavigation}>
+        {!activeMenu ? (
+          /* Main Tabs */
+          mainTabs.map((tab) => (
+            tab.path ? (
+              <Link 
+                key={tab.id}
+                to={tab.path}
+                className={styles.tabItem}
+                onClick={closeAll}
+              >
+                <div className={styles.tabIcon}>{tab.icon}</div>
+                <div className={styles.tabLabel}>{tab.label}</div>
+              </Link>
+            ) : (
+              <div
+                key={tab.id}
+                className={styles.tabItem}
+                onClick={() => handleTabClick(tab)}
+              >
+                <div className={styles.tabIcon}>{tab.icon}</div>
+                <div className={styles.tabLabel}>{tab.label}</div>
+              </div>
+            )
+          ))
+        ) : (
+          /* Submenu Tabs */
+          <>
+            <div className={styles.tabItem} onClick={handleBackClick}>
+              <div className={styles.tabIcon}><MdChevronRight style={{ transform: 'rotate(180deg)' }} /></div>
+              <div className={styles.tabLabel}>Back</div>
+            </div>
+            
+            {mainTabs.find(tab => tab.id === activeMenu)?.subItems?.map((item) => (
+              <Link
+                key={item.id}
+                to={item.path}
+                className={styles.tabItem}
+                onClick={closeAll}
+              >
+                <div className={styles.tabIcon}>{item.icon}</div>
+                <div className={styles.tabLabel}>{item.label}</div>
+              </Link>
+            ))}
+          </>
+        )}
+      </div>
+    </>
   );
 };
 
