@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef,useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaTimes, FaHome, FaBook, FaHistory, FaGraduationCap, FaNewspaper, FaRegFileAudio, FaUsers } from 'react-icons/fa';
+import { FaHandsPraying } from "react-icons/fa6";
 import { MdChevronRight } from 'react-icons/md';
 import styles from './Sidebar.module.css';
 import { BsCollectionFill } from "react-icons/bs";
@@ -31,7 +32,7 @@ const Sidebar = ({ open, closeSidebar }) => {
         label: 'Sikhism',
         subItems: [
           { id: 'history', icon: <FaHistory />, label: 'History', path: '/sikh-history' },
-          { id: 'gurbani', icon: <FaHistory />, label: 'Gurbani', path: '/gurbani' }
+          { id: 'gurbani', icon: <FaHandsPraying />, label: 'Gurbani', path: '/gurbani' }
         ]
       },
       { id: 'learning', icon: <FaGraduationCap />, label: 'Learning', path: '/learning' },

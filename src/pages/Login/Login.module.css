@@ -287,6 +287,7 @@
 
 .rememberMe input[type="checkbox"] {
   -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
   width: 18px;
   height: 18px;
@@ -296,9 +297,11 @@
   cursor: pointer;
   position: relative;
   transition: all 0.2s ease;
+  background-color: var(--input-bg-color);
 }
 
 .rememberMe input[type="checkbox"]:checked {
+  background-color: var(--button-bg-color);
   border-color: var(--button-bg-color);
 }
 
@@ -318,7 +321,6 @@
   cursor: pointer;
   user-select: none;
 }
-
 /* Forgot Password Link */
 .forgotPassword {
   color: var(--link-color);

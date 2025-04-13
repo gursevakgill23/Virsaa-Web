@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import  HCaptcha  from '@hcaptcha/react-hcaptcha';
+// import HCaptcha from '@hcaptcha/react-hcaptcha';
 import styles from './Login.module.css';
 import { FaGoogle, FaFacebook, FaGamepad, FaCoins } from 'react-icons/fa';
 import latest_content from '../../images/Login/latest_content.jpg';
@@ -22,8 +22,8 @@ const Login = ({ isDarkMode, apiString }) => {
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState(null);
-  const captchaRef = useRef(null);
+  // const [captchaToken, setCaptchaToken] = useState(null);
+  // const captchaRef = useRef(null);
 
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
@@ -57,17 +57,17 @@ const Login = ({ isDarkMode, apiString }) => {
     }
   };
 
-  const onCaptchaVerify = (token) => {
-    setCaptchaToken(token);
-    if (errors.captcha) {
-      setErrors(prev => ({ ...prev, captcha: '' }));
-    }
-  };
+  // const onCaptchaVerify = (token) => {
+  //   setCaptchaToken(token);
+  //   if (errors.captcha) {
+  //     setErrors(prev => ({ ...prev, captcha: '' }));
+  //   }
+  // };
 
-  const onCaptchaError = (error) => {
-    console.error("hCaptcha Error:", error);
-    setErrors(prev => ({ ...prev, captcha: 'Please complete the captcha' }));
-  };
+  // const onCaptchaError = (error) => {
+  //   console.error("hCaptcha Error:", error);
+  //   setErrors(prev => ({ ...prev, captcha: 'Please complete the captcha' }));
+  // };
 
   const validateForm = () => {
     const newErrors = {};
@@ -81,10 +81,6 @@ const Login = ({ isDarkMode, apiString }) => {
     
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    }
-
-    if (!captchaToken) {
-      newErrors.captcha = 'Please complete the captcha';
     }
     
     setErrors(newErrors);
@@ -103,7 +99,7 @@ const Login = ({ isDarkMode, apiString }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'captchaValidated': 'true' // Matches your backend expectation
+          'captchaValidated': 'true' // Bypassing captcha validation
         },
         body: JSON.stringify({
           email: formData.email,
@@ -128,9 +124,6 @@ const Login = ({ isDarkMode, apiString }) => {
       
       setTimeout(() => navigate('/'), 2000);
     } catch (error) {
-      captchaRef.current.resetCaptcha();
-      setCaptchaToken(null);
-      
       toast.error(error.message || 'An error occurred during login', {
         position: "top-center",
         autoClose: 5000,
@@ -203,24 +196,15 @@ const Login = ({ isDarkMode, apiString }) => {
                   id="rememberMe"
                   checked={formData.rememberMe}
                   onChange={handleChange}
+                  className={styles.checkboxInput}
                 />
-                <label htmlFor="rememberMe">Remember me</label>
+                <label htmlFor="rememberMe" className={styles.checkboxLabel}>
+                  Remember me
+                </label>
               </div>
               <Link to="/forgot-password" className={styles.forgotPassword}>
                 Forgot Password?
               </Link>
-            </div>
-
-            {/* hCaptcha Integration */}
-            <div className={styles.captchaContainer}>
-              <HCaptcha
-                ref={captchaRef}
-                sitekey={process.env.REACT_APP_HCAPTCHA_SITE_KEY}
-                onVerify={onCaptchaVerify}
-                onError={onCaptchaError}
-                theme={isDarkMode ? "dark" : "light"}
-              />
-              {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
             </div>
 
             {/* Login Button */}
