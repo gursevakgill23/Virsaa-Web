@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef,useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { FaTimes, FaHome, FaBook, FaHistory, FaGraduationCap, FaNewspaper, FaRegFileAudio, FaUsers } from 'react-icons/fa';
 import { MdChevronRight } from 'react-icons/md';
 import styles from './Sidebar.module.css';
@@ -10,70 +10,68 @@ import sidebar_header from '../../images/sidebar-header.png';
 const Sidebar = ({ open, closeSidebar }) => {
   const [activeMenu, setActiveMenu] = useState(null);
   const sidebarRef = useRef(null);
+  const location = useLocation();
 
-  const mainTabs = [
-    { id: 'home', icon: <FaHome />, label: 'Home', path: '/home' },
-    { 
-      id: 'collections', 
-      icon: <BsCollectionFill  />, 
-      label: 'Collections',
-      subItems: [
-        { id: 'ebooks', icon: <FaBook />, label: 'Ebooks', path: '/collections/ebooks' },
-        { id: 'audiobooks', icon: <FaRegFileAudio />, label: 'Audiobooks', path: '/collections/audiobooks' },
-        { id: 'authors', icon: <IoIosPeople />, label: 'Authors', path: '/collections/authors' }
-      ]
-    },
-    { 
-      id: 'sikhism', 
-      icon: <FaHistory />, 
-      label: 'Sikhism',
-      subItems: [
-        { id: 'history', icon: <FaHistory />, label: 'History', path: '/sikh-history' },
-        { id: 'gurbani', icon: <FaHistory />, label: 'Gurbani', path: '/gurbani' }
-      ]
-    },
-    { id: 'learning', icon: <FaGraduationCap />, label: 'Learning', path: '/learning' },
-    { id: 'news', icon: <FaNewspaper />, label: 'News', path: '/news' },
-    { id: 'about', icon: <FaUsers />, label: 'About', path: '/about' }
-  ];
+    // Memoize mainTabs to prevent unnecessary recreations
+    const mainTabs = useMemo(() => [
+      { id: 'home', icon: <FaHome />, label: 'Home', path: '/home' },
+      { 
+        id: 'collections', 
+        icon: <BsCollectionFill />, 
+        label: 'Collections',
+        subItems: [
+          { id: 'ebooks', icon: <FaBook />, label: 'Ebooks', path: '/collections/ebooks' },
+          { id: 'audiobooks', icon: <FaRegFileAudio />, label: 'Audiobooks', path: '/collections/audiobooks' },
+          { id: 'authors', icon: <IoIosPeople />, label: 'Authors', path: '/collections/authors' }
+        ]
+      },
+      { 
+        id: 'sikhism', 
+        icon: <FaHistory />, 
+        label: 'Sikhism',
+        subItems: [
+          { id: 'history', icon: <FaHistory />, label: 'History', path: '/sikh-history' },
+          { id: 'gurbani', icon: <FaHistory />, label: 'Gurbani', path: '/gurbani' }
+        ]
+      },
+      { id: 'learning', icon: <FaGraduationCap />, label: 'Learning', path: '/learning' },
+      { id: 'news', icon: <FaNewspaper />, label: 'News', path: '/news' },
+      { id: 'about', icon: <FaUsers />, label: 'About', path: '/about' }
+    ], []);
+  
 
-  const closeAll = useCallback(() => {
-    setActiveMenu(null);
-    closeSidebar();
-  }, [closeSidebar]);
-
-  const handleTabClick = useCallback((tab) => {
-    if (tab.path) {
-      closeAll();
-    } else if (tab.subItems) {
-      setActiveMenu(tab.id);
-    }
-  }, [closeAll]);
-
-  const handleBackClick = useCallback(() => {
-    setActiveMenu(null);
-  }, []);
-
+  // Track active menu based on current route
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        if (event.clientY > 50) {
-          closeAll();
-        }
-      }
-    };
+    const currentTab = mainTabs.find(tab => 
+      tab.path === location.pathname || 
+      (tab.subItems && tab.subItems.some(sub => sub.path === location.pathname))
+    );
+    
+    if (currentTab?.subItems) {
+      setActiveMenu(currentTab.id);
+    } else {
+      setActiveMenu(null);
+    }
+  }, [location.pathname, mainTabs]);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [closeAll]);
+  const handleMainTabClick = (tab) => {
+    if (!tab.subItems) {
+      closeSidebar();
+    }
+    setActiveMenu(tab.subItems ? tab.id : null);
+  };
+
+  const handleBackClick = () => {
+    setActiveMenu(null);
+  };
 
   return (
     <>
-      {/* Sidebar with only informational content */}
       <div className={`${styles.sidebar} ${open ? styles.open : ''}`} ref={sidebarRef}>
-        <button className={styles.closeButton} onClick={closeAll}>
+        <button className={styles.closeButton} onClick={() => {
+          closeSidebar();
+          setActiveMenu(null);
+        }}>
           <FaTimes />
         </button>
         
@@ -95,17 +93,15 @@ const Sidebar = ({ open, closeSidebar }) => {
         </div>
       </div>
 
-      {/* Bottom Tab Navigation */}
       <div className={styles.tabNavigation}>
         {!activeMenu ? (
-          /* Main Tabs */
           mainTabs.map((tab) => (
             tab.path ? (
-              <Link 
+              <Link
                 key={tab.id}
                 to={tab.path}
                 className={styles.tabItem}
-                onClick={closeAll}
+                onClick={() => handleMainTabClick(tab)}
               >
                 <div className={styles.tabIcon}>{tab.icon}</div>
                 <div className={styles.tabLabel}>{tab.label}</div>
@@ -114,7 +110,7 @@ const Sidebar = ({ open, closeSidebar }) => {
               <div
                 key={tab.id}
                 className={styles.tabItem}
-                onClick={() => handleTabClick(tab)}
+                onClick={() => handleMainTabClick(tab)}
               >
                 <div className={styles.tabIcon}>{tab.icon}</div>
                 <div className={styles.tabLabel}>{tab.label}</div>
@@ -122,7 +118,6 @@ const Sidebar = ({ open, closeSidebar }) => {
             )
           ))
         ) : (
-          /* Submenu Tabs */
           <>
             <div className={styles.tabItem} onClick={handleBackClick}>
               <div className={styles.tabIcon}><MdChevronRight style={{ transform: 'rotate(180deg)' }} /></div>
@@ -134,7 +129,7 @@ const Sidebar = ({ open, closeSidebar }) => {
                 key={item.id}
                 to={item.path}
                 className={styles.tabItem}
-                onClick={closeAll}
+                onClick={closeSidebar}
               >
                 <div className={styles.tabIcon}>{item.icon}</div>
                 <div className={styles.tabLabel}>{item.label}</div>
