@@ -299,7 +299,6 @@
 }
 
 .rememberMe input[type="checkbox"]:checked {
-  background-color: var(--button-bg-color);
   border-color: var(--button-bg-color);
 }
 
@@ -332,6 +331,30 @@
   color: var(--link-hover-color);
   text-decoration: underline;
 }
+
+.captchaContainer {
+  margin: 1rem 0;
+  width: 100%;
+  overflow: hidden; /* Prevent overflow */
+}
+
+/* HCaptcha responsive styles */
+@media (max-width: 400px) {
+  .captchaContainer {
+    transform: scale(0.85); /* Scale down slightly */
+    transform-origin: left center; /* Keep left-aligned */
+    width: 100vw; /* Take full viewport width */
+    padding: 0 10px; /* Add some padding */
+    box-sizing: border-box; /* Include padding in width */
+  }
+
+  /* Specific HCaptcha iframe styling */
+  .captchaContainer iframe {
+    max-width: 100% !important; /* Force iframe to respect container */
+    transform: scale(0.9); /* Additional scaling if needed */
+  }
+}
+
 
 /* Loading Spinner */
 .spinner {
