@@ -73,7 +73,7 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background-color: var(--header-bg-color);
+  background-color: var(--section-bg-color);
   padding: 8px 0;
   border-top: 1px solid var(--border-color);
   z-index: 999;

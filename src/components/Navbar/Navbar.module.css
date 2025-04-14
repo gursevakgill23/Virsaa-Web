@@ -1,15 +1,5 @@
 :root {
   /* Light Theme */
-  --navbar-bg:transparent;
-  --search-button-bg: #1a2a4f;
-  --search-button-text: #fff;
-  --text-color: #1a2a4f;
-  --dropdown-bg: white;
-  --dropdown-text: black;
-  --button-bg: white;
-  --button-text: #1a2a4f;
-  --button-hover-bg: #1a2a4f;
-  --button-hover-text: white;
   --sidebar-bg: white;
   --sidebar-text: #333;
   --sidebar-hover: #f5f5f5;
@@ -19,16 +9,6 @@
 
 [data-theme="dark"] {
   /* Dark Theme */
-  --navbar-bg: transparent;
-  --text-color: white;
-  --dropdown-bg: white;
-  --search-button-bg: #1a0e16;
-  --search-button-text: #fff;
-  --dropdown-text: black;
-  --button-bg: white;
-  --button-text: #1a0e16;
-  --button-hover-bg: #1a0e16;
-  --button-hover-text: white;
   --sidebar-bg: #1a0e16;
   --sidebar-text: white;
   --sidebar-hover: #2a1e26;

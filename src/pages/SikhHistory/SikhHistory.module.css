@@ -479,33 +479,6 @@ a {
   }
 }
 
-:root {
-  --skeleton-bg-color: #e0e0e0;
-  --skeleton-shine-color: rgba(255, 255, 255, 0.4);
-  --background-color: #ffffff;
-  --section-bg-color: #f9f9f9;
-  --text-color: #1a2a4f;
-  --headline-color: #1a2a4f;
-  --secondary-text-color: #555;
-  --button-bg-color: #1a2a4f;
-  --button-text-color: #ffffff;
-  --button-hover-bg-color: #ffffff;
-  --button-hover-text-color: #1a2a4f;
-}
-
-[data-theme='dark'] {
-  --skeleton-bg-color: #3a2a34;
-  --skeleton-shine-color: rgba(255, 255, 255, 0.1);
-  --background-color: #1A0E16;
-  --section-bg-color: #1a0e16;
-  --text-color: #e0e0e0;
-  --headline-color: #e0e0e0;
-  --secondary-text-color: #b0b0b0;
-  --button-bg-color: #e0e0e0;
-  --button-text-color: #1a0e16;
-  --button-hover-bg-color: #1a0e16;
-  --button-hover-text-color: #e0e0e0;
-}
 
 @media (max-width: 1300px) {
   .cardGrid {
