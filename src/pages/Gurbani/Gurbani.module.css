@@ -961,7 +961,7 @@ a {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 1.5rem;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -969,6 +969,8 @@ a {
 .playButton:hover {
   transform: scale(1.05);
   background: var(--button-hover-bg-color);
+  color:var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
 }
 
 .secondaryControls {

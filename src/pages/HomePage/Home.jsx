@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate,Link } from 'react-router-dom';
-import { MdPlayArrow } from "react-icons/md";
+import { MdPlayArrow, MdClose } from "react-icons/md";
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
+import { useAuth } from '../../context/AuthContext'; // Import your AuthContext
+
 
 // Light mode images
 import slide1Light from '../../images/header-slide1.jpg';
@@ -28,6 +30,73 @@ const Home = ({ isDarkMode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const imageRefs = useRef([]);
   const navigate = useNavigate();
+
+  const { isLoggedIn } = useAuth(); // Get auth state
+  const [showHukamnamaToast, setShowHukamnamaToast] = useState(false);
+  const [showHukamnamaModal, setShowHukamnamaModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('hukamnama');
+  const toastTimer = useRef(null);
+
+  // Show toast when component mounts - appears every time now
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowHukamnamaToast(true);
+      // Hide after 5 seconds
+      toastTimer.current = setTimeout(() => {
+        setShowHukamnamaToast(false);
+      }, 5000);
+    }, 2000); // Show after 2 seconds delay
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  const handleToastClick = () => {
+    clearTimeout(toastTimer.current);
+    setShowHukamnamaToast(false);
+    setShowHukamnamaModal(true);
+  };
+
+  const closeModal = () => {
+    setShowHukamnamaModal(false);
+  };
+
+ // Sample Hukamnama data - could be fetched from API based on auth state
+const hukamnamaData = {
+  punjabi: `ਹੁਕਮਿ ਰਜਾਈ ਚਲਣਾ ਨਾਨਕ ਲਿਖਿਆ ਨਾਲਿ ॥
+  ਗਾਵੀਐ ਸੁਣੀਐ ਮਨਿ ਰਖੀਐ ਭਾਉ ॥
+  ਦੁਖੁ ਪਰਹਰਿ ਸੁਖੁ ਘਰਿ ਲੈ ਜਾਇ ॥
+  ਗੁਰਮੁਖਿ ਨਾਦੰ ਗੁਰਮੁਖਿ ਵੇਦੰ ਗੁਰਮੁਖਿ ਰਹਿਆ ਸਮਾਈ ॥
+  ਗੁਰੁ ਈਸਰੁ ਗੁਰੁ ਗੋਰਖੁ ਬਰਮਾ ਗੁਰੁ ਪਾਰਬਤੀ ਮਾਈ ॥
+  ਜੇ ਹਉ ਜਾਣਾ ਆਖਾ ਨਾਹੀ ਕਹਣਾ ਕਥਨੁ ਨ ਜਾਈ ॥`,
+  
+  english: isLoggedIn 
+    ? `By the Hukam of His Command, He leads us to walk on the Path; O Nanak, it is written in our destiny.
+    Sing, and listen, and let your mind be filled with love.
+    Your pain shall be sent far away, and peace shall come to your home.
+    The Guru's Word is the Sound-current of the Naad; the Guru's Word is the Wisdom of the Vedas; the Guru's Word is all-pervading.
+    The Guru is Shiva, the Guru is Vishnu and Brahma; the Guru is Paarvati and Lakhshmi.
+    Even knowing God, I cannot describe Him; He cannot be described in words.`
+    : `Sign in to view the full Hukamnama translation`,
+    
+  arth: isLoggedIn 
+    ? `The Almighty directs all beings according to His Will; O Nanak, our destiny is pre-ordained by Him.
+    We should sing the Lord's praises, listen to them, and cherish love for Him in our hearts.
+    By doing so, all sufferings will depart and tranquility will come to abide in our homes.
+    The Guru's teachings connect us with the divine sound current, contain the essence of all scriptures, and are all-pervading.
+    The Guru has the attributes of all deities - Shiva, Vishnu, Brahma, Parvati and Lakshmi.
+    Even if I try to describe God, I cannot - He is beyond all description and explanation.`
+    : `Sign in to view the detailed explanation`,
+    
+  reference: {
+    source: "Sri Guru Granth Sahib Ji",
+    ang: 2,
+    raag: "Japji Sahib",
+    writer: "Guru Nanak Dev Ji"
+  }
+};
 
   // Memoize the bgImages array to prevent unnecessary recalculations
   const bgImages = useMemo(() => {
@@ -160,6 +229,69 @@ const Home = ({ isDarkMode }) => {
 
   return (
     <div className={styles.homeContainer}>
+      {/* Hukamnama Toast Notification - appears every time */}
+      {showHukamnamaToast && (
+        <div className={styles.hukamnamaToast} onClick={handleToastClick}>
+          <div className={styles.toastContent}>
+            <span>View Today's Hukamnama</span>
+            <span>ਅੱਜ ਦਾ ਹੁਕਮਨਾਮਾ ਦੇਖੋ</span>
+          </div>
+        </div>
+      )}
+
+      {/* Hukamnama Modal */}
+      {showHukamnamaModal && (
+        <div className={styles.hukamnamaModalOverlay}>
+          <div className={styles.hukamnamaModal}>
+            <button className={styles.modalCloseButton} onClick={closeModal}>
+              <MdClose />
+            </button>
+            
+            <h2 className={styles.modalTitle}>Today's Hukamnama</h2>
+            <h3 className={styles.modalSubtitle}>ਅੱਜ ਦਾ ਹੁਕਮਨਾਮਾ</h3>
+            
+            <div className={styles.tabContainer}>
+              <button 
+                className={`${styles.tabButton} ${activeTab === 'hukamnama' ? styles.activeTab : ''}`}
+                onClick={() => setActiveTab('hukamnama')}
+              >
+                Hukamnama
+              </button>
+              <button 
+                className={`${styles.tabButton} ${activeTab === 'arth' ? styles.activeTab : ''}`}
+                onClick={() => setActiveTab('arth')}
+              >
+                ਅਰਥ (Meaning)
+              </button>
+            </div>
+            
+            <div className={styles.tabContent}>
+              {activeTab === 'hukamnama' ? (
+                <>
+                  <p className={styles.punjabiText}>{hukamnamaData.punjabi}</p>
+                  <p className={styles.englishText}>{hukamnamaData.english}</p>
+                </>
+              ) : (
+                <p className={styles.arthText}>{hukamnamaData.arth}</p>
+              )}
+            </div>
+            
+            <div className={styles.modalFooter}>
+              {!isLoggedIn && (
+                <button className={styles.modalActionButton}>
+                  <Link to="/login">Sign In to View Full Translation</Link>
+                </button>
+              )}
+              {isLoggedIn && (
+                <button className={styles.modalActionButton}>
+                  <Link to="/gurbani">Read More Gurbani</Link>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={styles.header}>
         <div className={styles.imageSlider}>
           {bgImages.map((image, index) => (

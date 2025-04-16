@@ -12,6 +12,23 @@
   overflow-y: auto;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
 }
+/* Custom Scrollbar for Sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 4px; /* Makes the scrollbar thinner */
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05); /* Very light track */
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #b19cd9; /* Light purple color */
+  border-radius: 3px; /* Rounded corners */
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #9a7fcc; /* Slightly darker purple on hover */
+}
 
 .sidebar.open {
   left: 0;
@@ -122,6 +139,14 @@
 .tabNavigation .tabItem.active .tabIcon {
   transform: scale(1.1);
   color: var(--primary-color);
+}
+
+/* Prevent scrolling when sidebar is open */
+.no-scroll {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
 }
 
 /* Mobile Overrides */

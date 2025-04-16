@@ -39,7 +39,19 @@ const Sidebar = ({ open, closeSidebar }) => {
       { id: 'news', icon: <FaNewspaper />, label: 'News', path: '/news' },
       { id: 'about', icon: <FaUsers />, label: 'About', path: '/about' }
     ], []);
-  
+   // Prevent body scroll when sidebar is open
+  useEffect(() => {
+    if (open) {
+      document.body.classList.add('no-scroll');
+    } else {
+      document.body.classList.remove('no-scroll');
+    }
+
+    // Cleanup function
+    return () => {
+      document.body.classList.remove('no-scroll');
+    };
+  }, [open]);
 
   // Track active menu based on current route
   useEffect(() => {

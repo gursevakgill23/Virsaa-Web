@@ -3,6 +3,209 @@
   background-color: var(--background-color);
   color: var(--text-color);
 }
+/* Hukamnama Toast Styles */
+.hukamnamaToast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--button-bg-color);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1100;
+  cursor: pointer;
+  animation: slideUp 0.5s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 300px;
+  text-align: center;
+}
+
+.toastContent {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hukamnamaToast:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Hukamnama Modal Styles */
+.hukamnamaModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1200;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+}
+
+.hukamnamaModal {
+  background-color: var(--section-bg-color);
+  border-radius: 15px;
+  width: 90%;
+  max-width: 600px;
+  padding: 30px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalCloseButton {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--icon-color);
+  cursor: pointer;
+}
+
+.modalTitle {
+  font-size: 1.8rem;
+  color: var(--headline-color);
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.modalSubtitle {
+  font-size: 1.2rem;
+  color: var(--primary-color);
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.tabContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 25px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tabButton {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tabButton.activeTab {
+  color: var(--primary-color);
+  border-bottom: 3px solid var(--primary-color);
+  font-weight: bold;
+}
+
+.tabContent {
+  min-height: 150px;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.punjabiText {
+  font-size: 1.5rem;
+  line-height: 1.6;
+  color: var(--headline-color);
+  margin-bottom: 20px;
+}
+
+.englishText {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--text-color);
+  font-style: italic;
+}
+
+.arthText {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  color: var(--text-color);
+  text-align: left;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.modalActionButton {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  padding: 10px 25px;
+  border-radius: 30px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modalActionButton:hover {
+  background-color: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+}
+
+.modalActionButton a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hukamnamaModal {
+    width: 95%;
+    padding: 20px;
+  }
+  
+  .modalTitle {
+    font-size: 1.25rem;
+  }
+  
+  .punjabiText {
+    font-size: 1rem;
+  }
+  
+  .tabButton {
+    padding: 8px 15px;
+    font-size: 0.75rem;
+  }
+}
 
 .header {
   height: 700px;
