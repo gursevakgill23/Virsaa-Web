@@ -157,8 +157,9 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
       {/* Header Section */}
       <header
         className={styles.header}
-        style={{ backgroundImage: getImagePath(`url(${isDarkMode ? header_image_dark : header_image_light})`) }}
-      >
+        style={{ 
+          backgroundImage: `url(${isDarkMode ? getImagePath(header_image_dark) : getImagePath(header_image_light)})` 
+        }}      >
         <h1>Welcome to the Learning Hub</h1>
         <p>Explore tutorials, quizzes, and games to enhance your knowledge!</p>
       </header>

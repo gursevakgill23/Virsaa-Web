@@ -15,7 +15,7 @@ import {
   FaSignOutAlt,
   FaBell,
 } from 'react-icons/fa';
-import virsaa_logo from '../../images/logo.png';
+// import virsaa_logo from '../../images/logo.png';
 import result_image from '../../images/search_result.jpeg';
 import userImage from '../../images/Login/user-placeholder.jpg';
 import { useAuth } from '../../context/AuthContext';
@@ -96,9 +96,12 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
       >
         {/* Left Side: Logo and Arrow Button */}
         <div className={styles.leftSection}>
-          <div className={styles.logo}>
-            <img src={virsaa_logo} className="logo-image" alt="Logo" />
-          </div>
+        <div className={styles.logoContainer}>
+          <span className={styles.vir}>VIR</span>
+          <span className={styles.saaWrapper}>
+            <span className={styles.saa}>SAA</span>
+          </span>
+        </div>
         </div>
 
         {/* Center: Nav Links */}

@@ -12,17 +12,36 @@
   z-index: 1000;
 }
 
-.logo {
-  width: 60px;
-  height: 60px;
+.logoContainer {
+  display: flex;
+  align-items: center;
+  font-size: 28px;
+  font-weight: 800;
+  font-family: 'Montserrat', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.logo img {
-  height: 100%;
-  width: 100%;
-  object-fit: contain;
+.vir {
+  color: var(--primary-color);
 }
 
+.saaWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color:gold;
+  width: 75px;
+  height: 30px;
+  border-radius: 5px;
+  margin-left: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.saa {
+  color: var(--primary-color);
+  text-shadow: 0 1px 1px rgba(255,255,255,0.3);
+}
 .navLinks {
   display: flex;
   gap: 20px;
