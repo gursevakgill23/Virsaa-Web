@@ -1,11 +1,33 @@
 import React, { useState } from 'react';
 import styles from './Quizzes.module.css';
-import headerLight from '../../../images/Quizzes/header-image.jpg'; // Light mode header image
-import headerDark from '../../../images/Quizzes/header-image-dark.png'; // Dark mode header image
-import games from '../../../images/Quizzes/games.jpg';
 import { Link } from 'react-router-dom';
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
+
 
 const Quizzes = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
+  const headerLight = '/images/Quizzes/header-image.jpg'; // Light mode header image
+  const headerDark = '/images/Quizzes/header-image-dark.png'; // Dark mode header image
+  const games = '/images/Quizzes/games.jpg';
+
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
@@ -163,7 +185,9 @@ const Quizzes = ({ isDarkMode }) => {
       {/* Header Section with Image and Text Overlay */}
       <div
         className={styles.headerSection}
-        style={{ backgroundImage: `url(${isDarkMode ? headerDark : headerLight})` }}
+        style={{ 
+          backgroundImage: `url(${isDarkMode ? getImagePath(headerDark) : getImagePath(headerLight)})` 
+        }}
       >
         <div className={styles.textOverlay}>
           <h1 className={styles.headerTitle}>Test Your Knowledge</h1>
@@ -177,7 +201,7 @@ const Quizzes = ({ isDarkMode }) => {
       <div className={styles.breadcrumb}>
         <Link to={'/'}><span>Home</span></Link> / 
         <Link to={'/learning'}><span> Learning</span></Link> /
-        <Link to={'/learning'}><span> Quizzes</span></Link>
+        <Link to={'/learning/quizzes/quizz/1'}><span> Quizzes</span></Link>
 
       </div>
 
@@ -310,7 +334,7 @@ const Quizzes = ({ isDarkMode }) => {
           ].map((game, index) => (
             <div key={index} className={styles.gameCard}>
               <div className={styles.gameFront}>
-                <img src={game.image} alt={game.title} className={styles.gameImage} />
+                <img src={getImagePath(game.image)} alt={game.title} className={styles.gameImage} />
                 <h3 className={styles.gameTitle}>{game.title}</h3>
               </div>
               <div className={styles.gameBack}>

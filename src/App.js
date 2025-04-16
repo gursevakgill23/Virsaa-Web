@@ -132,7 +132,7 @@ const App = () => {
             <Route path="/about" element={<About isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/account" element={<Account isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/settings" element={<Settings isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
-            <Route path="/quizzes/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/quizzes/quizz/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/ebooks/ebook/:id" element={<EbookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/authors/author/:id" element={<AuthorDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/audiobooks/audiobook/:id" element={<AudiobookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />

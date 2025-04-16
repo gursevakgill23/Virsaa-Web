@@ -2,16 +2,29 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { FaFilter, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import styles from './Learning.module.css';
-import learningImage from '../../images/Learning/learning.jpg';
-import quizImage from '../../images/Learning/quizzes.jpg';
-import puzzleImage from '../../images/Learning/games.jpg';
-import memoryImage from '../../images/Learning/quizzes.jpg';
-import learningCarousel from '../../images/Learning/interactive-carousel.jpg';
-import gameTurnCard from '../../images/Learning/games-turn-card.jpg';
-import header_image_light from '../../images/Learning/header-image.png';
-import header_image_dark from '../../images/Learning/header-image-dark.png';
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
+
 
 const Learning = ({ isLoggedIn, isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
   const [activeTab, setActiveTab] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -19,6 +32,16 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [shuffledCards, setShuffledCards] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const learningImage = 'images/Learning/learning.jpg';
+  const quizImage = 'images/Learning/quizzes.jpg';
+  const puzzleImage = 'images/Learning/games.jpg';
+  const memoryImage = 'images/Learning/quizzes.jpg';
+  const learningCarousel = '/images/Learning/interactive-carousel.jpg';
+  const gameTurnCard = '/images/Learning/games-turn-card.jpg';
+  const header_image_light = '/images/Learning/header-image.png';
+  const header_image_dark = '/images/Learning/header-image-dark.png';
+
+
 
   // Simulate loading
   useEffect(() => {
@@ -134,7 +157,7 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
       {/* Header Section */}
       <header
         className={styles.header}
-        style={{ backgroundImage: `url(${isDarkMode ? header_image_dark : header_image_light})` }}
+        style={{ backgroundImage: getImagePath(`url(${isDarkMode ? header_image_dark : header_image_light})`) }}
       >
         <h1>Welcome to the Learning Hub</h1>
         <p>Explore tutorials, quizzes, and games to enhance your knowledge!</p>
@@ -238,8 +261,6 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
             Array(12).fill().map((_, index) => (
               <div key={`skeleton-${index}`} className={styles.cardSkeleton}>
                 <div className={styles.skeletonImageContainer}>
-                  <div className={styles.skeletonImage}>
-                  </div>
                 </div>
                 <div className={styles.skeletonText}></div>
                 <div className={styles.skeletonTextSmall}></div>
@@ -296,7 +317,7 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
                   <FaChevronLeft />
                 </button>
                 <div className={styles.carouselContent}>
-                  <img src={games[gameIndex].image} alt={games[gameIndex].title} />
+                  <img src={getImagePath(games[gameIndex].image)} alt={games[gameIndex].title} />
                   <h3>{games[gameIndex].title}</h3>
                   <p>{games[gameIndex].description}</p>
                 </div>
@@ -311,7 +332,7 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
         {/* Quizzes Section */}
         <div className={styles.quizzesSection}>
           <h2>Challenge Yourself with these Quizzes</h2>
-          <Link to={'/quizzes/1'}>
+          <Link to={'/quizzes/quizz/1'}>
             <div className={styles.quizzesGrid}>
               {isLoading ? (
                 Array(6).fill().map((_, index) => (
@@ -325,7 +346,7 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
                 quizzes.map((quiz) => (
                   <div key={quiz.id} className={styles.quizCard}>
                     <div className={styles.quizFront}>
-                      <img src={quiz.image} alt={quiz.title} />
+                      <img src={getImagePath(quiz.image)} alt={quiz.title} />
                       <h3>{quiz.title}</h3>
                     </div>
                     <div className={styles.quizBack}>
