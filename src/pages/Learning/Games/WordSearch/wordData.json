@@ -1,0 +1,80 @@
+{
+    "levels": {
+      "1-10": {
+        "easy": [
+          {"word": "Sikh", "punjabi": "ਸਿੱਖ", "category": "Religion", "hint": "Follower of Sikhism"},
+          {"word": "Punjab", "punjabi": "ਪੰਜਾਬ", "category": "Geography", "hint": "Land of five rivers"},
+          {"word": "Amrit", "punjabi": "ਅੰਮ੍ਰਿਤ", "category": "Religion", "hint": "Nectar of immortality"},
+          {"word": "Guru", "punjabi": "ਗੁਰੂ", "category": "Religion", "hint": "Spiritual teacher"},
+          {"word": "Lahore", "punjabi": "ਲਾਹੌਰ", "category": "Geography", "hint": "Cultural capital of Punjab"},
+          {"word": "Baisakhi", "punjabi": "ਵੈਸਾਖੀ", "category": "Festival", "hint": "Harvest festival"},
+          {"word": "Lohri", "punjabi": "ਲੋਹੜੀ", "category": "Festival", "hint": "Winter festival"},
+          {"word": "Jutti", "punjabi": "ਜੁੱਤੀ", "category": "Clothing", "hint": "Traditional footwear"},
+          {"word": "Phulkari", "punjabi": "ਫੁਲਕਾਰੀ", "category": "Art", "hint": "Traditional embroidery"},
+          {"word": "Giddha", "punjabi": "ਗਿੱਧਾ", "category": "Dance", "hint": "Folk dance"}
+        ],
+        "medium": [
+          {"word": "Khalsa", "punjabi": "ਖ਼ਾਲਸਾ", "category": "Religion", "hint": "Pure ones"},
+          {"word": "GoldenTemple", "punjabi": "ਸੁਵਰਣ ਮੰਦਿਰ", "category": "Landmark", "hint": "Holiest Gurdwara"},
+          {"word": "Jallianwala", "punjabi": "ਜਲ੍ਹਿਆਂਵਾਲਾ", "category": "History", "hint": "1919 massacre site"},
+          {"word": "Gatka", "punjabi": "ਗਤਕਾ", "category": "Martial Art", "hint": "Sikh martial art"},
+          {"word": "Kirtan", "punjabi": "ਕੀਰਤਨ", "category": "Music", "hint": "Devotional singing"},
+          {"word": "Langar", "punjabi": "ਲੰਗਰ", "category": "Practice", "hint": "Community kitchen"},
+          {"word": "Sarovar", "punjabi": "ਸਰੋਵਰ", "category": "Architecture", "hint": "Holy pool"},
+          {"word": "NishanSahib", "punjabi": "ਨਿਸ਼ਾਨ ਸਾਹਿਬ", "category": "Symbol", "hint": "Sikh flag"},
+          {"word": "Pagg", "punjabi": "ਪੱਗ", "category": "Clothing", "hint": "Turban"},
+          {"word": "Chola", "punjabi": "ਚੋਲਾ", "category": "Clothing", "hint": "Traditional robe"}
+        ],
+        "hard": [
+          {"word": "Gurmukhi", "punjabi": "ਗੁਰਮੁਖੀ", "category": "Language", "hint": "Punjabi script"},
+          {"word": "Chandigarh", "punjabi": "ਚੰਡੀਗੜ੍ਹ", "category": "Geography", "hint": "Capital of Punjab"},
+          {"word": "Harmandir", "punjabi": "ਹਰਿਮੰਦਿਰ", "category": "Landmark", "hint": "Golden Temple's name"},
+          {"word": "ShabadKirtan", "punjabi": "ਸ਼ਬਦ ਕੀਰਤਨ", "category": "Music", "hint": "Hymn singing"},
+          {"word": "DasamGranth", "punjabi": "ਦਸਮ ਗ੍ਰੰਥ", "category": "Scripture", "hint": "Second Sikh scripture"},
+          {"word": "JapjiSahib", "punjabi": "ਜਪੁਜੀ ਸਾਹਿਬ", "category": "Prayer", "hint": "Morning prayer"},
+          {"word": "AnandKaraj", "punjabi": "ਅਨੰਦ ਕਾਰਜ", "category": "Ceremony", "hint": "Sikh wedding"},
+          {"word": "PanjPyare", "punjabi": "ਪੰਜ ਪਿਆਰੇ", "category": "History", "hint": "Five beloved ones"},
+          {"word": "KhandeDiPahul", "punjabi": "ਖੰਡੇ ਦੀ ਪਾਹੁਲ", "category": "Ceremony", "hint": "Initiation ritual"},
+          {"word": "SarbatKhalsa", "punjabi": "ਸਰਬੱਤ ਖ਼ਾਲਸਾ", "category": "Institution", "hint": "Gathering of Sikhs"}
+        ]
+      },
+      "11-20": {
+        "easy": [
+          {"word": "Amritsar", "punjabi": "ਅੰਮ੍ਰਿਤਸਰ", "category": "City", "hint": "Home of Golden Temple"},
+          {"word": "Bhangra", "punjabi": "ਭੰਗੜਾ", "category": "Dance", "hint": "Energetic folk dance"},
+          {"word": "Dhol", "punjabi": "ਢੋਲ", "category": "Instrument", "hint": "Traditional drum"},
+          {"word": "Karah", "punjabi": "ਕੜਾਹ", "category": "Food", "hint": "Sacred pudding"},
+          {"word": "Kes", "punjabi": "ਕੇਸ", "category": "Appearance", "hint": "Uncut hair"},
+          {"word": "Kirpan", "punjabi": "ਕਿਰਪਾਨ", "category": "Symbol", "hint": "Ceremonial sword"},
+          {"word": "Kanga", "punjabi": "ਕੰਘਾ", "category": "Symbol", "hint": "Wooden comb"},
+          {"word": "Kachera", "punjabi": "ਕਛੈਰਾ", "category": "Clothing", "hint": "Cotton underwear"},
+          {"word": "Kara", "punjabi": "ਕੜਾ", "category": "Symbol", "hint": "Steel bracelet"},
+          {"word": "Ragi", "punjabi": "ਰਾਗੀ", "category": "Person", "hint": "Sikh musician"}
+        ],
+        "medium": [
+          {"word": "AkhandPath", "punjabi": "ਅਖੰਡ ਪਾਠ", "category": "Practice", "hint": "Continuous scripture reading"},
+          {"word": "Ardas", "punjabi": "ਅਰਦਾਸ", "category": "Prayer", "hint": "Sikh supplication"},
+          {"word": "ChaarSahibzade", "punjabi": "ਚਾਰ ਸਾਹਿਬਜ਼ਾਦੇ", "category": "History", "hint": "Guru Gobind Singh's sons"},
+          {"word": "Dastar", "punjabi": "ਦਸਤਾਰ", "category": "Clothing", "hint": "Turban"},
+          {"word": "Gurdwara", "punjabi": "ਗੁਰਦੁਆਰਾ", "category": "Place", "hint": "Sikh place of worship"},
+          {"word": "Hukamnama", "punjabi": "ਹੁਕਮਨਾਮਾ", "category": "Practice", "hint": "Order from Guru Granth Sahib"},
+          {"word": "Jaikara", "punjabi": "ਜੈਕਾਰਾ", "category": "Chant", "hint": "Victory shout"},
+          {"word": "Katha", "punjabi": "ਕਥਾ", "category": "Practice", "hint": "Religious discourse"},
+          {"word": "Kirtan", "punjabi": "ਕੀਰਤਨ", "category": "Practice", "hint": "Devotional singing"},
+          {"word": "MiriPiri", "punjabi": "ਮੀਰੀ ਪੀਰੀ", "category": "Concept", "hint": "Temporal and spiritual authority"}
+        ],
+        "hard": [
+          {"word": "BandiChhor", "punjabi": "ਬੰਦੀ ਛੋੜ", "category": "Festival", "hint": "Guru Hargobind's release"},
+          {"word": "ChardiKala", "punjabi": "ਚੜ੍ਹਦੀ ਕਲਾ", "category": "Concept", "hint": "Positive attitude"},
+          {"word": "DharamYudh", "punjabi": "ਧਰਮ ਯੁੱਧ", "category": "Concept", "hint": "Righteous war"},
+          {"word": "Gurmatta", "punjabi": "ਗੁਰਮੱਤਾ", "category": "Institution", "hint": "Collective decision"},
+          {"word": "IkOnkar", "punjabi": "ਇੱਕ ਓਅੰਕਾਰ", "category": "Symbol", "hint": "There is one God"},
+          {"word": "MoolMantar", "punjabi": "ਮੂਲ ਮੰਤਰ", "category": "Prayer", "hint": "Basic creed"},
+          {"word": "NaamSimran", "punjabi": "ਨਾਮ ਸਿਮਰਨ", "category": "Practice", "hint": "Meditation on God's name"},
+          {"word": "Panth", "punjabi": "ਪੰਥ", "category": "Community", "hint": "Sikh collective"},
+          {"word": "SachKhand", "punjabi": "ਸਚ ਖੰਡ", "category": "Concept", "hint": "Realm of Truth"},
+          {"word": "Waheguru", "punjabi": "ਵਾਹਿਗੁਰੂ", "category": "Name", "hint": "Wonderful Lord"}
+        ]
+      }
+    }
+  }

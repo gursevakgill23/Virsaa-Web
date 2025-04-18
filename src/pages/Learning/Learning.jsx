@@ -35,7 +35,7 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
   const learningImage = 'images/Learning/learning.jpg';
   const quizImage = 'images/Learning/quizzes.jpg';
   const puzzleImage = 'images/Learning/games.jpg';
-  const memoryImage = 'images/Learning/quizzes.jpg';
+  const memoryImage = 'images/Learning/memory.jpg';
   const learningCarousel = '/images/Learning/interactive-carousel.jpg';
   const gameTurnCard = '/images/Learning/games-turn-card.jpg';
   const header_image_light = '/images/Learning/header-image.png';
@@ -91,11 +91,29 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
   ], []);
 
   const games = [
-    { id: 21, title: 'Punjabi Puzzle', description: 'Solve fun puzzles.', image: learningCarousel },
-    { id: 22, title: 'Sikhism Memory Match', description: 'Match terms.', image: gameTurnCard },
-    { id: 23, title: 'Punjabi Puzzle', description: 'Solve fun puzzles.', image: learningCarousel },
+    { 
+      id: 21, 
+      title: 'Punjabi Puzzle', 
+      description: 'Solve fun puzzles.', 
+      image: learningCarousel,
+      link: '/' 
+    },
+    { 
+      id: 22, 
+      title: 'Sikhism Memory Match', 
+      description: 'Match terms.', 
+      image: gameTurnCard,
+      link: '/' 
+    },
+    { 
+      id: 23, 
+      title: 'Word Search', 
+      description: 'Solve fun puzzles.', 
+      image: learningCarousel,
+      link: '/learning/games/word-search' 
+    },
   ];
-
+  
   const quizzes = [
     { id: 11, title: 'Punjabi Grammar Quiz', description: 'Test your grammar.', image: gameTurnCard },
     { id: 12, title: 'Sikhism Quiz', description: 'Challenge yourself.', image: learningCarousel },
@@ -307,8 +325,7 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
           <div className={styles.gamesCarousel}>
             {isLoading ? (
               <div className={styles.carouselSkeleton}>
-                <div className={styles.skeletonImageContainer}>
-                </div>
+                <div className={styles.skeletonImageContainer}></div>
                 <div className={styles.skeletonText}></div>
                 <div className={styles.skeletonTextSmall}></div>
               </div>
@@ -317,11 +334,11 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
                 <button className={styles.carouselButton} onClick={handlePrevGame}>
                   <FaChevronLeft />
                 </button>
-                <div className={styles.carouselContent}>
+                <Link to={games[gameIndex].link} className={styles.carouselContent}>
                   <img src={getImagePath(games[gameIndex].image)} alt={games[gameIndex].title} />
                   <h3>{games[gameIndex].title}</h3>
                   <p>{games[gameIndex].description}</p>
-                </div>
+                </Link>
                 <button className={styles.carouselButton} onClick={handleNextGame}>
                   <FaChevronRight />
                 </button>

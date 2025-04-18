@@ -491,6 +491,7 @@ const hukamnamaData = {
           </div>
         </div>
       </section>
+      
     </div>
   );
 };

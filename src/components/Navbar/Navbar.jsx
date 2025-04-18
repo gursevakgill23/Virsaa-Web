@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './Navbar.module.css';
+import logo_virsaa from '../../images/logo.png'
 import { 
   FaBars, 
   FaSearch, 
@@ -97,11 +98,13 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
         {/* Left Side: Logo and Arrow Button */}
         <div className={styles.leftSection}>
         <div className={styles.logoContainer}>
-          <span className={styles.vir}>VIR</span>
-          <span className={styles.saaWrapper}>
-            <span className={styles.saa}>SAA</span>
-          </span>
+          <img 
+            src={logo_virsaa} 
+            alt="VIRSAA Logo" 
+            className={styles.logoImage}
+          />
         </div>
+
         </div>
 
         {/* Center: Nav Links */}

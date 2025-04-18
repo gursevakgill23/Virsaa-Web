@@ -1,7 +1,6 @@
 /* Base Styles */
 .homeContainer {
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: var(--section-bg-color);
 }
 /* Hukamnama Toast Styles */
 .hukamnamaToast {
@@ -10,7 +9,7 @@
   left: 50%;
   transform: translateX(-50%);
   background-color: var(--button-bg-color);
-  color: white;
+  color: var(--button-text-color);
   padding: 15px 25px;
   border-radius: 30px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -798,55 +797,65 @@
   }
 }
 
-/* Light Theme - Soft Purple */
+/* Light Theme - White/Gray */
 :root {
-  --background-color: #faf5ff;
-  --header-bg-color: #f0e5ff;
-  --section-bg-color: #f0e5ff;
-  --text-color: #2a1a3a;
-  --headline-color: #1a0a2a;
-  --icon-color: #5a3a7a;
-  --primary-color: #5a3a7a;
-  --button-bg-color: #5a3a7a;
-  --button-text-color: #ffffff;
-  --button-hover-bg-color: #ffffff;
-  --button-hover-text-color: #5a3a7a;
+  --background-color: #ffffff;
+  --header-bg-color: #f8f8f8;
+  --section-bg-color: #f8f8f8;
+  --text-color: #333333;
+  --headline-color: #000000;
+  --icon-color: #666666;
+  --primary-color: #000000; /* Black as primary color */
+  
+  /* Button colors - Invert on hover */
+  --button-bg-color: #000000; /* Black bg */
+  --button-text-color: #ffffff; /* White text */
+  --button-hover-bg-color: #ffffff; /* White bg on hover */
+  --button-hover-text-color: #000000; /* Black text on hover */
+  --button-border: 2px solid #000000; /* Added border for clean inversion */
+  
+  /* Rest of the light theme */
   --card-bg-color: #ffffff;
-  --input-border-color: #b8a2d8;
-  --card-overlay-bg: rgba(255, 255, 255, 0.92);
-  --border-color: #d0c0e0;
-  --table-header-bg: #e8d8f8;
-  --secondary-text-color: #5a4a6a;
-  --skeleton-bg-color: #e8e0f0;
+  --input-border-color: #dddddd;
+  --card-overlay-bg: rgba(255, 255, 255, 0.95);
+  --border-color: #eeeeee;
+  --table-header-bg: #f0f0f0;
+  --secondary-text-color: #777777;
+  --skeleton-bg-color: #f0f0f0;
   --skeleton-shine-color: rgba(255, 255, 255, 0.5);
   --sidebar-bg: #ffffff;
-  --sidebar-text: #3a2a4a;
-  --sidebar-hover: #f0e5ff;
+  --sidebar-text: #444444;
+  --sidebar-hover: #f0f0f0;
   --sidebar-bg-rgb: 255, 255, 255;
 }
 
-/* Dark Theme - Deep Purple */
+/* Dark Theme - Black/Gray */
 [data-theme='dark'] {
-  --background-color: #120820;
-  --header-bg-color: #1a0a2a;
-  --section-bg-color: #120820;
-  --text-color: #e8e0f8;
-  --headline-color: #f0e0ff;
-  --icon-color: #b89fd8;
-  --primary-color: #8a6aba;
-  --button-bg-color: #5a3a7a;
-  --button-text-color: #ffffff;
-  --button-hover-bg-color: #ffffff;
-  --button-hover-text-color: #5a3a7a;
-  --card-bg-color: #1a0a2a;
-  --card-overlay-bg: rgba(26, 10, 42, 0.95);
-  --border-color: #3a2a5a;
-  --table-header-bg: #2a1a4a;
-  --secondary-text-color: #b8a0d8;
-  --skeleton-bg-color: #2a1a4a;
-  --skeleton-shine-color: rgba(138, 106, 186, 0.3);
-  --sidebar-bg: #120820;
-  --sidebar-text: #e0d0f0;
-  --sidebar-hover: #2a1a4a;
-  --sidebar-bg-rgb: 18, 8, 32;
+  --background-color: #121212;
+  --header-bg-color: #1a1a1a;
+  --section-bg-color: #121212;
+  --text-color: #e0e0e0;
+  --headline-color: #ffffff;
+  --icon-color: #aaaaaa;
+  --primary-color: #ffffff; /* White as primary color */
+  
+  /* Button colors - Invert on hover */
+  --button-bg-color: #ffffff; /* White bg */
+  --button-text-color: #000000; /* Black text */
+  --button-hover-bg-color: #000000; /* Black bg on hover */
+  --button-hover-text-color: #ffffff; /* White text on hover */
+  --button-border: 2px solid #ffffff; /* Added border for clean inversion */
+  
+  /* Rest of the dark theme */
+  --card-bg-color: #1e1e1e;
+  --card-overlay-bg: rgba(30, 30, 30, 0.95);
+  --border-color: #333333;
+  --table-header-bg: #2a2a2a;
+  --secondary-text-color: #b0b0b0;
+  --skeleton-bg-color: #2a2a2a;
+  --skeleton-shine-color: rgba(100, 100, 100, 0.3);
+  --sidebar-bg: #121212;
+  --sidebar-text: #d0d0d0;
+  --sidebar-hover: #2a2a2a;
+  --sidebar-bg-rgb: 18, 18, 18;
 }
