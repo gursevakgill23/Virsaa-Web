@@ -24,6 +24,7 @@ import recent_news from '../../images/recent_news.jpg';
 import gurbani from '../../images/gurbani.jpg';
 import heritage from '../../images/heritage.jpg';
 import styles from './Home.module.css';
+import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 
 const Home = ({ isDarkMode }) => {
   const [imageIndex, setImageIndex] = useState(0);
@@ -491,7 +492,7 @@ const hukamnamaData = {
           </div>
         </div>
       </section>
-      
+      <ChatButton isDarkMode={isDarkMode} />      
     </div>
   );
 };

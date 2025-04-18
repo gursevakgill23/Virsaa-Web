@@ -28,7 +28,6 @@ import Quizzes from './pages/Learning/Quizzes/Quizzes';
 import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
 import AuthorDetail from './pages/Collections/AuthorDetail/AuthorDetail';
 import { AuthProvider } from './context/AuthContext';
-import ChatButton from './pages/Login/ChatWithUs/ChatButton/ChatButton';
 import AudiobookDetail from './pages/Collections/AudiobookDetail/AudiobookDetail';
 import Account from './pages/Profile/Account/Account';
 import Settings from './pages/Profile/Settings/Settings';
@@ -142,7 +141,6 @@ const App = () => {
           </Routes>
           <Footer isDarkMode={isDarkMode} apiString={API_STRING} />
           <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />
-          <ChatButton isDarkMode={isDarkMode} apiString={API_STRING} />
 
         </>
       )}
