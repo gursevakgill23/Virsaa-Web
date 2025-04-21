@@ -1,316 +1,391 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+/**
+ * WordSearch.jsx
+ * A cinematic Word Search game component for the Virsaa project.
+ * Features a dedicated game navbar, map selection, multilingual support (Punjabi/English),
+ * timer-based gameplay, achievements, top scorers, hints, coin system, and user profile management.
+ */
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import styles from './WordSearch.module.css';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { FaCoins, FaTrophy, FaShareAlt, FaArrowRight, FaLanguage, FaPause, FaPlay, FaSync, FaUser, FaUserAltSlash, FaCog, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
-import { GiLaurelCrown, GiStairsGoal } from 'react-icons/gi';
-import { IoMdArrowRoundBack, IoMdClose } from 'react-icons/io';
-import games from '../../../../images/Learning/games.jpg';
-import wordData from './wordData.json';
+import { Howl } from 'howler';
+import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaEdit, FaCreditCard, FaTrash, FaSignOutAlt, FaGamepad } from 'react-icons/fa';
+import { GiTreasureMap, GiClockwork, GiStairsGoal } from 'react-icons/gi';
+import { IoMdTimer, IoMdSettings } from 'react-icons/io';
+import { MdLeaderboard, MdStars } from 'react-icons/md';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
+import avatar from '../../../../images/Learning/avatar.jpg';
+import userDefault from '../../../../images/Learning/user_default.png';
+import wordsData from './wordData.json';
+import completSound from './assets/sounds/complete.mp3';
+import found from './assets/sounds/found.mp3';
+import levelUp from './assets/sounds/level-up.mp3';
 
-// Sound files
-import backgroundSound from './sounds/background.mp3';
-import foundSound from './sounds/found.mp3';
-import levelUpSound from './sounds/level-up.mp3';
 
+// Initialize sound effects for the game
+const sounds = {
+  complete: new Howl({ src: [completSound] }),
+  achievement: new Howl({ src: [levelUp] }),
+  coin: new Howl({ src: [found] }),
+  click: new Howl({ src: [found] }),
+  wordFound: new Howl({ src: [found] }),
+  error: new Howl({ src: ['./assets/sounds/error.mp3'] }),
+};
+
+// Mock API to fetch top scorers (to be replaced with actual API)
+const fetchTopScorers = async () => {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  return [
+    { id: 1, name: 'WordMaster', score: 3250, avatar: avatar },
+    { id: 2, name: 'LexiconPro', score: 2850, avatar: avatar },
+    { id: 3, name: 'VocabKing', score: 2750, avatar: avatar },
+    { id: 4, name: 'AlphabetNinja', score: 2500, avatar: avatar },
+    { id: 5, name: 'LetterHunter', score: 2350, avatar: avatar },
+  ];
+};
+
+// Mock API to fetch user achievements (to be replaced with actual API)
+const fetchUserAchievements = async (userId) => {
+  await new Promise(resolve => setTimeout(resolve, 800));
+  if (!userId) return [];
+  return [
+    { id: 1, name: 'First Game', description: 'Complete your first game', earned: true, icon: '🥇' },
+    { id: 2, name: 'Word Master', description: 'Find 50 words', earned: false, icon: '🔤', progress: '12/50' },
+    { id: 3, name: 'Speedster', description: 'Complete a game in under 2 minutes', earned: true, icon: '⚡' },
+    { id: 4, name: 'Premium Player', description: 'Play a premium map', earned: false, icon: '💎' },
+    { id: 5, name: 'Coin Collector', description: 'Earn 1000 coins', earned: false, icon: '🪙', progress: '350/1000' },
+  ];
+};
+
+// Mock API to fetch user game stats (to be replaced with actual API)
+const fetchUserGameStats = async (userId) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  if (!userId) return null;
+  return {
+    totalMatches: 45,
+    wins: 30,
+    losses: 15,
+    totalCoinsWon: 3200,
+    totalCoinsLostOnHints: 150,
+  };
+};
+
+// Mock API to fetch user payment methods (to be replaced with actual API)
+const fetchPaymentMethods = async (userId) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  if (!userId) return [];
+  return [
+    { id: 1, type: 'Credit Card', lastFour: '1234', expiry: '12/25' },
+    { id: 2, type: 'PayPal', email: 'user@example.com' },
+  ];
+};
+
+// Fallback words in case the fetch fails
+const fallbackWords = {
+  easy: [
+    { word: "cat", punjabi: "ਬਿੱਲੀ" },
+    { word: "dog", punjabi: "ਕੁੱਤਾ" },
+    { word: "bird", punjabi: "ਪੰਛੀ" },
+    { word: "fish", punjabi: "ਮੱਛੀ" },
+    { word: "lion", punjabi: "ਸ਼ੇਰ" }
+  ],
+  medium: [
+    { word: "house", punjabi: "ਘਰ" },
+    { word: "river", punjabi: "ਦਰਿਆ" },
+    { word: "forest", punjabi: "ਜੰਗਲ" },
+    { word: "mountain", punjabi: "ਪਹਾੜ" },
+    { word: "valley", punjabi: "ਵਾਦੀ" }
+  ],
+  hard: [
+    { word: "elephant", punjabi: "ਹਾਥੀ" },
+    { word: "crocodile", punjabi: "ਮਗਰਮੱਛ" },
+    { word: "rhinoceros", punjabi: "ਗੈਂਡਾ" },
+    { word: "hippopotamus", punjabi: "ਦਰਿਆਈ ਘੋੜਾ" },
+    { word: "giraffe", punjabi: "ਜਿਰਾਫ" }
+  ]
+};
+
+// Fetch words from a JSON file based on difficulty and language
+const fetchWords = async (difficulty, language) => {
+  try {
+    const response = await fetch(wordsData);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log('Fetched word data:', data); // Debugging log
+    const levels = data.levels;
+    const levelKeys = Object.keys(levels);
+    if (levelKeys.length === 0) {
+      throw new Error('No levels found in wordData.json');
+    }
+    const randomLevelKey = levelKeys[Math.floor(Math.random() * levelKeys.length)];
+    const wordsArray = levels[randomLevelKey][difficulty.toLowerCase()];
+    if (!wordsArray || wordsArray.length < 5) {
+      throw new Error(`Not enough words for difficulty ${difficulty} in level ${randomLevelKey}`);
+    }
+    const shuffledWords = wordsArray.sort(() => Math.random() - 0.5);
+    const selectedWords = shuffledWords.slice(0, 5).map(word => language === 'punjabi' ? word.punjabi : word.word);
+    return selectedWords;
+  } catch (error) {
+    console.error('Error fetching words:', error);
+    // Use fallback words if fetch fails
+    const fallback = fallbackWords[difficulty.toLowerCase()] || [];
+    return fallback.map(word => language === 'punjabi' ? word.punjabi : word.word);
+  }
+};
+
+// Game maps configuration with free, premium, login-only, and new Snow/Sand maps
+const gameMaps = [
+  { id: 1, name: 'Punjabi Basics', description: 'Learn basic Punjabi words', difficulty: 'Easy', timeLimit: 300, entryFee: 0, reward: 50, premium: false, loginRequired: false, size: 10, language: 'punjabi', theme: 'traditional' },
+  { id: 2, name: 'Advanced Vocabulary', description: 'Challenge with advanced Punjabi words', difficulty: 'Medium', timeLimit: 420, entryFee: 0, reward: 75, premium: false, loginRequired: false, size: 12, language: 'punjabi', theme: 'cultural' },
+  { id: 3, name: 'Gurmukhi Legacy', description: 'Explore historical Punjabi words', difficulty: 'Hard', timeLimit: 600, entryFee: 25, reward: 150, premium: true, loginRequired: false, size: 15, language: 'punjabi', theme: 'gold' },
+  { id: 4, name: 'English Basics', description: 'Simple English words', difficulty: 'Easy', timeLimit: 240, entryFee: 0, reward: 40, premium: false, loginRequired: false, size: 10, language: 'english', theme: 'nature' },
+  { id: 5, name: 'English Advanced', description: 'Tougher English words', difficulty: 'Medium', timeLimit: 360, entryFee: 10, reward: 100, premium: false, loginRequired: true, size: 12, language: 'english', theme: 'abstract' },
+  { id: 6, name: 'Jungle Expedition', description: 'Wildlife related words', difficulty: 'Medium', timeLimit: 360, entryFee: 15, reward: 120, premium: false, loginRequired: true, size: 12, language: 'english', theme: 'jungle' },
+  { id: 7, name: 'Mountain Trek', description: 'Adventure and nature words', difficulty: 'Hard', timeLimit: 480, entryFee: 20, reward: 180, premium: true, loginRequired: false, size: 14, language: 'english', theme: 'mountain' },
+  { id: 8, name: 'Cosmic Voyage', description: 'Space-themed premium challenge', difficulty: 'Hard', timeLimit: 600, entryFee: 30, reward: 200, premium: true, loginRequired: false, size: 15, language: 'english', theme: 'cosmic' },
+  { id: 9, name: 'Mystic Realms', description: 'Fantasy words for premium users', difficulty: 'Hard', timeLimit: 540, entryFee: 25, reward: 180, premium: true, loginRequired: false, size: 14, language: 'english', theme: 'mystic' },
+  { id: 10, name: 'Punjabi Poetry', description: 'Poetic Punjabi words', difficulty: 'Medium', timeLimit: 480, entryFee: 20, reward: 150, premium: true, loginRequired: false, size: 12, language: 'punjabi', theme: 'poetry' },
+  { id: 11, name: 'Snowy Slopes', description: 'Winter-themed words', difficulty: 'Medium', timeLimit: 420, entryFee: 15, reward: 120, premium: false, loginRequired: true, size: 12, language: 'english', theme: 'snow' },
+  { id: 12, name: 'Sandy Dunes', description: 'Desert-themed words', difficulty: 'Hard', timeLimit: 540, entryFee: 20, reward: 160, premium: false, loginRequired: true, size: 14, language: 'english', theme: 'sand' },
+];
+
+// Define difficulty levels with time multipliers and colors
+const difficultyLevels = [
+  { id: 'easy', name: 'Easy', timeMultiplier: 1.2, color: '#4CAF50' },
+  { id: 'medium', name: 'Medium', timeMultiplier: 1.0, color: '#FF9800' },
+  { id: 'hard', name: 'Hard', timeMultiplier: 0.8, color: '#F44336' },
+];
+
+// Main component to handle opening the game in a new tab
 const WordSearch = () => {
-  const { isLoggedIn, userData, login, logout } = useAuth();
-  const [isGuest, setIsGuest] = useState(false);
-  
-  // Game states
-  const [currentScreen, setCurrentScreen] = useState('levelSelect');
-  const [currentLevel, setCurrentLevel] = useState(1);
-  const [maxUnlockedLevel, setMaxUnlockedLevel] = useState(1);
-  const [difficulty, setDifficulty] = useState('easy');
-  const [language, setLanguage] = useState('english');
-  const [gameStarted, setGameStarted] = useState(false);
-  const [gamePaused, setGamePaused] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
-  const [showAchievementModal, setShowAchievementModal] = useState(false);
-  
-  // Settings states
-  const [showSettings, setShowSettings] = useState(false);
-  const [soundOn, setSoundOn] = useState(true);
-  const [volume, setVolume] = useState(0.5);
-  const [rememberDifficulty, setRememberDifficulty] = useState(false);
-  
-  // Game data
-  const [board, setBoard] = useState([]);
-  const [words, setWords] = useState([]);
-  const [foundWords, setFoundWords] = useState([]);
-  const [selectedCells, setSelectedCells] = useState([]);
-  const [isSelecting, setIsSelecting] = useState(false);
-  
-  // User data
-  const [coins, setCoins] = useState(0);
-  const [score, setScore] = useState(0);
-  const [scores, setScores] = useState([]);
-  const [achievements, setAchievements] = useState([]);
-  const [hintsUsed, setHintsUsed] = useState(0);
+  const { isLoggedIn } = useAuth();
 
-  // Time
-  const [timeLeft, setTimeLeft] = useState(0);
-  const timerRef = useRef(null);
-  
-  // Audio refs
-  const backgroundAudioRef = useRef(null);
-  const foundAudioRef = useRef(null);
-  const levelUpAudioRef = useRef(null);
-
-  // Mock data for guests and initial state
-  const mockScores = useMemo(() => [
-    { 
-      name: "PunjabiPro", 
-      score: 450, 
-      level: 10, 
-      difficulty: "hard", 
-      date: new Date(Date.now() - 86400000).toISOString(), 
-      completed: true, 
-      timeUsed: 120, 
-      wordsFound: 15, 
-      totalWords: 15 
-    },
-    { 
-      name: "SikhHistoryBuff", 
-      score: 380, 
-      level: 8, 
-      difficulty: "medium", 
-      date: new Date(Date.now() - 172800000).toISOString(), 
-      completed: true, 
-      timeUsed: 180, 
-      wordsFound: 12, 
-      totalWords: 12 
-    },
-    { 
-      name: "GurmukhiGuru", 
-      score: 320, 
-      level: 5, 
-      difficulty: "easy", 
-      date: new Date(Date.now() - 259200000).toISOString(), 
-      completed: true, 
-      timeUsed: 240, 
-      wordsFound: 10, 
-      totalWords: 10 
-    }
-  ], []);
-
-  const mockAchievements = useMemo(() => [
-    { 
-      id: "level-5", 
-      title: "Level 5 Completed", 
-      description: "Completed level 5", 
-      icon: <GiStairsGoal />, 
-      coins: 5 
-    },
-    { 
-      id: "perfect-3", 
-      title: "Perfect Score!", 
-      description: "Found all words in level 3", 
-      icon: <GiLaurelCrown />, 
-      coins: 6 
-    },
-    { 
-      id: "speed-2", 
-      title: "Speed Runner", 
-      description: "Completed level 2 quickly", 
-      icon: <FaTrophy />, 
-      coins: 2 
-    }
-  ], []);
-
-  // Initialize audio elements
   useEffect(() => {
-    backgroundAudioRef.current = new Audio(backgroundSound);
-    foundAudioRef.current = new Audio(foundSound);
-    levelUpAudioRef.current = new Audio(levelUpSound);
+    const hasOpenedGame = sessionStorage.getItem('wordSearchTabOpened');
+    if (hasOpenedGame) return;
+
+    sessionStorage.setItem('wordSearchTabOpened', 'true');
+    const gameUrl = '/learning/games/word-search';
+    const newWindow = window.open(gameUrl, '_blank');
+    if (newWindow) {
+      newWindow.focus();
+      window.location.href = '/';
+    }
 
     return () => {
-      backgroundAudioRef.current?.pause();
-      foundAudioRef.current?.pause();
-      levelUpAudioRef.current?.pause();
+      sessionStorage.removeItem('wordSearchTabOpened');
+    };
+  }, [isLoggedIn]);
+
+  return null;
+};
+
+// GamePlay component to be rendered in the new tab
+const WordSearchGamePlay = () => {
+  const { isLoggedIn, userData, login, logout } = useAuth();
+
+  // State management for the game
+  const [gameState, setGameState] = useState('select');
+  const [selectedMap, setSelectedMap] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedDifficulty, setSelectedDifficulty] = useState(difficultyLevels[1]);
+  const [board, setBoard] = useState([]);
+  const [wordsToFind, setWordsToFind] = useState([]);
+  const [foundWords, setFoundWords] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [score, setScore] = useState(0);
+  const [coins, setCoins] = useState(userData?.coins || 0);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [playAsGuest, setPlayAsGuest] = useState(false);
+  const [topScorers, setTopScorers] = useState([]);
+  const [loadingTopScorers, setLoadingTopScorers] = useState(true);
+  const [userAchievements, setUserAchievements] = useState([]);
+  const [loadingAchievements, setLoadingAchievements] = useState(true);
+  const [settings, setSettings] = useState({
+    soundEnabled: true,
+    constantDifficulty: false,
+    language: 'english',
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [showBuyCoins, setShowBuyCoins] = useState(false);
+  const [selectionStart, setSelectionStart] = useState(null);
+  const [selectedCells, setSelectedCells] = useState([]);
+  const [wordPositions, setWordPositions] = useState({});
+  const [showWelcomeBonus, setShowWelcomeBonus] = useState(false);
+  const [welcomeBonusAmount, setWelcomeBonusAmount] = useState(0);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [userStats, setUserStats] = useState(null);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [newName, setNewName] = useState(userData?.name || '');
+  const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
+  const timerRef = useRef(null);
+  const profileDropdownRef = useRef(null);
+
+  // Effect to handle welcome bonus on first load
+  useEffect(() => {
+    if (!userData?.welcomeBonusGiven) {
+      const bonus = isLoggedIn ? (userData?.isPremium ? 500 : 200) : 100;
+      const newCoins = (userData?.coins || 0) + bonus;
+      setCoins(newCoins);
+      setWelcomeBonusAmount(bonus);
+      setShowWelcomeBonus(true);
+
+      if (isLoggedIn) {
+        const updatedUser = { ...userData, coins: newCoins, welcomeBonusGiven: true };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        login(userData.token, updatedUser);
+      }
+
+      if (settings.soundEnabled) sounds.coin.play();
+      setTimeout(() => setShowWelcomeBonus(false), 5000);
+    }
+  }, [isLoggedIn, userData, login, settings.soundEnabled]);
+
+  // Effect to load top scorers, achievements, user stats, and payment methods
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const scorers = await fetchTopScorers();
+        setTopScorers(scorers);
+        setLoadingTopScorers(false);
+
+        if (isLoggedIn && userData) {
+          const achievements = await fetchUserAchievements(userData.id);
+          setUserAchievements(achievements);
+
+          const stats = await fetchUserGameStats(userData.id);
+          setUserStats(stats);
+
+          const methods = await fetchPaymentMethods(userData.id);
+          setPaymentMethods(methods);
+        }
+        setLoadingAchievements(false);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setLoadingTopScorers(false);
+        setLoadingAchievements(false);
+      }
+    };
+    loadData();
+  }, [isLoggedIn, userData]);
+
+  // Effect to handle clicks outside the profile dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
-  // Update audio volume when volume changes
+  // Cleanup timer on component unmount
   useEffect(() => {
-    if (backgroundAudioRef.current) {
-      backgroundAudioRef.current.volume = soundOn ? volume : 0;
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  // Initialize the game board with words
+  const initializeBoard = async () => {
+    if (!selectedMap) return;
+
+    const fetchedWords = await fetchWords(selectedMap.difficulty, selectedMap.language);
+    if (fetchedWords.length === 0) {
+      setErrorMessage('Failed to load words for the game. Using fallback words.');
+      console.error('No words fetched for the map');
     }
-    if (foundAudioRef.current) {
-      foundAudioRef.current.volume = soundOn ? volume : 0;
-    }
-    if (levelUpAudioRef.current) {
-      levelUpAudioRef.current.volume = soundOn ? volume : 0;
-    }
-  }, [volume, soundOn]);
+    setWordsToFind(fetchedWords);
 
-  useEffect(() => {
-    if (isLoggedIn && !isGuest) {
-      const savedScores = JSON.parse(localStorage.getItem('wordSearchScores')) || mockScores;
-      const savedCoins = parseInt(localStorage.getItem('userCoins')) || 0;
-      const savedLevel = parseInt(localStorage.getItem('maxUnlockedLevel')) || 1;
-      const savedAchievements = JSON.parse(localStorage.getItem('achievements')) || mockAchievements;
-      const savedSettings = JSON.parse(localStorage.getItem('wordSearchSettings')) || {};
-  
-      setScores(savedScores);
-      setCoins(savedCoins);
-      setMaxUnlockedLevel(savedLevel);
-      setAchievements(savedAchievements);
-      setSoundOn(savedSettings.soundOn !== undefined ? savedSettings.soundOn : true);
-      setVolume(savedSettings.volume !== undefined ? savedSettings.volume : 0.5);
-      setRememberDifficulty(savedSettings.rememberDifficulty || false);
-      if (savedSettings.difficulty) setDifficulty(savedSettings.difficulty);
-    } else if (isGuest) {
-      setMaxUnlockedLevel(1);
-      setCoins(0);
-      setScores(mockScores);
-      setAchievements(mockAchievements);
-    }
-  }, [isLoggedIn, isGuest, userData, mockScores, mockAchievements]);
-
-  // Handle audio when game starts/pauses
-  useEffect(() => {
-    const bgAudio = backgroundAudioRef.current;
-    if (!bgAudio) return;
-
-    if (gameStarted && !gamePaused) {
-      bgAudio.loop = true;
-      bgAudio.play().catch(e => console.log("Audio play error:", e));
-    } else {
-      bgAudio.pause();
-    }
-  }, [gameStarted, gamePaused]);
-
-  // Board generation functions
-  const getWordsForGame = () => {
-    const levelRange = currentLevel <= 10 ? '1-10' : '11-20';
-    const levelWords = wordData.levels[levelRange][difficulty];
-    const wordCount = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 12 : 15;
-    const shuffled = [...levelWords].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, wordCount);
-  };
-
-  const calculateBoardSize = (words) => {
-    const longestWord = Math.max(...words.map(w => 
-      language === 'punjabi' ? w.punjabi.length : w.word.length
-    ));
-    return Math.max(
-      difficulty === 'easy' ? 12 : difficulty === 'medium' ? 15 : 18,
-      longestWord + 5
-    );
-  };
-
-  const getRandomPunjabiCharacter = () => {
-    const start = 0x0A00;
-    const end = 0x0A7F;
-    const randomCode = start + Math.floor(Math.random() * (end - start + 1));
-    return String.fromCodePoint(randomCode);
-  };
-
-  const canPlaceWord = (word, row, col, direction, size, board) => {
-    const directionVectors = [
-      { dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 },
-      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 }
-    ];
-    const { dr, dc } = directionVectors[direction];
-
-    for (let i = 0; i < word.length; i++) {
-      const r = row + dr * i;
-      const c = col + dc * i;
-      
-      if (r < 0 || r >= size || c < 0 || c >= size || 
-          (board[r][c] !== '' && board[r][c] !== word[i])) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const placeWord = (word, row, col, direction, board) => {
-    const directionVectors = [
-      { dr: 0, dc: 1 }, { dr: 0, dc: -1 }, { dr: 1, dc: 0 }, { dr: -1, dc: 0 },
-      { dr: 1, dc: 1 }, { dr: 1, dc: -1 }, { dr: -1, dc: 1 }, { dr: -1, dc: -1 }
-    ];
-    const { dr, dc } = directionVectors[direction];
-
-    for (let i = 0; i < word.length; i++) {
-      const r = row + dr * i;
-      const c = col + dc * i;
-      board[r][c] = word[i];
-    }
-  };
-
-  const generateBoard = () => {
-    const selectedWords = getWordsForGame();
-    setWords(selectedWords);
-    setFoundWords([]);
-    
-    const size = calculateBoardSize(selectedWords);
+    const size = selectedMap.size;
+    const words = fetchedWords;
     const newBoard = Array(size).fill().map(() => Array(size).fill(''));
-    
-    let allWordsPlaced = false;
-    let attempts = 0;
-    const maxAttempts = 1000;
-    
-    while (!allWordsPlaced && attempts < maxAttempts) {
-      allWordsPlaced = true;
-      newBoard.forEach(row => row.fill('')); // Reset board
-      
-      for (const wordObj of selectedWords) {
-        const word = language === 'punjabi' ? wordObj.punjabi : wordObj.word.toLowerCase();
-        let placed = false;
-        let wordAttempts = 0;
-        
-        while (!placed && wordAttempts < 100) {
-          const direction = Math.floor(Math.random() * 8);
-          const row = Math.floor(Math.random() * size);
-          const col = Math.floor(Math.random() * size);
-          
-          if (canPlaceWord(word, row, col, direction, size, newBoard)) {
-            placeWord(word, row, col, direction, newBoard);
-            placed = true;
+    const newWordPositions = {};
+
+    const alphabet =
+      selectedMap.language === 'punjabi'
+        ? ['ਕ', 'ਖ', 'ਗ', 'ਘ', 'ਙ', 'ਚ', 'ਛ', 'ਜ', 'ਝ', 'ਞ', 'ਟ', 'ਠ', 'ਡ', 'ਢ', 'ਣ', 'ਤ', 'ਥ', 'ਦ', 'ਧ', 'ਨ', 'ਪ', 'ਫ', 'ਬ', 'ਭ', 'ਮ', 'ਯ', 'ਰ', 'ਲ', 'ਵ', 'ਸ', 'ਹ']
+        : 'abcdefghijklmnopqrstuvwxyz'.split('');
+
+    words.forEach(word => {
+      let placed = false;
+      let attempts = 0;
+      const maxAttempts = 200;
+
+      while (!placed && attempts < maxAttempts) {
+        attempts++;
+        const direction = Math.floor(Math.random() * 3);
+        const row = direction === 0 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
+        const col = direction === 1 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
+
+        let canPlace = true;
+        const positions = [];
+
+        for (let i = 0; i < word.length; i++) {
+          let r, c;
+          if (direction === 0) {
+            r = row;
+            c = col + i;
+          } else if (direction === 1) {
+            r = row + i;
+            c = col;
+          } else {
+            r = row + i;
+            c = col + i;
           }
-          wordAttempts++;
+
+          if (r >= size || c >= size || (newBoard[r][c] && newBoard[r][c] !== word[i])) {
+            canPlace = false;
+            break;
+          }
+          positions.push({ row: r, col: c });
         }
-        
-        if (!placed) {
-          allWordsPlaced = false;
-          break;
+
+        if (canPlace) {
+          for (let i = 0; i < word.length; i++) {
+            const { row, col } = positions[i];
+            newBoard[row][col] = word[i];
+          }
+          newWordPositions[word] = positions;
+          placed = true;
         }
       }
-      
-      attempts++;
-    }
-    
-    if (!allWordsPlaced) {
-      toast.error("Couldn't place all words - trying again");
-      return generateBoard(); // Recursively retry
-    }
-    
-    // Fill remaining cells
+
+      if (!placed) {
+        console.warn(`Could not place word "${word}" after ${maxAttempts} attempts`);
+        setErrorMessage('Unable to place all words on the board. Try again or select a different map.');
+      }
+    });
+
     for (let i = 0; i < size; i++) {
       for (let j = 0; j < size; j++) {
-        if (newBoard[i][j] === '') {
-          newBoard[i][j] = language === 'punjabi' 
-            ? getRandomPunjabiCharacter()
-            : String.fromCharCode(97 + Math.floor(Math.random() * 26));
+        if (!newBoard[i][j]) {
+          newBoard[i][j] = alphabet[Math.floor(Math.random() * alphabet.length)];
         }
       }
     }
-    
-    setBoard(newBoard);
-    setTimeLeft(difficultyTimes[difficulty]);
-  };
 
-  // Game control functions
-  const startTimer = () => {
-    clearInterval(timerRef.current);
+    setBoard(newBoard);
+    setWordPositions(newWordPositions);
+    setFoundWords([]);
+    setTimeLeft(Math.floor(selectedMap.timeLimit * selectedDifficulty.timeMultiplier));
+    setScore(0);
+    setGameState('playing');
+
+    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
-          endGame(false);
+          handleGameEnd(false);
           return 0;
         }
         return prev - 1;
@@ -318,1058 +393,1104 @@ const WordSearch = () => {
     }, 1000);
   };
 
-  const startGame = () => {
-    if (!isLoggedIn && !isGuest) {
-      toast.error('Please login or play as guest to start the game');
+  // Handle mouse down event on a cell to start selection
+  const handleCellMouseDown = (row, col) => {
+    if (settings.soundEnabled) sounds.click.play();
+    setSelectionStart({ row, col });
+    setSelectedCells([{ row, col }]);
+  };
+
+  // Handle mouse enter event on a cell to continue selection
+  const handleCellMouseEnter = (row, col) => {
+    if (!selectionStart) return;
+
+    const newSelectedCells = [];
+    const rowStart = Math.min(selectionStart.row, row);
+    const rowEnd = Math.max(selectionStart.row, row);
+    const colStart = Math.min(selectionStart.col, col);
+    const colEnd = Math.max(selectionStart.col, col);
+
+    if (rowStart === rowEnd || colStart === colEnd || (rowEnd - rowStart === colEnd - colStart)) {
+      for (let r = rowStart; r <= rowEnd; r++) {
+        for (let c = colStart; c <= colEnd; c++) {
+          if (rowStart === rowEnd || colStart === colEnd || (r - rowStart === c - colStart)) {
+            newSelectedCells.push({ row: r, col: c });
+          }
+        }
+      }
+    }
+
+    setSelectedCells(newSelectedCells);
+  };
+
+  // Handle mouse up event to end selection and check the word
+  const handleCellMouseUp = () => {
+    if (selectedCells.length > 1) {
+      checkSelectedWord();
+    }
+    setSelectionStart(null);
+    setSelectedCells([]);
+  };
+
+  // Check if the selected cells form a valid word
+  const checkSelectedWord = () => {
+    const word = selectedCells.map(cell => board[cell.row][cell.col]).join('');
+    const reversedWord = word.split('').reverse().join('');
+
+    const matchedWord = wordsToFind.find(w => w === word || w === reversedWord);
+
+    if (matchedWord && !foundWords.includes(matchedWord)) {
+      const expectedPositions = wordPositions[matchedWord] || [];
+      const isExactMatch =
+        expectedPositions.length === selectedCells.length &&
+        expectedPositions.every(pos =>
+          selectedCells.some(cell => cell.row === pos.row && cell.col === pos.col)
+        );
+
+      if (isExactMatch) {
+        if (settings.soundEnabled) sounds.wordFound.play();
+        setFoundWords(prev => [...prev, matchedWord]);
+
+        const wordScore =
+          matchedWord.length * 10 * (selectedDifficulty.id === 'easy' ? 1 : selectedDifficulty.id === 'medium' ? 1.5 : 2);
+        setScore(prev => prev + wordScore);
+
+        if (foundWords.length + 1 === wordsToFind.length) {
+          handleGameEnd(true);
+        }
+
+        // Update user stats (mock update for now)
+        if (isLoggedIn && userStats) {
+          setUserStats(prev => ({
+            ...prev,
+            totalMatches: prev.totalMatches + (foundWords.length + 1 === wordsToFind.length ? 1 : 0),
+            wins: prev.wins + (foundWords.length + 1 === wordsToFind.length ? 1 : 0),
+          }));
+        }
+      } else {
+        if (settings.soundEnabled) sounds.error.play();
+      }
+    } else {
+      if (settings.soundEnabled) sounds.error.play();
+    }
+  };
+
+  // Handle the end of the game (win or lose)
+  const handleGameEnd = (completed) => {
+    clearInterval(timerRef.current);
+
+    if (completed) {
+      const timeBonus = Math.floor(timeLeft / 10);
+      const coinsEarned = Math.floor(selectedMap.reward * (timeLeft / selectedMap.timeLimit)) + timeBonus;
+
+      if (isLoggedIn || playAsGuest) {
+        const newCoins = coins + coinsEarned;
+        setCoins(newCoins);
+
+        if (isLoggedIn) {
+          const updatedUser = { ...userData, coins: newCoins };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          login(userData.token, updatedUser);
+
+          // Update user stats
+          setUserStats(prev => ({
+            ...prev,
+            totalCoinsWon: prev.totalCoinsWon + coinsEarned,
+          }));
+        }
+
+        if (settings.soundEnabled) {
+          sounds.complete.play();
+          sounds.coin.play();
+        }
+      }
+
+      setGameState('completed');
+    } else {
+      setGameState('completed');
+
+      // Update user stats for a loss
+      if (isLoggedIn && userStats) {
+        setUserStats(prev => ({
+          ...prev,
+          totalMatches: prev.totalMatches + 1,
+          losses: prev.losses + 1,
+        }));
+      }
+    }
+  };
+
+  // Handle map selection with access checks
+  const handleMapSelect = (map) => {
+    if (map.loginRequired && !isLoggedIn) {
+      setShowLoginModal(true);
       return;
     }
-    generateBoard();
-    setGameStarted(true);
-    setGameOver(false);
-    setGamePaused(false);
-    startTimer();
+
+    if (map.premium && (!isLoggedIn || !userData || !userData.isPremium)) {
+      window.open('/premium', '_blank');
+      return;
+    }
+
+    if (map.entryFee > 0 && coins < map.entryFee) {
+      setShowBuyCoins(true);
+      return;
+    }
+
+    if (settings.soundEnabled) sounds.click.play();
+    setSelectedMap(map);
+    setGameState('difficulty');
   };
 
-  const endGame = (completed) => {
-    clearInterval(timerRef.current);
-    setGameOver(true);
-    setGameStarted(false);
-    
-    const timeUsed = difficultyTimes[difficulty] - timeLeft;
-    const newScore = calculateScore(completed, timeUsed);
-    setScore(newScore);
-    
-    const coinsEarned = completed ? currentLevel : -Math.floor(currentLevel / 2);
-    const newCoins = Math.max(0, coins + coinsEarned);
-    setCoins(newCoins);
-    
-    if (!isGuest && isLoggedIn) {
-      localStorage.setItem('userCoins', newCoins.toString());
-      
-      if (completed && currentLevel === maxUnlockedLevel) {
-        const newLevel = Math.min(maxUnlockedLevel + 1, 50);
-        setMaxUnlockedLevel(newLevel);
-        localStorage.setItem('maxUnlockedLevel', newLevel.toString());
-        levelUpAudioRef.current?.play().catch(e => console.log("Level up sound error:", e));
+  // Handle difficulty selection
+  const handleDifficultySelect = (difficulty) => {
+    setSelectedDifficulty(difficulty);
+    if (settings.soundEnabled) sounds.click.play();
+  };
+
+  // Start the game after difficulty selection
+  const handleStartGame = async () => {
+    if (!selectedMap) return;
+
+    if (selectedMap.entryFee > 0 && (isLoggedIn || playAsGuest)) {
+      if (coins < selectedMap.entryFee) {
+        setShowBuyCoins(true);
+        return;
       }
-      
-      const newScoreEntry = createScoreEntry(completed, timeUsed, newScore);
-      updateScores(newScoreEntry);
+      const newCoins = coins - selectedMap.entryFee;
+      setCoins(newCoins);
 
-      // Save settings for logged-in users
-      const settings = {
-        soundOn,
-        volume,
-        rememberDifficulty,
-        difficulty: rememberDifficulty ? difficulty : null
-      };
-      localStorage.setItem('wordSearchSettings', JSON.stringify(settings));
+      if (isLoggedIn) {
+        const updatedUser = { ...userData, coins: newCoins };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        login(userData.token, updatedUser);
+      }
     }
-    
-    checkAchievements(completed, timeUsed);
-    
-    if (completed) {
-      setShowAchievementModal(true);
-    } else {
-      toast.error(`Time's up! You found ${foundWords.length}/${words.length} words`);
-    }
+
+    setErrorMessage(null);
+    await initializeBoard();
   };
 
-  const calculateScore = (completed, timeUsed) => {
-    const baseScore = currentLevel * (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 15 : 20);
-    const timeBonus = Math.max(0, difficultyTimes[difficulty] - timeUsed) * 2;
-    const completionBonus = completed ? 100 : 0;
-    const foundWordsBonus = foundWords.length * 5;
-    return baseScore + timeBonus + completionBonus + foundWordsBonus;
-  };
-
-  const createScoreEntry = (completed, timeUsed, score) => ({
-    name: isGuest ? 'Guest' : userData?.name || 'Player',
-    score,
-    level: currentLevel,
-    difficulty,
-    date: new Date().toISOString(),
-    completed,
-    timeUsed,
-    wordsFound: foundWords.length,
-    totalWords: words.length
-  });
-
-  const updateScores = (newScoreEntry) => {
-    const updatedScores = [...scores, newScoreEntry]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-    setScores(updatedScores);
-    if (!isGuest && isLoggedIn) {
-      localStorage.setItem('wordSearchScores', JSON.stringify(updatedScores));
+  // Use a hint to reveal a word
+  const useHint = () => {
+    if (coins < 10) {
+      setShowBuyCoins(true);
+      return;
     }
+
+    const remainingWords = wordsToFind.filter(word => !foundWords.includes(word));
+    if (remainingWords.length === 0) return;
+
+    const hintWord = remainingWords[0];
+    const positions = wordPositions[hintWord];
+
+    setSelectedCells(positions);
+    setTimeout(() => setSelectedCells([]), 2000);
+
+    const newCoins = coins - 10;
+    setCoins(newCoins);
+
+    if (isLoggedIn) {
+      const updatedUser = { ...userData, coins: newCoins };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      login(userData.token, updatedUser);
+
+      // Update user stats for coins lost on hints
+      setUserStats(prev => ({
+        ...prev,
+        totalCoinsLostOnHints: prev.totalCoinsLostOnHints + 10,
+      }));
+    }
+
+    if (settings.soundEnabled) sounds.click.play();
   };
 
+  // Format time in MM:SS format
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // Word selection functions
-  const handleCellMouseDown = (row, col) => {
-    if (gameOver || !gameStarted || gamePaused) return;
-    setIsSelecting(true);
-    setSelectedCells([[row, col]]);
+  // Allow playing as a guest without saving progress
+  const handlePlayAsGuest = () => {
+    setPlayAsGuest(true);
+    setShowLoginModal(false);
   };
 
-  const handleCellMouseEnter = (row, col) => {
-    if (!isSelecting || gameOver || !gameStarted || gamePaused) return;
-    const firstCell = selectedCells[0];
-    const newSelectedCells = getCellsBetween(firstCell[0], firstCell[1], row, col);
-    setSelectedCells(newSelectedCells);
-  };
-
-  const handleCellMouseUp = () => {
-    if (!isSelecting || gameOver || !gameStarted || gamePaused) return;
-    setIsSelecting(false);
-    checkSelectedWord();
-    setSelectedCells([]);
-  };
-
-  const getCellsBetween = (row1, col1, row2, col2) => {
-    const cells = [];
-    const rowStep = row1 === row2 ? 0 : (row2 > row1 ? 1 : -1);
-    const colStep = col1 === col2 ? 0 : (col2 > col1 ? 1 : -1);
-    
-    let row = row1;
-    let col = col1;
-    
-    while (true) {
-      cells.push([row, col]);
-      if (row === row2 && col === col2) break;
-      row += rowStep;
-      col += colStep;
+  // Handle coin purchase
+  const handleBuyCoins = (amount) => {
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
     }
-    
-    return cells;
+
+    alert(`Redirecting to payment for ${amount} coins...`);
+    setShowBuyCoins(false);
   };
 
-  const checkSelectedWord = () => {
-    try {
-      if (selectedCells.length < 3) return;
-      
-      const selectedWord = selectedCells.map(([r, c]) => {
-        const cell = board[r][c];
-        return typeof cell === 'object' ? cell.char : cell;
-      }).join('');
-      
-      const reversedWord = selectedWord.split('').reverse().join('');
-      
-      for (const wordObj of words) {
-        const targetWord = language === 'punjabi' ? wordObj.punjabi : wordObj.word.toLowerCase();
-        
-        if (!foundWords.includes(wordObj.word) && 
-            (selectedWord === targetWord || reversedWord === targetWord)) {
-          const newFoundWords = [...foundWords, wordObj.word];
-          setFoundWords(newFoundWords);
-          foundAudioRef.current?.play().catch(e => console.log("Found word sound error:", e));
-          toast.success(`Found: ${wordObj.word} (${wordObj.punjabi})`);
-          highlightFoundWord(selectedCells);
-          
-          if (newFoundWords.length === words.length) {
-            endGame(true);
-          }
-          return;
-        }
-      }
-    } catch (error) {
-      console.error('Error in word selection:', error);
-      toast.error('Aww Snap! Something went wrong with word selection');
-    }
+  // Toggle sound settings
+  const toggleSound = () => {
+    setSettings(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }));
+    if (!settings.soundEnabled) sounds.click.play();
   };
 
-  const highlightFoundWord = (cells) => {
-    const newBoard = [...board];
-    cells.forEach(([row, col]) => {
-      newBoard[row][col] = {
-        char: newBoard[row][col],
-        found: true,
-        justFound: true
-      };
-    });
-    setBoard(newBoard);
-    
-    setTimeout(() => {
-      setBoard(prev => prev.map(row => 
-        row.map(cell => typeof cell === 'object' ? {...cell, justFound: false} : cell)
-      ));
-    }, 500);
-  };
-
-  // Game management functions
-  const togglePause = () => {
-    if (gameOver) return;
-    if (gamePaused) {
-      setGamePaused(false);
-      startTimer();
-    } else {
-      setGamePaused(true);
-      clearInterval(timerRef.current);
-    }
-  };
-
-  const changeDifficulty = (newDifficulty) => {
-    if (gameStarted && !gameOver) {
-      if (window.confirm('Changing difficulty will restart the current level. Continue?')) {
-        setDifficulty(newDifficulty);
-        resetGame();
-      }
-    } else {
-      setDifficulty(newDifficulty);
-    }
-  };
-
+  // Reset the game to the map selection screen
   const resetGame = () => {
-    clearInterval(timerRef.current);
-    setGameStarted(false);
-    setGameOver(false);
-    setGamePaused(false);
-    setFoundWords([]);
-    setSelectedCells([]);
-    backgroundAudioRef.current?.pause();
+    if (timerRef.current) clearInterval(timerRef.current);
+    setGameState('select');
+    setSelectedMap(null);
+    setSelectedDifficulty(difficultyLevels[1]);
+    setErrorMessage(null);
   };
 
-  const backToLevels = () => {
-    resetGame();
-    setCurrentScreen('levelSelect');
-  };
-
-  const selectLevel = (level) => {
-    if (level > maxUnlockedLevel) {
-      toast.info(`Complete level ${maxUnlockedLevel} first to unlock this level`);
-      return;
-    }
-    setCurrentLevel(level);
-    if (rememberDifficulty && isLoggedIn && !isGuest) {
-      setCurrentScreen('game');
-      setTimeout(() => {
-        startGame();
-      }, 300);
-    } else {
-      setCurrentScreen('difficultySelect');
-    }
-  };
-
-  const startWithDifficulty = () => {
-    setCurrentScreen('game');
-    setTimeout(() => {
-      startGame();
-    }, 300);
-  };
-
-  const shareScore = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `I scored ${score} on Virsaa Word Search!`,
-        text: `Can you beat my score in Level ${currentLevel} (${difficulty})?`,
-        url: 'https://virsaa.com/word-search'
-      }).catch(err => {
-        console.log('Error sharing:', err);
-        copyToClipboard();
-      });
-    } else {
-      copyToClipboard();
-    }
-  };
-
-  const copyToClipboard = () => {
-    const text = `I scored ${score} on Virsaa Word Search (Level ${currentLevel}, ${difficulty})! Can you beat me? https://virsaa.com/word-search`;
-    navigator.clipboard.writeText(text).then(() => {
-      toast.success('Score copied to clipboard!');
-    });
-  };
-
-  const checkAchievements = (completed, timeUsed) => {
-    const newAchievements = [];
-    
-    if (completed && !achievements.some(a => a.id === `level-${currentLevel}`)) {
-      newAchievements.push({
-        id: `level-${currentLevel}`,
-        title: `Level ${currentLevel} Completed`,
-        description: `You've successfully completed level ${currentLevel}`,
-        icon: <GiStairsGoal />,
-        coins: currentLevel
-      });
-    }
-    
-    if (foundWords.length === words.length && !achievements.some(a => a.id === `perfect-${currentLevel}`)) {
-      newAchievements.push({
-        id: `perfect-${currentLevel}`,
-        title: `Perfect Score!`,
-        description: `Found all words in level ${currentLevel}`,
-        icon: <GiLaurelCrown />,
-        coins: currentLevel * 2
-      });
-    }
-    
-    if (timeUsed < difficultyTimes[difficulty] / 2 && !achievements.some(a => a.id === `speed-${currentLevel}`)) {
-      newAchievements.push({
-        id: `speed-${currentLevel}`,
-        title: `Speed Runner`,
-        description: `Completed level ${currentLevel} in half the time`,
-        icon: <FaTrophy />,
-        coins: currentLevel
-      });
-    }
-    
-    if (newAchievements.length > 0) {
-      const updatedAchievements = [...achievements, ...newAchievements];
-      setAchievements(updatedAchievements);
-      
-      if (!isGuest && isLoggedIn) {
-        localStorage.setItem('achievements', JSON.stringify(updatedAchievements));
-      }
-      
-      const achievementCoins = newAchievements.reduce((sum, a) => sum + a.coins, 0);
-      const totalCoins = coins + achievementCoins + (completed ? currentLevel : 0);
-      setCoins(totalCoins);
-      
-      if (!isGuest && isLoggedIn) {
-        localStorage.setItem('userCoins', totalCoins.toString());
-      }
-      
-      newAchievements.forEach(achievement => {
-        toast.success(`Achievement Unlocked: ${achievement.title} (+${achievement.coins} coins)`);
-      });
-    }
-  };
-
-  const refreshScores = () => {
-    if (isGuest) {
-      toast.info('Guest scores are not saved');
-      return;
-    }
-    const savedScores = JSON.parse(localStorage.getItem('wordSearchScores')) || mockScores;
-    setScores(savedScores);
-    toast.info('Scores refreshed');
-  };
-
-  const showHint = () => {
-    if (coins < 5 || hintsUsed >= 3 || !gameStarted || gameOver) return;
-    
-    const unfoundWords = words.filter(w => !foundWords.includes(w.word));
-    if (unfoundWords.length === 0) return;
-    
-    const randomWord = unfoundWords[Math.floor(Math.random() * unfoundWords.length)];
-    const word = language === 'punjabi' ? randomWord.punjabi : randomWord.word.toLowerCase();
-    
-    // Find word positions on board
-    const positions = [];
-    board.forEach((row, r) => {
-      row.forEach((cell, c) => {
-        const cellChar = typeof cell === 'object' ? cell.char : cell;
-        if (cellChar === word[0]) {
-          // Check all directions for the word
-          for (let dr = -1; dr <= 1; dr++) {
-            for (let dc = -1; dc <= 1; dc++) {
-              if (dr === 0 && dc === 0) continue;
-              let match = true;
-              for (let i = 0; i < word.length; i++) {
-                const newR = r + dr * i;
-                const newC = c + dc * i;
-                if (newR < 0 || newR >= board.length || newC < 0 || newC >= board[0].length) {
-                  match = false;
-                  break;
-                }
-                const targetCell = board[newR][newC];
-                const targetChar = typeof targetCell === 'object' ? targetCell.char : targetCell;
-                if (targetChar !== word[i]) {
-                  match = false;
-                  break;
-                }
-              }
-              if (match) {
-                for (let i = 0; i < word.length; i++) {
-                  positions.push([r + dr * i, c + dc * i]);
-                }
-                return;
-              }
-            }
-          }
-        }
-      });
-    });
-    
-    if (positions.length === 0) return;
-    
-    // Highlight the word
-    const newBoard = [...board];
-    positions.forEach(([r, c]) => {
-      newBoard[r][c] = {
-        char: newBoard[r][c],
-        hint: true
+  // Handle profile updates (avatar and name)
+  const handleProfileUpdate = () => {
+    if (isLoggedIn) {
+      const updatedUser = {
+        ...userData,
+        name: newName,
+        avatar: newAvatar,
       };
-    });
-    
-    setBoard(newBoard);
-    setHintsUsed(hintsUsed + 1);
-    setCoins(coins - 5);
-    
-    setTimeout(() => {
-      setBoard(prev => prev.map(row => 
-        row.map(cell => typeof cell === 'object' ? {...cell, hint: false} : cell)
-      ));
-    }, 2000);
-  };
-
-  const playAsGuest = () => {
-    setIsGuest(true);
-    setCurrentScreen('levelSelect');
-    toast.info('Playing as guest - progress will not be saved');
-  };
-
-  const handleLogin = () => {
-    const username = prompt('Enter your username:');
-    if (username) {
-      login('dummy_token', { name: username, id: Date.now() }, false);
-      toast.success(`Welcome back, ${username}!`);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      login(userData.token, updatedUser);
+      setEditingProfile(false);
+      setShowProfileDropdown(false);
     }
   };
 
-  // Difficulty times (in seconds)
-  const difficultyTimes = {
-    easy: 300,
-    medium: 420,
-    hard: 600
+  // Handle avatar upload (mock for now)
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setNewAvatar(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  // Similar Games data
-  const similarGames = [
-    {
-      id: 1,
-      title: 'Punjabi Crossword',
-      image: games,
-      description: 'Solve crosswords in Punjabi language with increasing difficulty'
-    },
-    {
-      id: 2,
-      title: 'Gurmukhi Match',
-      image: games,
-      description: 'Match Gurmukhi characters with their English equivalents'
-    },
-    {
-      id: 3,
-      title: 'Sikh History Quiz',
-      image: games,
-      description: 'Test your knowledge of Sikh history and gurus'
-    },
-    {
-      id: 4,
-      title: 'Shabad Puzzle',
-      image: games,
-      description: 'Reconstruct Shabads from mixed up lines'
-    },
-    {
-      id: 5,
-      title: 'Punjabi Vocabulary',
-      image: games,
-      description: 'Build your Punjabi vocabulary with fun challenges'
-    },
-    {
-      id: 6,
-      title: 'Gurbani Explorer',
-      image: games,
-      description: 'Learn meanings of Gurbani words through interactive play'
-    }
-  ];
+  // Handle adding a payment method (mock for now)
+  const handleAddPaymentMethod = () => {
+    const newMethod = {
+      id: paymentMethods.length + 1,
+      type: 'Credit Card',
+      lastFour: '5678',
+      expiry: '01/27',
+    };
+    setPaymentMethods([...paymentMethods, newMethod]);
+  };
 
-  // Render functions
-  const renderSettingsSidebar = () => (
-    <div className={`${styles.settingsSidebar} ${showSettings ? styles.show : ''}`}>
-      <div className={styles.settingsHeader}>
-        <h3>Game Settings</h3>
-        <button 
-          className={styles.closeButton}
-          onClick={() => setShowSettings(false)}
-        >
-          <IoMdClose />
-        </button>
+  // Handle removing a payment method
+  const handleRemovePaymentMethod = (id) => {
+    setPaymentMethods(paymentMethods.filter(method => method.id !== id));
+  };
+
+  // Render the game board with interactive cells
+  const renderBoard = () => {
+    if (!selectedMap) return null;
+
+    return (
+      <div className={styles.board}>
+        <div className={styles.boardOverlay}></div>
+        <div className={styles.boardGrid}>
+          {board.map((row, rowIndex) => (
+            <div key={rowIndex} className={styles.row}>
+              {row.map((cell, colIndex) => {
+                const isSelected = selectedCells.some(c => c.row === rowIndex && c.col === colIndex);
+                const isFound = foundWords.some(word => {
+                  const positions = wordPositions[word] || [];
+                  return positions.some(pos => pos.row === rowIndex && pos.col === colIndex);
+                });
+
+                return (
+                  <div
+                    key={`${rowIndex}-${colIndex}`}
+                    className={`${styles.cell} ${isSelected ? styles.selected : ''} ${isFound ? styles.found : ''}`}
+                    onMouseDown={() => handleCellMouseDown(rowIndex, colIndex)}
+                    onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
+                    onMouseUp={handleCellMouseUp}
+                    onTouchStart={() => handleCellMouseDown(rowIndex, colIndex)}
+                    onTouchMove={e => {
+                      const touch = e.touches[0];
+                      const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                      if (element && element.classList.contains(styles.cell)) {
+                        const [r, c] = element.dataset.coords.split('-').map(Number);
+                        handleCellMouseEnter(r, c);
+                      }
+                    }}
+                    onTouchEnd={handleCellMouseUp}
+                    tabIndex={0}
+                    data-coords={`${rowIndex}-${colIndex}`}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleCellMouseDown(rowIndex, colIndex);
+                      }
+                    }}
+                    role="gridcell"
+                    aria-label={selectedMap.language === 'punjabi' ? `ਅੱਖਰ ${cell}` : `Letter ${cell}`}
+                  >
+                    {cell}
+                    <div className={styles.cellHighlight}></div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
-      
-      <div className={styles.settingsSection}>
-        <h4>Sound</h4>
-        <div className={styles.soundControl}>
-          <button 
-            className={styles.soundToggle}
-            onClick={() => setSoundOn(!soundOn)}
+    );
+  };
+
+  // Render the map selection screen
+  const renderMapSelection = () => {
+    const filteredMaps =
+      selectedCategory === 'all'
+        ? gameMaps
+        : gameMaps.filter(map =>
+            selectedCategory === 'punjabi'
+              ? map.language === 'punjabi'
+              : selectedCategory === 'english'
+              ? map.language === 'english'
+              : selectedCategory === 'premium' && map.premium
+          );
+
+    return (
+      <div className={styles.mapSelection}>
+        <div className={styles.sectionHeader}>
+          <GiTreasureMap className={styles.sectionIcon} />
+          <h2>{settings.language === 'punjabi' ? 'ਮੈਪ ਚੁਣੋ' : 'Select a Map'}</h2>
+        </div>
+
+        <div className={styles.mapCategories}>
+          <button
+            className={selectedCategory === 'all' ? styles.activeCategory : ''}
+            onClick={() => setSelectedCategory('all')}
           >
-            {soundOn ? <FaVolumeUp /> : <FaVolumeMute />}
-            {soundOn ? ' On' : ' Off'}
+            {settings.language === 'punjabi' ? 'ਸਾਰੇ' : 'All'}
           </button>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
-            disabled={!soundOn}
-            className={styles.volumeSlider}
-          />
-        </div>
-      </div>
-      
-      {isLoggedIn && !isGuest && (
-        <div className={styles.settingsSection}>
-          <h4>Difficulty</h4>
-          <div className={styles.difficultySetting}>
-            <label className={styles.settingOption}>
-              <input
-                type="checkbox"
-                checked={rememberDifficulty}
-                onChange={() => setRememberDifficulty(!rememberDifficulty)}
-              />
-              <span>Remember my difficulty choice</span>
-            </label>
-            {rememberDifficulty && (
-              <div className={styles.difficultyOptions}>
-                <button
-                  className={difficulty === 'easy' ? styles.active : ''}
-                  onClick={() => setDifficulty('easy')}
-                >
-                  Easy
-                </button>
-                <button
-                  className={difficulty === 'medium' ? styles.active : ''}
-                  onClick={() => setDifficulty('medium')}
-                >
-                  Medium
-                </button>
-                <button
-                  className={difficulty === 'hard' ? styles.active : ''}
-                  onClick={() => setDifficulty('hard')}
-                >
-                  Hard
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {(!isLoggedIn || isGuest) && (
-        <div className={styles.loginPrompt}>
-          <p>Login to save your settings and progress!</p>
-          <button 
-            className={styles.loginButton}
-            onClick={handleLogin}
+          <button
+            className={selectedCategory === 'punjabi' ? styles.activeCategory : ''}
+            onClick={() => setSelectedCategory('punjabi')}
           >
-            <FaUser /> Login
+            {settings.language === 'punjabi' ? 'ਪੰਜਾਬੀ' : 'Punjabi'}
+          </button>
+          <button
+            className={selectedCategory === 'english' ? styles.activeCategory : ''}
+            onClick={() => setSelectedCategory('english')}
+          >
+            {settings.language === 'punjabi' ? 'ਅੰਗਰੇਜ਼ੀ' : 'English'}
+          </button>
+          <button
+            className={selectedCategory === 'premium' ? styles.activeCategory : ''}
+            onClick={() => setSelectedCategory('premium')}
+          >
+            <FaCrown /> {settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ' : 'Premium'}
           </button>
         </div>
-      )}
-    </div>
-  );
 
-  const renderLevelSelectScreen = () => (
-    <div className={styles.levelSelectScreen}>
-      <div className={styles.levelBackground}>
-        <div className={styles.bgParticles}></div>
-        <div className={styles.bgParticles2}></div>
-      </div>
-      
-      <button 
-        className={styles.settingsButton}
-        onClick={() => setShowSettings(true)}
-      >
-        <FaCog />
-      </button>
-      
-      {renderSettingsSidebar()}
-      
-      <div className={styles.levelContainer}>
-        <h1>Select Level</h1>
-        <div className={styles.levelLadder}>
-          {Array.from({ length: 50 }, (_, i) => i + 1).map(level => (
-            <div 
-              key={level}
-              className={`${styles.levelRung} ${level <= maxUnlockedLevel ? styles.unlocked : styles.locked}`}
-              onClick={() => selectLevel(level)}
+        <div className={styles.mapGrid}>
+          {filteredMaps.map(map => (
+            <div
+              key={map.id}
+              className={`${styles.mapCard} ${map.premium ? styles.premium : ''} ${map.loginRequired ? styles.locked : ''}`}
             >
-              <div className={styles.levelContent}>
-                <span>Level {level}</span>
-                {level === maxUnlockedLevel && (
-                  <div className={styles.currentLevelPointer}>
-                    <GiStairsGoal />
+              <div className={`${styles.mapImage} ${styles[map.theme]}`}>
+                {map.loginRequired && !isLoggedIn && (
+                  <div className={styles.lockOverlay}>
+                    <FaLock />
+                    <span>{settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login Required'}</span>
+                    <button
+                      className={styles.actionButton}
+                      onClick={() => window.open('/login', '_blank')}
+                    >
+                      {settings.language === 'punjabi' ? 'ਲੌਗਇਨ' : 'Login'}
+                    </button>
                   </div>
                 )}
+                {map.premium && (!isLoggedIn || !userData || !userData.isPremium) && (
+                  <div className={styles.lockOverlay}>
+                    <FaCrown />
+                    <span>{settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਦੀ ਲੋੜ ਹੈ' : 'Premium Required'}</span>
+                    <button
+                      className={styles.actionButton}
+                      onClick={() => window.open('/premium', '_blank')}
+                    >
+                      {settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਬਣੋ' : 'Go Premium'}
+                    </button>
+                  </div>
+                )}
+                {(!map.loginRequired || isLoggedIn) && (map.premium ? (isLoggedIn && userData?.isPremium) : true) && (
+                  <button className={styles.playButton} onClick={() => handleMapSelect(map)}>
+                    {settings.language === 'punjabi' ? 'ਖੇਡੋ' : 'Play'}
+                  </button>
+                )}
+                {map.premium && (
+                  <div className={styles.premiumBadge}>
+                    <FaCrown /> PREMIUM
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.mapInfo}>
+                <h3>{map.name}</h3>
+                <p>{map.description}</p>
+
+                <div className={styles.mapStats}>
+                  <div>
+                    <GiClockwork />
+                    <span>{formatTime(map.timeLimit)}</span>
+                  </div>
+                  <div>
+                    <FaCoins />
+                    <span>{map.entryFee > 0 ? `${map.entryFee}` : 'Free'}</span>
+                  </div>
+                  <div>
+                    <GiStairsGoal />
+                    <span>{map.reward}</span>
+                  </div>
+                </div>
+
+                <div className={styles.difficultyTag} data-difficulty={map.difficulty.toLowerCase()}>
+                  {map.difficulty}
+                </div>
               </div>
             </div>
           ))}
         </div>
-        
-        {!isLoggedIn && !isGuest ? (
-          <div className={styles.authOptions}>
-            <h3>Choose how to play:</h3>
-            <button 
-              className={styles.guestButton}
-              onClick={playAsGuest}
-            >
-              <FaUserAltSlash /> Play As Guest
-            </button>
-            <button 
-              className={styles.loginButton}
-              onClick={handleLogin}
-            >
-              <FaUser /> Login
-            </button>
+      </div>
+    );
+  };
+
+  // Render the difficulty selection screen
+  const renderDifficultySelection = () => {
+    if (!selectedMap) return null;
+
+    return (
+      <div className={styles.difficultySelection}>
+        <h2>{settings.language === 'punjabi' ? 'ਮੁਸ਼ਕਲਤਾ ਚੁਣੋ' : 'Select Difficulty'}</h2>
+        {errorMessage && (
+          <div className={styles.errorMessage}>
+            <FaInfoCircle /> {errorMessage}
           </div>
-        ) : (
-          <div className={styles.userInfo}>
-            <p>Playing as: <strong>{isGuest ? 'Guest' : userData?.name}</strong></p>
-            {isGuest && <p className={styles.guestNote}>Guest progress won't be saved</p>}
-            {isLoggedIn && (
-              <button 
-                className={styles.logoutButton}
-                onClick={() => {
-                  logout();
-                  setIsGuest(false);
-                }}
-              >
-                Logout
+        )}
+        <div className={styles.difficultyOptions}>
+          {difficultyLevels.map(difficulty => (
+            <div
+              key={difficulty.id}
+              className={`${styles.difficultyCard} ${selectedDifficulty.id === difficulty.id ? styles.selected : ''}`}
+              onClick={() => handleDifficultySelect(difficulty)}
+            >
+              <h3>{difficulty.name}</h3>
+              <p>
+                {settings.language === 'punjabi'
+                  ? `ਟਾਈਮ: ${formatTime(Math.floor(selectedMap.timeLimit * difficulty.timeMultiplier))}`
+                  : `Time: ${formatTime(Math.floor(selectedMap.timeLimit * difficulty.timeMultiplier))}`}
+              </p>
+              <p>
+                {settings.language === 'punjabi'
+                  ? `ਸਕੋਰ ਗੁਣਕ: ${difficulty.id === 'easy' ? '1x' : difficulty.id === 'medium' ? '1.5x' : '2x'}`
+                  : `Score Multiplier: ${difficulty.id === 'easy' ? '1x' : difficulty.id === 'medium' ? '1.5x' : '2x'}`}
+              </p>
+            </div>
+          ))}
+        </div>
+        <button className={styles.startButton} onClick={handleStartGame}>
+          {settings.language === 'punjabi' ? 'ਖੇਡ ਸ਼ੁਰੂ ਕਰੋ' : 'Start Game'}
+        </button>
+      </div>
+    );
+  };
+
+  // Render the main game UI during gameplay
+  const renderGameUI = () => {
+    return (
+      <div className={styles.gameLayout}>
+        <div className={styles.gameMain}>
+          <div className={styles.gameHeader}>
+            <div className={styles.gameInfo}>
+              <div className={styles.timeDisplay} style={{ color: selectedDifficulty.color }}>
+                <IoMdTimer /> {formatTime(timeLeft)}
+              </div>
+              <div className={styles.scoreDisplay}>
+                <FaTrophy /> {score}
+              </div>
+              <div className={styles.coinDisplay}>
+                <FaCoins /> {coins}
+              </div>
+            </div>
+
+            <div className={styles.gameControls}>
+              <button className={styles.hintButton} onClick={useHint}>
+                <FaLightbulb /> {settings.language === 'punjabi' ? 'ਸੰਕੇਤ' : 'Hint'} (10 <FaCoins />)
               </button>
+            </div>
+          </div>
+
+          <div className={styles.wordList}>
+            <h3>{settings.language === 'punjabi' ? 'ਸ਼ਬਦ ਲੱਭੋ' : 'Find These Words'}:</h3>
+            <div className={styles.wordsContainer}>
+              {wordsToFind.map((word, index) => (
+                <div key={index} className={`${styles.word} ${foundWords.includes(word) ? styles.found : ''}`}>
+                  {word}
+                  {foundWords.includes(word) && <span className={styles.checkmark}>✓</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {renderBoard()}
+        </div>
+
+        <div className={styles.gameSidebar}>
+          {renderTopScorers()}
+          {renderAchievements()}
+        </div>
+      </div>
+    );
+  };
+
+  // Render the game completion screen
+  const renderCompletedScreen = () => {
+    const timeBonus = Math.floor(timeLeft / 10);
+    const coinsEarned = Math.floor(selectedMap.reward * (timeLeft / selectedMap.timeLimit)) + timeBonus;
+
+    return (
+      <div className={styles.completedScreen}>
+        <div className={styles.completedContent}>
+          <h2>{settings.language === 'punjabi' ? 'ਵਧਾਈਆਂ!' : 'Congratulations!'}</h2>
+          <p>
+            {settings.language === 'punjabi'
+              ? `ਤੁਸੀਂ ${selectedMap.name} ਮੈਪ ਪੂਰੀ ਕਰ ਲਈ ਹੈ!`
+              : `You completed the ${selectedMap.name} map!`}
+          </p>
+
+          <div className={styles.resultStats}>
+            <div className={styles.statItem}>
+              <span>{settings.language === 'punjabi' ? 'ਅੰਤਿਮ ਸਕੋਰ' : 'Final Score'}</span>
+              <span className={styles.statValue}>{score}</span>
+            </div>
+            <div className={styles.statItem}>
+              <span>{settings.language === 'punjabi' ? 'ਸਮਾਂ ਬਾਕੀ' : 'Time Remaining'}</span>
+              <span className={styles.statValue}>{formatTime(timeLeft)}</span>
+            </div>
+            <div className={styles.statItem}>
+              <span>{settings.language === 'punjabi' ? 'ਸਿੱਕੇ ਕਮਾਏ' : 'Coins Earned'}</span>
+              <span className={styles.statValue}>
+                {coinsEarned} <FaCoins />
+                {timeBonus > 0 && ` (+${timeBonus} bonus)`}
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.completedActions}>
+            <button className={styles.primaryButton} onClick={resetGame}>
+              {settings.language === 'punjabi' ? 'ਦੂਜੀ ਮੈਪ ਚੁਣੋ' : 'Choose Another Map'}
+            </button>
+            {!isLoggedIn && !playAsGuest && (
+              <button
+                className={styles.secondaryButton}
+                onClick={() => login('mock-token', { id: 1, name: 'Demo User', coins: 100, isPremium: false })}
+              >
+                <FaSignInAlt /> {settings.language === 'punjabi' ? 'ਪ੍ਰਗਤੀ ਨੂੰ ਸੰਭਾਲਣ ਲਈ ਲੌਗਇਨ ਕਰੋ' : 'Login to Save Progress'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render the top scorers sidebar
+  const renderTopScorers = () => {
+    return (
+      <div className={styles.sidePanel}>
+        <div className={styles.panelHeader}>
+          <MdLeaderboard />
+          <h3>{settings.language === 'punjabi' ? 'ਚੋਟੀ ਦੇ ਖਿਡਾਰੀ' : 'Top Scorers'}</h3>
+        </div>
+        {loadingTopScorers ? (
+          <Skeleton count={5} height={40} style={{ marginBottom: '10px' }} />
+        ) : (
+          <div className={styles.leaderboard}>
+            {topScorers.map((player, index) => (
+              <div key={player.id} className={styles.leaderboardItem}>
+                <span className={styles.rank}>{index + 1}</span>
+                <img src={player.avatar} alt={player.name} className={styles.avatar} />
+                <div className={styles.playerInfo}>
+                  <span className={styles.name}>{player.name}</span>
+                  <span className={styles.score}>{player.score} pts</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render the achievements sidebar
+  const renderAchievements = () => {
+    return (
+      <div className={styles.sidePanel}>
+        <div className={styles.panelHeader}>
+          <MdStars />
+          <h3>{settings.language === 'punjabi' ? 'ਪ੍ਰਾਪਤੀਆਂ' : 'Achievements'}</h3>
+        </div>
+        {loadingAchievements ? (
+          <Skeleton count={4} height={60} style={{ marginBottom: '10px' }} />
+        ) : (
+          <div className={styles.achievementsList}>
+            {userAchievements.length > 0 ? (
+              userAchievements.map(achievement => (
+                <div
+                  key={achievement.id}
+                  className={`${styles.achievement} ${achievement.earned ? styles.earned : ''}`}
+                >
+                  <span className={styles.achievementIcon}>{achievement.icon}</span>
+                  <div className={styles.achievementDetails}>
+                    <h4>{achievement.name}</h4>
+                    <p>{achievement.description}</p>
+                    {achievement.progress && (
+                      <div className={styles.progressBar}>
+                        <div
+                          className={styles.progressFill}
+                          style={{
+                            width: `${
+                              (parseInt(achievement.progress.split('/')[0]) /
+                                parseInt(achievement.progress.split('/')[1])) *
+                              100
+                            }%`,
+                          }}
+                        ></div>
+                        <span>{achievement.progress}</span>
+                      </div>
+                    )}
+                  </div>
+                  {achievement.earned && <span className={styles.earnedBadge}>✓</span>}
+                </div>
+              ))
+            ) : (
+              <p className={styles.noAchievements}>
+                {settings.language === 'punjabi'
+                  ? 'ਕੋਈ ਪ੍ਰਾਪਤੀਆਂ ਨਹੀਂ ਮਿਲੀਆਂ। ਖੇਡਣਾ ਸ਼ੁਰੂ ਕਰੋ!'
+                  : 'No achievements yet. Start playing!'}
+              </p>
             )}
           </div>
         )}
       </div>
-    </div>
-  );
+    );
+  };
 
-  const renderDifficultySelectScreen = () => {
-    if (rememberDifficulty && isLoggedIn && !isGuest) {
-      // Skip difficulty selection if user wants to remember it
-      startWithDifficulty();
-      return null;
-    }
-    
+  // Render the settings sidebar
+  const renderSettingsSidebar = () => {
     return (
-      <div className={styles.difficultySelectScreen}>
-        <div className={styles.difficultyModal}>
-          <h2>Level {currentLevel}</h2>
-          <p>Select Difficulty</p>
-          <div className={styles.difficultyOptions}>
-            <button 
-              className={difficulty === 'easy' ? styles.active : ''}
-              onClick={() => setDifficulty('easy')}
-            >
-              Easy
-            </button>
-            <button 
-              className={difficulty === 'medium' ? styles.active : ''}
-              onClick={() => setDifficulty('medium')}
-            >
-              Medium
-            </button>
-            <button 
-              className={difficulty === 'hard' ? styles.active : ''}
-              onClick={() => setDifficulty('hard')}
-            >
-              Hard
-            </button>
-          </div>
-          
-          <div className={styles.languageToggle}>
-            <span>Language:</span>
-            <button
-              className={language === 'english' ? styles.active : ''}
-              onClick={() => setLanguage('english')}
-            >
-              <FaLanguage /> English
-            </button>
-            <button
-              className={language === 'punjabi' ? styles.active : ''}
-              onClick={() => setLanguage('punjabi')}
-            >
-              <FaLanguage /> Punjabi
-            </button>
-          </div>
-          
-          <button className={styles.startButton} onClick={startWithDifficulty}>
-            Start Game
+      <div className={`${styles.settingsSidebar} ${showSettings ? styles.open : ''}`}>
+        <div className={styles.settingsHeader}>
+          <h2>
+            <IoMdSettings /> {settings.language === 'punjabi' ? 'ਸੈਟਿੰਗਾਂ' : 'Settings'}
+          </h2>
+          <button className={styles.closeButton} onClick={() => setShowSettings(false)}>
+            ×
           </button>
-          <button className={styles.backButton} onClick={() => setCurrentScreen('levelSelect')}>
-            <IoMdArrowRoundBack /> Back to Levels
+        </div>
+
+        <div className={styles.settingsContent}>
+          <div className={styles.settingGroup}>
+            <h3>{settings.language === 'punjabi' ? 'ਆਡੀਓ' : 'Audio'}</h3>
+            <div className={styles.settingItem}>
+              <label>
+                <input type="checkbox" checked={settings.soundEnabled} onChange={toggleSound} />
+                {settings.language === 'punjabi' ? 'ਆਵਾਜ਼ ਚਾਲੂ ਕਰੋ' : 'Enable Sound'}
+              </label>
+            </div>
+          </div>
+
+          <div className={styles.settingGroup}>
+            <h3>{settings.language === 'punjabi' ? 'ਗੇਮਪਲੇ' : 'Gameplay'}</h3>
+            <div className={styles.settingItem}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.constantDifficulty}
+                  onChange={() =>
+                    setSettings(prev => ({ ...prev, constantDifficulty: !prev.constantDifficulty }))
+                  }
+                />
+                {settings.language === 'punjabi' ? 'ਲਗਾਤਾਰ ਮੁਸ਼ਕਲਤਾ' : 'Constant Difficulty'}
+              </label>
+            </div>
+          </div>
+
+          <div className={styles.settingGroup}>
+            <h3>{settings.language === 'punjabi' ? 'ਭਾਸ਼ਾ' : 'Language'}</h3>
+            <div className={styles.settingItem}>
+              <label>{settings.language === 'punjabi' ? 'ਇੰਟਰਫੇਸ ਭਾਸ਼ਾ' : 'Interface Language'}</label>
+              <select
+                value={settings.language}
+                onChange={e => setSettings(prev => ({ ...prev, language: e.target.value }))}
+              >
+                <option value="english">English</option>
+                <option value="punjabi">Punjabi</option>
+              </select>
+              <p className={styles.note}>
+                {settings.language === 'punjabi'
+                  ? 'ਨੋਟ: ਬੋਰਡ ਦੀ ਭਾਸ਼ਾ ਚੁਣੇ ਹੋਏ ਮੈਪ ਦੀ ਭਾਸ਼ਾ ਨਾਲ ਮੇਲ ਖਾਂਦੀ ਹੈ।'
+                  : 'Note: Board language matches the selected map\'s language.'}
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.settingGroup}>
+            <h3>{settings.language === 'punjabi' ? 'ਖਾਤਾ' : 'Account'}</h3>
+            {isLoggedIn ? (
+              <>
+                <div className={styles.userInfo}>
+                  <img
+                    src={userData?.avatar || userDefault}
+                    alt="User"
+                    className={styles.userAvatar}
+                  />
+                  <div>
+                    <h4>{userData?.name || 'User'}</h4>
+                    <p>
+                      {coins} <FaCoins />
+                    </p>
+                    {userData?.isPremium && (
+                      <p className={styles.premiumBadge}>
+                        <FaCrown /> Premium User
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button className={styles.logoutButton} onClick={logout}>
+                  {settings.language === 'punjabi' ? 'ਲੌਗਆਉਟ' : 'Logout'}
+                </button>
+              </>
+            ) : (
+              <button
+                className={styles.loginButton}
+                onClick={() => {
+                  setShowSettings(false);
+                  setShowLoginModal(true);
+                }}
+              >
+                <FaSignInAlt /> {settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render the login modal
+  const renderLoginModal = () => {
+    return (
+      <div className={styles.modalOverlay}>
+        <div className={styles.loginModal}>
+          <h2>{settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login Required'}</h2>
+          <p>
+            {settings.language === 'punjabi'
+              ? 'ਇਸ ਮੈਪ ਨੂੰ ਖੇਡਣ ਲਈ ਤੁਹਾਨੂੰ ਲੌਗਇਨ ਕਰਨ ਦੀ ਲੋੜ ਹੈ। ਜੇਕਰ ਤੁਸੀਂ ਮਹਿਮਾਨ ਵਜੋਂ ਖੇਡਦੇ ਹੋ, ਤਾਂ ਤੁਹਾਡੀ ਪ੍ਰਗਤੀ ਸੰਭਾਲੀ ਨਹੀਂ ਜਾਵੇਗੀ।'
+              : 'You need to login to play this map. If you play as guest, your progress will not be saved.'}
+          </p>
+
+          <div className={styles.loginActions}>
+            <button
+              className={styles.primaryButton}
+              onClick={() => login('mock-token', { id: 1, name: 'Demo User', coins: 100, isPremium: false })}
+            >
+              <FaSignInAlt /> {settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login'}
+            </button>
+            <button className={styles.secondaryButton} onClick={handlePlayAsGuest}>
+              <FaUser /> {settings.language === 'punjabi' ? 'ਮਹਿਮਾਨ ਵਜੋਂ ਖੇਡੋ' : 'Play as Guest'}
+            </button>
+          </div>
+
+          <div className={styles.loginWarning}>
+            <FaInfoCircle />
+            {settings.language === 'punjabi'
+              ? 'ਮਹਿਮਾਨ ਖੇਡ: ਕੋਈ ਪ੍ਰਾਪਤੀਆਂ ਜਾਂ ਸਿੱਕੇ ਨਹੀਂ ਸੰਭਾਲੇ ਜਾਣਗੇ'
+              : 'Guest play: No achievements or coins will be saved'}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render the buy coins modal
+  const renderBuyCoinsModal = () => {
+    return (
+      <div className={styles.modalOverlay}>
+        <div className={styles.buyCoinsModal}>
+          <h2>
+            <FaCoins /> {settings.language === 'punjabi' ? 'ਸਿੱਕੇ ਖਰੀਦੋ' : 'Buy Coins'}
+          </h2>
+          <p>
+            {settings.language === 'punjabi'
+              ? 'ਤੁਹਾਡੇ ਕੋਲ ਇਸ ਮੈਪ ਨੂੰ ਖੇਡਣ ਲਈ ਕਾਫ਼ੀ ਸਿੱਕੇ ਨਹੀਂ ਹਨ। ਹੇਠਾਂ ਦਿੱਤੇ ਵਿਕਲਪਾਂ ਵਿੱਚੋਂ ਸਿੱਕੇ ਖਰੀਦੋ:'
+              : "You don't have enough coins to play this map. Buy coins from the options below:"}
+          </p>
+
+          <div className={styles.coinPackages}>
+            <div className={styles.coinPackage} onClick={() => handleBuyCoins(100)}>
+              <div className={styles.coinAmount}>
+                100 <FaCoins />
+              </div>
+              <div className={styles.coinPrice}>$1.99 CAD</div>
+              <div className={styles.coinBonus}>+10 bonus</div>
+            </div>
+            <div className={styles.coinPackage} onClick={() => handleBuyCoins(250)}>
+              <div className={styles.coinAmount}>
+                250 <FaCoins />
+              </div>
+              <div className={styles.coinPrice}>$3.99 CAD</div>
+              <div className={styles.coinBonus}>+30 bonus</div>
+            </div>
+            <div className={styles.coinPackage} onClick={() => handleBuyCoins(500)}>
+              <div className={styles.coinAmount}>
+                500 <FaCoins />
+              </div>
+              <div className={styles.coinPrice}>$6.99 CAD</div>
+              <div className={styles.coinBonus}>+75 bonus</div>
+            </div>
+          </div>
+
+          <button className={styles.closeButton} onClick={() => setShowBuyCoins(false)}>
+            {settings.language === 'punjabi' ? 'ਰੱਦ ਕਰੋ' : 'Cancel'}
           </button>
         </div>
       </div>
     );
   };
 
-  const renderGameScreen = () => (
-    <>
-      <div className={styles.header}>
-        <button className={styles.backButton} onClick={backToLevels}>
-          <IoMdArrowRoundBack /> <span className={styles.backButtonText}>Levels</span>
-        </button>
-        
-        <div className={styles.gameInfo}>
-          <h1 className={styles.levelTitle}>Level {currentLevel}</h1>
-          <div className={styles.difficultyBadge}>
-            {difficulty.toUpperCase()}
+  // Render the welcome bonus notification
+  const renderWelcomeBonus = () => {
+    if (!showWelcomeBonus) return null;
+
+    return (
+      <div className={styles.welcomeBonus}>
+        <div className={styles.bonusContent}>
+          <FaGem className={styles.bonusIcon} />
+          <div>
+            <h3>{settings.language === 'punjabi' ? 'ਸੁਆਗਤ ਬੋਨਸ!' : 'Welcome Bonus!'}</h3>
+            <p>
+              {settings.language === 'punjabi'
+                ? `ਤੁਹਾਨੂੰ ${welcomeBonusAmount} ਸਿੱਕੇ ਮਿਲੇ ਹਨ`
+                : `You received ${welcomeBonusAmount} coins`}
+            </p>
           </div>
         </div>
-        
-        <div className={styles.gameControls}>
-          <div className={styles.coinDisplay}>
-            <FaCoins className={styles.coinIcon} />
-            <span className={styles.coinCount}>{coins}</span>
-          </div>
-          <button 
-            className={styles.pauseButton} 
-            onClick={togglePause}
-            disabled={gameOver}
+      </div>
+    );
+  };
+
+  // Render the user profile dropdown
+  const renderProfileDropdown = () => {
+    if (!isLoggedIn || !userData) return null;
+
+    return (
+      <div className={styles.profileDropdown} ref={profileDropdownRef}>
+        <div className={styles.profileHeader}>
+          <h3>{settings.language === 'punjabi' ? 'ਪ੍ਰੋਫਾਈਲ' : 'Game Profile'}</h3>
+          <button
+            className={styles.profileCloseButton}
+            onClick={() => setShowProfileDropdown(false)}
+            aria-label={settings.language === 'punjabi' ? 'ਬੰਦ ਕਰੋ' : 'Close'}
           >
-            {gamePaused ? <FaPlay /> : <FaPause />}
+            ×
+          </button>
+        </div>
+
+        <div className={styles.profileContent}>
+          {/* Profile Edit Section */}
+          <div className={styles.profileSection}>
+            {editingProfile ? (
+              <div className={styles.profileEdit}>
+                <div className={styles.avatarUpload}>
+                  <img src={newAvatar} alt="User Avatar" className={styles.profileAvatar} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className={styles.avatarInput}
+                    id="avatar-upload"
+                  />
+                  <label htmlFor="avatar-upload" className={styles.avatarUploadButton}>
+                    {settings.language === 'punjabi' ? 'ਅਵਤਾਰ ਬਦਲੋ' : 'Change Avatar'}
+                  </label>
+                </div>
+                <div className={styles.nameEdit}>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder={settings.language === 'punjabi' ? 'ਨਵਾਂ ਨਾਮ ਦਰਜ ਕਰੋ' : 'Enter new name'}
+                    className={styles.nameInput}
+                  />
+                </div>
+                <div className={styles.editActions}>
+                  <button onClick={handleProfileUpdate} className={styles.saveButton}>
+                    {settings.language === 'punjabi' ? 'ਸੰਭਾਲੋ' : 'Save'}
+                  </button>
+                  <button onClick={() => setEditingProfile(false)} className={styles.cancelButton}>
+                    {settings.language === 'punjabi' ? 'ਰੱਦ ਕਰੋ' : 'Cancel'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.profileInfo}>
+                <img src={userData.avatar || userDefault} alt="User Avatar" className={styles.profileAvatar} />
+                <h4>{userData.name}</h4>
+                <button
+                  onClick={() => {
+                    setNewName(userData.name);
+                    setNewAvatar(userData.avatar || userDefault);
+                    setEditingProfile(true);
+                  }}
+                  className={styles.editProfileButton}
+                >
+                  <FaEdit /> {settings.language === 'punjabi' ? 'ਸੋਧੋ' : 'Edit Profile'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Game Stats Section */}
+          <div className={styles.profileSection}>
+            <h4>
+              <FaGamepad /> {settings.language === 'punjabi' ? 'ਖੇਡ ਦੇ ਅੰਕੜੇ' : 'Game Stats'}
+            </h4>
+            {userStats ? (
+              <div className={styles.statsList}>
+                <div className={styles.statItem}>
+                  <span>{settings.language === 'punjabi' ? 'ਕੁੱਲ ਮੈਚ' : 'Total Matches'}</span>
+                  <span>{userStats.totalMatches}</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span>{settings.language === 'punjabi' ? 'ਜਿੱਤਾਂ' : 'Wins'}</span>
+                  <span>{userStats.wins}</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span>{settings.language === 'punjabi' ? 'ਹਾਰਾਂ' : 'Losses'}</span>
+                  <span>{userStats.losses}</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span>{settings.language === 'punjabi' ? 'ਕੁੱਲ ਸਿੱਕੇ ਜਿੱਤੇ' : 'Total Coins Won'}</span>
+                  <span>{userStats.totalCoinsWon} <FaCoins /></span>
+                </div>
+                <div className={styles.statItem}>
+                  <span>{settings.language === 'punjabi' ? 'ਸੰਕੇਤਾਂ ਤੇ ਖਰਚੇ ਸਿੱਕੇ' : 'Coins Spent on Hints'}</span>
+                  <span>{userStats.totalCoinsLostOnHints} <FaCoins /></span>
+                </div>
+              </div>
+            ) : (
+              <p>{settings.language === 'punjabi' ? 'ਅੰਕੜੇ ਲੋਡ ਹੋ ਰਹੇ ਹਨ...' : 'Loading stats...'}</p>
+            )}
+          </div>
+
+          {/* Payment Methods Section */}
+          <div className={styles.profileSection}>
+            <h4>
+              <FaCreditCard /> {settings.language === 'punjabi' ? 'ਭੁਗਤਾਨ ਵਿਧੀਆਂ' : 'Payment Methods'}
+            </h4>
+            <div className={styles.paymentMethods}>
+              {paymentMethods.length > 0 ? (
+                paymentMethods.map(method => (
+                  <div key={method.id} className={styles.paymentMethod}>
+                    <div className={styles.methodDetails}>
+                      <span>{method.type}</span>
+                      {method.lastFour ? (
+                        <span>**** {method.lastFour} (Exp: {method.expiry})</span>
+                      ) : (
+                        <span>{method.email}</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRemovePaymentMethod(method.id)}
+                      className={styles.removeMethodButton}
+                      aria-label={settings.language === 'punjabi' ? 'ਭੁਗਤਾਨ ਵਿਧੀ ਹਟਾਓ' : 'Remove payment method'}
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p>{settings.language === 'punjabi' ? 'ਕੋਈ ਭੁਗਤਾਨ ਵਿਧੀ ਨਹੀਂ ਜੋੜੀ ਗਈ।' : 'No payment methods added.'}</p>
+              )}
+              <button onClick={handleAddPaymentMethod} className={styles.addMethodButton}>
+                {settings.language === 'punjabi' ? '+ ਨਵੀਂ ਵਿਧੀ ਜੋੜੋ' : '+ Add New Method'}
+              </button>
+            </div>
+          </div>
+
+          {/* Logout Button */}
+          <button onClick={logout} className={styles.logoutButton}>
+            <FaSignOutAlt /> {settings.language === 'punjabi' ? 'ਲੌਗਆਉਟ' : 'Logout'}
           </button>
         </div>
       </div>
-      
-      <div className={styles.gameArea}>
-        <div className={styles.boardSection}>
-          <div className={styles.languageTabs}>
-            <button
-              className={language === 'english' ? styles.active : ''}
-              onClick={() => {
-                if (gameStarted && !gameOver) {
-                  if (window.confirm('Changing language will restart the game. Continue?')) {
-                    setLanguage('english');
-                    resetGame();
-                  }
-                } else {
-                  setLanguage('english');
-                }
-              }}
-            >
-              <FaLanguage /> English
-            </button>
-            <button
-              className={language === 'punjabi' ? styles.active : ''}
-              onClick={() => {
-                if (gameStarted && !gameOver) {
-                  if (window.confirm('Changing language will restart the game. Continue?')) {
-                    setLanguage('punjabi');
-                    resetGame();
-                  }
-                } else {
-                  setLanguage('punjabi');
-                }
-              }}
-            >
-              <FaLanguage /> Punjabi
-            </button>
-          </div>
-          
-          {gameStarted && (
-            <div className={styles.stats}>
-              <div className={styles.timeLeft}>
-                Time: <span>{formatTime(timeLeft)}</span>
-              </div>
-              <div className={styles.wordsFound}>
-                Found: <span>{foundWords.length}/{words.length}</span>
-              </div>
-              <button 
-                className={styles.hintButton}
-                onClick={showHint}
-                disabled={hintsUsed >= 3 || coins < 5 || !gameStarted || gameOver}
+    );
+  };
+
+  // Render the game navbar
+  const renderGameNavbar = () => {
+    return (
+      <nav className={styles.gameNavbar}>
+        <div className={styles.navbarLeft}>
+          <h1 className={styles.navbarBrand}>Virsaa Word Search</h1>
+        </div>
+        <div className={styles.navbarRight}>
+          {isLoggedIn && userData && (
+            <div className={styles.userInfo}>
+              <div
+                className={styles.avatarContainer}
+                onMouseEnter={() => setShowProfileDropdown(true)}
+                onClick={() => setShowProfileDropdown(true)}
               >
-                Hint ({3 - hintsUsed} left) - 5 <FaCoins />
-              </button>
+                <img src={userData.avatar || userDefault} alt="User" className={styles.userAvatar} />
+              </div>
+              <span>{userData.name}</span>
+              <span className={styles.coins}>
+                {coins} <FaCoins />
+              </span>
+              {userData.isPremium && (
+                <span className={styles.premiumBadge}>
+                  <FaCrown /> Premium
+                </span>
+              )}
+              {showProfileDropdown && renderProfileDropdown()}
             </div>
           )}
-          
-          <div className={styles.wordList}>
-            {words.map((wordObj) => (
-              <div
-                key={wordObj.word}
-                className={`${styles.wordItem} ${
-                  foundWords.includes(wordObj.word) ? styles.foundWord : ''
-                }`}
-                data-tooltip={wordObj.hint}
-              >
-                {language === 'punjabi' ? wordObj.punjabi : wordObj.word}
-                <span className={styles.wordCategory}>{wordObj.category}</span>
-              </div>
-            ))}
-          </div>
-          
-          <div className={styles.boardContainer}>
-            {board.length > 0 ? (
-              <div className={styles.board}>
-                {board.map((row, rowIndex) => (
-                  <div key={rowIndex} className={styles.row}>
-                    {row.map((cell, colIndex) => {
-                      const cellData = typeof cell === 'object' ? cell : { char: cell, found: false };
-                      const isSelected = selectedCells.some(
-                        ([r, c]) => r === rowIndex && c === colIndex
-                      );
-                      return (
-                        <div
-                          key={`${rowIndex}-${colIndex}`}
-                          className={`${styles.cell} ${isSelected ? styles.selectedCell : ''} ${
-                            cellData.found ? styles.foundCell : ''
-                          } ${cellData.hint ? styles.hintCell : ''} ${
-                            cellData.justFound ? styles.justFound : ''
-                          }`}
-                          onMouseDown={() => handleCellMouseDown(rowIndex, colIndex)}
-                          onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
-                          onMouseUp={handleCellMouseUp}
-                          onTouchStart={() => handleCellMouseDown(rowIndex, colIndex)}
-                          onTouchMove={(e) => {
-                            e.preventDefault();
-                            const touch = e.touches[0];
-                            const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                            if (element && element.dataset.row && element.dataset.col) {
-                              handleCellMouseEnter(
-                                parseInt(element.dataset.row),
-                                parseInt(element.dataset.col)
-                              );
-                            }
-                          }}
-                          onTouchEnd={handleCellMouseUp}
-                          data-row={rowIndex}
-                          data-col={colIndex}
-                        >
-                          {cellData.char}
-                          {cellData.justFound && (
-                            <div className={styles.wordParticles}>
-                              {[...Array(8)].map((_, i) => (
-                                <div 
-                                  key={i}
-                                  className={styles.wordParticle}
-                                  style={{
-                                    '--tx': `${Math.random() * 100 - 50}px`,
-                                    '--ty': `${Math.random() * 100 - 50}px`
-                                  }}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.placeholder}>
-                {!gameStarted && !gameOver && 'Click Start Game to begin'}
-                {gameOver && 'Game Over! Click Play Again to restart'}
-              </div>
-            )}
-          </div>
-          
-          <div className={styles.controls}>
-            {!gameStarted && (
-              <button className={styles.startButton} onClick={startGame}>
-                {gameOver ? 'Play Again' : 'Start Game'}
-              </button>
-            )}
-            
-            {gameStarted && (
-              <button className={styles.resetButton} onClick={resetGame}>
-                Reset Game
-              </button>
-            )}
-
-            <div className={styles.difficultyToggle}>
-              <span>Difficulty:</span>
-              <button
-                className={difficulty === 'easy' ? styles.active : ''}
-                onClick={() => changeDifficulty('easy')}
-              >
-                Easy
-              </button>
-              <button
-                className={difficulty === 'medium' ? styles.active : ''}
-                onClick={() => changeDifficulty('medium')}
-              >
-                Medium
-              </button>
-              <button
-                className={difficulty === 'hard' ? styles.active : ''}
-                onClick={() => changeDifficulty('hard')}
-              >
-                Hard
-              </button>
-            </div>
-          </div>
+          <button className={styles.settingsButton} onClick={() => setShowSettings(!showSettings)}>
+            <IoMdSettings />
+          </button>
         </div>
-        
-        <div className={styles.achievementsSection}>
-          <div className={styles.scoresHeader}>
-            <h2><FaTrophy /> Achievements</h2>
-          </div>
-          
-          <div className={styles.achievementsList}>
-            {achievements.length > 0 ? (
-              achievements.slice(0, 5).map((achievement, index) => (
-                <div key={index} className={styles.achievementCard}>
-                  <div className={styles.achievementIcon}>
-                    {achievement.icon}
-                  </div>
-                  <div className={styles.achievementContent}>
-                    <h3>{achievement.title}</h3>
-                    <p>{achievement.description}</p>
-                  </div>
-                  <div className={styles.achievementReward}>
-                    +{achievement.coins} <FaCoins />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className={styles.noAchievements}>
-                <p>Complete levels to earn achievements!</p>
-              </div>
-            )}
-          </div>
-          
-          <div className={styles.scoresHeader}>
-            <h2><GiLaurelCrown /> Top Scores</h2>
-            <button 
-              className={styles.refreshButton}
-              onClick={refreshScores}
-            >
-              <FaSync /> Refresh
-            </button>
-          </div>
-          
-          <div className={styles.scoresList}>
-            {scores.length > 0 ? (
-              scores.slice(0, 3).map((scoreEntry, index) => (
-                <div key={index} className={styles.scoreCard}>
-                  <div className={styles.scoreRank}>{index + 1}</div>
-                  <div className={styles.scoreDetails}>
-                    <h3>{scoreEntry.name}</h3>
-                    <p>Level {scoreEntry.level} • {scoreEntry.difficulty}</p>
-                  </div>
-                  <div className={styles.scoreValue}>{scoreEntry.score}</div>
-                </div>
-              ))
-            ) : (
-              <div className={styles.noScores}>
-                <p>No scores yet. Be the first!</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      <div className={styles.similarGamesSection}>
-        <h2 className={styles.similarGamesTitle}>Similar Games</h2>
-        <div className={styles.similarGamesContainer}>
-          {similarGames.map(game => (
-            <div key={game.id} className={styles.gameCard}>
-              <div className={styles.gameImageContainer}>
-                <img src={game.image} alt={game.title} className={styles.gameImage} />
-              </div>
-              <h3 className={styles.gameTitle}>{game.title}</h3>
-              <p className={styles.gameDescription}>{game.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
-
-  const renderAchievementModal = () => {
-    const levelAchievements = achievements.filter(a => a.id.includes(`level-${currentLevel}`));
-    const totalCoinsEarned = levelAchievements.reduce((sum, a) => sum + a.coins, 0) + currentLevel;
-    
-    return (
-      <div className={styles.achievementModal}>
-        <div className={styles.modalContent}>
-          <div className={styles.modalHeader}>
-            <GiLaurelCrown className={styles.crownIcon} />
-            <h2>Level Complete!</h2>
-          </div>
-          
-          <div className={styles.achievementList}>
-            {levelAchievements.map((achievement, index) => (
-              <div key={index} className={styles.achievementItem}>
-                <div className={styles.achievementIcon}>{achievement.icon}</div>
-                <div className={styles.achievementDetails}>
-                  <h3>{achievement.title}</h3>
-                  <p>{achievement.description}</p>
-                </div>
-                <div className={styles.achievementCoins}>
-                  +{achievement.coins} <FaCoins />
-                </div>
-              </div>
-            ))}
-            
-            <div className={styles.levelCompletion}>
-              <div className={styles.levelCompletionIcon}>
-                <GiStairsGoal />
-              </div>
-              <div className={styles.levelCompletionDetails}>
-                <h3>Level {currentLevel} Completed</h3>
-                <p>You've unlocked level {currentLevel + 1}</p>
-              </div>
-              <div className={styles.levelCompletionCoins}>
-                +{currentLevel} <FaCoins />
-              </div>
-            </div>
-          </div>
-          
-          <div className={styles.totalCoins}>
-            <span>Total Earned:</span>
-            <span className={styles.coinsAmount}>
-              {totalCoinsEarned} <FaCoins />
-            </span>
-          </div>
-          
-          <div className={styles.modalActions}>
-            <button 
-              className={styles.shareButton}
-              onClick={() => {
-                shareScore();
-                setShowAchievementModal(false);
-              }}
-            >
-              <FaShareAlt /> Share
-            </button>
-            <button 
-              className={styles.nextButton}
-              onClick={() => {
-                setShowAchievementModal(false);
-                if (currentLevel < maxUnlockedLevel) {
-                  setCurrentLevel(currentLevel + 1);
-                  resetGame();
-                } else {
-                  backToLevels();
-                }
-              }}
-            >
-              {currentLevel < maxUnlockedLevel ? (
-                <>
-                  Next Level <FaArrowRight />
-                </>
-              ) : (
-                'Back to Levels'
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
+      </nav>
     );
   };
 
+  // Main render method for the game
   return (
-    <div className={styles.container}>
-      <ToastContainer position="top-center" autoClose={3000} />
-      
-      {currentScreen === 'levelSelect' && renderLevelSelectScreen()}
-      {currentScreen === 'difficultySelect' && renderDifficultySelectScreen()}
-      {currentScreen === 'game' && renderGameScreen()}
-      {showAchievementModal && renderAchievementModal()}
+    <div className={styles.wordSearchContainer}>
+      {renderGameNavbar()}
+      <div className={styles.mainContent}>
+        {gameState === 'select' && renderMapSelection()}
+        {gameState === 'difficulty' && renderDifficultySelection()}
+        {gameState === 'playing' && renderGameUI()}
+        {gameState === 'completed' && renderCompletedScreen()}
+      </div>
+
+      {renderSettingsSidebar()}
+      {showLoginModal && renderLoginModal()}
+      {showBuyCoins && renderBuyCoinsModal()}
+      {renderWelcomeBonus()}
     </div>
   );
 };
 
 export default WordSearch;
+export { WordSearchGamePlay };

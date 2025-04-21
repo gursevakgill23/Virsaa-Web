@@ -366,8 +366,6 @@ a {
   position: fixed;
   top: 10%;
   display: flex;
-
-  justify-content: center;
   width: 80%;
   height: 600px;
   display: flex;

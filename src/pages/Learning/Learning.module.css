@@ -386,21 +386,27 @@ a {
   text-align: left;
 }
 
-.gamesCarousel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  position: relative;
-}
-.gamesDesc{
+.gamesDesc {
   color: var(--text-color);
   margin: 2rem;
 }
 
+.gamesCarousel {
+  position: relative; /* Ensure this is the positioning context */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  margin: 0 auto; /* Center the carousel */
+  padding: 0; /* Remove any padding that might offset the buttons */
+}
+
 .carouselContent {
+  position: relative; /* Ensure the content can be a reference for absolute positioning */
   width: 70%;
   text-align: center;
+  z-index: 1; /* Ensure the content is below the buttons in the stacking order */
 }
 
 .carouselContent img {
@@ -408,12 +414,14 @@ a {
   height: 300px;
   object-fit: cover;
   border-radius: 10px;
+  display: block; /* Remove any inline spacing issues */
+  margin: 0; /* Remove any default margins */
 }
 
 .carouselContent h3 {
   font-size: 1.5rem;
   margin: 10px 0;
-  color: var(--secondary-text-color-);
+  color: var(--text-color);
 }
 
 .carouselContent p {
@@ -422,6 +430,9 @@ a {
 }
 
 .carouselButton {
+  position: absolute;
+  top: 50%; /* Vertically center relative to the image */
+  transform: translateY(-50%); /* Adjust for the button's own height */
   background: var(--button-bg-color);
   border: none;
   color: var(--button-text-color);
@@ -429,14 +440,34 @@ a {
   border-radius: 50%;
   cursor: pointer;
   font-size: 1.2rem;
+  z-index: 2; /* Ensure buttons are above the image */
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+/* Position the left button */
+.carouselButton:first-of-type {
+  top: 40%;
+  left:5%; /* Move the button outside the image on the left */
+}
+
+/* Position the right button */
+.carouselButton:last-of-type {
+  top: 40%;
+  right: 5%; /* Move the button outside the image on the right */
 }
 
 .carouselButton:hover {
   background: var(--button-hover-bg-color);
   color: var(--button-hover-text-color);
   border: 1px solid var(--button-hover-text-color);
+  transform: translateY(-50%) scale(1.1); /* Maintain centering while scaling */
 }
 
+/* Ensure buttons are accessible */
+.carouselButton:focus {
+  outline: 2px solid var(--accent-color-2);
+  outline-offset: 2px;
+}
 /* Quizzes Section */
 .quizzesSection {
   margin-top:  40px;

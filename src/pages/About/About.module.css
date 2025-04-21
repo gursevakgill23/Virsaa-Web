@@ -74,7 +74,6 @@ a {
   list-style: none;
 }
 
-
 /* Story Section */
 .storySection {
   padding: 0 2rem;
@@ -134,8 +133,6 @@ a {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  
-
 }
 
 .missionImage {
@@ -146,7 +143,6 @@ a {
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
-
 }
 
 .missionText {
@@ -206,6 +202,7 @@ a {
   background-color: var(--card-bg-color);
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-width: 250px; /* Ensure cards maintain a minimum width */
 }
 
 .valueIcon {
@@ -225,19 +222,6 @@ a {
   color: var(--secondary-text-color);
 }
 
-@keyframes  appear{
-  from{
-  opacity: 0;
-  scale:0.5;
-  }
-  to{
-    opacity: 1;
-    scale: 1;
-  }
-  
-}
-
-
 /* Team Section */
 .teamSection {
   padding: 2rem;
@@ -256,6 +240,7 @@ a {
   background-color: var(--card-bg-color);
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-width: 250px; /* Ensure cards maintain a minimum width */
 }
 
 .memberImage {
@@ -341,12 +326,12 @@ a {
 /* Appear Animation */
 @keyframes appear {
   from {
-      opacity: 0;
-      transform: translateY(20px);
+    opacity: 0;
+    transform: translateY(20px);
   }
   to {
-      opacity: 1;
-      transform: translateY(0);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -357,54 +342,94 @@ a {
 /* Responsive Design */
 @media (max-width: 992px) {
   .heroTagline {
-      font-size: 2.5rem;
+    font-size: 2.5rem;
   }
 
   .heroDescription {
-      font-size: 1.2rem;
+    font-size: 1.2rem;
   }
 
   .sectionTitle {
-      font-size: 2rem;
+    font-size: 2rem;
   }
 
   .missionCommunityContainer {
-      flex-direction: column;
+    flex-direction: column;
   }
 
   .missionImage,
   .communityImage,
   .digitizationImage {
-      width: 100%;
+    width: 100%;
   }
 
   .digitizationContent {
-      flex-direction: column;
+    flex-direction: column;
   }
 
   .digitizationImage {
-      width: 100%;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Team Section - Horizontal Scroll */
+  .teamGrid {
+    display: flex;
+    flex-wrap: nowrap; /* Keep cards in a single row */
+    overflow-x: auto; /* Enable horizontal scrolling */
+    gap: 1.5rem;
+    padding: 0 1rem;
+    scrollbar-width: none; /* Hide scrollbar for Firefox */
+  }
+
+  .teamGrid::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for Chrome, Safari */
+  }
+
+  .teamMember {
+    flex: 0 0 auto; /* Prevent cards from shrinking */
+    width: 250px; /* Fixed width for consistency */
+  }
+
+  /* Values Section - Horizontal Scroll */
+  .valuesGrid {
+    display: flex;
+    flex-wrap: nowrap; /* Keep cards in a single row */
+    overflow-x: auto; /* Enable horizontal scrolling */
+    gap: 1.5rem;
+    padding: 0 1rem;
+    scrollbar-width: none; /* Hide scrollbar for Firefox */
+  }
+
+  .valuesGrid::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for Chrome, Safari */
+  }
+
+  .valueItem {
+    flex: 0 0 auto; /* Prevent cards from shrinking */
+    width: 250px; /* Fixed width for consistency */
   }
 }
 
 @media (max-width: 576px) {
   .heroTagline {
-      font-size: 1.5rem;
+    font-size: 1.5rem;
   }
 
   .heroDescription {
-      font-size: 0.9rem;
+    font-size: 0.9rem;
   }
 
   .sectionTitle {
-      font-size: 2rem;
+    font-size: 2rem;
   }
 
   .missionCommunityContainer {
-      flex-direction: column;
+    flex-direction: column;
   }
 
-  .heroSection{
+  .heroSection {
     height: 300px;
   }
 }

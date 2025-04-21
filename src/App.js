@@ -31,7 +31,7 @@ import { AuthProvider } from './context/AuthContext';
 import AudiobookDetail from './pages/Collections/AudiobookDetail/AudiobookDetail';
 import Account from './pages/Profile/Account/Account';
 import Settings from './pages/Profile/Settings/Settings';
-import WordSearch from './pages/Learning/Games/WordSearch/WordSearch';
+import { WordSearchGamePlay } from './pages/Learning/Games/WordSearch/WordSearch';
 
 
 // Define your API base URL
@@ -136,7 +136,7 @@ const App = () => {
             <Route path="/collections/ebooks/ebook/:id" element={<EbookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/authors/author/:id" element={<AuthorDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/audiobooks/audiobook/:id" element={<AudiobookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
-            <Route path="/learning/games/word-search" element={<WordSearch isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/learning/games/word-search" element={<WordSearchGamePlay isDarkMode={isDarkMode} apiString={API_STRING} />} />
 
           </Routes>
           <Footer isDarkMode={isDarkMode} apiString={API_STRING} />

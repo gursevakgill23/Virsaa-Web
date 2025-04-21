@@ -961,15 +961,16 @@ a {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 1rem;
+  font-size: 1.5rem; /* Increased default icon size for better visibility */
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); /* Add shadow for depth */
 }
 
 .playButton:hover {
-  transform: scale(1.05);
+  transform: scale(1.1); /* Slightly larger on hover */
   background: var(--button-hover-bg-color);
-  color:var(--button-hover-text-color);
+  color: var(--button-hover-text-color);
   border: 1px solid var(--button-hover-text-color);
 }
 
@@ -1047,9 +1048,19 @@ a {
   }
   
   .playButton {
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
+    width: 48px; /* Minimum touch target size for accessibility */
+    height: 48px;
+    font-size: 1.5rem; /* Ensure icon remains visible */
+    background: var(--button-bg-color); /* Ensure background is always set */
+    color: var(--button-text-color); /* Ensure text/icon color is always set */
+    border: 2px solid var(--button-border); /* Add border for better visibility */
+  }
+  
+  .playButton:hover {
+    transform: scale(1.1);
+    background: var(--button-hover-bg-color);
+    color: var(--button-hover-text-color);
+    border: 2px solid var(--button-hover-text-color);
   }
   
   .mediaModalContent {
@@ -1068,6 +1079,22 @@ a {
   
   .volumeSlider {
     width: 80px;
+  }
+
+  .playButton {
+    width: 48px; /* Ensure touch target size */
+    height: 48px;
+    font-size: 1.5rem; /* Keep icon size consistent */
+    background: var(--button-bg-color); /* Reinforce background */
+    color: var(--button-text-color); /* Reinforce color */
+    border: 2px solid var(--button-border); /* Add border for visibility */
+  }
+
+  .playButton:hover {
+    transform: scale(1.1);
+    background: var(--button-hover-bg-color);
+    color: var(--button-hover-text-color);
+    border: 2px solid var(--button-hover-text-color);
   }
 }
 

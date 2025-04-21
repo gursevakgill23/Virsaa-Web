@@ -30,7 +30,7 @@ const Loader = ({ onLoadingComplete }) => {
     const timer = setTimeout(() => {
       setLoading(false); // Hide loader after 1.5 seconds
       onLoadingComplete(); // Notify parent component that loading is complete
-    }, 1500); // Show loader for 1.5 seconds
+    }, 2000); // Show loader for 1.5 seconds
     return () => clearTimeout(timer); // Cleanup timer on unmount
   }, [onLoadingComplete]);
 
@@ -55,7 +55,7 @@ const Loader = ({ onLoadingComplete }) => {
           <img
             src={getImagePath(logo)}
             alt="App Logo"
-            style={{ width: '100px', height: '100px' }} // Adjust size as needed
+            style={{ width: '120px', height: '100px' }} // Adjust size as needed
             className='loader-image'
           />
           {/* Rotating Circle */}
