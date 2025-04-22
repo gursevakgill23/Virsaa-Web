@@ -771,7 +771,6 @@ const WordSearchGamePlay = () => {
                 )}
                 {map.premium && (!isLoggedIn || !userData || !userData.isPremium) && (
                   <div className={styles.lockOverlay}         
-                  onClick={(e) => e.stopPropagation()} // Prevent click from reaching parent
 >
                     <FaCrown />
                     <span>{settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਦੀ ਲੋੜ ਹੈ' : 'Premium Required'}</span>

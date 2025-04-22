@@ -45,7 +45,7 @@ const Home = ({ isDarkMode }) => {
       // Hide after 5 seconds
       toastTimer.current = setTimeout(() => {
         setShowHukamnamaToast(false);
-      }, 5000);
+      }, 8000);
     }, 2000); // Show after 2 seconds delay
     
     return () => {

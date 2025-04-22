@@ -1370,6 +1370,7 @@
 /* Welcome Bonus */
 .welcomeBonus {
   position: fixed;
+  width: 40%;
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
@@ -1378,7 +1379,8 @@
   border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  justify-content: center;
+  gap: 0.5rem;
   box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
   z-index: 1001;
   animation: slideDown 0.5s ease-in-out;
