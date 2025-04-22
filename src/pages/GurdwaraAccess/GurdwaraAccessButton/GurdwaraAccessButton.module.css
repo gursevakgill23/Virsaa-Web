@@ -35,16 +35,8 @@
   .container{
     bottom: 12%;
   }
-  
-}
-@media (max-width:768px) {
   .button{
-    font-size: 12px;
-  }  
-}
-@media (max-width:480px) {
-  .button{
-    font-size: 10px;
+    display: none;
   }
   
 }

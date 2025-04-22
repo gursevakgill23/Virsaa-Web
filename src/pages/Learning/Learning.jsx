@@ -80,7 +80,7 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
     // Games (10 items)
     { id: 21, type: 'game', image: puzzleImage, title: 'Punjabi Puzzle', description: 'Solve fun puzzles.', category: 'Puzzle' },
     { id: 22, type: 'game', image: memoryImage, title: 'Sikhism Memory Match', description: 'Match terms.', category: 'Memory' },
-    { id: 23, type: 'game', image: puzzleImage, title: 'Punjabi Word Search', description: 'Find hidden words.', category: 'Puzzle' },
+    { id: 23, type: 'game', image: puzzleImage, title: 'Shabad Khoj', description: 'Find hidden words.', category: 'Puzzle' },
     { id: 24, type: 'game', image: memoryImage, title: 'Punjabi Proverbs Match', description: 'Match proverbs.', category: 'Memory' },
     { id: 25, type: 'game', image: puzzleImage, title: 'Gurmukhi Crossword', description: 'Solve crossword.', category: 'Puzzle' },
     { id: 26, type: 'game', image: memoryImage, title: 'Sikh Gurus Memory Game', description: 'Match teachings.', category: 'Memory' },
@@ -107,8 +107,8 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
     },
     { 
       id: 23, 
-      title: 'Word Search', 
-      description: 'Solve fun puzzles.', 
+      title: 'Shabad Khoj', 
+      description: 'Find the words.', 
       image: learningCarousel,
       link: '/learning/games/word-search' 
     },

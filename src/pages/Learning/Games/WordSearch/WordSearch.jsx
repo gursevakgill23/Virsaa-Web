@@ -5,6 +5,7 @@
  * timer-based gameplay, achievements, top scorers, hints, coin system, and user profile management.
  */
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import styles from './WordSearch.module.css';
 import { Howl } from 'howler';
@@ -81,22 +82,22 @@ const fetchPaymentMethods = async (userId) => {
 // Fetch words from the local JSON file based on map level, difficulty, and language
 const fetchWords = (map, difficulty, language) => {
   try {
-    const levelRange = map.id <= 10 ? '1-10' : '11-20'; // Adjust based on your map-to-level mapping
+    const levelRange = map.id <= 10 ? '1-10' : '11-20';
     const wordsArray = wordsData.levels[levelRange]?.[difficulty.toLowerCase()];
     
     if (!wordsArray || wordsArray.length < 5) {
       throw new Error(`Not enough words for level ${levelRange}, difficulty ${difficulty}`);
     }
 
-    console.log(`Fetched words for level ${levelRange}, difficulty ${difficulty}:`, wordsArray); // Debugging log
+    console.log(`Fetched words for level ${levelRange}, difficulty ${difficulty}:`, wordsArray);
 
     const shuffledWords = wordsArray.sort(() => Math.random() - 0.5);
-    const selectedWords = shuffledWords.slice(0, 5).map(word => language === 'punjabi' ? word.punjabi : word.word);
+    const selectedWords = shuffledWords.slice(0, 10).map(word => language === 'punjabi' ? word.punjabi : word.word);
     
     return selectedWords;
   } catch (error) {
     console.error('Error fetching words:', error);
-    return []; // Return empty array to trigger error message in initializeBoard
+    return [];
   }
 };
 
@@ -126,6 +127,7 @@ const difficultyLevels = [
 // Main component to handle opening the game in a new tab
 const WordSearch = () => {
   const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const hasOpenedGame = sessionStorage.getItem('wordSearchTabOpened');
@@ -136,13 +138,13 @@ const WordSearch = () => {
     const newWindow = window.open(gameUrl, '_blank');
     if (newWindow) {
       newWindow.focus();
-      window.location.href = '/';
+      navigate('/');
     }
 
     return () => {
       sessionStorage.removeItem('wordSearchTabOpened');
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn,navigate]);
 
   return null;
 };
@@ -150,6 +152,7 @@ const WordSearch = () => {
 // GamePlay component to be rendered in the new tab
 const WordSearchGamePlay = () => {
   const { isLoggedIn, userData, login, logout } = useAuth();
+  const navigate = useNavigate();
 
   // State management for the game
   const [gameState, setGameState] = useState('select');
@@ -185,7 +188,7 @@ const WordSearchGamePlay = () => {
   const [userStats, setUserStats] = useState(null);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [newName, setNewName] = useState(userData?.name || '');
+  const [newName, setNewName] = useState(userData?.name || 'Demo User');
   const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
   const timerRef = useRef(null);
   const profileDropdownRef = useRef(null);
@@ -425,7 +428,6 @@ const WordSearchGamePlay = () => {
           handleGameEnd(true);
         }
 
-        // Update user stats (mock update for now)
         if (isLoggedIn && userStats) {
           setUserStats(prev => ({
             ...prev,
@@ -458,7 +460,6 @@ const WordSearchGamePlay = () => {
           localStorage.setItem('user', JSON.stringify(updatedUser));
           login(userData.token, updatedUser);
 
-          // Update user stats
           setUserStats(prev => ({
             ...prev,
             totalCoinsWon: prev.totalCoinsWon + coinsEarned,
@@ -475,7 +476,6 @@ const WordSearchGamePlay = () => {
     } else {
       setGameState('completed');
 
-      // Update user stats for a loss
       if (isLoggedIn && userStats) {
         setUserStats(prev => ({
           ...prev,
@@ -494,7 +494,7 @@ const WordSearchGamePlay = () => {
     }
 
     if (map.premium && (!isLoggedIn || !userData || !userData.isPremium)) {
-      window.open('/premium', '_blank');
+      navigate('/premium');
       return;
     }
 
@@ -559,7 +559,6 @@ const WordSearchGamePlay = () => {
       localStorage.setItem('user', JSON.stringify(updatedUser));
       login(userData.token, updatedUser);
 
-      // Update user stats for coins lost on hints
       setUserStats(prev => ({
         ...prev,
         totalCoinsLostOnHints: prev.totalCoinsLostOnHints + 10,
@@ -653,7 +652,7 @@ const WordSearchGamePlay = () => {
     if (!selectedMap) return null;
 
     return (
-      <div className={styles.board}>
+      <div className={`${styles.board} ${styles[selectedMap.theme]}`}>
         <div className={styles.boardOverlay}></div>
         <div className={styles.boardGrid}>
           {board.map((row, rowIndex) => (
@@ -764,7 +763,7 @@ const WordSearchGamePlay = () => {
                     <span>{settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login Required'}</span>
                     <button
                       className={styles.actionButton}
-                      onClick={() => window.open('/login', '_blank')}
+                      onClick={() => navigate('/login')}
                     >
                       {settings.language === 'punjabi' ? 'ਲੌਗਇਨ' : 'Login'}
                     </button>
@@ -776,7 +775,7 @@ const WordSearchGamePlay = () => {
                     <span>{settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਦੀ ਲੋੜ ਹੈ' : 'Premium Required'}</span>
                     <button
                       className={styles.actionButton}
-                      onClick={() => window.open('/premium', '_blank')}
+                      onClick={() => navigate('/premium')}
                     >
                       {settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਬਣੋ' : 'Go Premium'}
                     </button>
@@ -952,7 +951,7 @@ const WordSearchGamePlay = () => {
             {!isLoggedIn && !playAsGuest && (
               <button
                 className={styles.secondaryButton}
-                onClick={() => login('mock-token', { id: 1, name: 'Demo User', coins: 100, isPremium: false })}
+                onClick={() => navigate('/login')}
               >
                 <FaSignInAlt /> {settings.language === 'punjabi' ? 'ਪ੍ਰਗਤੀ ਨੂੰ ਸੰਭਾਲਣ ਲਈ ਲੌਗਇਨ ਕਰੋ' : 'Login to Save Progress'}
               </button>
@@ -1115,7 +1114,7 @@ const WordSearchGamePlay = () => {
                     className={styles.userAvatar}
                   />
                   <div>
-                    <h4>{userData?.name || 'User'}</h4>
+                    <h4>{userData?.name || 'Demo User'}</h4>
                     <p>
                       {coins} <FaCoins />
                     </p>
@@ -1135,7 +1134,7 @@ const WordSearchGamePlay = () => {
                 className={styles.loginButton}
                 onClick={() => {
                   setShowSettings(false);
-                  setShowLoginModal(true);
+                  navigate('/login');
                 }}
               >
                 <FaSignInAlt /> {settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login'}
@@ -1162,7 +1161,7 @@ const WordSearchGamePlay = () => {
           <div className={styles.loginActions}>
             <button
               className={styles.primaryButton}
-              onClick={() => login('mock-token', { id: 1, name: 'Demo User', coins: 100, isPremium: false })}
+              onClick={() => navigate('/login')}
             >
               <FaSignInAlt /> {settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login'}
             </button>
@@ -1265,9 +1264,7 @@ const WordSearchGamePlay = () => {
             ×
           </button>
         </div>
-
         <div className={styles.profileContent}>
-          {/* Profile Edit Section */}
           <div className={styles.profileSection}>
             {editingProfile ? (
               <div className={styles.profileEdit}>
@@ -1305,10 +1302,10 @@ const WordSearchGamePlay = () => {
             ) : (
               <div className={styles.profileInfo}>
                 <img src={userData.avatar || userDefault} alt="User Avatar" className={styles.profileAvatar} />
-                <h4>{userData.name}</h4>
+                <h4>{userData.name || 'Demo User'}</h4>
                 <button
                   onClick={() => {
-                    setNewName(userData.name);
+                    setNewName(userData.name || 'Demo User');
                     setNewAvatar(userData.avatar || userDefault);
                     setEditingProfile(true);
                   }}
@@ -1320,7 +1317,6 @@ const WordSearchGamePlay = () => {
             )}
           </div>
 
-          {/* Game Stats Section */}
           <div className={styles.profileSection}>
             <h4>
               <FaGamepad /> {settings.language === 'punjabi' ? 'ਖੇਡ ਦੇ ਅੰਕੜੇ' : 'Game Stats'}
@@ -1353,7 +1349,6 @@ const WordSearchGamePlay = () => {
             )}
           </div>
 
-          {/* Payment Methods Section */}
           <div className={styles.profileSection}>
             <h4>
               <FaCreditCard /> {settings.language === 'punjabi' ? 'ਭੁਗਤਾਨ ਵਿਧੀਆਂ' : 'Payment Methods'}
@@ -1388,7 +1383,6 @@ const WordSearchGamePlay = () => {
             </div>
           </div>
 
-          {/* Logout Button */}
           <button onClick={logout} className={styles.logoutButton}>
             <FaSignOutAlt /> {settings.language === 'punjabi' ? 'ਲੌਗਆਉਟ' : 'Logout'}
           </button>
@@ -1402,7 +1396,7 @@ const WordSearchGamePlay = () => {
     return (
       <nav className={styles.gameNavbar}>
         <div className={styles.navbarLeft}>
-          <h1 className={styles.navbarBrand}>Virsaa Word Search</h1>
+          <h1 className={styles.navbarBrand}>Shabad Khoj</h1>
         </div>
         <div className={styles.navbarRight}>
           {isLoggedIn && userData && (
@@ -1414,7 +1408,7 @@ const WordSearchGamePlay = () => {
               >
                 <img src={userData.avatar || userDefault} alt="User" className={styles.userAvatar} />
               </div>
-              <span>{userData.name}</span>
+              <span>{userData.name || 'Demo User'}</span>
               <span className={styles.coins}>
                 {coins} <FaCoins />
               </span>
