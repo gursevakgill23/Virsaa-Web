@@ -21,13 +21,11 @@ import completSound from './assets/sounds/complete.mp3';
 import found from './assets/sounds/found.mp3';
 import levelUp from './assets/sounds/level-up.mp3';
 
-
 // Initialize sound effects for the game
 const sounds = {
   complete: new Howl({ src: [completSound] }),
   achievement: new Howl({ src: [levelUp] }),
   coin: new Howl({ src: [found] }),
-  click: new Howl({ src: [found] }),
   wordFound: new Howl({ src: [found] }),
   error: new Howl({ src: ['./assets/sounds/error.mp3'] }),
 };
@@ -80,58 +78,25 @@ const fetchPaymentMethods = async (userId) => {
   ];
 };
 
-// Fallback words in case the fetch fails
-const fallbackWords = {
-  easy: [
-    { word: "cat", punjabi: "ਬਿੱਲੀ" },
-    { word: "dog", punjabi: "ਕੁੱਤਾ" },
-    { word: "bird", punjabi: "ਪੰਛੀ" },
-    { word: "fish", punjabi: "ਮੱਛੀ" },
-    { word: "lion", punjabi: "ਸ਼ੇਰ" }
-  ],
-  medium: [
-    { word: "house", punjabi: "ਘਰ" },
-    { word: "river", punjabi: "ਦਰਿਆ" },
-    { word: "forest", punjabi: "ਜੰਗਲ" },
-    { word: "mountain", punjabi: "ਪਹਾੜ" },
-    { word: "valley", punjabi: "ਵਾਦੀ" }
-  ],
-  hard: [
-    { word: "elephant", punjabi: "ਹਾਥੀ" },
-    { word: "crocodile", punjabi: "ਮਗਰਮੱਛ" },
-    { word: "rhinoceros", punjabi: "ਗੈਂਡਾ" },
-    { word: "hippopotamus", punjabi: "ਦਰਿਆਈ ਘੋੜਾ" },
-    { word: "giraffe", punjabi: "ਜਿਰਾਫ" }
-  ]
-};
-
-// Fetch words from a JSON file based on difficulty and language
-const fetchWords = async (difficulty, language) => {
+// Fetch words from the local JSON file based on map level, difficulty, and language
+const fetchWords = (map, difficulty, language) => {
   try {
-    const response = await fetch(wordsData);
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log('Fetched word data:', data); // Debugging log
-    const levels = data.levels;
-    const levelKeys = Object.keys(levels);
-    if (levelKeys.length === 0) {
-      throw new Error('No levels found in wordData.json');
-    }
-    const randomLevelKey = levelKeys[Math.floor(Math.random() * levelKeys.length)];
-    const wordsArray = levels[randomLevelKey][difficulty.toLowerCase()];
+    const levelRange = map.id <= 10 ? '1-10' : '11-20'; // Adjust based on your map-to-level mapping
+    const wordsArray = wordsData.levels[levelRange]?.[difficulty.toLowerCase()];
+    
     if (!wordsArray || wordsArray.length < 5) {
-      throw new Error(`Not enough words for difficulty ${difficulty} in level ${randomLevelKey}`);
+      throw new Error(`Not enough words for level ${levelRange}, difficulty ${difficulty}`);
     }
+
+    console.log(`Fetched words for level ${levelRange}, difficulty ${difficulty}:`, wordsArray); // Debugging log
+
     const shuffledWords = wordsArray.sort(() => Math.random() - 0.5);
     const selectedWords = shuffledWords.slice(0, 5).map(word => language === 'punjabi' ? word.punjabi : word.word);
+    
     return selectedWords;
   } catch (error) {
     console.error('Error fetching words:', error);
-    // Use fallback words if fetch fails
-    const fallback = fallbackWords[difficulty.toLowerCase()] || [];
-    return fallback.map(word => language === 'punjabi' ? word.punjabi : word.word);
+    return []; // Return empty array to trigger error message in initializeBoard
   }
 };
 
@@ -298,10 +263,12 @@ const WordSearchGamePlay = () => {
   const initializeBoard = async () => {
     if (!selectedMap) return;
 
-    const fetchedWords = await fetchWords(selectedMap.difficulty, selectedMap.language);
+    const fetchedWords = await fetchWords(selectedMap, selectedMap.difficulty, selectedMap.language);
     if (fetchedWords.length === 0) {
-      setErrorMessage('Failed to load words for the game. Using fallback words.');
-      console.error('No words fetched for the map');
+      setErrorMessage('Failed to load words for the game. Please select a different map or try again.');
+      console.error('No words fetched for the map:', selectedMap);
+      setGameState('select');
+      return;
     }
     setWordsToFind(fetchedWords);
 
@@ -361,7 +328,7 @@ const WordSearchGamePlay = () => {
 
       if (!placed) {
         console.warn(`Could not place word "${word}" after ${maxAttempts} attempts`);
-        setErrorMessage('Unable to place all words on the board. Try again or select a different map.');
+        setErrorMessage('Unable to place all words on the board. Please select a different map or try again.');
       }
     });
 
@@ -395,7 +362,6 @@ const WordSearchGamePlay = () => {
 
   // Handle mouse down event on a cell to start selection
   const handleCellMouseDown = (row, col) => {
-    if (settings.soundEnabled) sounds.click.play();
     setSelectionStart({ row, col });
     setSelectedCells([{ row, col }]);
   };
@@ -537,7 +503,6 @@ const WordSearchGamePlay = () => {
       return;
     }
 
-    if (settings.soundEnabled) sounds.click.play();
     setSelectedMap(map);
     setGameState('difficulty');
   };
@@ -545,7 +510,6 @@ const WordSearchGamePlay = () => {
   // Handle difficulty selection
   const handleDifficultySelect = (difficulty) => {
     setSelectedDifficulty(difficulty);
-    if (settings.soundEnabled) sounds.click.play();
   };
 
   // Start the game after difficulty selection
@@ -601,8 +565,6 @@ const WordSearchGamePlay = () => {
         totalCoinsLostOnHints: prev.totalCoinsLostOnHints + 10,
       }));
     }
-
-    if (settings.soundEnabled) sounds.click.play();
   };
 
   // Format time in MM:SS format
@@ -632,7 +594,6 @@ const WordSearchGamePlay = () => {
   // Toggle sound settings
   const toggleSound = () => {
     setSettings(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }));
-    if (!settings.soundEnabled) sounds.click.play();
   };
 
   // Reset the game to the map selection screen
