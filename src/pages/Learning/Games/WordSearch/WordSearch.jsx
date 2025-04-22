@@ -144,7 +144,7 @@ const WordSearch = () => {
     return () => {
       sessionStorage.removeItem('wordSearchTabOpened');
     };
-  }, [isLoggedIn,navigate]);
+  }, [isLoggedIn, navigate]);
 
   return null;
 };
@@ -282,7 +282,7 @@ const WordSearchGamePlay = () => {
 
     const alphabet =
       selectedMap.language === 'punjabi'
-        ? ['ਕ', 'ਖ', 'ਗ', 'ਘ', 'ਙ', 'ਚ', 'ਛ', 'ਜ', 'ਝ', 'ਞ', 'ਟ', 'ਠ', 'ਡ', 'ਢ', 'ਣ', 'ਤ', 'ਥ', 'ਦ', 'ਧ', 'ਨ', 'ਪ', 'ਫ', 'ਬ', 'ਭ', 'ਮ', 'ਯ', 'ਰ', 'ਲ', 'ਵ', 'ਸ', 'ਹ']
+        ? ['ੳ', 'ਅ', 'ੲ', 'ਸ', 'ਹ', 'ਕ', 'ਖ', 'ਗ', 'ਘ', 'ਙ', 'ਚ', 'ਛ', 'ਜ', 'ਝ', 'ਞ', 'ਟ', 'ਠ', 'ਡ', 'ਢ', 'ਣ', 'ਤ', 'ਥ', 'ਦ', 'ਧ', 'ਨ', 'ਪ', 'ਫ', 'ਬ', 'ਭ', 'ਮ', 'ਯ', 'ਰ', 'ਲ', 'ਵ', 'ਸ', 'ਹ']
         : 'abcdefghijklmnopqrstuvwxyz'.split('');
 
     words.forEach(word => {
