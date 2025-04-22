@@ -110,7 +110,7 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
       title: 'Shabad Khoj', 
       description: 'Find the words.', 
       image: learningCarousel,
-      link: '/learning/games/word-search' 
+      link: '/learning/games/shabd-khoj' 
     },
   ];
   

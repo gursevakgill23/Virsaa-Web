@@ -250,6 +250,8 @@
   color: #F5F5F5;
   font-size: 1rem;
   gap: 0.3rem;
+  z-index: 10; /* Ensure it's above other elements */
+  pointer-events: auto; /* Allow clicks on the overlay */
 }
 
 .lockOverlay svg {
@@ -267,6 +269,9 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 11; /* Higher than overlay */
+  pointer-events: auto; /* Ensure button is clickable */
 }
 
 .actionButton:hover {
@@ -1796,9 +1801,7 @@
 
 /* Responsive Design */
 @media (max-width: 868px) {
-  .wordSearchContainer {
-    padding: 0.5rem;
-  }
+  
 
   .gameNavbar {
     gap: 0.5rem;

@@ -770,12 +770,19 @@ const WordSearchGamePlay = () => {
                   </div>
                 )}
                 {map.premium && (!isLoggedIn || !userData || !userData.isPremium) && (
-                  <div className={styles.lockOverlay}>
+                  <div className={styles.lockOverlay}         
+                  onClick={(e) => e.stopPropagation()} // Prevent click from reaching parent
+>
                     <FaCrown />
                     <span>{settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਦੀ ਲੋੜ ਹੈ' : 'Premium Required'}</span>
                     <button
                       className={styles.actionButton}
-                      onClick={() => navigate('/premium')}
+                      onClick={() => {
+                        setShowSettings(false);
+                        setShowProfileDropdown(false);
+                        navigate('/premium');
+                        console.log('Navigation called');
+                      }}
                     >
                       {settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਬਣੋ' : 'Go Premium'}
                     </button>
