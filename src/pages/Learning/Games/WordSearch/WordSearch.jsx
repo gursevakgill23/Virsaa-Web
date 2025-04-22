@@ -1427,7 +1427,7 @@ const WordSearchGamePlay = () => {
             </div>
           )}
           <button className={styles.settingsButton} onClick={() => setShowSettings(!showSettings)}>
-            <IoMdSettings />
+            <IoMdSettings className={styles.icon} />
           </button>
         </div>
       </nav>

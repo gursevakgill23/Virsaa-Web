@@ -687,7 +687,7 @@ const Gurbani = ({ isDarkMode }) => {
                   className={styles.playButton} 
                   onClick={togglePlayPause}
                 >
-                  {isPlaying ? <FaPause /> : <FaPlay />}
+                  {isPlaying ? <FaPause className={styles.icon}/> : <FaPlay className={styles.icon} />}
                 </button>
                 <button className={styles.controlButton} onClick={playNext}>
                   <FaStepForward />
