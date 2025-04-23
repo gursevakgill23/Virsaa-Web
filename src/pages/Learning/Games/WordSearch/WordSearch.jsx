@@ -9,18 +9,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import styles from './WordSearch.module.css';
 import { Howl } from 'howler';
-import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaEdit, FaCreditCard, FaTrash, FaSignOutAlt, FaGamepad } from 'react-icons/fa';
+import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaEdit, FaCreditCard, FaTrash, FaSignOutAlt, FaGamepad, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { GiTreasureMap, GiClockwork, GiStairsGoal } from 'react-icons/gi';
 import { IoMdTimer, IoMdSettings } from 'react-icons/io';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import avatar from '../../../../images/Learning/avatar.jpg';
-import userDefault from '../../../../images/Learning/user_default.png';
+import userDefault from '../../../../images/Learning/user-default.jpg';
 import wordsData from './wordData.json';
 import completSound from './assets/sounds/complete.mp3';
 import found from './assets/sounds/found.mp3';
 import levelUp from './assets/sounds/level-up.mp3';
+import playable1 from './assets/images/playables.jpg';
 
 // Initialize sound effects for the game
 const sounds = {
@@ -117,6 +118,137 @@ const gameMaps = [
   { id: 12, name: 'Sandy Dunes', description: 'Desert-themed words', difficulty: 'Hard', timeLimit: 540, entryFee: 20, reward: 160, premium: false, loginRequired: true, size: 14, language: 'english', theme: 'sand' },
 ];
 
+// Virsaa Playables data
+const virsaaPlayables = [
+  {
+    id: 1,
+    name: 'Punjabi Puzzle',
+    description: 'Solve puzzles in Punjabi',
+    image: playable1,
+    link: '/games/punjabi-puzzle'
+  },
+  {
+    id: 2,
+    name: 'Gurmukhi Match',
+    description: 'Match Gurmukhi characters',
+    image: playable1,
+    link: '/games/gurmukhi-match'
+  },
+  {
+    id: 3,
+    name: 'Shabad Quiz',
+    description: 'Test your knowledge of Shabads',
+    image: playable1,
+    link: '/games/shabad-quiz'
+  },
+  {
+    id: 4,
+    name: 'Sikh History Trivia',
+    description: 'Learn Sikh history through trivia',
+    image: playable1,
+    link: '/games/sikh-history'
+  },
+  {
+    id: 5,
+    name: 'Shabd Khoj',
+    description: 'Learn Sikh history through trivia',
+    image: playable1,
+    link: '/games/sikh-history'
+  },
+  {
+    id: 6,
+    name: 'Gurmukhi Match',
+    description: 'Match Gurmukhi characters',
+    image: playable1,
+    link: '/games/gurmukhi-match'
+  },
+  {
+    id: 7,
+    name: 'Shabad Quiz',
+    description: 'Test your knowledge of Shabads',
+    image: playable1,
+    link: '/games/shabad-quiz'
+  },
+  {
+    id: 8,
+    name: 'Sikh History Trivia',
+    description: 'Learn Sikh history through trivia',
+    image: playable1,
+    link: '/games/sikh-history'
+  },
+  {
+    id: 9,
+    name: 'Shabd Khoj',
+    description: 'Learn Sikh history through trivia',
+    image: playable1,
+    link: '/games/sikh-history'
+  },
+  {
+    id: 10,
+    name: 'Punjabi Puzzle',
+    description: 'Solve puzzles in Punjabi',
+    image: playable1,
+    link: '/games/punjabi-puzzle'
+  },
+  {
+    id: 11,
+    name: 'Gurmukhi Match',
+    description: 'Match Gurmukhi characters',
+    image: playable1,
+    link: '/games/gurmukhi-match'
+  },
+  {
+    id: 12,
+    name: 'Shabad Quiz',
+    description: 'Test your knowledge of Shabads',
+    image: playable1,
+    link: '/games/shabad-quiz'
+  },
+  {
+    id: 13,
+    name: 'Sikh History Trivia',
+    description: 'Learn Sikh history through trivia',
+    image: playable1,
+    link: '/games/sikh-history'
+  },
+  {
+    id: 14,
+    name: 'Shabd Khoj',
+    description: 'Learn Sikh history through trivia',
+    image: playable1,
+    link: '/games/sikh-history'
+  },
+  {
+    id: 15,
+    name: 'Gurmukhi Match',
+    description: 'Match Gurmukhi characters',
+    image: playable1,
+    link: '/games/gurmukhi-match'
+  },
+  {
+    id: 16,
+    name: 'Shabad Quiz',
+    description: 'Test your knowledge of Shabads',
+    image: playable1,
+    link: '/games/shabad-quiz'
+  },
+  {
+    id: 17,
+    name: 'Sikh History Trivia',
+    description: 'Learn Sikh history through trivia',
+    image: playable1,
+    link: '/games/sikh-history'
+  },
+  {
+    id: 18,
+    name: 'Shabd Khoj',
+    description: 'Learn Sikh history through trivia',
+    image: playable1,
+    link: '/games/sikh-history'
+  },
+    
+];
+
 // Define difficulty levels with time multipliers and colors
 const difficultyLevels = [
   { id: 'easy', name: 'Easy', timeMultiplier: 1.2, color: '#4CAF50' },
@@ -188,10 +320,19 @@ const WordSearchGamePlay = () => {
   const [userStats, setUserStats] = useState(null);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [newName, setNewName] = useState(userData?.name || 'Demo User');
+  const [newName, setNewName] = useState(userData?.name || 'Gursevak Singh');
   const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
   const timerRef = useRef(null);
   const profileDropdownRef = useRef(null);
+  const mapsContainerRef = useRef(null);
+
+  // Scroll maps horizontally
+  const scrollMaps = (direction) => {
+    if (mapsContainerRef.current) {
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      mapsContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   // Effect to handle welcome bonus on first load
   useEffect(() => {
@@ -263,107 +404,106 @@ const WordSearchGamePlay = () => {
   }, []);
 
   // Initialize the game board with words
-  // Inside initializeBoard function, add logging for debugging
-const initializeBoard = async () => {
-  if (!selectedMap) return;
+  const initializeBoard = async () => {
+    if (!selectedMap) return;
 
-  const fetchedWords = await fetchWords(selectedMap, selectedMap.difficulty, selectedMap.language);
-  if (fetchedWords.length === 0) {
-    setErrorMessage('Failed to load words for the game. Please select a different map or try again.');
-    console.error('No words fetched for the map:', selectedMap);
-    setGameState('select');
-    return;
-  }
-  setWordsToFind(fetchedWords);
+    const fetchedWords = await fetchWords(selectedMap, selectedMap.difficulty, selectedMap.language);
+    if (fetchedWords.length === 0) {
+      setErrorMessage('Failed to load words for the game. Please select a different map or try again.');
+      console.error('No words fetched for the map:', selectedMap);
+      setGameState('select');
+      return;
+    }
+    setWordsToFind(fetchedWords);
 
-  const size = selectedMap.size;
-  const words = fetchedWords;
-  const newBoard = Array(size).fill().map(() => Array(size).fill(''));
-  const newWordPositions = {};
+    const size = selectedMap.size;
+    const words = fetchedWords;
+    const newBoard = Array(size).fill().map(() => Array(size).fill(''));
+    const newWordPositions = {};
 
-  const alphabet =
-    selectedMap.language === 'punjabi'
-      ? ['ੳ', 'ਅ', 'ੲ', 'ਸ', 'ਹ', 'ਕ', 'ਖ', 'ਗ', 'ਘ', 'ਙ', 'ਚ', 'ਛ', 'ਜ', 'ਝ', 'ਞ', 'ਟ', 'ਠ', 'ਡ', 'ਢ', 'ਣ', 'ਤ', 'ਥ', 'ਦ', 'ਧ', 'ਨ', 'ਪ', 'ਫ', 'ਬ', 'ਭ', 'ਮ', 'ਯ', 'ਰ', 'ਲ', 'ਵ', 'ਸ', 'ਹ']
-      : 'abcdefghijklmnopqrstuvwxyz'.split('');
+    const alphabet =
+      selectedMap.language === 'punjabi'
+        ? ['ੳ', 'ਅ', 'ੲ', 'ਸ', 'ਹ', 'ਕ', 'ਖ', 'ਗ', 'ਘ', 'ਙ', 'ਚ', 'ਛ', 'ਜ', 'ਝ', 'ਞ', 'ਟ', 'ਠ', 'ਡ', 'ਢ', 'ਣ', 'ਤ', 'ਥ', 'ਦ', 'ਧ', 'ਨ', 'ਪ', 'ਫ', 'ਬ', 'ਭ', 'ਮ', 'ਯ', 'ਰ', 'ਲ', 'ਵ', 'ਸ', 'ਹ']
+        : 'abcdefghijklmnopqrstuvwxyz'.split('');
 
-  words.forEach(word => {
-    let placed = false;
-    let attempts = 0;
-    const maxAttempts = 200;
+    words.forEach(word => {
+      let placed = false;
+      let attempts = 0;
+      const maxAttempts = 200;
 
-    while (!placed && attempts < maxAttempts) {
-      attempts++;
-      const direction = Math.floor(Math.random() * 3);
-      const row = direction === 0 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
-      const col = direction === 1 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
+      while (!placed && attempts < maxAttempts) {
+        attempts++;
+        const direction = Math.floor(Math.random() * 3);
+        const row = direction === 0 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
+        const col = direction === 1 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
 
-      let canPlace = true;
-      const positions = [];
+        let canPlace = true;
+        const positions = [];
 
-      for (let i = 0; i < word.length; i++) {
-        let r, c;
-        if (direction === 0) {
-          r = row;
-          c = col + i;
-        } else if (direction === 1) {
-          r = row + i;
-          c = col;
-        } else {
-          r = row + i;
-          c = col + i;
-        }
-
-        if (r >= size || c >= size || (newBoard[r][c] && newBoard[r][c] !== word[i])) {
-          canPlace = false;
-          break;
-        }
-        positions.push({ row: r, col: c });
-      }
-
-      if (canPlace) {
         for (let i = 0; i < word.length; i++) {
-          const { row, col } = positions[i];
-          newBoard[row][col] = word[i];
+          let r, c;
+          if (direction === 0) {
+            r = row;
+            c = col + i;
+          } else if (direction === 1) {
+            r = row + i;
+            c = col;
+          } else {
+            r = row + i;
+            c = col + i;
+          }
+
+          if (r >= size || c >= size || (newBoard[r][c] && newBoard[r][c] !== word[i])) {
+            canPlace = false;
+            break;
+          }
+          positions.push({ row: r, col: c });
         }
-        newWordPositions[word] = positions;
-        placed = true;
+
+        if (canPlace) {
+          for (let i = 0; i < word.length; i++) {
+            const { row, col } = positions[i];
+            newBoard[row][col] = word[i];
+          }
+          newWordPositions[word] = positions;
+          placed = true;
+        }
       }
-    }
 
-    if (!placed) {
-      console.warn(`Could not place word "${word}" on map "${selectedMap.name}" after ${maxAttempts} attempts`);
-      setErrorMessage(`Unable to place word "${word}" on the board. Please try again or select a different map.`);
-    }
-  });
-
-  // Fill remaining cells
-  for (let i = 0; i < size; i++) {
-    for (let j = 0; j < size; j++) {
-      if (!newBoard[i][j]) {
-        newBoard[i][j] = alphabet[Math.floor(Math.random() * alphabet.length)];
+      if (!placed) {
+        console.warn(`Could not place word "${word}" on map "${selectedMap.name}" after ${maxAttempts} attempts`);
+        setErrorMessage(`Unable to place word "${word}" on the board. Please try again or select a different map.`);
       }
-    }
-  }
-
-  setBoard(newBoard);
-  setWordPositions(newWordPositions);
-  setFoundWords([]);
-  setTimeLeft(Math.floor(selectedMap.timeLimit * selectedDifficulty.timeMultiplier));
-  setScore(0);
-  setGameState('playing');
-
-  if (timerRef.current) clearInterval(timerRef.current);
-  timerRef.current = setInterval(() => {
-    setTimeLeft(prev => {
-      if (prev <= 1) {
-        clearInterval(timerRef.current);
-        handleGameEnd(false);
-        return 0;
-      }
-      return prev - 1;
     });
-  }, 1000);
-};
+
+    // Fill remaining cells
+    for (let i = 0; i < size; i++) {
+      for (let j = 0; j < size; j++) {
+        if (!newBoard[i][j]) {
+          newBoard[i][j] = alphabet[Math.floor(Math.random() * alphabet.length)];
+        }
+      }
+    }
+
+    setBoard(newBoard);
+    setWordPositions(newWordPositions);
+    setFoundWords([]);
+    setTimeLeft(Math.floor(selectedMap.timeLimit * selectedDifficulty.timeMultiplier));
+    setScore(0);
+    setGameState('playing');
+
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          handleGameEnd(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   // Handle mouse down event on a cell to start selection
   const handleCellMouseDown = (row, col) => {
@@ -648,6 +788,12 @@ const initializeBoard = async () => {
   const handleRemovePaymentMethod = (id) => {
     setPaymentMethods(paymentMethods.filter(method => method.id !== id));
   };
+  const [displayCount, setDisplayCount] = useState(10);
+
+  const handleToggleDisplay = () => {
+    setDisplayCount(displayCount === 12 ? 18 : 12);
+  };
+
 
   // Render the game board with interactive cells
   const renderBoard = () => {
@@ -752,81 +898,130 @@ const initializeBoard = async () => {
           </button>
         </div>
 
-        <div className={styles.mapGrid}>
-          {filteredMaps.map(map => (
-            <div
-              key={map.id}
-              className={`${styles.mapCard} ${map.premium ? styles.premium : ''} ${map.loginRequired ? styles.locked : ''}`}
-            >
-              <div className={`${styles.mapImage} ${styles[map.theme]}`}>
-                {map.loginRequired && !isLoggedIn && (
-                  <div className={styles.lockOverlay}>
-                    <FaLock />
-                    <span>{settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login Required'}</span>
-                    <button
-                      className={styles.actionButton}
-                      onClick={() => navigate('/login')}
-                    >
-                      {settings.language === 'punjabi' ? 'ਲੌਗਇਨ' : 'Login'}
+        <div className={styles.mapsContainerWrapper}>
+          <button 
+            className={styles.scrollButtonLeft} 
+            onClick={() => scrollMaps('left')}
+            aria-label="Scroll maps left"
+          >
+            <FaChevronLeft />
+          </button>
+          <div className={styles.mapsContainer} ref={mapsContainerRef}>
+            {filteredMaps.map(map => (
+              <div
+                key={map.id}
+                className={`${styles.mapCard} ${map.premium ? styles.premium : ''} ${map.loginRequired ? styles.locked : ''}`}
+              >
+                <div className={`${styles.mapImage} ${styles[map.theme]}`}>
+                  {map.loginRequired && !isLoggedIn && (
+                    <div className={styles.lockOverlay}>
+                      <FaLock />
+                      <span>{settings.language === 'punjabi' ? 'ਲੌਗਇਨ ਕਰੋ' : 'Login Required'}</span>
+                      <button
+                        className={styles.actionButton}
+                        onClick={() => navigate('/login')}
+                      >
+                        {settings.language === 'punjabi' ? 'ਲੌਗਇਨ' : 'Login'}
+                      </button>
+                    </div>
+                  )}
+                  {map.premium && (!isLoggedIn || !userData || !userData.isPremium) && (
+                    <div className={styles.lockOverlay}>
+                      <FaCrown />
+                      <span>{settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਦੀ ਲੋੜ ਹੈ' : 'Premium Required'}</span>
+                      <button
+                        className={styles.actionButton}
+                        onClick={() => {
+                          setShowSettings(false);
+                          setShowProfileDropdown(false);
+                          navigate('/premium');
+                        }}
+                      >
+                        {settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਬਣੋ' : 'Go Premium'}
+                      </button>
+                    </div>
+                  )}
+                  {(!map.loginRequired || isLoggedIn) && (map.premium ? (isLoggedIn && userData?.isPremium) : true) && (
+                    <button className={styles.playButton} onClick={() => handleMapSelect(map)}>
+                      {settings.language === 'punjabi' ? 'ਖੇਡੋ' : 'Play'}
                     </button>
-                  </div>
-                )}
-                {map.premium && (!isLoggedIn || !userData || !userData.isPremium) && (
-                  <div className={styles.lockOverlay}         
->
-                    <FaCrown />
-                    <span>{settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਦੀ ਲੋੜ ਹੈ' : 'Premium Required'}</span>
-                    <button
-                      className={styles.actionButton}
-                      onClick={() => {
-                        setShowSettings(false);
-                        setShowProfileDropdown(false);
-                        navigate('/premium');
-                        console.log('Navigation called');
-                      }}
-                    >
-                      {settings.language === 'punjabi' ? 'ਪ੍ਰੀਮੀਅਮ ਬਣੋ' : 'Go Premium'}
-                    </button>
-                  </div>
-                )}
-                {(!map.loginRequired || isLoggedIn) && (map.premium ? (isLoggedIn && userData?.isPremium) : true) && (
-                  <button className={styles.playButton} onClick={() => handleMapSelect(map)}>
-                    {settings.language === 'punjabi' ? 'ਖੇਡੋ' : 'Play'}
-                  </button>
-                )}
-                {map.premium && (
-                  <div className={styles.premiumBadge}>
-                    <FaCrown /> PREMIUM
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.mapInfo}>
-                <h3>{map.name}</h3>
-                <p>{map.description}</p>
-
-                <div className={styles.mapStats}>
-                  <div>
-                    <GiClockwork />
-                    <span>{formatTime(map.timeLimit)}</span>
-                  </div>
-                  <div>
-                    <FaCoins />
-                    <span>{map.entryFee > 0 ? `${map.entryFee}` : 'Free'}</span>
-                  </div>
-                  <div>
-                    <GiStairsGoal />
-                    <span>{map.reward}</span>
-                  </div>
+                  )}
+                  {map.premium && (
+                    <div className={styles.premiumBadge}>
+                      <FaCrown /> PREMIUM
+                    </div>
+                  )}
                 </div>
 
-                <div className={styles.difficultyTag} data-difficulty={map.difficulty.toLowerCase()}>
-                  {map.difficulty}
+                <div className={styles.mapInfo}>
+                  <h3>{map.name}</h3>
+                  <p>{map.description}</p>
+
+                  <div className={styles.mapStats}>
+                    <div>
+                      <GiClockwork />
+                      <span>{formatTime(map.timeLimit)}</span>
+                    </div>
+                    <div>
+                      <FaCoins />
+                      <span>{map.entryFee > 0 ? `${map.entryFee}` : 'Free'}</span>
+                    </div>
+                    <div>
+                      <GiStairsGoal />
+                      <span>{map.reward}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.difficultyTag} data-difficulty={map.difficulty.toLowerCase()}>
+                    {map.difficulty}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <button 
+            className={styles.scrollButtonRight} 
+            onClick={() => scrollMaps('right')}
+            aria-label="Scroll maps right"
+          >
+            <FaChevronRight />
+          </button>
         </div>
+
+        {/* Virsaa Playables Section */}
+        <div className={styles.virsaaPlayables}>
+          <div className={styles.sectionHeader}>
+            <GiTreasureMap className={styles.sectionIcon} />
+            <h2>Virsaa Playables</h2>
+          </div>
+          <div className={styles.playablesContainer}>
+            {virsaaPlayables.slice(0, displayCount).map(game => (
+              <div key={game.id} className={styles.playableCard}>
+                <div className={styles.playableImage} style={{ backgroundImage: `url(${game.image})` }}>
+                  <button 
+                    className={styles.playButton}
+                    onClick={() => navigate(game.link)}
+                  >
+                    Play
+                  </button>
+                </div>
+                <div className={styles.playableInfo}>
+                  <h3>{game.name}</h3>
+                  <p>{game.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={styles.toggleButtonContainer}>
+            <button 
+              className={styles.toggleButton}
+              onClick={handleToggleDisplay}
+            >
+              {displayCount === 12 ? 'Show More' : 'Show Less'}
+            </button>
+          </div>
+        </div>
+
       </div>
     );
   };

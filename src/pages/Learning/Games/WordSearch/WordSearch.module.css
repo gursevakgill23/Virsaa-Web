@@ -86,15 +86,15 @@
 
 /* Main Content Wrapper */
 .mainContent {
-  padding-top: 60px;
+  padding: 1rem;
 }
 
 /* Map Selection */
 .mapSelection {
   width: 100%;
-  max-width: 1600px;
+  max-width: 1800px;
   margin: 0 auto;
-  padding: 2rem 0;
+  padding: 1rem 0;
 }
 
 .sectionHeader {
@@ -150,13 +150,156 @@
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
-.mapGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
-  gap: 1rem;
-  justify-content: center;
+/* New Maps Container with Scroll */
+.mapsContainerWrapper {
+  position: relative;
+  margin: 0 auto;
+  max-width: 100%;
+  padding: 0 40px;
 }
 
+.mapsContainer {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  padding: 1rem 0;
+}
+
+.mapsContainer::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.scrollButtonLeft,
+.scrollButtonRight {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 215, 0, 0.7);
+  color: #212121;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s ease;
+}
+
+.scrollButtonLeft {
+  left: 0;
+}
+
+.scrollButtonRight {
+  right: 0;
+}
+
+.scrollButtonLeft:hover,
+.scrollButtonRight:hover {
+  background: #FFD700;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Virsaa Playables Section */
+.virsaaPlayables {
+  margin-top: 3rem;
+  width: 100%;
+  padding: 1rem;
+}
+
+.playablesContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+.playableCard {
+  background: rgb(254, 233, 3);
+  padding: 10px;
+  height: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.playableCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.playableImage {
+  height: 320px;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  margin-bottom: 0;
+}
+
+.playableImage .playButton {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  padding: 0.5rem 1rem;
+  background: #00C853;
+  color: #F5F5F5;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.playableImage .playButton:hover {
+  background: #00E5FF;
+  transform: scale(1.05);
+}
+
+.playableInfo {
+  padding: 0 1rem;
+}
+
+.playableInfo h3 {
+  font-size: 1.2rem;
+  color: black;
+  margin-bottom: 0.5rem;
+}
+
+.playableInfo p {
+  font-size: 0.9rem;
+  color: white;
+}
+
+.toggleButtonContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.toggleButton {
+  padding: 0.75rem 2rem;
+  background: #FFD700;
+  color: #1A1A1A;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggleButton:hover {
+  background: #00E5FF;
+  transform: scale(1.05);
+}
+/* Map Card */
 .mapCard {
   position: relative;
   background: #212121;
@@ -164,13 +307,13 @@
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   cursor: pointer;
-  width: 100%;
-  max-width: 350px;
-  margin: 0 auto;
+  width: 300px;
+  height: 500px;
+  flex-shrink: 0;
 }
 
 .mapImage {
-  height: 150px;
+  height: 300px;
   width: 100%;
   min-width: 0;
   background-size: cover;
@@ -250,8 +393,8 @@
   color: #F5F5F5;
   font-size: 1rem;
   gap: 0.3rem;
-  z-index: 10; /* Ensure it's above other elements */
-  pointer-events: auto; /* Allow clicks on the overlay */
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .lockOverlay svg {
@@ -270,8 +413,8 @@
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
-  z-index: 100; /* Higher than overlay */
-  pointer-events: auto; /* Ensure button is clickable */
+  z-index: 100;
+  pointer-events: auto;
 }
 
 .actionButton:hover {
@@ -315,7 +458,7 @@
 }
 
 .mapInfo {
-  padding: 0.8rem;
+  padding: 0.5rem 0.8rem;
 }
 
 .mapInfo h3 {
@@ -435,7 +578,7 @@
   border: none;
   border-radius: 20px;
   background: #FFD700;
-  color: #F5F5F5;
+  color: black;
   font-size: 1.2rem;
   font-weight: 600;
   cursor: pointer;
@@ -444,7 +587,6 @@
 
 .startButton:hover {
   background: #00E5FF;
-  color: #212121;
   transform: scale(1.05);
 }
 
@@ -513,7 +655,7 @@
   border: none;
   border-radius: 20px;
   background: #FFD700;
-  color: #F5F5F5;
+  color: black;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -525,7 +667,6 @@
 
 .hintButton:hover {
   background: #00E5FF;
-  color: #212121;
   transform: scale(1.05);
 }
 
@@ -861,42 +1002,23 @@
   box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
   transform: translateZ(15px);
 }
-/* 2. Adjust cell size for Punjabi maps to prevent character overflow */
-.board.cultural .cell {
-  width: 42px; /* Slightly larger for Punjabi characters */
-  height: 42px;
-  font-size: 1rem; /* Adjusted for better fit */
-  line-height: 1; /* Ensure characters are centered */
+
+.cellHighlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
 }
 
-/* 3. Set opacity for map background images */
-.mapImage.traditional,
-.mapImage.cultural,
-.mapImage.gold,
-.mapImage.nature,
-.mapImage.abstract,
-.mapImage.jungle,
-.mapImage.mountain,
-.mapImage.cosmic,
-.mapImage.mystic,
-.mapImage.poetry,
-.mapImage.snow,
-.mapImage.sand,
-.board.traditional,
-.board.cultural,
-.board.gold,
-.board.nature,
-.board.abstract,
-.board.jungle,
-.board.mountain,
-.board.cosmic,
-.board.mystic,
-.board.poetry,
-.board.snow,
-.board.sand {
-  opacity: 0.75; /* Adjust opacity for better cell visibility */
-  background-blend-mode: overlay;
+.cell.selected .cellHighlight {
+  border-color: #00E5FF;
+  animation: neonGlow 1.5s infinite alternate;
 }
+
 /* Found Cell */
 .cell.found {
   background: #4CAF50;
@@ -917,21 +1039,6 @@
   100% {
     transform: scale(1);
   }
-}
-.cellHighlight {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: 6px;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-}
-
-.cell.selected .cellHighlight {
-  border-color: #00E5FF;
-  animation: neonGlow 1.5s infinite alternate;
 }
 
 /* Sidebar */
@@ -1204,14 +1311,18 @@
 
 .closeButton {
   background: transparent;
-  border: none;
+  border: 1px solid #FFD700;
+  border-radius: 10px;
+  padding:0.5rem;
+  width: 100%;
   font-size: 1.5rem;
   color: #F5F5F5;
   cursor: pointer;
 }
 
 .closeButton:hover {
-  color: #FFD700;
+  color: black;
+  background: linear-gradient(45deg, #FFD700, #00E5FF);
 }
 
 .settingsContent {
@@ -1835,9 +1946,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 868px) {
-  
-
+@media (max-width: 868px) { 
   .gameNavbar {
     gap: 0.5rem;
   }
@@ -1845,7 +1954,9 @@
   .navbarBrand {
     font-size: 1.2rem;
   }
-
+  .playablesContainer {
+    grid-template-columns: repeat(3, 1fr);
+  }
   .userInfo {
     font-size: 0.8rem;
   }
@@ -1873,15 +1984,19 @@
     font-size: 0.8rem;
   }
 
-  .mapGrid {
-    grid-template-columns: 1fr;
-    justify-items: center;
+  .mapsContainerWrapper {
+    padding: 0 30px;
+  }
+
+  .scrollButtonLeft,
+  .scrollButtonRight {
+    width: 30px;
+    height: 30px;
   }
 
   .mapCard {
-    width: 90vw;
-    max-width: 320px;
-    margin: 0 auto;
+    width: 250px;
+    height: 350px;
   }
 
   .mapImage {
@@ -2111,11 +2226,47 @@
     font-size: 0.8rem;
   }
 }
+/* Media Query for Horizontal Scrolling on Larger Screens */
+@media (max-width: 768px) {
+  .playablesContainer {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 1.5rem;
+    padding-bottom: 1rem; /* Space for smooth scrolling */
+  }
+
+  .playableCard {
+    flex: 0 0 300px; /* Fixed width for each card */
+  }
+
+  /* Hide Scrollbar */
+  .playablesContainer::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+  }
+
+  .playablesContainer {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .playableCard{
+    height: 320px;
+  }
+  .playableImage{
+    height: 200px;
+  }
+
+  .toggleButton{
+    display: none;
+  }
+}
+
 
 @media (max-width: 480px) {
   .navbarBrand {
     font-size: 1rem;
   }
+  
 
   .userInfo {
     font-size: 0.7rem;
@@ -2126,15 +2277,13 @@
     height: 20px;
   }
 
-  .mapGrid {
-    grid-template-columns: 1fr;
-    justify-items: center;
+  .mapsContainerWrapper {
+    padding: 0 20px;
   }
 
   .mapCard {
-    width: 90vw;
-    max-width: 300px;
-    margin: 0 auto;
+    width: 220px;
+    height: 320px;
   }
 
   .sectionHeader h2 {
@@ -2151,7 +2300,7 @@
   }
 
   .mapImage {
-    height: 150px;
+    height: 120px;
   }
 
   .mapInfo h3 {
