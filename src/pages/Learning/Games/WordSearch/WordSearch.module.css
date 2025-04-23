@@ -2113,10 +2113,6 @@
 }
 
 @media (max-width: 480px) {
-  .wordSearchContainer {
-    overflow: hidden;
-    height: 100vh;
-  }
   .navbarBrand {
     font-size: 1rem;
   }
