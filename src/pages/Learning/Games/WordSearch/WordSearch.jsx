@@ -263,105 +263,107 @@ const WordSearchGamePlay = () => {
   }, []);
 
   // Initialize the game board with words
-  const initializeBoard = async () => {
-    if (!selectedMap) return;
+  // Inside initializeBoard function, add logging for debugging
+const initializeBoard = async () => {
+  if (!selectedMap) return;
 
-    const fetchedWords = await fetchWords(selectedMap, selectedMap.difficulty, selectedMap.language);
-    if (fetchedWords.length === 0) {
-      setErrorMessage('Failed to load words for the game. Please select a different map or try again.');
-      console.error('No words fetched for the map:', selectedMap);
-      setGameState('select');
-      return;
-    }
-    setWordsToFind(fetchedWords);
+  const fetchedWords = await fetchWords(selectedMap, selectedMap.difficulty, selectedMap.language);
+  if (fetchedWords.length === 0) {
+    setErrorMessage('Failed to load words for the game. Please select a different map or try again.');
+    console.error('No words fetched for the map:', selectedMap);
+    setGameState('select');
+    return;
+  }
+  setWordsToFind(fetchedWords);
 
-    const size = selectedMap.size;
-    const words = fetchedWords;
-    const newBoard = Array(size).fill().map(() => Array(size).fill(''));
-    const newWordPositions = {};
+  const size = selectedMap.size;
+  const words = fetchedWords;
+  const newBoard = Array(size).fill().map(() => Array(size).fill(''));
+  const newWordPositions = {};
 
-    const alphabet =
-      selectedMap.language === 'punjabi'
-        ? ['ੳ', 'ਅ', 'ੲ', 'ਸ', 'ਹ', 'ਕ', 'ਖ', 'ਗ', 'ਘ', 'ਙ', 'ਚ', 'ਛ', 'ਜ', 'ਝ', 'ਞ', 'ਟ', 'ਠ', 'ਡ', 'ਢ', 'ਣ', 'ਤ', 'ਥ', 'ਦ', 'ਧ', 'ਨ', 'ਪ', 'ਫ', 'ਬ', 'ਭ', 'ਮ', 'ਯ', 'ਰ', 'ਲ', 'ਵ', 'ਸ', 'ਹ']
-        : 'abcdefghijklmnopqrstuvwxyz'.split('');
+  const alphabet =
+    selectedMap.language === 'punjabi'
+      ? ['ੳ', 'ਅ', 'ੲ', 'ਸ', 'ਹ', 'ਕ', 'ਖ', 'ਗ', 'ਘ', 'ਙ', 'ਚ', 'ਛ', 'ਜ', 'ਝ', 'ਞ', 'ਟ', 'ਠ', 'ਡ', 'ਢ', 'ਣ', 'ਤ', 'ਥ', 'ਦ', 'ਧ', 'ਨ', 'ਪ', 'ਫ', 'ਬ', 'ਭ', 'ਮ', 'ਯ', 'ਰ', 'ਲ', 'ਵ', 'ਸ', 'ਹ']
+      : 'abcdefghijklmnopqrstuvwxyz'.split('');
 
-    words.forEach(word => {
-      let placed = false;
-      let attempts = 0;
-      const maxAttempts = 200;
+  words.forEach(word => {
+    let placed = false;
+    let attempts = 0;
+    const maxAttempts = 200;
 
-      while (!placed && attempts < maxAttempts) {
-        attempts++;
-        const direction = Math.floor(Math.random() * 3);
-        const row = direction === 0 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
-        const col = direction === 1 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
+    while (!placed && attempts < maxAttempts) {
+      attempts++;
+      const direction = Math.floor(Math.random() * 3);
+      const row = direction === 0 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
+      const col = direction === 1 ? Math.floor(Math.random() * size) : Math.floor(Math.random() * (size - word.length));
 
-        let canPlace = true;
-        const positions = [];
+      let canPlace = true;
+      const positions = [];
 
+      for (let i = 0; i < word.length; i++) {
+        let r, c;
+        if (direction === 0) {
+          r = row;
+          c = col + i;
+        } else if (direction === 1) {
+          r = row + i;
+          c = col;
+        } else {
+          r = row + i;
+          c = col + i;
+        }
+
+        if (r >= size || c >= size || (newBoard[r][c] && newBoard[r][c] !== word[i])) {
+          canPlace = false;
+          break;
+        }
+        positions.push({ row: r, col: c });
+      }
+
+      if (canPlace) {
         for (let i = 0; i < word.length; i++) {
-          let r, c;
-          if (direction === 0) {
-            r = row;
-            c = col + i;
-          } else if (direction === 1) {
-            r = row + i;
-            c = col;
-          } else {
-            r = row + i;
-            c = col + i;
-          }
-
-          if (r >= size || c >= size || (newBoard[r][c] && newBoard[r][c] !== word[i])) {
-            canPlace = false;
-            break;
-          }
-          positions.push({ row: r, col: c });
+          const { row, col } = positions[i];
+          newBoard[row][col] = word[i];
         }
-
-        if (canPlace) {
-          for (let i = 0; i < word.length; i++) {
-            const { row, col } = positions[i];
-            newBoard[row][col] = word[i];
-          }
-          newWordPositions[word] = positions;
-          placed = true;
-        }
-      }
-
-      if (!placed) {
-        console.warn(`Could not place word "${word}" after ${maxAttempts} attempts`);
-        setErrorMessage('Unable to place all words on the board. Please select a different map or try again.');
-      }
-    });
-
-    for (let i = 0; i < size; i++) {
-      for (let j = 0; j < size; j++) {
-        if (!newBoard[i][j]) {
-          newBoard[i][j] = alphabet[Math.floor(Math.random() * alphabet.length)];
-        }
+        newWordPositions[word] = positions;
+        placed = true;
       }
     }
 
-    setBoard(newBoard);
-    setWordPositions(newWordPositions);
-    setFoundWords([]);
-    setTimeLeft(Math.floor(selectedMap.timeLimit * selectedDifficulty.timeMultiplier));
-    setScore(0);
-    setGameState('playing');
+    if (!placed) {
+      console.warn(`Could not place word "${word}" on map "${selectedMap.name}" after ${maxAttempts} attempts`);
+      setErrorMessage(`Unable to place word "${word}" on the board. Please try again or select a different map.`);
+    }
+  });
 
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          handleGameEnd(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+  // Fill remaining cells
+  for (let i = 0; i < size; i++) {
+    for (let j = 0; j < size; j++) {
+      if (!newBoard[i][j]) {
+        newBoard[i][j] = alphabet[Math.floor(Math.random() * alphabet.length)];
+      }
+    }
+  }
+
+  setBoard(newBoard);
+  setWordPositions(newWordPositions);
+  setFoundWords([]);
+  setTimeLeft(Math.floor(selectedMap.timeLimit * selectedDifficulty.timeMultiplier));
+  setScore(0);
+  setGameState('playing');
+
+  if (timerRef.current) clearInterval(timerRef.current);
+  timerRef.current = setInterval(() => {
+    setTimeLeft(prev => {
+      if (prev <= 1) {
+        clearInterval(timerRef.current);
+        handleGameEnd(false);
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
+};
 
   // Handle mouse down event on a cell to start selection
   const handleCellMouseDown = (row, col) => {

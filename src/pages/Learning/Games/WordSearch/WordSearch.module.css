@@ -436,7 +436,7 @@
   border-radius: 20px;
   background: #FFD700;
   color: #F5F5F5;
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -861,9 +861,42 @@
   box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
   transform: translateZ(15px);
 }
+/* 2. Adjust cell size for Punjabi maps to prevent character overflow */
+.board.cultural .cell {
+  width: 42px; /* Slightly larger for Punjabi characters */
+  height: 42px;
+  font-size: 1rem; /* Adjusted for better fit */
+  line-height: 1; /* Ensure characters are centered */
+}
 
-/* WordSearch.module.css */
-
+/* 3. Set opacity for map background images */
+.mapImage.traditional,
+.mapImage.cultural,
+.mapImage.gold,
+.mapImage.nature,
+.mapImage.abstract,
+.mapImage.jungle,
+.mapImage.mountain,
+.mapImage.cosmic,
+.mapImage.mystic,
+.mapImage.poetry,
+.mapImage.snow,
+.mapImage.sand,
+.board.traditional,
+.board.cultural,
+.board.gold,
+.board.nature,
+.board.abstract,
+.board.jungle,
+.board.mountain,
+.board.cosmic,
+.board.mystic,
+.board.poetry,
+.board.snow,
+.board.sand {
+  opacity: 0.75; /* Adjust opacity for better cell visibility */
+  background-blend-mode: overlay;
+}
 /* Found Cell */
 .cell.found {
   background: #4CAF50;
@@ -1885,8 +1918,8 @@
   }
 
   .startButton {
-    padding: 0.6rem 1.2rem;
-    font-size: 0.9rem;
+    padding: 0.8rem 1.25rem;
+    font-size: 1rem;
   }
 
   .gameLayout {
@@ -2080,6 +2113,10 @@
 }
 
 @media (max-width: 480px) {
+  .wordSearchContainer {
+    overflow: hidden;
+    height: 100vh;
+  }
   .navbarBrand {
     font-size: 1rem;
   }
@@ -2156,8 +2193,7 @@
   }
 
   .startButton {
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
   }
 
   .timeDisplay, .scoreDisplay, .coinDisplay {
