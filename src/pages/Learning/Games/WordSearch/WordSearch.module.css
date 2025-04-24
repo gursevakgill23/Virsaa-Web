@@ -221,7 +221,7 @@
 .playableCard {
   background: rgb(254, 233, 3);
   padding: 10px;
-  height: 450px;
+  height: 500px;
   border-radius: 12px;
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -234,7 +234,7 @@
 }
 
 .playableImage {
-  height: 320px;
+  height: 380px;
   width: 100%;
   background-size: cover;
   background-position: center;
@@ -1311,18 +1311,15 @@
 
 .closeButton {
   background: transparent;
-  border: 1px solid #FFD700;
-  border-radius: 10px;
   padding:0.5rem;
-  width: 100%;
   font-size: 1.5rem;
   color: #F5F5F5;
   cursor: pointer;
+  border: none;
 }
 
 .closeButton:hover {
-  color: black;
-  background: linear-gradient(45deg, #FFD700, #00E5FF);
+  color: #FFD700;
 }
 
 .settingsContent {

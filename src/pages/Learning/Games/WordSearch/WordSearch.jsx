@@ -15,14 +15,34 @@ import { IoMdTimer, IoMdSettings } from 'react-icons/io';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import avatar from '../../../../images/Learning/avatar.jpg';
-import userDefault from '../../../../images/Learning/user-default.jpg';
 import wordsData from './wordData.json';
 import completSound from './assets/sounds/complete.mp3';
 import found from './assets/sounds/found.mp3';
 import levelUp from './assets/sounds/level-up.mp3';
-import playable1 from './assets/images/playables.jpg';
 
+const playable1 = '/images/Learning/playables.jpg';
+const avatar = '/images/Learning/avatar.jpg';
+const userDefault = '/images/Learning/user-default.jpg';
+
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 // Initialize sound effects for the game
 const sounds = {
   complete: new Howl({ src: [completSound] }),
@@ -283,6 +303,8 @@ const WordSearch = () => {
 
 // GamePlay component to be rendered in the new tab
 const WordSearchGamePlay = () => {
+  const getImagePath = useProductionImagePath();
+
   const { isLoggedIn, userData, login, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -997,7 +1019,7 @@ const WordSearchGamePlay = () => {
           <div className={styles.playablesContainer}>
             {virsaaPlayables.slice(0, displayCount).map(game => (
               <div key={game.id} className={styles.playableCard}>
-                <div className={styles.playableImage} style={{ backgroundImage: `url(${game.image})` }}>
+                <div className={styles.playableImage} style={{ backgroundImage: `url(${getImagePath(game.image)})` }}>
                   <button 
                     className={styles.playButton}
                     onClick={() => navigate(game.link)}
@@ -1180,7 +1202,7 @@ const WordSearchGamePlay = () => {
             {topScorers.map((player, index) => (
               <div key={player.id} className={styles.leaderboardItem}>
                 <span className={styles.rank}>{index + 1}</span>
-                <img src={player.avatar} alt={player.name} className={styles.avatar} />
+                <img src={getImagePath(player.avatar)} alt={player.name} className={styles.avatar} />
                 <div className={styles.playerInfo}>
                   <span className={styles.name}>{player.name}</span>
                   <span className={styles.score}>{player.score} pts</span>
@@ -1312,7 +1334,7 @@ const WordSearchGamePlay = () => {
               <>
                 <div className={styles.userInfo}>
                   <img
-                    src={userData?.avatar || userDefault}
+                    src={getImagePath(userData?.avatar) || userDefault}
                     alt="User"
                     className={styles.userAvatar}
                   />
@@ -1472,7 +1494,7 @@ const WordSearchGamePlay = () => {
             {editingProfile ? (
               <div className={styles.profileEdit}>
                 <div className={styles.avatarUpload}>
-                  <img src={newAvatar} alt="User Avatar" className={styles.profileAvatar} />
+                  <img src={getImagePath(newAvatar)} alt="User Avatar" className={styles.profileAvatar} />
                   <input
                     type="file"
                     accept="image/*"
@@ -1504,7 +1526,7 @@ const WordSearchGamePlay = () => {
               </div>
             ) : (
               <div className={styles.profileInfo}>
-                <img src={userData.avatar || userDefault} alt="User Avatar" className={styles.profileAvatar} />
+                <img src={getImagePath(userData.avatar || userDefault)} alt="User Avatar" className={styles.profileAvatar} />
                 <h4>{userData.name || 'Demo User'}</h4>
                 <button
                   onClick={() => {
@@ -1609,7 +1631,7 @@ const WordSearchGamePlay = () => {
                 onMouseEnter={() => setShowProfileDropdown(true)}
                 onClick={() => setShowProfileDropdown(true)}
               >
-                <img src={userData.avatar || userDefault} alt="User" className={styles.userAvatar} />
+                <img src={getImagePath(userData.avatar || userDefault)} alt="User" className={styles.userAvatar} />
               </div>
               <span>{userData.name || 'Demo User'}</span>
               <span className={styles.coins}>
