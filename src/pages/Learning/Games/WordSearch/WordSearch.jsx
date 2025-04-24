@@ -25,24 +25,20 @@ const avatar = '/images/Learning/avatar.jpg';
 const userDefault = '/images/Learning/user-default.jpg';
 
 const useProductionImagePath = () => {
-  
   return (imagePath) => {
-    // Only modify in production
     if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
       if (typeof imagePath === 'string') {
-        // For public folder images
         return imagePath.startsWith('/') 
           ? imagePath 
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {
-        // For imported images
         return imagePath.default || imagePath;
       }
     }
     return imagePath;
   };
 };
+
 // Initialize sound effects for the game
 const sounds = {
   complete: new Howl({ src: [completSound] }),
@@ -266,7 +262,6 @@ const virsaaPlayables = [
     image: playable1,
     link: '/games/sikh-history'
   },
-    
 ];
 
 // Define difficulty levels with time multipliers and colors
@@ -344,9 +339,12 @@ const WordSearchGamePlay = () => {
   const [editingProfile, setEditingProfile] = useState(false);
   const [newName, setNewName] = useState(userData?.name || 'Gursevak Singh');
   const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
+  const [activeTab, setActiveTab] = useState('game'); // New state for tab navigation
+  const [displayCount, setDisplayCount] = useState(6); // Updated for Virsaa Playables
   const timerRef = useRef(null);
   const profileDropdownRef = useRef(null);
   const mapsContainerRef = useRef(null);
+  const [isTabDropdownOpen, setIsTabDropdownOpen] = useState(false);
 
   // Scroll maps horizontally
   const scrollMaps = (direction) => {
@@ -810,12 +808,15 @@ const WordSearchGamePlay = () => {
   const handleRemovePaymentMethod = (id) => {
     setPaymentMethods(paymentMethods.filter(method => method.id !== id));
   };
-  const [displayCount, setDisplayCount] = useState(10);
 
+  // Handle Virsaa Playables display toggle
   const handleToggleDisplay = () => {
-    setDisplayCount(displayCount === 12 ? 18 : 12);
+    if (displayCount < virsaaPlayables.length) {
+      setDisplayCount(prev => prev + 6);
+    } else {
+      setDisplayCount(prev => Math.max(6, prev - 6));
+    }
   };
-
 
   // Render the game board with interactive cells
   const renderBoard = () => {
@@ -1039,11 +1040,10 @@ const WordSearchGamePlay = () => {
               className={styles.toggleButton}
               onClick={handleToggleDisplay}
             >
-              {displayCount === 12 ? 'Show More' : 'Show Less'}
+              {displayCount >= virsaaPlayables.length ? 'Show Less' : 'Show More'}
             </button>
           </div>
         </div>
-
       </div>
     );
   };
@@ -1113,19 +1113,76 @@ const WordSearchGamePlay = () => {
             </div>
           </div>
 
-          <div className={styles.wordList}>
-            <h3>{settings.language === 'punjabi' ? 'ਸ਼ਬਦ ਲੱਭੋ' : 'Find These Words'}:</h3>
-            <div className={styles.wordsContainer}>
-              {wordsToFind.map((word, index) => (
-                <div key={index} className={`${styles.word} ${foundWords.includes(word) ? styles.found : ''}`}>
-                  {word}
-                  {foundWords.includes(word) && <span className={styles.checkmark}>✓</span>}
-                </div>
-              ))}
-            </div>
+          <div
+            className={`${styles.tabContainer} ${isTabDropdownOpen ? styles.open : ''}`}
+            onClick={() => {
+              console.log('Tab container clicked, toggling dropdown:', !isTabDropdownOpen);
+              setIsTabDropdownOpen(!isTabDropdownOpen);
+            }}
+          >
+            <button
+              className={`${styles.tabButton} ${activeTab === 'game' ? styles.activeTab : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Game tab selected');
+                setActiveTab('game');
+                setIsTabDropdownOpen(false);
+              }}
+            >
+              {settings.language === 'punjabi' ? 'ਖੇਡ ਖੇਡੋ' : 'Play Game'}
+            </button>
+            <button
+              className={`${styles.tabButton} ${activeTab === 'achievements' ? styles.activeTab : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Achievements tab selected');
+                setActiveTab('achievements');
+                setIsTabDropdownOpen(false);
+              }}
+            >
+              {settings.language === 'punjabi' ? 'ਪ੍ਰਾਪਤੀਆਂ ਵੇਖੋ' : 'View Achievements'}
+            </button>
+            <button
+              className={`${styles.tabButton} ${activeTab === 'scorers' ? styles.activeTab : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Top Scorers tab selected');
+                setActiveTab('scorers');
+                setIsTabDropdownOpen(false);
+              }}
+            >
+              {settings.language === 'punjabi' ? 'ਚੋਟੀ ਦੇ ਸਕੋਰਰ ਵੇਖੋ' : 'View Top Scorers'}
+            </button>
           </div>
 
-          {renderBoard()}
+          {activeTab === 'game' && (
+            <>
+              <div className={styles.wordList}>
+                <h3>{settings.language === 'punjabi' ? 'ਸ਼ਬਦ ਲੱਭੋ' : 'Find These Words'}:</h3>
+                <div className={styles.wordsContainer}>
+                  {wordsToFind.map((word, index) => (
+                    <div key={index} className={`${styles.word} ${foundWords.includes(word) ? styles.found : ''}`}>
+                      {word}
+                      {foundWords.includes(word) && <span className={styles.checkmark}>✓</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {renderBoard()}
+            </>
+          )}
+
+          {activeTab === 'achievements' && (
+            <div className={styles.tabContent}>
+              {renderAchievements()}
+            </div>
+          )}
+
+          {activeTab === 'scorers' && (
+            <div className={styles.tabContent}>
+              {renderTopScorers()}
+            </div>
+          )}
         </div>
 
         <div className={styles.gameSidebar}>

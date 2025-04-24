@@ -1,0 +1,949 @@
+/* Reset default browser styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+button, input, select {
+    font-family: 'Roboto', sans-serif;
+    border: none;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+/* Root container */
+.container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #251a2e 0%, #16213E 100%);
+    color: #E0E0E0;
+    font-family: 'Roboto', sans-serif;
+    overflow-x: hidden;
+}
+
+/* Navbar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background: linear-gradient(90deg, #0F3460 0%, #533483 100%);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    margin-bottom: 20px;
+    position: relative;
+    top: 0;
+    left: 0;
+    z-index: 2000;
+}
+
+.navbarBrand {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #E0E0E0;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.navbarRight {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.userAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #533483;
+    transition: transform 0.2s ease;
+}
+
+.userAvatar:hover {
+    transform: scale(1.1);
+}
+
+.userInfo > span {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E0E0E0;
+}
+
+.coins {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: bold;
+    color: #E94560;
+}
+
+.levelProgress {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.levelProgress > span {
+    font-size: 0.9rem;
+    color: #E0E0E0;
+}
+
+.progressBar {
+    width: 100px;
+    height: 8px;
+    background: #0F1E40;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progressBar > div {
+    height: 100%;
+    background: #E94560;
+    transition: width 0.3s ease;
+}
+
+.settingsButton,
+.loginButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E0E0E0;
+    background: linear-gradient(45deg, #0F3460 0%, #533483 100%);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.settingsButton:hover,
+.loginButton:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* Profile Dropdown */
+.profileDropdown {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    width: 300px;
+    background: #0F1E40;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    padding: 20px;
+}
+
+.profileHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.profileHeader h3 {
+    font-size: 1.5rem;
+    color: #E94560;
+}
+
+.closeButton {
+    background: none;
+    color: #E0E0E0;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.closeButton:hover {
+    color: #E94560;
+}
+
+.profileContent {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.profileInfo,
+.profileEdit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.profileAvatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid #E94560;
+}
+
+.avatarUpload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatarUpload input {
+    display: none;
+}
+
+.avatarUpload label {
+    cursor: pointer;
+    color: #E94560;
+    font-weight: 600;
+    padding: 8px 15px;
+    background: #0F1E40;
+    border-radius: 5px;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.avatarUpload label:hover {
+    background: #E94560;
+    color: #E0E0E0;
+}
+
+.profileEdit input {
+    padding: 8px;
+    border: 1px solid #533483;
+    border-radius: 5px;
+    background: #E0E0E0;
+    color: #0F1E40;
+    width: 100%;
+    max-width: 200px;
+    font-size: 1rem;
+}
+
+.profileEdit button,
+.profileInfo button {
+    padding: 8px 15px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E0E0E0;
+    background: linear-gradient(45deg, #0F3460 0%, #533483 100%);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profileEdit button:hover,
+.profileInfo button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+.profileSection {
+    margin-top: 15px;
+}
+
+.profileSection h4 {
+    font-size: 1.2rem;
+    color: #E94560;
+}
+
+.statsList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.statsList div {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #E0E0E0;
+}
+
+.statsList span:first-child {
+    font-weight: 600;
+}
+
+/* Settings Sidebar */
+.settingsSidebar {
+    position: fixed;
+    top: 0;
+    right: -300px;
+    width: 300px;
+    height: 100%;
+    background: #0F1E40;
+    padding: 20px;
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    transition: right 0.3s ease;
+}
+
+.settingsSidebar.sidebarOpen {
+    right: 0;
+}
+
+.sidebarHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sidebarHeader h2 {
+    font-size: 1.8rem;
+    color: #E94560;
+}
+
+.settingsContent {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.settingsContent label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1rem;
+    color: #E0E0E0;
+}
+
+.settingsContent input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #E94560;
+}
+
+.settingsContent select {
+    padding: 8px;
+    font-size: 1rem;
+    color: #0F1E40;
+    background: #E0E0E0;
+    border: 1px solid #533483;
+    border-radius: 5px;
+    width: 100%;
+    cursor: pointer;
+}
+
+/* Modal */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #0F1E40;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 900px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+}
+
+.modal h2 {
+    font-size: 1.8rem;
+    color: #E94560;
+    margin-bottom: 15px;
+}
+
+.modal p,
+.modal li {
+    font-size: 1rem;
+    color: #E0E0E0;
+    margin-bottom: 10px;
+}
+
+.modal ul {
+    list-style: none;
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.modal li::before {
+    content: '•';
+    color: #E94560;
+    margin-right: 10px;
+}
+
+.modal button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E0E0E0;
+    background: linear-gradient(45deg, #0F3460 0%, #533483 100%);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin: 5px;
+}
+
+.modal button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+.shopOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.shopOptions button {
+    padding: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E0E0E0;
+    background: linear-gradient(45deg, #0F1E40 0%, #533483 100%);
+    border-radius: 8px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.shopOptions button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* Selection Screen */
+.selectionScreen {
+    text-align: center;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 1200px;
+    flex-direction: column;
+    margin: 0 auto;
+}
+
+.selectionScreen h2 {
+    font-size: 2rem;
+    color: #E94560;
+    margin-bottom: 20px;
+}
+
+.selectionOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+.optionGroup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.optionGroup h3 {
+    font-size: 1.5rem;
+    color: #E94560;
+    margin-bottom: 10px;
+}
+
+.modeOptions,
+.difficultyOptions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 35px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.modeCard,
+.difficultyCard {
+    background: #0F1E40;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 300px;
+    width: 300px;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+.modeCard:hover,
+.difficultyCard:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+.modeCard h4,
+.difficultyCard h4 {
+    font-size: 1.2rem;
+    color: #E94560;
+}
+
+.modeCard p,
+.difficultyCard p {
+    font-size: 0.9rem;
+    color: #E0E0E0;
+}
+
+.selected {
+    background: linear-gradient(45deg, #0F3460 0%, #533483 100%);
+    color: #E0E0E0;
+}
+
+.optionGroup select {
+    padding: 10px;
+    font-size: 1rem;
+    color: #0F1E40;
+    background: #E0E0E0;
+    border: 1px solid #533483;
+    border-radius: 5px;
+    width: 100%;
+    max-width: 200px;
+    cursor: pointer;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.optionGroup select:hover,
+.optionGroup select:focus {
+    border-color: #E94560;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.startButton {
+    padding: 12px 30px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #E0E0E0;
+    background: linear-gradient(45deg, #0F3460 0%, #533483 100%);
+    border-radius: 8px;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.startButton:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* Memorize and Game Screens */
+.memorizeScreen,
+.gameScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+.gameControls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    background: #0F1E40;
+    padding: 10px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+.gameControls button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E0E0E0;
+    background: linear-gradient(45deg, #0F3460 0%, #533483 100%);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gameControls button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+.timer {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #E94560;
+    background: #0F1E40;
+    padding: 5px 15px;
+    border-radius: 5px;
+}
+
+.memorizeNotification {
+    text-align: center;
+    background: #0F1E40;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+.memorizeNotification h2 {
+    font-size: 1.8rem;
+    color: #E94560;
+    margin-bottom: 10px;
+}
+
+/* Card Grid */
+.memorizeScreen .cardGrid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    width: 100%;
+    justify-items: center;
+    max-width: 1600px;
+}
+
+.gameScreen .cardGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    width: 100%;
+    justify-items: center;
+}
+
+/* Card Styles */
+.card {
+    width: 300px;
+    height: 350px;
+    perspective: 1000px;
+    cursor: pointer;
+    transition: transform 0.6s ease;
+}
+
+.cardInner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.6s ease;
+}
+
+.card.flipped .cardInner {
+    transform: rotateY(180deg);
+}
+
+.card.matched {
+    opacity: 0.5;
+    border: 1px solid green;
+}
+
+.cardFront,
+.cardBack {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.cardFront {
+    background: #0F1E40;
+}
+
+.cardBack {
+    background: #E0E0E0;
+    transform: rotateY(180deg);
+    border: 2px solid transparent;
+    border-image: linear-gradient(45deg, #E94560, #533483) 1;
+}
+
+.card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.cardBack span {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #0F1E40;
+    text-align: center;
+    padding: 10px;
+}
+
+.countdown {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #E94560;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    background: #0F1
+
+E40;
+    padding: 10px 20px;
+    border-radius: 10px;
+}
+
+/* Side Panels */
+.sidePanels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.sidePanel {
+    background: #0F1E40;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.sidePanel h3 {
+    font-size: 1.5rem;
+    color: #E94560;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.leaderboardItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    background: #0F1E40;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.leaderboardItem img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+}
+
+.leaderboardItem span {
+    font-size: 0.9rem;
+    color: #E0E0E0;
+}
+
+.leaderboardItem div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.achievement {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    background: #0F1E40;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.achievement.earned {
+    background: linear-gradient(45deg, #0F3460 0%, #533483 100%);
+}
+
+.achievement span {
+    font-size: 1.5rem;
+}
+
+.achievement div {
+    flex: 1;
+}
+
+.achievement h4 {
+    font-size: 1rem;
+    color: #E0E0E0;
+}
+
+.achievement p {
+    font-size: 0.8rem;
+    color: #E0E0E0;
+}
+
+.achievement span:last-child {
+    font-size: 0.8rem;
+    color: #E94560;
+}
+
+/* Card Pair Modal */
+.cardPair {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.cardPreview {
+    width: 300px;
+    height: 350px;
+    background: #E0E0E0;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.cardPreview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.cardPreview span {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #0F1E40;
+    text-align: center;
+}
+
+/* Video */
+.video {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+/* Audio */
+.modal audio {
+    width: 100%;
+    max-width: 300px;
+    margin-bottom: 20px;
+}
+
+/* Loading text */
+.cardGrid p {
+    font-size: 1.2rem;
+    color: #E94560;
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .memorizeScreen .cardGrid,
+    .gameScreen .cardGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .card {
+        width: 120px;
+        height: 180px;
+    }
+
+    .cardBack span {
+        font-size: 1.2rem;
+    }
+
+    .navbar {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .navbarRight {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .sidePanels {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .sidePanel {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .settingsSidebar {
+        width: 250px;
+        right: -250px;
+    }
+
+    .settingsSidebar.sidebarOpen {
+        right: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .memorizeScreen .cardGrid,
+    .gameScreen .cardGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .card {
+        width: 100px;
+        height: 150px;
+    }
+
+    .cardBack span {
+        font-size: 1rem;
+    }
+
+    .navbarBrand {
+        font-size: 1.5rem;
+    }
+
+    .settingsButton,
+    .loginButton,
+    .gameControls button,
+    .modal button,
+    .startButton {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+
+    .profileDropdown {
+        width: 90%;
+        right: 5%;
+    }
+
+    .modal {
+        padding: 15px;
+    }
+
+    .modal h2 {
+        font-size: 1.5rem;
+    }
+
+    .settingsSidebar {
+        width: 200px;
+        right: -200px;
+    }
+
+    .settingsSidebar.sidebarOpen {
+        right: 0;
+    }
+
+    .modeCard,
+    .difficultyCard {
+        width: 150px;
+    }
+}

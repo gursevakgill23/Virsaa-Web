@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar/Navbar';
@@ -32,7 +32,7 @@ import AudiobookDetail from './pages/Collections/AudiobookDetail/AudiobookDetail
 import Account from './pages/Profile/Account/Account';
 import Settings from './pages/Profile/Settings/Settings';
 import { WordSearchGamePlay } from './pages/Learning/Games/WordSearch/WordSearch';
-
+import MemoryMatch from './pages/Learning/Games/MemoryMatch/MemoryMatch';
 
 // Define your API base URL
 const API_STRING = "http://localhost:5118";
@@ -41,6 +41,7 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const location = useLocation(); // Get current route
 
   // Set theme based on cookie value on component mount
   useEffect(() => {
@@ -52,7 +53,6 @@ const App = () => {
       setIsDarkMode(false);
       document.documentElement.setAttribute('data-theme', 'light');
     }
-    
   }, []);
 
   // Function to toggle theme
@@ -65,7 +65,6 @@ const App = () => {
 
   const handleLoadingComplete = () => {
     setIsLoading(false);
-
   };
 
   const toggleSidebar = () => {
@@ -76,11 +75,13 @@ const App = () => {
     setIsSidebarOpen(false);
   };
 
+  // Check if current route is a game page
+  const isGamePage = location.pathname === '/learning/games/shabd-khoj' || 
+                    location.pathname === '/learning/games/memory-match';
+
   return (
     <AuthProvider>
-    <Router>
       <CssBaseline />
-      {/* ToastContainer should be placed here at the root level */}
       <ToastContainer
         position="top-center"
         autoClose={5000}
@@ -137,17 +138,22 @@ const App = () => {
             <Route path="/collections/authors/author/:id" element={<AuthorDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/audiobooks/audiobook/:id" element={<AudiobookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/learning/games/shabd-khoj" element={<WordSearchGamePlay isDarkMode={isDarkMode} apiString={API_STRING} />} />
-            
-
+            <Route path="/learning/games/memory-match" element={<MemoryMatch isDarkMode={isDarkMode} apiString={API_STRING} />} />
           </Routes>
-          <Footer isDarkMode={isDarkMode} apiString={API_STRING} />
+          {/* Conditionally render Footer, excluding game pages */}
+          {!isGamePage && <Footer isDarkMode={isDarkMode} apiString={API_STRING} />}
           <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />
-
         </>
       )}
-    </Router>
     </AuthProvider>
   );
 };
 
-export default App;
+// Wrap App with Router to provide useLocation context
+const AppWrapper = () => (
+  <Router>
+    <App />
+  </Router>
+);
+
+export default AppWrapper;

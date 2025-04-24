@@ -15,6 +15,7 @@
   justify-content: space-between;
   align-items: center;
   background: #212121;
+  height: 80px;
   padding: 0.5rem 1rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   position: sticky;
@@ -1905,9 +1906,26 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Adjust userInfo for better alignment with dropdown */
-.avatarContainer {
+/* Tab Navigation */
+.tabContainer {
+  display: none;
+}
+
+.tabButton {
+  background: #424242;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  color: #F5F5F5;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.tabButton:hover,
+.tabButton.activeTab {
+  background: #FFD700;
+  color: #212121;
 }
 
 /* Animations */
@@ -2052,6 +2070,22 @@
     gap: 0.25rem;
   }
 
+  .tabContainer {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .gameLayout {
+      overflow: hidden !important; /* Prevent scrolling in gameLayout */
+      flex-direction: column;
+      flex: 1; /* Allow gameLayout to take available space */
+    }  
+
+  .gameSidebar {
+    display: none;
+  }
+  
   .timeDisplay, .scoreDisplay, .coinDisplay {
     font-size: 0.9rem;
     padding: 0.4rem 0.8rem;
@@ -2257,7 +2291,12 @@
     display: none;
   }
 }
-
+@media(max-width:576px){
+  .tabButton{
+    padding: 0.5rem 0.65rem;
+    font-size: 12px;
+  }
+}
 
 @media (max-width: 480px) {
   .navbarBrand {
