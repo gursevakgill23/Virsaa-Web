@@ -219,7 +219,7 @@
   margin-top: 1rem;
 }
 .playableCard {
-  background: rgb(254, 233, 3);
+  background: #FFD700;
   padding: 10px;
   height: 500px;
   border-radius: 12px;
@@ -2297,7 +2297,7 @@
   }
 
   .mapImage {
-    height: 120px;
+    height: 150px;
   }
 
   .mapInfo h3 {
