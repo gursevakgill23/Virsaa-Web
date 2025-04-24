@@ -3,7 +3,7 @@
   position: relative;
   min-height: 100vh;
   background: linear-gradient(135deg, #1A237E 0%, rgba(0, 0, 0, 0.1) 100%);
-  padding: 0;
+  padding-bottom: 5rem;
   overflow-x: hidden;
   color: #F5F5F5;
   font-family: 'Poppins', sans-serif;

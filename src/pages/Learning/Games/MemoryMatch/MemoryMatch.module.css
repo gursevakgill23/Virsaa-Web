@@ -1,9 +1,4 @@
 /* Reset default browser styles */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
 
 button, input, select {
     font-family: 'Roboto', sans-serif;
@@ -17,6 +12,7 @@ button, input, select {
 /* Root container */
 .container {
     min-height: 100vh;
+    padding-bottom: 5rem;
     background: linear-gradient(135deg, #251a2e 0%, #16213E 100%);
     color: #E0E0E0;
     font-family: 'Roboto', sans-serif;
