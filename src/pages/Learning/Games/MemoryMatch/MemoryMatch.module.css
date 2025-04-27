@@ -80,6 +80,7 @@ body {
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
   position: sticky;
   top: 0;
+  height: 80px;
   z-index: 1000;
   animation: slideIn 0.6s ease-out;
 }
@@ -183,6 +184,9 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(100, 255, 218, 0.3);
+}
+.loginButton{
+  padding: 0.6rem 1.5rem;
 }
 
 .settingsButton:hover,
@@ -1141,6 +1145,7 @@ body {
 
 .navbarRight{
     flex-direction: row;
+    gap: 0.75rem;
 }
   
 .userInfo {
@@ -1178,7 +1183,7 @@ body {
   }
   .loginButton{
     font-size: 12px;
-    padding: 8px;
+    padding: 6px;
   }
 
   .selectionScreen {
@@ -1254,7 +1259,6 @@ body {
   .userInfo > span {
     font-size: 0.9rem;
   }
-
 
 
   .profileDropdown {
