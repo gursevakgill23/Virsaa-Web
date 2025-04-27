@@ -10,21 +10,43 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import foundSound from './assets/sounds/found.mp3';
 import achievementSound from './assets/sounds/level-up.mp3';
 import completeSound from './assets/sounds/complete.mp3';
-import userDefault from './assets/images/user-default.jpg';
-import vaisakhi from './assets/images/vaisakhi.jpg';
-import bhangra from './assets/images/bhangra.jpg';
-import giddha from './assets/images/giddha.jpg';
-import phulkari from './assets/images/phulkari.jpg';
-import lassi from './assets/images/lassi.jpg';
-import lohri from './assets/images/lohri.jpg';
-import basant from './assets/images/basant.jpg';
-import holi from './assets/images/holi.jpg';
-import diwali from './assets/images/diwali.jpg';
-import kangha from './assets/images/kangha.jpg';
-import kara from './assets/images/kara.jpg';
-import ik_onkar from './assets/images/basant.jpg';
-import khanda from './assets/images/khanda.jpg';
-import kirpan from './assets/images/kirpan.jpg';
+
+
+const userDefault = '/images/games/user-default.jpg';
+const vaisakhi = '/images/games/vaisakhi.jpg';
+const bhangra = '/images/games/bhangra.jpg';
+const giddha = '/images/games/giddha.jpg';
+const phulkari = '/images/games/phulkari.jpg';
+const lassi = '/images/games/lassi.jpg';
+const lohri = '/images/games/lohri.jpg';
+const basant = '/images/games/basant.jpg';
+const holi = '/images/games/holi.jpg';
+const diwali = '/images/games/diwali.jpg';
+const kangha = '/images/games/kangha.jpg';
+const kara = '/images/games/kara.jpg';
+const ik_onkar = '/images/games/basant.jpg';
+const khanda = '/images/games/khanda.jpg';
+const kirpan = '/images/games/kirpan.jpg';
+
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 
 // Initialize sound effects
 const sounds = {
@@ -104,6 +126,8 @@ const gameModes = [
 ];
 
 const MemoryMatch = () => {
+  const getImagePath = useProductionImagePath();
+
   const { isLoggedIn, userData, login, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -421,7 +445,7 @@ const MemoryMatch = () => {
         {isLoggedIn && userData ? (
           <div className={styles.userInfo}>
             <img
-              src={userData.avatar || userDefault}
+              src={getImagePath(userData.avatar || userDefault)}
               alt="User"
               className={styles.userAvatar}
               onClick={() => setShowProfileDropdown(!showProfileDropdown)}
@@ -449,7 +473,7 @@ const MemoryMatch = () => {
                   {editingProfile ? (
                     <div className={styles.profileEdit}>
                       <div className={styles.avatarUpload}>
-                        <img src={newAvatar} alt="User Avatar" className={styles.profileAvatar} />
+                        <img src={getImagePath(newAvatar)} alt="User Avatar" className={styles.profileAvatar} />
                         <input type="file" accept="image/*" onChange={handleAvatarChange} id="avatar-upload" />
                         <label htmlFor="avatar-upload">{language === 'punjabi' ? 'ਅਵਤਾਰ ਬਦਲੋ' : 'Change Avatar'}</label>
                       </div>
@@ -466,7 +490,7 @@ const MemoryMatch = () => {
                     </div>
                   ) : (
                     <div className={styles.profileInfo}>
-                      <img src={userData.avatar || userDefault} alt="User Avatar" className={styles.profileAvatar} />
+                      <img src={getImagePath(userData.avatar || userDefault)} alt="User Avatar" className={styles.profileAvatar} />
                       <h4>{userData.name || 'Virsaa Player'}</h4>
                       <button onClick={() => setEditingProfile(true)}>
                         <FaEdit /> {language === 'punjabi' ? 'ਸੋਧੋ' : 'Edit Profile'}
@@ -670,7 +694,7 @@ const MemoryMatch = () => {
                   <span className={styles.hiddenIcon}>?</span>
                 </div>
                 <div className={styles.cardBack}>
-                  <img src={card.image} alt={card.text} loading="lazy" />
+                  <img src={getImagePath(card.image)} alt={card.text} loading="lazy" />
                 </div>
               </div>
             </div>
@@ -713,7 +737,7 @@ const MemoryMatch = () => {
                 </div>
                 <div className={styles.cardBack}>
                   {card.type === 'image' ? (
-                    <img src={card.image} alt={card.text} loading="lazy" />
+                    <img src={getImagePath(card.image)} alt={card.text} loading="lazy" />
                   ) : (
                     <span>{language === 'punjabi' ? card.punjabiText : card.text}</span>
                   )}
@@ -739,7 +763,7 @@ const MemoryMatch = () => {
             topScorers.map((player, index) => (
               <div key={player.id} className={styles.leaderboardItem}>
                 <span>{index + 1}</span>
-                <img src={player.avatar} alt={player.name} />
+                <img src={getImagePath(player.avatar)} alt={player.name} />
                 <div>
                   <span>{player.name}</span>
                   <span>{player.score} pts</span>
@@ -819,7 +843,7 @@ const MemoryMatch = () => {
           <h2>{language === 'punjabi' ? 'ਕਾਰਡ ਜੋੜਾ' : 'Card Pair'}</h2>
           <div className={styles.cardPair}>
             <div className={styles.cardPreview}>
-              <img src={showCardModal.image} alt={showCardModal.text} loading="lazy" />
+              <img src={getImagePath(showCardModal.image)} alt={showCardModal.text} loading="lazy" />
             </div>
             <div className={styles.cardPreview}>
               <span>{language === 'punjabi' ? pairCard.punjabiText : pairCard.text}</span>

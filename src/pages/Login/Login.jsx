@@ -7,12 +7,33 @@ import styles from './Login.module.css';
 import { FaGoogle, FaFacebook, FaGamepad, FaCoins } from 'react-icons/fa';
 import latest_content from '../../images/Login/latest_content.jpg';
 import games from '../../images/Login/games.jpg';
-import formSideImage from '../../images/Login/right_section.png';
-import headerImageLight from '../../images/Login/background.jpeg';
-import headerImageDark from '../../images/Login/background-dark.jpeg';
 import { useAuth } from '../../context/AuthContext';
 
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const Login = ({ isDarkMode, apiString }) => {
+  const getImagePath = useProductionImagePath();
+
+  const formSideImage = '/images/Login/right_section.png';
+  const headerImageLight = '/images/Login/background.jpeg';
+  const headerImageDark = '/images/Login/background-dark.jpeg';
+
   const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
@@ -233,7 +254,7 @@ const Login = ({ isDarkMode, apiString }) => {
         {/* Right Section */}
         <div className={styles.rightSection}>
           <div className={styles.rightContent}>
-            <img src={formSideImage} alt="Side" className={styles.rightImage} />
+            <img src={getImagePath(formSideImage)} alt="Side" className={styles.rightImage} />
             <p className={styles.rightText}>
               Join our community and explore the latest content and games tailored just for you.
             </p>
@@ -250,7 +271,7 @@ const Login = ({ isDarkMode, apiString }) => {
         <div className={styles.cardGrid}>
           {latestContent.map((content) => (
             <div key={content.id} className={styles.card}>
-              <img src={content.image} alt={content.title} className={styles.cardImage} />
+              <img src={getImagePath(content.image)} alt={content.title} className={styles.cardImage} />
               <h3 className={styles.cardTitle}>{content.title}</h3>
               <p className={styles.cardDescription}>{content.description}</p>
             </div>
@@ -263,7 +284,7 @@ const Login = ({ isDarkMode, apiString }) => {
         <div className={styles.cardGrid}>
           {popularInKids.map((game) => (
             <div key={game.id} className={styles.card}>
-              <img src={game.image} alt={game.title} className={styles.cardImage} />
+              <img src={getImagePath(game.image)} alt={game.title} className={styles.cardImage} />
               <h3 className={styles.cardTitle}>{game.title}</h3>
               <p className={styles.cardInfo}>
                 <FaGamepad /> Level: {game.level}

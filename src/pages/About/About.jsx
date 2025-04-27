@@ -1,14 +1,34 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './About.module.css';
-import teamMember from '../../images/About/team-member.jpg';
-import headerDark from '../../images/About/header-image-dark.png';
-import headerLight from '../../images/About/header-image.jpg';
-import heritageImage from '../../images/About/heritage.jpg';
-import communityImage from '../../images/About/community.jpg';
-import digitizationImage from '../../images/About/digitization.jpg';
-
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const About = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
+  const teamMember = '../../images/About/team-member.jpg';
+  const headerDark = '../../images/About/header-image-dark.png';
+  const headerLight = '../../images/About/header-image.jpg';
+  const heritageImage = '../../images/About/heritage.jpg';
+  const communityImage = '../../images/About/community.jpg';
+  const digitizationImage = '../../images/About/digitization.jpg';
+
   const navigate = useNavigate();
 
   // Dynamic header image based on theme
@@ -76,7 +96,7 @@ const About = ({ isDarkMode }) => {
         <div className={`${styles.missionSection} ${styles.appearAnimation}`}>
           <h2 className={styles.sectionTitle}>Our Mission</h2>
           <div className={styles.missionContent}>
-            <img src={heritageImage} alt="Heritage" className={styles.missionImage} />
+            <img src={getImagePath(heritageImage)} alt="Heritage" className={styles.missionImage} />
             <div className={styles.missionText}>
               <p>
                 Our mission is to preserve the rich cultural and historical heritage of Sikhism and Punjab by digitizing rare texts, manuscripts, and artifacts. We aim to make these resources accessible to everyone, ensuring that future generations can learn from and appreciate this invaluable legacy.
@@ -89,7 +109,7 @@ const About = ({ isDarkMode }) => {
         <div className={`${styles.communitySection} ${styles.appearAnimation}`}>
           <h2 className={styles.sectionTitle}>Our Community</h2>
           <div className={styles.communityContent}>
-            <img src={communityImage} alt="Community" className={styles.communityImage} />
+            <img src={getImagePath(communityImage)} alt="Community" className={styles.communityImage} />
             <div className={styles.communityText}>
               <p>
                 Our community is at the heart of everything we do. From scholars and researchers to casual readers and history enthusiasts, we bring together people from all walks of life who share a common love for Punjabi and Sikh heritage. Join us in our mission to preserve and celebrate this rich cultural legacy.
@@ -136,7 +156,7 @@ const About = ({ isDarkMode }) => {
             { name: 'Navjot Singh', role: 'Community Manager', image: teamMember },
           ].map((member, index) => (
             <div key={index} className={styles.teamMember}>
-              <img src={member.image} alt={member.name} className={styles.memberImage} />
+              <img src={getImagePath(member.image)} alt={member.name} className={styles.memberImage} />
               <h3 className={styles.memberName}>{member.name}</h3>
               <p className={styles.memberRole}>{member.role}</p>
             </div>
@@ -148,7 +168,7 @@ const About = ({ isDarkMode }) => {
       <section className={`${styles.digitizationSection} ${styles.appearAnimation}`}>
         <h2 className={styles.sectionTitle}>Our Digitization Process</h2>
         <div className={styles.digitizationContent}>
-          <img src={digitizationImage} alt="Digitization" className={styles.digitizationImage} />
+          <img src={getImagePath(digitizationImage)} alt="Digitization" className={styles.digitizationImage} />
           <div className={styles.digitizationText}>
             <p>
               Our digitization process involves scanning, transcribing, and archiving rare manuscripts, books, and documents. We use state-of-the-art technology to ensure that these resources are preserved in high quality and made accessible to the public. Our team works tirelessly to ensure that every detail is captured accurately.

@@ -22,7 +22,7 @@ import levelUp from './assets/sounds/level-up.mp3';
 
 const playable1 = '/images/Learning/playables.jpg';
 const avatar = '/images/Learning/avatar.jpg';
-const userDefault = '/images/Learning/user-default.jpg';
+const userDefault = '/images/games/user-default.jpg';
 
 const useProductionImagePath = () => {
   return (imagePath) => {

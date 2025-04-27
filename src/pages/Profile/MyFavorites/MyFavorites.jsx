@@ -19,12 +19,33 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 
 // Import images
-import header_image_light from '../../../images/Profile/header-image.png';
-import header_image_dark from '../../../images/Profile/header-image-dark.png';
-import bookImage from '../../../images/Profile/book-image.jpg';
-import authorImage from '../../../images/Profile/author-image.jpg';
-
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const MyFavorites = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
+
+  const header_image_light = '/images/Profile/header-image.png';
+  const header_image_dark = '/images/Profile/header-image-dark.png';
+  const bookImage = '/images/Profile/book-image.jpg';
+  const authorImage = '/images/Profile/author-image.jpg';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [activeTab, setActiveTab] = useState('ebooks');
@@ -111,7 +132,7 @@ const MyFavorites = ({ isDarkMode }) => {
       {/* Header - Matches Gurbani page */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Favorites Header"
           className={styles.headerImage}
         />
@@ -446,7 +467,7 @@ const MyFavorites = ({ isDarkMode }) => {
 const EbookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
   <div className={styles.card}>
     <div className={styles.cardImageContainer}>
-      <img src={item.image} alt={item.title} className={styles.cardImage} />
+      <img src={useProductionImagePath(item.image)} alt={item.title} className={styles.cardImage} />
       <div className={styles.cardBadge}>Ebook</div>
       <div className={styles.cardMenuContainer}>
         <button className={styles.cardMenu} onClick={toggleMenu}>
@@ -482,7 +503,7 @@ const EbookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
 const AudiobookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
   <div className={styles.card}>
     <div className={styles.cardImageContainer}>
-      <img src={item.image} alt={item.title} className={styles.cardImage} />
+      <img src={useProductionImagePath(item.image)} alt={item.title} className={styles.cardImage} />
       <div className={styles.cardBadge}>Audiobook</div>
       <div className={styles.cardMenuContainer}>
         <button className={styles.cardMenu} onClick={toggleMenu}>
@@ -512,7 +533,7 @@ const AudiobookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
 const AuthorCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
   <div className={styles.authorCard}>
     <div className={styles.authorImageContainer}>
-      <img src={item.image} alt={item.name} className={styles.authorImage} />
+      <img src={useProductionImagePath(item.image)} alt={item.name} className={styles.authorImage} />
       <div className={styles.cardMenuContainer}>
         <button className={styles.cardMenu} onClick={toggleMenu}>
           <FiMoreVertical />
@@ -537,7 +558,7 @@ const AuthorCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
 const SavedCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
   <div className={styles.card}>
     <div className={styles.cardImageContainer}>
-      <img src={item.image} alt={item.title} className={styles.cardImage} />
+      <img src={useProductionImagePath(item.image)} alt={item.title} className={styles.cardImage} />
       <div className={styles.cardBadge}>{item.type}</div>
       <div className={styles.cardMenuContainer}>
         <button className={styles.cardMenu} onClick={toggleMenu}>

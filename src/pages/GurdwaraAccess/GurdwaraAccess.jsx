@@ -12,6 +12,25 @@ import iconShadowUrl from '../../images/gurdwaraAccess/marker-shadow.png';
 import { FaCaretRight, FaSearch, FaLocationArrow } from 'react-icons/fa';
 import gurdwaraHistoryImage from '../../images/gurdwaraAccess/gurdwara-history.jpg';
 
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -91,7 +110,9 @@ function deg2rad(deg) {
   return deg * (Math.PI / 180);
 }
 
+
 const GurdwaraAccess = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
@@ -379,7 +400,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
       {/* Header with image and text */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Gurdwara Header"
           className={styles.headerImage}
         />
@@ -561,7 +582,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
               <h2>History of {nearestGurdwara.name}</h2>
               <div className={styles.historyContent}>
                 <img
-                  src={gurdwaraHistoryImage}
+                  src={getImagePath(gurdwaraHistoryImage)}
                   alt="Gurdwara History"
                   className={styles.historyImage}
                 />

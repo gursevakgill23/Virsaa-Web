@@ -1,11 +1,32 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './History.module.css';
-import header_image_light from '../../../images/Profile/header-image.png';
-import header_image_dark from '../../../images/Profile/header-image-dark.png';
 import { FaTrash, FaCheckSquare, FaSquare, FaEllipsisV, FaSearch, FaList, FaNetworkWired } from 'react-icons/fa';
 
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const History = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
+  const header_image_light = '/images/Profile/header-image.png';
+  const header_image_dark = '/images/Profile/header-image-dark.png';
+
   const [userData] = useState({
     username: 'Jaspreet Singh',
     image: 'https://randomuser.me/api/portraits/men/32.jpg',
@@ -146,7 +167,7 @@ const History = ({ isDarkMode }) => {
       {/* Header - Matches Gurbani page */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="History Header"
           className={styles.headerImage}
         />
@@ -160,7 +181,7 @@ const History = ({ isDarkMode }) => {
       <div className={styles.mainContent}>
         {/* User Profile Section */}
         <div className={styles.profileSection}>
-          <img src={userData.image} alt="User" className={styles.profileImage} />
+          <img src={getImagePath(userData.image)} alt="User" className={styles.profileImage} />
           <h2 className={styles.username}>{userData.username}</h2>
           <span className={styles.membership}>{userData.membership}</span>
           <p className={styles.bio}>{userData.bio}</p>

@@ -6,10 +6,30 @@ import {
   FaCalendarAlt, FaHeart, FaPen 
 } from 'react-icons/fa';
 import styles from './MyProfile.module.css';
-import header_image_light from '../../../images/Gurbani/header-image.png';
-import header_image_dark from '../../../images/Gurbani/header-image-dark.png';
 
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const MyProfile = ({ isDarkMode }) => {
+  const header_image_light = '../../../images/Gurbani/header-image.png';
+  const header_image_dark = '../../../images/Gurbani/header-image-dark.png';
+  const getImagePath = useProductionImagePath();
   const [userData, setUserData] = useState({
     name: 'Jaspreet Singh',
     joinDate: 'Member since March 2021',
@@ -94,7 +114,7 @@ const MyProfile = ({ isDarkMode }) => {
       {/* Header - Matches Gurbani page */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Account Header"
           className={styles.headerImage}
         />
@@ -117,7 +137,7 @@ const MyProfile = ({ isDarkMode }) => {
         ) : (
           <div className={styles.avatarWrapper}>
             <img 
-              src="https://randomuser.me/api/portraits/men/32.jpg" 
+              src={getImagePath("https://randomuser.me/api/portraits/men/32.jpg")} 
               alt="User" 
               className={styles.avatar}
             />

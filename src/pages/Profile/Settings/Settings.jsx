@@ -6,10 +6,31 @@ import {
   FaChevronDown, FaChevronUp
 } from 'react-icons/fa';
 import styles from './Settings.module.css';
-import header_image_light from '../../../images/Profile/header-image.png';
-import header_image_dark from '../../../images/Profile/header-image-dark.png';
 
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const Settings = ({ isDarkMode, toggleTheme }) => {
+  const getImagePath = useProductionImagePath();
+  const header_image_light = '../../../images/Profile/header-image.png';
+  const header_image_dark = '../../../images/Profile/header-image-dark.png';
+
   const [activeTab, setActiveTab] = useState('general');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [notifications, setNotifications] = useState({
@@ -86,7 +107,7 @@ const Settings = ({ isDarkMode, toggleTheme }) => {
       {/* Header - Matches Gurbani page */}
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Settings Header"
           className={styles.headerImage}
         />

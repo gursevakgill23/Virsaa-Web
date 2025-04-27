@@ -3,30 +3,47 @@ import { useNavigate,Link } from 'react-router-dom';
 import { MdPlayArrow, MdClose } from "react-icons/md";
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext'; // Import your AuthContext
-
-
-// Light mode images
-import slide1Light from '../../images/header-slide1.jpg';
-import slide2Light from '../../images/header-slide2.jpg';
-import slide3Light from '../../images/header-slide3.jpg';
-
-// Dark mode images
-import slide1Dark from '../../images/header-slide1-dark.jpg';
-import slide2Dark from '../../images/header-slide2-dark.jpg';
-import slide3Dark from '../../images/header-slide3-dark.jpg';
-
-import book_image from '../../images/book-image.jpg';
-import audiobooks_kirtan from '../../images/audiobooks_kirtan.jpg';
-import learning_resources from '../../images/learning_resources.jpg';
-import games_quizzes from '../../images/games_quizzes.jpg';
-import sikh_history from '../../images/sikh_history.jpg';
-import recent_news from '../../images/recent_news.jpg';
-import gurbani from '../../images/gurbani.jpg';
-import heritage from '../../images/heritage.jpg';
 import styles from './Home.module.css';
 import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const Home = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
+  const slide1Light = '../../images/header-slide1.jpg';
+  const slide2Light = '../../images/header-slide2.jpg';
+  const slide3Light = '../../images/header-slide3.jpg';
+
+  // Dark mode images
+  const slide1Dark = '../../images/header-slide1-dark.jpg';
+  const slide2Dark = '../../images/header-slide2-dark.jpg';
+  const slide3Dark = '../../images/header-slide3-dark.jpg';
+
+  const book_image = '../../images/book-image.jpg';
+  const audiobooks_kirtan = '../../images/audiobooks_kirtan.jpg';
+  const learning_resources = '../../images/learning_resources.jpg';
+  const games_quizzes = '../../images/games_quizzes.jpg';
+  const sikh_history = '../../images/sikh_history.jpg';
+  const recent_news = '../../images/recent_news.jpg';
+  const gurbani = '../../images/gurbani.jpg';
+  const heritage = '../../images/heritage.jpg';
   const [imageIndex, setImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const imageRefs = useRef([]);
@@ -363,7 +380,7 @@ const hukamnamaData = {
                 <div className={styles.imageContainer}>
                   <img
                     ref={(el) => (imageRefs.current[index] = el)}
-                    src={book.image}
+                    src={getImagePath(book.image)}
                     alt={book.name}
                     className={styles.bookImage}
                   />
@@ -385,7 +402,7 @@ const hukamnamaData = {
         <h1 className={styles.heritageHeading}>Explore The Richness Of Punjabi & Sikh Heritage</h1>
         <div className={styles.heritageContainer}>
           <div className={styles.heritageImage}>
-            <img src={heritage} alt="Punjabi & Sikh Heritage" />
+            <img src={getImagePath(heritage)} alt="Punjabi & Sikh Heritage" />
           </div>
           <div className={styles.heritageContent}>
             <div className={styles.heritageItem}>
@@ -426,7 +443,7 @@ const hukamnamaData = {
           <Link to={'/collections'}>
           <div className={styles.card}>
             <div className={styles.cardImage}>
-              <img src={audiobooks_kirtan} alt="Audiobooks and Kirtan" />
+              <img src={getImagePath(audiobooks_kirtan)} alt="Audiobooks and Kirtan" />
               <div className={styles.cardOverlay}>
                 <h3>AUDIOBOOKS AND KIRTAN</h3>
                 <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
@@ -437,7 +454,7 @@ const hukamnamaData = {
           <Link to={'/learning'}>
           <div className={styles.card}>
             <div className={styles.cardImage}>
-              <img src={learning_resources} alt="Learning Resources" />
+              <img src={getImagePath(learning_resources)} alt="Learning Resources" />
               <div className={styles.cardOverlay}>
                 <h3>LEARNING RESOURCES</h3>
                 <p>Discover educational materials, books, and online courses to deepen your understanding of Punjabi culture and Sikh heritage.</p>
@@ -448,7 +465,7 @@ const hukamnamaData = {
           <Link to={'/learning'}>
           <div className={styles.card}>
             <div className={styles.cardImage}>
-              <img src={games_quizzes} alt="Games and Quizzes" />
+              <img src={getImagePath(games_quizzes)} alt="Games and Quizzes" />
               <div className={styles.cardOverlay}>
                 <h3>GAMES AND QUIZZES</h3>
                 <p>Engage in fun and interactive games and quizzes to test your knowledge of Punjabi culture and Sikh history.</p>
@@ -459,7 +476,7 @@ const hukamnamaData = {
           <div className={styles.card}>
           <Link to={'/sikh-history'}>
             <div className={styles.cardImage}>
-              <img src={sikh_history} alt="Sikh History" />
+              <img src={getImagePath(sikh_history)} alt="Sikh History" />
               <div className={styles.cardOverlay}>
                 <h3>SIKH HISTORY</h3>
                 <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
@@ -470,7 +487,7 @@ const hukamnamaData = {
           <div className={styles.card}>
           <Link to={'/news'}>
             <div className={styles.cardImage}>
-              <img src={recent_news} alt="Recent News" />
+              <img src={getImagePath(recent_news)} alt="Recent News" />
               <div className={styles.cardOverlay}>
                 <h3>RECENT NEWS</h3>
                 <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
@@ -482,7 +499,7 @@ const hukamnamaData = {
           <div className={styles.card}>
           <Link to={'/gurbani'}>
             <div className={styles.cardImage}>
-              <img src={gurbani} alt="Gurbani" />
+              <img src={getImagePath(gurbani)} alt="Gurbani" />
               <div className={styles.cardOverlay}>
                 <h3>GURBANI</h3>
                 <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>

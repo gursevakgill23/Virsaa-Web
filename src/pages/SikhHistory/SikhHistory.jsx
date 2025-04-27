@@ -1,14 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './SikhHistory.module.css';
-import header_image_light from '../../images/sikhHistory/header-image.png';
-import header_image_dark from '../../images/sikhHistory/header-image-dark.png';
-import filter_image from '../../images/sikhHistory/filter_image.jpeg';
-import sikh_history from '../../images/sikhHistory/sikh_history1.jpg';
-import book_image from '../../images/book-image.jpg';
-import inspiring_image from '../../images/sikhHistory/inspiring.jpg';
 import ComingSoon from '../../elements/ComingSoon/ComingSoon';
 
+const header_image_light = '/images/sikhHistory/header-image.png';
+const header_image_dark = '/images/sikhHistory/header-image-dark.png';
+const filter_image = '/images/sikhHistory/filter_image.jpeg';
+const sikh_history = '/images/sikhHistory/sikh_history1.jpg';
+const book_image = '/images/book-image.jpg';
+const inspiring_image = '/images/sikhHistory/inspiring.jpg';
+
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const scrollableImages = [
   { id: 1, src: filter_image, text: 'Guru Nanak Dev Ji' },
   { id: 2, src: filter_image, text: 'Foundation of Sikhism' },
@@ -57,6 +77,7 @@ const recommendedItems = [
 ];
 
 const SikhHistory = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const cardsPerPage = 12;
@@ -93,7 +114,7 @@ const SikhHistory = ({ isDarkMode }) => {
     <div className={styles.container}>
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Sikh History Header"
           className={styles.headerImage}
         />
@@ -118,7 +139,7 @@ const SikhHistory = ({ isDarkMode }) => {
         ) : (
           scrollableImages.map((item) => (
             <div key={item.id} className={styles.scrollableItem}>
-              <img src={item.src} alt={item.text} className={styles.scrollableImage} />
+              <img src={getImagePath(item.src)} alt={item.text} className={styles.scrollableImage} />
               <p className={styles.scrollableText}>{item.text}</p>
             </div>
           ))
@@ -150,7 +171,7 @@ const SikhHistory = ({ isDarkMode }) => {
                 <div className={styles.cardImageContainer}>
                   <img 
                     ref={(el) => (imageRefs.current[index] = el)}
-                    src={card.image} 
+                    src={getImagePath(card.image)} 
                     alt={card.title} 
                     className={styles.cardImage} 
                   />
@@ -184,7 +205,7 @@ const SikhHistory = ({ isDarkMode }) => {
           </div>
         ) : (
           <div className={styles.inspiringImageContainer}>
-            <img src={inspiring_image} alt="Most Inspiring in Sikhism" className={styles.inspiringImage} />
+            <img src={getImagePath(inspiring_image)} alt="Most Inspiring in Sikhism" className={styles.inspiringImage} />
           </div>
         )}
         <div className={styles.inspiringContent}>
@@ -218,7 +239,7 @@ const SikhHistory = ({ isDarkMode }) => {
           ) : (
             recommendedItems.map((item) => (
               <div key={item.id} className={styles.recommendedCard}>
-                <img src={item.image} alt={item.title} className={styles.recommendedImage} />
+                <img src={getImagePath(item.image)} alt={item.title} className={styles.recommendedImage} />
                 <h3 className={styles.recommendedTitle}>{item.title}</h3>
               </div>
             ))

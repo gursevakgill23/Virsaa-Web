@@ -2,17 +2,39 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link,useNavigate } from 'react-router-dom';
 import { FaCrown, FaSearch, FaFilter, FaTimes, FaPlayCircle, FaVideo, FaHeadphones, FaLock, FaMicrophone, FaPlay, FaPause, FaStepBackward, FaStepForward, FaVolumeUp, FaExpand } from 'react-icons/fa';
 import styles from './Gurbani.module.css';
-import header_image_light from '../../images/Gurbani/header-image.png';
-import header_image_dark from '../../images/Gurbani/header-image-dark.png';
-import gurbaniImage from '../../images/Gurbani/gurbani.png';
-import audioKirtanImage from '../../images/Gurbani/audio-kirtan.jpg';
-import videoKirtanImage from '../../images/Gurbani/video-kirtan.jpg';
-import sectionImage from '../../images/Gurbani/section-image.jpg';
-import bookImage from '../../images/Collections/book-image.jpg';
 import audioFile from "../../images/Gurbani/Nitnem.mp3";
 import videoFile from "../../images/Gurbani/Aarti.mp4";
 
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const Gurbani = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
+
+  const header_image_light = '/images/Gurbani/header-image.png';
+  const header_image_dark = '/images/Gurbani/header-image-dark.png';
+  const gurbaniImage = '/images/Gurbani/gurbani.png';
+  const audioKirtanImage = '/images/Gurbani/audio-kirtan.jpg';
+  const videoKirtanImage = '/images/Gurbani/video-kirtan.jpg';
+  const sectionImage = '/images/Gurbani/section-image.jpg';
+  const bookImage = '/images/Collections/book-image.jpg';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -413,7 +435,7 @@ const Gurbani = ({ isDarkMode }) => {
 
       <div className={styles.header}>
         <img
-          src={isDarkMode ? header_image_dark : header_image_light}
+          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Gurbani Header"
           className={styles.headerImage}
         />
@@ -552,7 +574,7 @@ const Gurbani = ({ isDarkMode }) => {
                       <div className={styles.premiumRibbon}>Premium</div>
                     </>
                   )}
-                  <img src={item.image} alt={item.title} className={styles.cardImage} />
+                  <img src={getImagePath(item.image)} alt={item.title} className={styles.cardImage} />
                   <h3 className={styles.cardTitle}>{item.title}</h3>
                   {item.isPremium && (
                     <div className={styles.premiumBadge}>
@@ -642,7 +664,7 @@ const Gurbani = ({ isDarkMode }) => {
             
             <div className={styles.mediaModalHeader}>
               <img 
-                src={bookImage} 
+                src={getImagePath(bookImage)} 
                 alt={currentMedia.title} 
                 className={styles.mediaModalImage}
               />
@@ -740,7 +762,7 @@ const Gurbani = ({ isDarkMode }) => {
           </div>
         ) : (
           <div className={styles.sectionImage}>
-            <img src={sectionImage} alt="Section" />
+            <img src={getImagePath(sectionImage)} alt="Section" />
           </div>
         )}
       </div>
