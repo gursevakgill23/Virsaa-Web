@@ -147,6 +147,9 @@ const MemoryMatch = () => {
   const timerRef = useRef(null);
   const countdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
+  // State for Music and Notifications
+  const [musicEnabled, setMusicEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   // Initialize cards (for playing phase)
   const initializeCards = () => {
@@ -505,59 +508,60 @@ const MemoryMatch = () => {
     </nav>
   );
 
-  // Render settings sidebar
-  const renderSettingsSidebar = () => (
-    <div className={`${styles.settingsSidebar} ${showSettings ? styles.sidebarOpen : ''}`}>
-      <div className={styles.sidebarHeader}>
-        <h2>{language === 'punjabi' ? 'ਸੈਟਿੰਗਾਂ' : 'Settings'}</h2>
-        <button onClick={() => setShowSettings(false)} className={styles.closeButton}>×</button>
+  
+  const renderSettingsSidebar = () => {
+    
+  
+    return (
+      <div className={`${styles.settingsSidebar} ${showSettings ? styles.sidebarOpen : ''}`}>
+        <div className={styles.sidebarHeader}>
+          <h2>{language === 'punjabi' ? 'ਸੈਟਿੰਗਾਂ' : 'Settings'}</h2>
+          <button onClick={() => setShowSettings(false)} className={styles.closeButton}>×</button>
+        </div>
+        <div className={styles.settingsContent}>
+          <label>
+            <input
+              type="checkbox"
+              checked={sounds.found.volume() > 0}
+              onChange={() => sounds.found.volume(sounds.found.volume() > 0 ? 0 : 1)}
+            />
+            <span>{language === 'punjabi' ? 'ਆਵਾਜ਼' : 'Sound'}</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={musicEnabled}
+              onChange={() => setMusicEnabled(!musicEnabled)}
+            />
+            <span>{language === 'punjabi' ? 'ਸੰਗੀਤ' : 'Music'}</span>
+          </label>
+          <label>
+            <span>{language === 'punjabi' ? 'ਥੀਮ' : 'Theme'}</span>
+            <select>
+              <option value="phulkari">Phulkari</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={notificationsEnabled}
+              onChange={() => setNotificationsEnabled(!notificationsEnabled)}
+            />
+            <span>{language === 'punjabi' ? 'ਸੂਚਨਾਵਾਂ' : 'Notifications'}</span>
+          </label>
+          <label>
+            <span>{language === 'punjabi' ? 'ਭਾਸ਼ਾ' : 'Language'}</span>
+            <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+              <option value="english">English</option>
+              <option value="punjabi">Punjabi</option>
+            </select>
+          </label>
+        </div>
       </div>
-      <div className={styles.settingsContent}>
-        <label className={styles.toggleLabel}>
-          <input
-            type="checkbox"
-            checked={sounds.found.volume() > 0}
-            onChange={() => sounds.found.volume(sounds.found.volume() > 0 ? 0 : 1)}
-          />
-          <span className={styles.toggleSwitch}></span>
-          <span>{language === 'punjabi' ? 'ਆਵਾਜ਼' : 'Sound'}</span>
-        </label>
-        <label className={styles.toggleLabel}>
-          <input
-            type="checkbox"
-            checked={true}
-            onChange={() => {}}
-          />
-          <span className={styles.toggleSwitch}></span>
-          <span>{language === 'punjabi' ? 'ਸੰਗੀਤ' : 'Music'}</span>
-        </label>
-        <label>
-          <span>{language === 'punjabi' ? 'ਥੀਮ' : 'Theme'}</span>
-          <select>
-            <option value="phulkari">Phulkari</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </label>
-        <label className={styles.toggleLabel}>
-          <input
-            type="checkbox"
-            checked={true}
-            onChange={() => {}}
-          />
-          <span className={styles.toggleSwitch}></span>
-          <span>{language === 'punjabi' ? 'ਸੂਚਨਾਵਾਂ' : 'Notifications'}</span>
-        </label>
-        <label>
-          <span>{language === 'punjabi' ? 'ਭਾਸ਼ਾ' : 'Language'}</span>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-            <option value="english">English</option>
-            <option value="punjabi">Punjabi</option>
-          </select>
-        </label>
-      </div>
-    </div>
-  );
+    );
+  };
   // Render coin shop modal
   const renderCoinShopModal = () => (
     <div className={styles.modalOverlay}>

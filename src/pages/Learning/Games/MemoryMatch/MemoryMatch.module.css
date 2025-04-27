@@ -12,9 +12,6 @@ button, input, select {
   font-family: 'Poppins', sans-serif;
   border: none;
   outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
   background: none;
 }
 
@@ -162,6 +159,7 @@ body {
   background: #112240;
   border-radius: 4px;
   overflow: hidden;
+  border: 1px solid white;
 }
 
 .progressBar > div {
@@ -429,9 +427,34 @@ body {
 .settingsContent input[type="checkbox"] {
   width: 20px;
   height: 20px;
-  accent-color: #64ffda;
   cursor: pointer;
   border: 2px solid #64ffda;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  outline: none;
+}
+
+.settingsContent input[type="checkbox"]:checked {
+  background: #64ffda;
+  border-color: #64ffda;
+}
+
+.settingsContent input[type="checkbox"]:checked::after {
+  content: '\2713';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.settingsContent input[type="checkbox"]:focus {
+  box-shadow: 0 0 5px rgba(100, 255, 218, 0.5);
 }
 
 .settingsContent select {
@@ -449,7 +472,6 @@ body {
 .settingsContent select:hover {
   box-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
 }
-
 /* Modals */
 .modalOverlay {
   position: fixed;
@@ -1153,6 +1175,10 @@ body {
 
   .settingsSidebar.sidebarOpen {
     right: 0;
+  }
+  .loginButton{
+    font-size: 12px;
+    padding: 8px;
   }
 
   .selectionScreen {
