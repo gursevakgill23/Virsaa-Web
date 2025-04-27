@@ -1255,14 +1255,10 @@ body {
     font-size: 0.9rem;
   }
 
-  .progressBar {
-    width: 80px;
-  }
 
   .settingsButton,
   .loginButton {
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
   }
 
   .profileDropdown {
