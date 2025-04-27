@@ -212,17 +212,17 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
           </div>
           
           <div className={styles.sidebarMenu}>
-            <Link to="/account" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+            <Link to="/my-profile" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
               <span>My Profile</span>
               <FaUser className={styles.sidebarMenuIcon} />
             </Link>
             
-            <Link to="/settings" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+            <Link to="/account-settings" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
               <span>Account Settings</span>
               <FaUserCog className={styles.sidebarMenuIcon} />
             </Link>
             
-            <Link to="/favorites" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
+            <Link to="/my-favorites" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
               <span>My Favorites</span>
               <FaHeart className={styles.sidebarMenuIcon} />
             </Link>

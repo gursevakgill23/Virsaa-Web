@@ -544,7 +544,7 @@
   }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
   .loginButton,.getPremiumButton {
     padding: 4px 8px;
     font-size: 0.65rem;

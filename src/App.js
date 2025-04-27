@@ -29,10 +29,13 @@ import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
 import AuthorDetail from './pages/Collections/AuthorDetail/AuthorDetail';
 import { AuthProvider } from './context/AuthContext';
 import AudiobookDetail from './pages/Collections/AudiobookDetail/AudiobookDetail';
-import Account from './pages/Profile/Account/Account';
-import Settings from './pages/Profile/Settings/Settings';
 import { WordSearchGamePlay } from './pages/Learning/Games/WordSearch/WordSearch';
 import MemoryMatch from './pages/Learning/Games/MemoryMatch/MemoryMatch';
+import MyProfile from './pages/Profile/MyProfile/MyProfile';
+import MyFavorites from './pages/Profile/MyFavorites/MyFavorites';
+import Settings from './pages/Profile/Settings/Settings';
+import History from './pages/Profile/History/History';
+import Notifications from './pages/Profile/Notifications/Notifications';
 
 // Define your API base URL
 const API_STRING = "http://localhost:5118";
@@ -131,8 +134,12 @@ const App = () => {
             <Route path="/gurdwara-access/history/:id" element={<GurdwaraHistory isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/news" element={<News isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/about" element={<About isDarkMode={isDarkMode} apiString={API_STRING} />} />
-            <Route path="/account" element={<Account isDarkMode={isDarkMode} apiString={API_STRING} />} />
-            <Route path="/settings" element={<Settings isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
+            <Route path="/my-profile" element={<MyProfile isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/account-settings" element={<Settings isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
+            <Route path="/my-favorites" element={<MyFavorites isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
+            <Route path="/history" element={<History isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
+            <Route path="/notifications" element={<Notifications isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
+
             <Route path="/quizzes/quizz/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/ebooks/ebook/:id" element={<EbookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/authors/author/:id" element={<AuthorDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />

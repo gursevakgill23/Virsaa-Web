@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import styles from './MemoryMatch.module.css';
 import { Howl } from 'howler';
-import { FaCoins, FaUser, FaSignInAlt, FaEdit, FaCreditCard, FaSignOutAlt, FaCog, FaPlay, FaList } from 'react-icons/fa';
+import { FaCoins, FaUser, FaSignInAlt, FaEdit, FaCreditCard, FaSignOutAlt, FaCog, FaPlay, FaList, FaClock, FaExchangeAlt, FaStar, FaTachometerAlt } from 'react-icons/fa';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
@@ -17,20 +17,14 @@ import giddha from './assets/images/giddha.jpg';
 import phulkari from './assets/images/phulkari.jpg';
 import lassi from './assets/images/lassi.jpg';
 import lohri from './assets/images/lohri.jpg';
-import basant from './assets/images/basant.jpg'
+import basant from './assets/images/basant.jpg';
 import holi from './assets/images/holi.jpg';
 import diwali from './assets/images/diwali.jpg';
 import kangha from './assets/images/kangha.jpg';
 import kara from './assets/images/kara.jpg';
-import ik_onkar from './assets/images/basant.jpg'
+import ik_onkar from './assets/images/basant.jpg';
 import khanda from './assets/images/khanda.jpg';
 import kirpan from './assets/images/kirpan.jpg';
-
-
-
-
-
-
 
 // Initialize sound effects
 const sounds = {
@@ -41,18 +35,18 @@ const sounds = {
 
 // Card sets
 const cardSets = {
-    festivals: [
-        { id: 1, image: vaisakhi, text: 'Vaisakhi', punjabiText: 'ਵਿਸਾਖੀ' },
-        { id: 2, image: lohri, text: 'Lohri', punjabiText: 'ਲੋਹੜੀ' },
-        { id: 3, image: basant, text: 'Basant', punjabiText: 'ਬਸੰਤ' },
-        { id: 4, image: holi, text: 'Holi', punjabiText: 'ਹੋਲੀ' },
-        { id: 5, image: diwali, text: 'Diwali', punjabiText: 'ਦੀਵਾਲੀ' },
-        { id: 6, image: bhangra, text: 'Bhangra', punjabiText: 'ਭੰਗੜਾ' },
-        { id: 7, image: giddha, text: 'Giddha', punjabiText: 'ਗਿੱਧਾ' },
-        { id: 8, image: phulkari, text: 'Phulkari', punjabiText: 'ਫੁਲਕਾਰੀ' },
-        { id: 9, image: lassi, text: 'Lassi', punjabiText: 'ਲੱਸੀ' },
-        { id: 10, image: bhangra, text: 'Bhangra', punjabiText: 'ਭੰਗੜਾ' },
-      ],
+  festivals: [
+    { id: 1, image: vaisakhi, text: 'Vaisakhi', punjabiText: 'ਵਿਸਾਖੀ' },
+    { id: 2, image: lohri, text: 'Lohri', punjabiText: 'ਲੋਹੜੀ' },
+    { id: 3, image: basant, text: 'Basant', punjabiText: 'ਬਸੰਤ' },
+    { id: 4, image: holi, text: 'Holi', punjabiText: 'ਹੋਲੀ' },
+    { id: 5, image: diwali, text: 'Diwali', punjabiText: 'ਦੀਵਾਲੀ' },
+    { id: 6, image: bhangra, text: 'Bhangra', punjabiText: 'ਭੰਗੜਾ' },
+    { id: 7, image: giddha, text: 'Giddha', punjabiText: 'ਗਿੱਧਾ' },
+    { id: 8, image: phulkari, text: 'Phulkari', punjabiText: 'ਫੁਲਕਾਰੀ' },
+    { id: 9, image: lassi, text: 'Lassi', punjabiText: 'ਲੱਸੀ' },
+    { id: 10, image: bhangra, text: 'Bhangra', punjabiText: 'ਭੰਗੜਾ' },
+  ],
   symbols: [
     { id: 6, image: khanda, text: 'Khanda', punjabiText: 'ਖੰਡਾ' },
     { id: 7, image: ik_onkar, text: 'Ik Onkar', punjabiText: 'ਇੱਕ ਓਅੰਕਾਰ' },
@@ -120,6 +114,7 @@ const MemoryMatch = () => {
   const [selectedCardSet, setSelectedCardSet] = useState('festivals');
   const [language, setLanguage] = useState('english');
   const [cards, setCards] = useState([]);
+  const [memorizeCards, setMemorizeCards] = useState([]);
   const [flippedCards, setFlippedCards] = useState([]);
   const [matchedPairs, setMatchedPairs] = useState([]);
   const [timeLeft, setTimeLeft] = useState(60);
@@ -146,10 +141,14 @@ const MemoryMatch = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showCoinShop, setShowCoinShop] = useState(false);
   const [chapter, setChapter] = useState(1);
+  const [showGameEndModal, setShowGameEndModal] = useState(false);
+  const [gameResult, setGameResult] = useState(null);
+  const [coinsEarned, setCoinsEarned] = useState(0);
   const timerRef = useRef(null);
+  const countdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
 
-  // Initialize cards
+  // Initialize cards (for playing phase)
   const initializeCards = () => {
     const cardCount = selectedDifficulty.cardCount;
     const selectedCards = cardSets[selectedCardSet].slice(0, cardCount / 2);
@@ -163,12 +162,26 @@ const MemoryMatch = () => {
       isFlipped: false,
       isMatched: false,
     }));
-    console.log('Initialized cards:', shuffledCards);
     setCards(shuffledCards);
     setTimeLeft(selectedDifficulty.timeLimit);
     setFlippedCards([]);
     setMatchedPairs([]);
     setScore(0);
+  };
+
+  // Initialize cards for memorization phase (only images)
+  const initializeMemorizeCards = () => {
+    const cardCount = selectedDifficulty.cardCount;
+    const selectedCards = cardSets[selectedCardSet].slice(0, cardCount / 2);
+    const imageCards = selectedCards.map((card, index) => ({
+      ...card,
+      type: 'image',
+      pairId: card.id,
+      id: index,
+      isFlipped: true,
+      isMatched: false,
+    }));
+    setMemorizeCards(imageCards);
   };
 
   // Start memorization phase
@@ -182,25 +195,21 @@ const MemoryMatch = () => {
 
   // Start memorization phase after story modal
   const startMemorizePhase = () => {
-    console.log('Starting memorize phase, gameState:', gameState);
     initializeCards();
+    initializeMemorizeCards();
     setShowStoryModal(false);
     setShowMemorizeScreen(true);
     setGameState('memorizing');
-    setTimeLeft(selectedDifficulty.timeLimit);
+    setTimeLeft(60);
+
     if (timerRef.current) clearInterval(timerRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        console.log('Time left:', prev);
-        if (prev <= 3 && selectedMode.id !== 'zen') {
-          clearInterval(timerRef.current);
-          setCountdown(3);
-          return prev;
-        }
         if (prev <= 0) {
           clearInterval(timerRef.current);
-          setShowMemorizeScreen(false);
-          setGameState('playing');
+          startPlayingPhase();
           return 0;
         }
         return prev - 1;
@@ -208,59 +217,81 @@ const MemoryMatch = () => {
     }, 1000);
   };
 
+  // Start playing phase
+  const startPlayingPhase = () => {
+    setShowMemorizeScreen(false);
+    setGameState('playing');
+    setCards(prev => prev.map(card => ({ ...card, isFlipped: false })));
+    setTimeLeft(selectedDifficulty.timeLimit);
+    setCountdown(3); // Always start with 3 seconds countdown
+  };
+
   // Handle game end with useCallback
   const handleGameEnd = useCallback((completed) => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+
+    const earned = completed ? 100 + Math.floor(timeLeft / 5) : 10; // Fewer coins for loss
+    setCoinsEarned(earned);
+    setCoins(prev => prev + earned);
+    setGameResult(completed ? 'win' : 'lose');
+
     if (completed) {
-      const coinsEarned = 100 + Math.floor(timeLeft / 5);
-      setCoins(prev => prev + coinsEarned);
       setChapter(prev => prev + 1);
-      if (isLoggedIn) {
-        const updatedUser = { ...userData, coins: coins + coinsEarned, xp: xp + 50 };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        login(userData.token, updatedUser);
-        setUserStats(prev => ({
-          ...prev,
-          totalMatches: prev.totalMatches + 1,
-          wins: prev.wins + 1,
-          totalCoinsWon: prev.totalCoinsWon + coinsEarned,
-          xp: prev.xp + 50,
-        }));
-      }
       sounds.complete.play();
     }
+
+    if (isLoggedIn) {
+      const updatedUser = { ...userData, coins: coins + earned, xp: xp + (completed ? 50 : 10) };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      login(userData.token, updatedUser);
+      setUserStats(prev => ({
+        ...prev,
+        totalMatches: prev.totalMatches + 1,
+        wins: completed ? prev.wins + 1 : prev.wins,
+        losses: completed ? prev.losses : prev.losses + 1,
+        totalCoinsWon: prev.totalCoinsWon + earned,
+        xp: prev.xp + (completed ? 50 : 10),
+      }));
+    }
+
+    setShowGameEndModal(true);
     setGameState('select');
+    setShowMemorizeScreen(false);
+    setCountdown(null);
   }, [isLoggedIn, userData, login, coins, xp, timeLeft]);
 
   // Handle countdown and game start
   useEffect(() => {
     if (countdown === null) return;
-    const timer = setTimeout(() => {
-      console.log('Countdown:', countdown);
-      if (countdown > 0) {
-        setCountdown(prev => prev - 1);
-      } else {
-        console.log('Starting game, gameState:', gameState);
-        setShowMemorizeScreen(false);
-        setGameState('playing');
-        setCountdown(null);
-        if (selectedMode.id !== 'zen') {
-          if (timerRef.current) clearInterval(timerRef.current);
-          timerRef.current = setInterval(() => {
-            setTimeLeft(prev => {
-              if (prev <= 0) {
-                clearInterval(timerRef.current);
-                handleGameEnd(false);
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
+
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 0) {
+          clearInterval(countdownRef.current);
+          setGameState('playing');
+          setCountdown(null);
+          if (selectedMode.id !== 'zen') {
+            if (timerRef.current) clearInterval(timerRef.current);
+            timerRef.current = setInterval(() => {
+              setTimeLeft(prev => {
+                if (prev <= 0) {
+                  clearInterval(timerRef.current);
+                  handleGameEnd(false);
+                  return 0;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+          }
+          return 0;
         }
-      }
+        return prev - 1;
+      });
     }, 1000);
-    return () => clearTimeout(timer);
-  }, [countdown, selectedMode.id, gameState, handleGameEnd]);
+
+    return () => clearInterval(countdownRef.current);
+  }, [countdown, selectedMode.id, handleGameEnd]);
 
   // Load data
   useEffect(() => {
@@ -296,26 +327,28 @@ const MemoryMatch = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Cleanup timer
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, []);
 
   // Handle card click
   const handleCardClick = (card) => {
-    console.log('Card clicked:', card, 'gameState:', gameState);
     if (gameState === 'memorizing') {
       setShowCardModal(card);
       setTimeout(() => setShowCardModal(null), 2000);
       return;
     }
     if (gameState !== 'playing' || card.isFlipped || card.isMatched || flippedCards.length >= 2) return;
+
     const newCards = cards.map(c => (c.id === card.id ? { ...c, isFlipped: true } : c));
     setCards(newCards);
     const newFlipped = [...flippedCards, card];
     setFlippedCards(newFlipped);
+
     if (newFlipped.length === 2) {
       const [first, second] = newFlipped;
       if (first.pairId === second.pairId && first.type !== second.type) {
@@ -343,7 +376,6 @@ const MemoryMatch = () => {
       localStorage.setItem('user', JSON.stringify(updatedUser));
       login(userData.token, updatedUser);
       setEditingProfile(false);
-      setShowProfileDropdown(false);
     }
   };
 
@@ -389,7 +421,7 @@ const MemoryMatch = () => {
               src={userData.avatar || userDefault}
               alt="User"
               className={styles.userAvatar}
-              onClick={() => setShowProfileDropdown(true)}
+              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
             />
             <span>{userData.name || 'Virsaa Player'}</span>
             <span className={styles.coins}>
@@ -424,8 +456,10 @@ const MemoryMatch = () => {
                         onChange={(e) => setNewName(e.target.value)}
                         placeholder={language === 'punjabi' ? 'ਨਵਾਂ ਨਾਮ' : 'New Name'}
                       />
-                      <button onClick={handleProfileUpdate}>{language === 'punjabi' ? 'ਸੰਭਾਲੋ' : 'Save'}</button>
-                      <button onClick={() => setEditingProfile(false)}>{language === 'punjabi' ? 'ਰੱਦ ਕਰੋ' : 'Cancel'}</button>
+                      <div className={styles.profileEditButtons}>
+                        <button onClick={handleProfileUpdate}>{language === 'punjabi' ? 'ਸੰਭਾਲੋ' : 'Save'}</button>
+                        <button onClick={() => setEditingProfile(false)}>{language === 'punjabi' ? 'ਰੱਦ ਕਰੋ' : 'Cancel'}</button>
+                      </div>
                     </div>
                   ) : (
                     <div className={styles.profileInfo}>
@@ -447,10 +481,10 @@ const MemoryMatch = () => {
                       </div>
                     </div>
                   )}
-                  <button onClick={() => setShowCoinShop(true)}>
-                    <FaCreditCard /> {language === 'punjabi' ? 'ਸਿੱਕੇ ਖਰੀਦੋ' : 'Coin Shop'}
+                  <button className={styles.actionButton}onClick={() => setShowCoinShop(true)}>
+                    <FaCreditCard /> {language === 'punjabi' ? 'ਸਿੱਕੇ ਖਰੀਦੋ' : 'Buy Coins'}
                   </button>
-                  <button onClick={logout}>
+                  <button className={styles.actionButton} onClick={logout}>
                     <FaSignOutAlt /> {language === 'punjabi' ? 'ਲੌਗਆਉਟ' : 'Logout'}
                   </button>
                 </div>
@@ -479,40 +513,43 @@ const MemoryMatch = () => {
         <button onClick={() => setShowSettings(false)} className={styles.closeButton}>×</button>
       </div>
       <div className={styles.settingsContent}>
-        <label>
+        <label className={styles.toggleLabel}>
           <input
             type="checkbox"
             checked={sounds.found.volume() > 0}
             onChange={() => sounds.found.volume(sounds.found.volume() > 0 ? 0 : 1)}
           />
-          {language === 'punjabi' ? 'ਆਵਾਜ਼' : 'Sound'}
+          <span className={styles.toggleSwitch}></span>
+          <span>{language === 'punjabi' ? 'ਆਵਾਜ਼' : 'Sound'}</span>
         </label>
-        <label>
+        <label className={styles.toggleLabel}>
           <input
             type="checkbox"
             checked={true}
             onChange={() => {}}
           />
-          {language === 'punjabi' ? 'ਸੰਗੀਤ' : 'Music'}
+          <span className={styles.toggleSwitch}></span>
+          <span>{language === 'punjabi' ? 'ਸੰਗੀਤ' : 'Music'}</span>
         </label>
         <label>
-          {language === 'punjabi' ? 'ਥੀਮ' : 'Theme'}
+          <span>{language === 'punjabi' ? 'ਥੀਮ' : 'Theme'}</span>
           <select>
             <option value="phulkari">Phulkari</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
         </label>
-        <label>
+        <label className={styles.toggleLabel}>
           <input
             type="checkbox"
             checked={true}
             onChange={() => {}}
           />
-          {language === 'punjabi' ? 'ਸੂਚਨਾਵਾਂ' : 'Notifications'}
+          <span className={styles.toggleSwitch}></span>
+          <span>{language === 'punjabi' ? 'ਸੂਚਨਾਵਾਂ' : 'Notifications'}</span>
         </label>
         <label>
-          {language === 'punjabi' ? 'ਭਾਸ਼ਾ' : 'Language'}
+          <span>{language === 'punjabi' ? 'ਭਾਸ਼ਾ' : 'Language'}</span>
           <select value={language} onChange={(e) => setLanguage(e.target.value)}>
             <option value="english">English</option>
             <option value="punjabi">Punjabi</option>
@@ -521,7 +558,6 @@ const MemoryMatch = () => {
       </div>
     </div>
   );
-
   // Render coin shop modal
   const renderCoinShopModal = () => (
     <div className={styles.modalOverlay}>
@@ -610,16 +646,13 @@ const MemoryMatch = () => {
       </div>
       <div className={styles.memorizeNotification}>
         <h2>{language === 'punjabi' ? 'ਸਾਰੇ ਕਾਰਡ ਯਾਦ ਕਰੋ' : 'Memorize all the cards'}</h2>
-        <button className={styles.startButton} onClick={() => {
-          console.log('Start button clicked, ending memorize phase');
-          setShowMemorizeScreen(false);
-        }}>
+        <button className={styles.startButton} onClick={startPlayingPhase}>
           {language === 'punjabi' ? 'ਸ਼ੁਰੂ' : 'Start'}
         </button>
       </div>
       <div className={styles.cardGrid}>
-        {cards.length > 0 ? (
-          cards.map(card => (
+        {memorizeCards.length > 0 ? (
+          memorizeCards.map(card => (
             <div
               key={card.id}
               className={`${styles.card} ${card.isFlipped ? styles.flipped : ''} ${card.isMatched ? styles.matched : ''}`}
@@ -630,14 +663,10 @@ const MemoryMatch = () => {
             >
               <div className={styles.cardInner}>
                 <div className={styles.cardFront}>
-                  <img src={card.image} alt={card.text} loading="lazy" />
+                  <span className={styles.hiddenIcon}>?</span>
                 </div>
                 <div className={styles.cardBack}>
-                  {card.type === 'image' ? (
-                    <img src={card.image} alt={card.text} loading="lazy" />
-                  ) : (
-                    <span>{language === 'punjabi' ? card.punjabiText : card.text}</span>
-                  )}
+                  <img src={card.image} alt={card.text} loading="lazy" />
                 </div>
               </div>
             </div>
@@ -660,7 +689,7 @@ const MemoryMatch = () => {
           <FaList /> {language === 'punjabi' ? 'ਨਿਯਮ' : 'Rules'}
         </button>
         <div className={styles.timer}>
-          {language === 'punjabi' ? 'ਸਕੋਰ: ' : 'Score: '} {score}
+          {language === 'punjabi' ? 'ਸਮਾਂ: ' : 'Time: '} {timeLeft}s | {language === 'punjabi' ? 'ਸਕੋਰ: ' : 'Score: '} {score}
         </div>
       </div>
       <div className={styles.cardGrid}>
@@ -676,7 +705,7 @@ const MemoryMatch = () => {
             >
               <div className={styles.cardInner}>
                 <div className={styles.cardFront}>
-                  <img src={card.image} alt={card.text} loading="lazy" />
+                  <span className={styles.hiddenIcon}>?</span>
                 </div>
                 <div className={styles.cardBack}>
                   {card.type === 'image' ? (
@@ -749,16 +778,16 @@ const MemoryMatch = () => {
     </div>
   );
 
-  // Render rules modal
+  // Render rules modal with icons
   const renderRulesModal = () => (
     <div className={styles.modalOverlay}>
       <div className={styles.modal}>
         <h2>{language === 'punjabi' ? 'ਨਿਯਮ' : 'Rules'}</h2>
         <ul>
-          <li>{language === 'punjabi' ? '1 ਮਿੰਟ ਵਿੱਚ ਸਾਰੇ ਕਾਰਡ ਯਾਦ ਕਰੋ।' : 'Memorize all cards in 1 minute.'}</li>
-          <li>{language === 'punjabi' ? 'ਚਿੱਤਰ ਅਤੇ ਟੈਕਸਟ ਕਾਰਡਾਂ ਨੂੰ ਮੇਲ ਕਰੋ।' : 'Match image and text cards.'}</li>
-          <li>{language === 'punjabi' ? 'ਸਕੋਰ ਅਤੇ ਸਿੱਕੇ ਕਮਾਓ।' : 'Earn score and coins.'}</li>
-          <li>{language === 'punjabi' ? 'ਟਾਈਮ ਅਟੈਕ ਵਿੱਚ ਤੇਜ਼ੀ ਨਾਲ ਜੋੜੀਆਂ ਲੱਭੋ।' : 'Find pairs quickly in Time Attack.'}</li>
+          <li><FaClock className={styles.ruleIcon} /> {language === 'punjabi' ? '1 ਮਿੰਟ ਵਿੱਚ ਸਾਰੇ ਕਾਰਡ ਯਾਦ ਕਰੋ।' : 'Memorize all cards in 1 minute.'}</li>
+          <li><FaExchangeAlt className={styles.ruleIcon} /> {language === 'punjabi' ? 'ਚਿੱਤਰ ਅਤੇ ਟੈਕਸਟ ਕਾਰਡਾਂ ਨੂੰ ਮੇਲ ਕਰੋ।' : 'Match image and text cards.'}</li>
+          <li><FaStar className={styles.ruleIcon} /> {language === 'punjabi' ? 'ਸਕੋਰ ਅਤੇ ਸਿੱਕੇ ਕਮਾਓ।' : 'Earn score and coins.'}</li>
+          <li><FaTachometerAlt className={styles.ruleIcon} /> {language === 'punjabi' ? 'ਟਾਈਮ ਅਟੈਕ ਵਿੱਚ ਤੇਜ਼ੀ ਨਾਲ ਜੋੜੀਆਂ ਲੱਭੋ।' : 'Find pairs quickly in Time Attack.'}</li>
         </ul>
         <button onClick={() => setShowRulesModal(false)}>{language === 'punjabi' ? 'ਬੰਦ ਕਰੋ' : 'Close'}</button>
       </div>
@@ -779,7 +808,7 @@ const MemoryMatch = () => {
   // Render card preview modal
   const renderCardModal = () => {
     if (!showCardModal) return null;
-    const pairCard = cards.find(c => c.pairId === showCardModal.pairId && c.type !== showCardModal.type);
+    const pairCard = cards.find(c => c.pairId === showCardModal.pairId && c.type === 'text');
     return (
       <div className={styles.modalOverlay}>
         <div className={styles.modal}>
@@ -797,6 +826,31 @@ const MemoryMatch = () => {
       </div>
     );
   };
+
+  // Render game end modal
+  const renderGameEndModal = () => (
+    <div className={styles.modalOverlay}>
+      <div className={`${styles.modal} ${gameResult === 'win' ? styles.winModal : styles.loseModal}`}>
+        <h2>
+          {gameResult === 'win'
+            ? (language === 'punjabi' ? 'ਵਧਾਈਆਂ!' : 'Congratulations!')
+            : (language === 'punjabi' ? 'ਅਫਸੋਸ! ਅਗਲੀ ਵਾਰ ਬਿਹਤਰ ਕਿਸਮਤ' : 'Sorry! Better Luck Next Time')}
+        </h2>
+        <p>
+          {gameResult === 'win'
+            ? (language === 'punjabi' ? 'ਤੁਸੀਂ ਸਾਰੇ ਜੋੜੇ ਮਿਲਾ ਲਏ ਹਨ!' : 'You have matched all pairs!')
+            : (language === 'punjabi' ? 'ਤੁਸੀਂ ਸਮਾਂ ਸਮਾਪਤ ਹੋਣ ਤੋਂ ਪਹਿਲਾਂ ਜੋੜੇ ਨਹੀਂ ਮਿਲਾਏ।' : 'You didn’t match all pairs before time ran out.')}
+        </p>
+        <div className={styles.coinsInfo}>
+          <p>{language === 'punjabi' ? `ਕਮਾਏ ਸਿੱਕੇ: ${coinsEarned}` : `Coins Earned: ${coinsEarned}`}</p>
+          <p>{language === 'punjabi' ? `ਕੁੱਲ ਸਿੱਕੇ: ${coins}` : `Total Coins: ${coins}`}</p>
+        </div>
+        <button onClick={() => setShowGameEndModal(false)}>
+          {language === 'punjabi' ? 'ਬੰਦ ਕਰੋ' : 'Close'}
+        </button>
+      </div>
+    </div>
+  );
 
   // Render login modal
   const renderLoginModal = () => (
@@ -822,11 +876,12 @@ const MemoryMatch = () => {
       {showCoinShop && renderCoinShopModal()}
       {gameState === 'select' && renderSelectionScreen()}
       {showMemorizeScreen && renderMemorizeScreen()}
-      {gameState === 'playing' && !showMemorizeScreen && renderGameScreen()}
+      {gameState === 'playing' && !showMemorizeScreen && renderGameScreen()} 
       {showStoryModal && renderStoryModal()}
       {showRulesModal && renderRulesModal()}
       {showHowToPlay && renderHowToPlayModal()}
       {showCardModal && renderCardModal()}
+      {showGameEndModal && renderGameEndModal()}
       {showLoginModal && renderLoginModal()}
     </div>
   );

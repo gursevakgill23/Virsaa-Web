@@ -5,11 +5,11 @@ import {
   FaCloud, FaEdit, FaSave, FaTimes, FaVenusMars,
   FaCalendarAlt, FaHeart, FaPen 
 } from 'react-icons/fa';
-import styles from './Account.module.css';
+import styles from './MyProfile.module.css';
 import header_image_light from '../../../images/Gurbani/header-image.png';
 import header_image_dark from '../../../images/Gurbani/header-image-dark.png';
 
-const Account = ({ isDarkMode }) => {
+const MyProfile = ({ isDarkMode }) => {
   const [userData, setUserData] = useState({
     name: 'Jaspreet Singh',
     joinDate: 'Member since March 2021',
@@ -421,4 +421,4 @@ const StatBox = ({ icon, title, value, loading }) => {
   );
 };
 
-export default Account;
+export default MyProfile;

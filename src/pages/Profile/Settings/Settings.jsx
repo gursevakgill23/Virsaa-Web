@@ -6,8 +6,8 @@ import {
   FaChevronDown, FaChevronUp
 } from 'react-icons/fa';
 import styles from './Settings.module.css';
-import header_image_light from '../../../images/Gurbani/header-image.png';
-import header_image_dark from '../../../images/Gurbani/header-image-dark.png';
+import header_image_light from '../../../images/Profile/header-image.png';
+import header_image_dark from '../../../images/Profile/header-image-dark.png';
 
 const Settings = ({ isDarkMode, toggleTheme }) => {
   const [activeTab, setActiveTab] = useState('general');

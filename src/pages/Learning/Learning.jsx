@@ -96,14 +96,14 @@ const Learning = ({ isLoggedIn, isDarkMode }) => {
       title: 'Punjabi Puzzle', 
       description: 'Solve fun puzzles.', 
       image: learningCarousel,
-      link: '/' 
+      link: '/learning/games/memory-match' 
     },
     { 
       id: 22, 
       title: 'Sikhism Memory Match', 
       description: 'Match terms.', 
       image: gameTurnCard,
-      link: '/' 
+      link: '/learning/games/memory-match' 
     },
     { 
       id: 23, 
