@@ -1256,10 +1256,6 @@ body {
   }
 
 
-  .settingsButton,
-  .loginButton {
-    font-size: 0.75rem;
-  }
 
   .profileDropdown {
     padding: 1rem;
