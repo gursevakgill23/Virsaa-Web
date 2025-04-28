@@ -692,7 +692,7 @@ body {
 .optionGroup h3 {
   font-size: 1.8rem;
   color: #64ffda;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 
 .modeOptions,
@@ -1199,7 +1199,7 @@ body {
     grid-template-columns: 1fr;
   }
   .startButton{
-    margin-top: 10px;
+    margin-top: 1.75rem;
   }
 
   .cardGrid {
@@ -1216,15 +1216,19 @@ body {
   }
   .countdown{
     left: 20%;
+    font-size: 2.25rem;
+  }
+  .selectionOptions{
+    gap: 1rem;
+  }
+  .optionGroup{
+    margin-bottom: 0;
   }
 
   .sidePanels {
     grid-template-columns: 1fr;
   }
 
-  .countdown {
-    font-size: 3rem;
-  }
 
   .modal {
     width: 95%;
@@ -1299,7 +1303,7 @@ body {
   }
 
   .timer {
-    font-size: 0.75rem;
+    font-size: 1.2;
     padding: 0.6rem 1rem;
   }
 

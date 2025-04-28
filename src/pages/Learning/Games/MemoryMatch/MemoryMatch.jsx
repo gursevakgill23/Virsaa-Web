@@ -466,7 +466,7 @@ const MemoryMatch = () => {
             {showProfileDropdown && (
               <div className={styles.profileDropdown} ref={profileDropdownRef}>
                 <div className={styles.profileHeader}>
-                  <h3>{language === 'punjabi' ? 'ਪ੍ਰੋਫਾਈਲ' : 'Profile'}</h3>
+                  <h3>{language === 'punjabi' ? 'ਪ੍ਰੋਫਾਈਲ' : 'Game Profile'}</h3>
                   <button onClick={() => setShowProfileDropdown(false)} className={styles.closeButton}>×</button>
                 </div>
                 <div className={styles.profileContent}>

@@ -1,12 +1,15 @@
-/* Base Styles */
+/* Base Styles with Colorful Theme */
 .quizzContainer {
   background-color: var(--section-bg-color);
   color: var(--text-color);
   min-height: 100vh;
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(255, 200, 124, 0.05) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(100, 210, 255, 0.05) 0%, transparent 20%);
 }
 
-/* Header Section */
+/* Animated Gradient Header Section */
 .headerSection {
   height: 400px;
   background-size: cover;
@@ -15,84 +18,178 @@
   align-items: center;
   padding: 2rem;
   position: relative;
+  overflow: hidden;
+}
+
+.headerSection::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(255, 105, 180, 0.15) 0%, 
+    rgba(100, 210, 255, 0.15) 50%, 
+    rgba(124, 252, 0, 0.15) 100%);
+  z-index: 0;
+  animation: gradientShift 15s ease infinite;
+  background-size: 200% 200%;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .textOverlay {
   color: var(--text-color);
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .headerTitle {
   font-size: 3rem;
   margin-bottom: 1rem;
-  color: var(--headline-color);
+  color: #FF6B6B;
+  background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+  from { text-shadow: 0 0 5px rgba(255, 107, 107, 0.3); }
+  to { text-shadow: 0 0 15px rgba(255, 107, 107, 0.6); }
 }
 
 .headerDescription {
   font-size: 1.2rem;
   margin-bottom: 2rem;
   color: var(--text-color);
+  max-width: 600px;
+  line-height: 1.6;
 }
 
 .headerButton {
   padding: 0.75rem 1.5rem;
-  background: var(--button-bg-color);
-  color: var(--button-text-color);
+  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+  color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 25px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+  position: relative;
+  overflow: hidden;
 }
 
 .headerButton:hover {
-  background: var(--button-hover-bg-color);
-  color: var(--button-hover-text-color);
-  border: 1px solid var(--button-hover-text-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
-/* Breadcrumb Section */
+.headerButton:active {
+  transform: translateY(0);
+}
+
+.headerButton::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, #FF8E53, #FF6B6B);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.headerButton:hover::after {
+  opacity: 1;
+}
+
+/* Animated Breadcrumb Section */
 .breadcrumb {
   font-size: 1rem;
-  color: var(--secondary-text-color);
+  color: var(--text-color);
   margin: 2rem;
-  background: var(--section-bg-color);
-  padding: 10px;
-  border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg-color);
+  padding: 12px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+}
+
+.breadcrumb:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .breadcrumb span {
-  color: var(--text-color);
+  color: var(--primary-color);
   cursor: pointer;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
-a {
-  text-decoration: none;
-  list-style: none;
+.breadcrumb span:hover {
+  color: #FF6B6B;
 }
 
-/* Quiz Dropdown */
+.breadcrumb span:not(:last-child)::after {
+  content: '›';
+  margin: 0 10px;
+  color: #6c757d;
+}
+
+/* Vibrant Quiz Dropdown */
 .quizDropdownContainer {
   padding: 1rem 2rem;
 }
 
 .quizDropdown {
-  padding: 0.5rem;
-  background: var(--section-bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
-  color: var(--text-color);
+  padding: 0.75rem 1rem;
+  background: var(--card-bg-color);
+  border: 2px solid #4ECDC4;
+  border-radius: 8px;
+  color: var(--secondary-color);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(78, 205, 196, 0.2);
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234ECDC4'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
 }
 
-/* Main Content */
+.quizDropdown:focus {
+  outline: none;
+  border-color: #FF6B6B;
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
+}
+
+/* Main Content with Floating Effect */
 .mainContent {
   display: flex;
   gap: 5rem;
   padding: 2rem;
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .quizSection {
   flex: 2;
+  animation: slideInLeft 0.6s ease-out;
 }
 
 .sidebar {
@@ -100,25 +197,52 @@ a {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  animation: slideInRight 0.6s ease-out;
 }
 
-/* Question Section */
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Question Section with Card Flip Effect */
 .questionSection {
-  background: var(--section-bg-color);
-  padding: 1.5rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg-color);
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s ease;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.questionSection:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
 }
 
 .questionNumber {
   font-size: 1.2rem;
-  color: var(--secondary-text-color);
+  color: var(--text-color);
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  background: var(--card-bg-color);
+  border-radius: 20px;
 }
 
 .questionText {
   font-size: 1.5rem;
-  margin: 1rem 0;
+  margin: 1.5rem 0;
   color: var(--text-color);
+  line-height: 1.4;
+  font-weight: 600;
 }
 
 .options {
@@ -128,55 +252,102 @@ a {
 }
 
 .optionButton {
-  padding: 1rem;
-  background: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
+  padding: 1.2rem;
+  background: var(--card-bg-color);
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
   color: var(--text-color);
+  font-size: 1.1rem;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
 }
 
 .optionButton:hover {
-  background: var(--section-bg-color);
+  border-color: #4ECDC4;
+  transform: translateX(5px);
 }
 
-/* Navigation Buttons */
+.optionButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(100, 210, 255, 0.1), transparent);
+  transition: all 0.6s ease;
+}
+
+.optionButton:hover::before {
+  left: 100%;
+}
+
+/* Navigation Buttons with Hover Effect */
 .navigationButtons {
   display: flex;
   justify-content: space-between;
-  margin-top: 1rem;
+  margin-top: 2rem;
 }
 
 .prevButton,
 .nextButton,
 .submitButton {
-  padding: 0.5rem 1rem;
-  background: var(--button-bg-color);
-  color: var(--button-text-color);
+  padding: 0.8rem 1.8rem;
   border: none;
-  border-radius: 5px;
+  border-radius: 50px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  font-size: 1rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.prevButton {
+  background: linear-gradient(45deg, #6c757d, #adb5bd);
+  color: white;
+}
+
+.nextButton {
+  background: linear-gradient(45deg, #4ECDC4, #88d8c0);
+  color: white;
+}
+
+.submitButton {
+  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+  color: white;
 }
 
 .prevButton:hover,
 .nextButton:hover,
 .submitButton:hover {
-  background: var(--button-hover-bg-color);
-  color: var(--button-hover-text-color);
-  border: 1px solid var(--button-hover-text-color);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.prevButton:active,
+.nextButton:active,
+.submitButton:active {
+  transform: translateY(0);
 }
 
 .prevButton:disabled,
 .nextButton:disabled {
-  background: var(--secondary-text-color);
+  background: #e9ecef;
+  color: #adb5bd;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-/* Today's Top Scorers Section */
+/* Today's Top Scorers Section with Medal Colors */
 .topScorersSection {
   margin-top: 2rem;
+  animation: fadeInUp 0.6s ease-out;
 }
 
 .scorersList {
@@ -187,226 +358,336 @@ a {
 
 .scorerCard {
   background: var(--card-bg-color);
-  padding: 1rem;
+  padding: 1.2rem;
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: all 0.3s ease;
+  border-left: 4px solid #4ECDC4;
+}
+
+.scorerCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.scorerCard:nth-child(1) {
+  border-left-color: #FFD700; /* Gold */
+}
+
+.scorerCard:nth-child(2) {
+  border-left-color: #C0C0C0; /* Silver */
+}
+
+.scorerCard:nth-child(3) {
+  border-left-color: #CD7F32; /* Bronze */
 }
 
 .scorerName {
   font-size: 1.2rem;
-  color: var(--text-color);
+  color: #343a40;
+  font-weight: 500;
 }
 
 .scorerScore {
   font-size: 1rem;
-  color: var(--secondary-text-color);
+  color: var(--text-color);
+  font-weight: bold;
+  background: var(--section-bg-color);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
 }
 
-/* Sidebar Sections */
+/* Sidebar Sections with Floating Cards */
 .sidebarTitle {
   font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: var(--headline-color);
-  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #FF6B6B;
+  position: relative;
+  display: inline-block;
+}
+
+.sidebarTitle::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
+  border-radius: 3px;
 }
 
 .tournamentCard,
 .badgeCard {
   background: var(--card-bg-color);
-  padding: 1rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1rem;
+  padding: 1.5rem;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1.5rem;
+  transition: all 0.4s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.tournamentCard:hover,
+.badgeCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
 
 .tournamentTitle,
 .badgeTitle {
   font-size: 1.2rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.8rem;
   color: var(--text-color);
+  font-weight: 600;
 }
 
 .tournamentTime,
 .tournamentParticipants,
 .badgeDescription {
   font-size: 1rem;
-  color: var(--secondary-text-color);
+  color: #6c757d;
+  line-height: 1.5;
+  margin-bottom: 1.2rem;
 }
 
 .joinButton {
-  padding: 0.5rem 1rem;
-  background: var(--button-bg-color);
-  color: var(--button-text-color);
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(45deg, #4ECDC4, #88d8c0);
+  color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 50px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(78, 205, 196, 0.3);
 }
 
 .joinButton:hover {
-  background: var(--button-hover-bg-color);
-  color: var(--button-hover-text-color);
-  border: 1px solid var(--button-hover-text-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(78, 205, 196, 0.4);
 }
 
-/* Discussion Post Section */
+/* Discussion Post Section with Interactive Elements */
 .discussionSection {
   padding: 2rem;
   background: var(--section-bg-color);
   width: 100%;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  margin-top: 2rem;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .discussionTitle {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: var(--headline-color);
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  color: #FF6B6B;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.discussionTitle::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
+  border-radius: 3px;
 }
 
 .newPostForm {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 1.2rem;
+  margin-bottom: 2.5rem;
 }
 
 .newPostTextarea {
-  padding: 1rem;
-  background: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
+  padding: 1.2rem;
+  background: var(--card-bg-color);
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
   color: var(--text-color);
   resize: vertical;
-  min-height: 100px;
+  min-height: 120px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.newPostTextarea:focus {
+  outline: none;
+  border-color: #4ECDC4;
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.2);
 }
 
 .postButton {
-  padding: 0.5rem 1rem;
-  background: var(--button-bg-color);
-  color: var(--button-text-color);
+  padding: 0.8rem 2rem;
+  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+  color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 50px;
   cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
   align-self: flex-start;
-  transition: background 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
 }
 
 .postButton:hover {
-  background: var(--button-hover-bg-color);
-  color: var(--button-hover-text-color);
-  border: 1px solid var(--button-hover-text-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
 .postCard {
   background: var(--card-bg-color);
-  padding: 1.5rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.5rem;
+  padding: 1.8rem;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.postCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
 }
 
 .postHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
 }
 
 .postAuthor {
   font-size: 1.2rem;
   color: var(--text-color);
+  font-weight: 600;
 }
 
 .postTimestamp {
   font-size: 0.9rem;
-  color: var(--secondary-text-color);
+  color: #6c757d;
+  font-style: italic;
 }
 
 .postContent {
-  font-size: 1rem;
-  color: var(--text-color);
-  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #495057;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
 }
 
 .replies {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   padding-left: 2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
+  border-left: 3px solid #e9ecef;
 }
 
 .replyCard {
-  background: var(--background-color);
-  padding: 1rem;
-  border-radius: 5px;
-  margin-bottom: 1rem;
+  background: var(--section-bg-color);
+  padding: 1.2rem;
+  border-radius: 10px;
+  margin-bottom: 1.2rem;
   width: 100%;
+  transition: all 0.3s ease;
+}
+
+.replyCard:hover {
+  background: var(--card-bg-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
 }
 
 .replyForm {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 1.2rem;
 }
 
 .replyTextarea {
-  padding: 0.5rem;
-  background: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
-  color: var(--text-color);
+  padding: 0.8rem;
+  background: var(--section-bg-color);
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  color: #495057;
   resize: vertical;
-  min-height: 60px;
+  min-height: 80px;
+  transition: all 0.3s ease;
+}
+
+.replyTextarea:focus {
+  outline: none;
+  border-color: #4ECDC4;
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.2);
 }
 
 .replyButton {
-  padding: 0.5rem 1rem;
-  background: var(--button-bg-color);
-  color: var(--button-text-color);
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(45deg, #4ECDC4, #88d8c0);
+  color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 50px;
   cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
   align-self: flex-start;
-  transition: background 0.3s ease;
+  box-shadow: 0 4px 10px rgba(78, 205, 196, 0.3);
 }
 
 .replyButton:hover {
-  background: var(--button-hover-bg-color);
-  color: var(--button-hover-text-color);
-  border: 1px solid var(--button-hover-text-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(78, 205, 196, 0.4);
 }
 
 .showMoreButton {
   display: flex;
-  padding: 0.25rem;
+  padding: 0.5rem;
   background: none;
   border: none;
-  color: var(--button-bg-color);
+  color: #4ECDC4;
   font-size: 1rem;
   cursor: pointer;
   align-self: center;
   justify-content: center;
   align-items: center;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
   width: 100%;
   text-align: center;
+  font-weight: bold;
+  border-radius: 5px;
 }
 
 .showMoreButton:hover {
-  color: blue;
+  color: #FF6B6B;
+  background: rgba(100, 210, 255, 0.1);
 }
-.showMoreButton span{
+
+.showMoreButton span {
   margin: 0 10px;
 }
 
-/* Participate in These Games Section */
+/* Game Cards with 3D Flip Effect */
 .gamesSection {
   padding: 2rem;
-  background: var(--section-bg-color);
+  background: var(--card-bg-color);
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  margin-top: 2rem;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .gamesGrid {
@@ -420,6 +701,7 @@ a {
   position: relative;
   perspective: 1000px;
   height: 300px;
+  cursor: pointer;
 }
 
 .gameFront,
@@ -428,27 +710,30 @@ a {
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.6s ease;
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
+  overflow: hidden;
 }
 
 .gameFront {
-  background: var(--card-bg-color);
+  background: linear-gradient(45deg, #4ECDC4, #88d8c0);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  transform-style: preserve-3d;
 }
 
 .gameBack {
-  background: var(--card-bg-color);
+  background: white;
   transform: rotateY(180deg);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  text-align: center;
 }
 
 .gameCard:hover .gameFront {
@@ -461,111 +746,168 @@ a {
 
 .gameImage {
   width: 100%;
-  height: 80%;
+  height: 70%;
   object-fit: cover;
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
 }
 
 .gameTitle {
   font-size: 1.5rem;
-  margin-top: 1rem;
-  color: var(--text-color);
+  margin: 1rem 0 0.5rem;
+  color: #343a40;
+  font-weight: 600;
 }
 
 .gameDescription {
   font-size: 1rem;
-  color: var(--secondary-text-color);
-  margin-bottom: 1rem;
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
 }
 
-/* Summary Popup */
+.playButton {
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.playButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+/* Animated Summary Popup */
 .summaryPopup {
   position: fixed;
-  top: 10%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
-  width: 80%;
-  height: 600px;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.4s ease-out;
 }
 
 .summaryContent {
-  background: var(--background-color);
-  border: 1px solid var(--button-bg-color);
-  padding: 6rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border-radius: 10px;
+  background: white;
+  padding: 3rem;
+  border-radius: 20px;
   text-align: center;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.summaryContent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
 }
 
 .circularProgress {
-  margin-bottom: 1rem;
+  margin: 1.5rem auto;
+  position: relative;
+  width: 150px;
+  height: 150px;
 }
 
 .circularChart {
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 100%;
 }
 
 .circleBg {
   fill: none;
-  stroke: var(--border-color);
-  stroke-width: 3.8;
+  stroke: #e9ecef;
+  stroke-width: 8;
 }
 
 .circle {
   fill: none;
-  stroke: var(--button-bg-color);
-  stroke-width: 3.8;
+  stroke: url(#gradient);
+  stroke-width: 8;
   stroke-linecap: round;
-  animation: progress 1s ease-out forwards;
+  animation: progress 1.5s ease-out forwards;
+  transform-origin: center;
+  transform: rotate(-90deg);
 }
 
 @keyframes progress {
-  0% {
-    stroke-dasharray: 0, 100;
-  }
+  0% { stroke-dasharray: 0, 100; }
 }
 
 .summaryTitle {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  color: var(--headline-color);
+  font-size: 2.2rem;
+  margin-bottom: 1.5rem;
+  color: #343a40;
+  font-weight: 700;
 }
 
-.summaryScore,
+.summaryScore {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #495057;
+  font-weight: 600;
+}
+
 .summaryBadge {
   font-size: 1.2rem;
-  margin-bottom: 1rem;
-  color: var(--text-color);
+  margin-bottom: 2rem;
+  color: #6c757d;
+  display: inline-block;
+  padding: 0.5rem 1.5rem;
+  background: #f8f9fa;
+  border-radius: 50px;
 }
 
 .closeButton {
-  padding: 0.5rem 1rem;
-  background: var(--button-bg-color);
-  color: var(--button-text-color);
+  padding: 0.8rem 2rem;
+  background: linear-gradient(45deg, #4ECDC4, #88d8c0);
+  color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 50px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
 }
 
 .closeButton:hover {
-  background: var(--button-hover-bg-color);
-  color: var(--button-hover-text-color);
-  border: 1px solid var(--button-hover-text-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .headerSection {
-    height: 300px;
+    height: 350px;
+    padding: 1.5rem;
   }
 
   .headerTitle {
-    font-size: 2rem;
+    font-size: 2.2rem;
   }
 
   .headerDescription {
@@ -574,24 +916,31 @@ a {
 
   .mainContent {
     flex-direction: column;
+    gap: 2rem;
+    padding: 1.5rem;
   }
 
   .gamesGrid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 
   .discussionSection {
     padding: 1.5rem;
+  }
+
+  .summaryContent {
+    padding: 2rem 1.5rem;
   }
 }
 
 @media (max-width: 576px) {
   .headerSection {
     height: 300px;
+    padding: 1rem;
   }
 
   .headerTitle {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
   }
 
   .headerDescription {
@@ -606,12 +955,27 @@ a {
     grid-template-columns: 1fr;
   }
 
-  .discussionSection {
-    padding: 1rem;
-  }
-
   .newPostTextarea,
   .replyTextarea {
-    min-height: 80px;
+    min-height: 100px;
   }
+
+  .postCard {
+    padding: 1.2rem;
+  }
+
+  .replies {
+    padding-left: 1rem;
+  }
+}
+
+/* SVG Gradient for Circular Progress */
+svg.defs-only {
+  position: absolute;
+  height: 0;
+  width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: hidden;
 }
