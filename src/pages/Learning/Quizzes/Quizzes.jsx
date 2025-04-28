@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './Quizzes.module.css';
 import { Link } from 'react-router-dom';
 
@@ -30,6 +30,17 @@ const Quizzes = ({ isDarkMode }) => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isEvaluated, setIsEvaluated] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState('quiz1');
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [timerStarted, setTimerStarted] = useState(false);
+  const [showTimeUp, setShowTimeUp] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+
+  const quizDurations = {
+    quiz1: 10 * 60,
+    quiz2: 15 * 60,
+    quiz3: 15 * 60,
+  };
+
   const [discussionPosts, setDiscussionPosts] = useState([
     {
       id: 1,
@@ -248,7 +259,7 @@ const Quizzes = ({ isDarkMode }) => {
           { id: 1, text: 'Mojari', isCorrect: true },
           { id: 2, text: 'Kolhapuri', isCorrect: false },
           { id: 3, text: 'Jutti', isCorrect: false },
-          { id: 4, text: 'Sandals', isCorrect: false },
+          { id: 4, text: ' sandal', isCorrect: false },
         ],
       },
     ],
@@ -484,7 +495,7 @@ const Quizzes = ({ isDarkMode }) => {
         question: 'What does "Ghar" mean in Punjabi?',
         options: [
           { id: 1, text: 'House', isCorrect: true },
-          { id: 2, text: 'Vill', isCorrect: false },
+          { id: 2, text: 'Village', isCorrect: false },
           { id: 3, text: 'Temple', isCorrect: false },
           { id: 4, text: 'Market', isCorrect: false },
         ],
@@ -530,8 +541,45 @@ const Quizzes = ({ isDarkMode }) => {
 
   const questions = quizQuestions[selectedQuiz];
 
+  const startTimer = () => {
+    setTimeLeft(quizDurations[selectedQuiz]);
+    setTimerStarted(true);
+  };
+
+  const handleStartQuiz = () => {
+    if (timerStarted) {
+      setShowWarning(true);
+    } else {
+      resetQuiz();
+      startTimer();
+    }
+  };
+
+  useEffect(() => {
+    if (timerStarted && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            setShowTimeUp(true);
+            setTimerStarted(false);
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [timerStarted, timeLeft]);
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleAnswer = (isCorrect, optionId) => {
-    if (isEvaluated) return;
+    if (isEvaluated || timeLeft <= 0) return;
 
     setSelectedOption(optionId);
     setIsEvaluated(true);
@@ -549,26 +597,51 @@ const Quizzes = ({ isDarkMode }) => {
         setCurrentQuestion(currentQuestion + 1);
       } else {
         setShowSummary(true);
+        setTimerStarted(false);
       }
     }, 1500);
   };
 
   const handleSubmitQuiz = () => {
-    setShowSummary(true);
+    if (timeLeft > 0) {
+      setShowSummary(true);
+      setTimerStarted(false);
+    }
   };
 
   const closeSummary = () => {
     setShowSummary(false);
+    resetQuiz();
   };
 
-  const handleQuizChange = (e) => {
-    setSelectedQuiz(e.target.value);
+  const closeTimeUp = () => {
+    setShowTimeUp(false);
+    resetQuiz();
+  };
+
+  const handleWarningContinue = () => {
+    setShowWarning(false);
+    resetQuiz();
+    startTimer();
+  };
+
+  const handleWarningCancel = () => {
+    setShowWarning(false);
+  };
+
+  const resetQuiz = () => {
     setCurrentQuestion(0);
     setScore(0);
     setSelectedAnswers([]);
     setSelectedOption(null);
     setIsEvaluated(false);
-    setShowSummary(false);
+    setTimeLeft(quizDurations[selectedQuiz]);
+    setTimerStarted(false);
+  };
+
+  const handleQuizChange = (e) => {
+    setSelectedQuiz(e.target.value);
+    resetQuiz();
   };
 
   const handlePostSubmit = (e) => {
@@ -650,7 +723,9 @@ const Quizzes = ({ isDarkMode }) => {
           <p className={styles.headerDescription}>
             Explore quizzes, join tournaments, and earn badges to showcase your expertise!
           </p>
-          <button className={styles.headerButton}>Start New Quiz</button>
+          <button className={styles.headerButton} onClick={handleStartQuiz}>
+            Start New Quiz
+          </button>
         </div>
       </div>
 
@@ -678,6 +753,14 @@ const Quizzes = ({ isDarkMode }) => {
 
       <div className={styles.mainContent}>
         <div className={styles.quizSection}>
+          <div className={styles.timerSection}>
+            <span className={styles.timerText}>
+              Time Left: {timeLeft !== null ? formatTime(timeLeft) : 'Not Started'}
+            </span>
+            <button className={styles.startQuizButton} onClick={handleStartQuiz}>
+              Start Quiz
+            </button>
+          </div>
           <div className={styles.questionSection}>
             <div className={styles.questionHeader}>
               <span className={styles.questionNumber}>
@@ -692,7 +775,7 @@ const Quizzes = ({ isDarkMode }) => {
                   className={styles.optionButton}
                   style={getOptionStyle(option)}
                   onClick={() => handleAnswer(option.isCorrect, option.id)}
-                  disabled={isEvaluated}
+                  disabled={isEvaluated || timeLeft <= 0}
                 >
                   {option.text}
                 </button>
@@ -702,7 +785,7 @@ const Quizzes = ({ isDarkMode }) => {
           <div className={styles.navigationButtons}>
             <button
               className={styles.prevButton}
-              disabled={currentQuestion === 0}
+              disabled={currentQuestion === 0 || timeLeft <= 0}
               onClick={() => setCurrentQuestion(currentQuestion - 1)}
             >
               Previous
@@ -711,12 +794,16 @@ const Quizzes = ({ isDarkMode }) => {
               <button
                 className={styles.nextButton}
                 onClick={() => setCurrentQuestion(currentQuestion + 1)}
-                disabled={!isEvaluated}
+                disabled={!isEvaluated || timeLeft <= 0}
               >
                 Next
               </button>
             ) : (
-              <button className={styles.submitButton} onClick={handleSubmitQuiz}>
+              <button
+                className={styles.submitButton}
+                onClick={handleSubmitQuiz}
+                disabled={timeLeft <= 0}
+              >
                 Submit Quiz
               </button>
             )}
@@ -780,17 +867,17 @@ const Quizzes = ({ isDarkMode }) => {
 
       <div className={styles.discussionSection}>
         <h2 className={styles.discussionTitle}>Discussion Forum</h2>
-        <form className={styles.newPostForm} onSubmit={handlePostSubmit}>
+        <div className={styles.newPostForm}>
           <textarea
             className={styles.newPostTextarea}
             value={newPostContent}
             onChange={(e) => setNewPostContent(e.target.value)}
             placeholder="Start a new discussion..."
           ></textarea>
-          <button type="submit" className={styles.postButton}>
+          <button onClick={handlePostSubmit} className={styles.postButton}>
             Post
           </button>
-        </form>
+        </div>
         <div className={styles.postsList}>
           {discussionPosts.map((post) => (
             <div key={post.id} className={styles.postCard}>
@@ -816,14 +903,11 @@ const Quizzes = ({ isDarkMode }) => {
                     className={styles.showMoreButton}
                     onClick={() => toggleShowReplies(post.id)}
                   >
-                    <span>&lt;----  </span> {showAllReplies[post.id] ? 'Show Less' : 'Show More'} <span>  ----&gt;</span>
+                    <span>  </span> {showAllReplies[post.id] ? 'Show Less' : 'Show More'} <span> </span>
                   </button>
                 )}
               </div>
-              <form
-                className={styles.replyForm}
-                onSubmit={(e) => handleReplySubmit(post.id, e)}
-              >
+              <div className={styles.replyForm}>
                 <textarea
                   className={styles.replyTextarea}
                   value={replyContent[post.id] || ''}
@@ -832,10 +916,10 @@ const Quizzes = ({ isDarkMode }) => {
                   }
                   placeholder="Write a reply..."
                 ></textarea>
-                <button type="submit" className={styles.replyButton}>
+                <button onClick={(e) => handleReplySubmit(post.id, e)} className={styles.replyButton}>
                   Reply
                 </button>
-              </form>
+              </div>
             </div>
           ))}
         </div>
@@ -847,8 +931,11 @@ const Quizzes = ({ isDarkMode }) => {
           {[
             { title: 'Punjabi Trivia', description: 'Test your knowledge of Punjabi culture.', image: games },
             { title: 'Sikh History Quiz', description: 'Explore the rich history of Sikhism.', image: games },
-            { title: 'Punjabi Trivia', description: 'Test your knowledge of Punjabi culture.', image: games },
-            { title: 'Sikh History Quiz', description: 'Explore the rich history of Sikhism.', image: games },
+            { title: 'Cultural Fest Quiz', description: 'Learn about Punjab’s vibrant festivals.', image: games },
+            { title: 'Punjabi Music Trivia', description: 'Test your knowledge of Punjabi folk music.', image: games },
+            { title: 'Sikh Gurus Quiz', description: 'Dive into the teachings of the Sikh Gurus.', image: games },
+            { title: 'Punjabi Cuisine Quiz', description: 'Explore the flavors of Punjabi food.', image: games },
+            { title: 'Traditional Arts Quiz', description: 'Discover Punjab’s art and crafts.', image: games },
           ].map((game, index) => (
             <div key={index} className={styles.gameCard}>
               <div className={styles.gameFront}>
@@ -863,10 +950,9 @@ const Quizzes = ({ isDarkMode }) => {
           ))}
         </div>
       </div>
-
       {showSummary && (
         <div className={styles.summaryPopup}>
-          <div className={styles.summaryContent}>
+          <div className={`${styles.summaryContent} ${styles.success}`}>
             <div className={styles.circularProgress}>
               <svg viewBox="0 0 36 36" className={styles.circularChart}>
                 <path
@@ -883,9 +969,41 @@ const Quizzes = ({ isDarkMode }) => {
             <h2 className={styles.summaryTitle}>Quiz Completed!</h2>
             <p className={styles.summaryScore}>Your Score: {score}/{questions.length}</p>
             <p className={styles.summaryBadge}>Badge Earned: 🏆 Quiz Master</p>
+            <p className={styles.summaryAchievement}>Achievement Unlocked: Time Master!</p>
             <button className={styles.closeButton} onClick={closeSummary}>
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {showTimeUp && (
+        <div className={styles.summaryPopup}>
+          <div className={`${styles.summaryContent} ${styles.failure}`}>
+            <h2 className={styles.summaryTitle}>Time's Up!</h2>
+            <p className={styles.summaryMessage}>Better luck next time! Try again to complete the quiz within the time limit.</p>
+            <button className={styles.closeButton} onClick={closeTimeUp}>
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showWarning && (
+        <div className={styles.warningPopup}>
+          <div className={styles.warningContent}>
+            <h2 className={styles.warningTitle}>Warning</h2>
+            <p className={styles.warningMessage}>
+              This action will leave your current quiz. Are you sure you want to continue?
+            </p>
+            <div className={styles.warningButtons}>
+              <button className={styles.cancelButton} onClick={handleWarningCancel}>
+                Cancel
+              </button>
+              <button className={styles.continueButton} onClick={handleWarningContinue}>
+                Continue
+              </button>
+            </div>
           </div>
         </div>
       )}
