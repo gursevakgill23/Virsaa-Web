@@ -112,7 +112,7 @@
 .breadcrumb {
   font-size: 1rem;
   color: var(--text-color);
-  margin: 2rem;
+  margin: 1.5rem;
   background: var(--card-bg-color);
   padding: 12px 20px;
   border-radius: 10px;

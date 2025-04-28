@@ -755,7 +755,7 @@ const Quizzes = ({ isDarkMode }) => {
         <div className={styles.quizSection}>
           <div className={styles.timerSection}>
             <span className={styles.timerText}>
-              Time Left: {timeLeft !== null ? formatTime(timeLeft) : 'Not Started'}
+              Time Left: {timeLeft !== null ? formatTime(timeLeft) : '00:00'}
             </span>
             <button className={styles.startQuizButton} onClick={handleStartQuiz}>
               Start Quiz
