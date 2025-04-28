@@ -1,4 +1,3 @@
-
 /* Base Styles */
 .quizzContainer {
   background-color: var(--section-bg-color);
@@ -50,7 +49,6 @@
   border: 1px solid var(--button-hover-text-color);
 }
 
-
 /* Breadcrumb Section */
 .breadcrumb {
   font-size: 1rem;
@@ -72,8 +70,6 @@ a {
   text-decoration: none;
   list-style: none;
 }
-
-
 
 /* Quiz Dropdown */
 .quizDropdownContainer {
@@ -152,7 +148,9 @@ a {
   margin-top: 1rem;
 }
 
-.prevButton, .nextButton, .submitButton {
+.prevButton,
+.nextButton,
+.submitButton {
   padding: 0.5rem 1rem;
   background: var(--button-bg-color);
   color: var(--button-text-color);
@@ -161,57 +159,19 @@ a {
   cursor: pointer;
   transition: background 0.3s ease;
 }
-.prevButton:hover, .nextButton:hover, .submitButton:hover{
+
+.prevButton:hover,
+.nextButton:hover,
+.submitButton:hover {
   background: var(--button-hover-bg-color);
   color: var(--button-hover-text-color);
   border: 1px solid var(--button-hover-text-color);
 }
 
-.prevButton:disabled, .nextButton:disabled {
+.prevButton:disabled,
+.nextButton:disabled {
   background: var(--secondary-text-color);
   cursor: not-allowed;
-}
-
-/* Achievement Options Section */
-.achievementOptions {
-  margin-top: 2rem;
-}
-
-.sectionTitle {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  margin-top: 4rem;
-  color: var(--headline-color);
-}
-
-.achievementGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.achievementCard {
-  background: var(--card-bg-color);
-  padding: 1rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.achievementIcon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.achievementTitle {
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
-  color: var(--text-color);
-}
-
-.achievementDescription {
-  font-size: 1rem;
-  color: var(--secondary-text-color);
 }
 
 /* Today's Top Scorers Section */
@@ -253,7 +213,8 @@ a {
   margin-top: 0;
 }
 
-.tournamentCard, .badgeCard {
+.tournamentCard,
+.badgeCard {
   background: var(--card-bg-color);
   padding: 1rem;
   border-radius: 10px;
@@ -261,13 +222,16 @@ a {
   margin-bottom: 1rem;
 }
 
-.tournamentTitle, .badgeTitle {
+.tournamentTitle,
+.badgeTitle {
   font-size: 1.2rem;
   margin-bottom: 0.5rem;
   color: var(--text-color);
 }
 
-.tournamentTime, .tournamentParticipants, .badgeDescription {
+.tournamentTime,
+.tournamentParticipants,
+.badgeDescription {
   font-size: 1rem;
   color: var(--secondary-text-color);
 }
@@ -288,6 +252,157 @@ a {
   border: 1px solid var(--button-hover-text-color);
 }
 
+/* Discussion Post Section */
+.discussionSection {
+  padding: 2rem;
+  background: var(--section-bg-color);
+  width: 100%;
+}
+
+.discussionTitle {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--headline-color);
+}
+
+.newPostForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.newPostTextarea {
+  padding: 1rem;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-color);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.postButton {
+  padding: 0.5rem 1rem;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.3s ease;
+}
+
+.postButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+.postCard {
+  background: var(--card-bg-color);
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.postHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.postAuthor {
+  font-size: 1.2rem;
+  color: var(--text-color);
+}
+
+.postTimestamp {
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+}
+
+.postContent {
+  font-size: 1rem;
+  color: var(--text-color);
+  margin-bottom: 1rem;
+}
+
+.replies {
+  margin-top: 1rem;
+  padding-left: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.replyCard {
+  background: var(--background-color);
+  padding: 1rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.replyForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.replyTextarea {
+  padding: 0.5rem;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-color);
+  resize: vertical;
+  min-height: 60px;
+}
+
+.replyButton {
+  padding: 0.5rem 1rem;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.3s ease;
+}
+
+.replyButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+  border: 1px solid var(--button-hover-text-color);
+}
+
+.showMoreButton {
+  display: flex;
+  padding: 0.25rem;
+  background: none;
+  border: none;
+  color: var(--button-bg-color);
+  font-size: 1rem;
+  cursor: pointer;
+  align-self: center;
+  justify-content: center;
+  align-items: center;
+  transition: color 0.3s ease;
+  width: 100%;
+  text-align: center;
+}
+
+.showMoreButton:hover {
+  color: blue;
+}
+.showMoreButton span{
+  margin: 0 10px;
+}
+
 /* Participate in These Games Section */
 .gamesSection {
   padding: 2rem;
@@ -298,7 +413,7 @@ a {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 2rem;
-  margin-top: 2rem; /* Adjusted margin */
+  margin-top: 2rem;
 }
 
 .gameCard {
@@ -307,7 +422,8 @@ a {
   height: 300px;
 }
 
-.gameFront, .gameBack {
+.gameFront,
+.gameBack {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -345,13 +461,13 @@ a {
 
 .gameImage {
   width: 100%;
-  height: 80%; /* Adjusted height */
+  height: 80%;
   object-fit: cover;
 }
 
 .gameTitle {
   font-size: 1.5rem;
-  margin-top: 1rem; /* Adjusted margin */
+  margin-top: 1rem;
   color: var(--text-color);
 }
 
@@ -368,7 +484,6 @@ a {
   display: flex;
   width: 80%;
   height: 600px;
-  display: flex;
   justify-content: center;
   align-items: center;
 }
@@ -420,7 +535,8 @@ a {
   color: var(--headline-color);
 }
 
-.summaryScore, .summaryBadge {
+.summaryScore,
+.summaryBadge {
   font-size: 1.2rem;
   margin-bottom: 1rem;
   color: var(--text-color);
@@ -463,6 +579,10 @@ a {
   .gamesGrid {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
+
+  .discussionSection {
+    padding: 1.5rem;
+  }
 }
 
 @media (max-width: 576px) {
@@ -484,5 +604,14 @@ a {
 
   .gamesGrid {
     grid-template-columns: 1fr;
+  }
+
+  .discussionSection {
+    padding: 1rem;
+  }
+
+  .newPostTextarea,
+  .replyTextarea {
+    min-height: 80px;
   }
 }
