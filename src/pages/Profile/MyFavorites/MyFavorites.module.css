@@ -822,6 +822,9 @@
     .listRowItem {
         font-size: 0.85rem;
     }
+    .menuDropdown button, .listMenuContainer .menuDropdown {
+        font-size: 12px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -880,4 +883,8 @@
     .listRowItem {
         font-size: 0.8rem;
     }
+    .menuDropdown button, .listMenuContainer .menuDropdown {
+        font-size: 10px;
+    }
+
 }

@@ -1,8 +1,24 @@
 import React from 'react';
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa'; // React Icons
 import styles from './Footer.module.css'; // Import CSS Module
-import logo from "../../images/logo.png"
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    if (process.env.NODE_ENV === 'production') {
+      if (typeof imagePath === 'string') {
+        return imagePath.startsWith('/')
+          ? imagePath
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 const Footer = () => {
+  const getImagePath = useProductionImagePath();
+  const logo = "/images/logo.png"
+
   return (
     <div className={styles.footerContainer}>
     <footer className={styles.footer}>
@@ -10,7 +26,7 @@ const Footer = () => {
         {/* Column 1: Logo and Description */}
         <div className={styles.footerColumn}>
           <div className={styles.logo}>
-            <img src={logo} alt="Virsa Logo" />
+            <img src={getImagePath(logo)} alt="Virsa Logo" />
           </div>
           <p className={styles.description}>
             Virsaa is a modern platform dedicated to preserving and promoting cultural heritage through innovative solutions.

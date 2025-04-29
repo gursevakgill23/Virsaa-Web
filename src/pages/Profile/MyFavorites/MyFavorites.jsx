@@ -18,33 +18,29 @@ import styles from './MyFavorites.module.css';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
-// Import images
+// Hook for image path handling
 const useProductionImagePath = () => {
-  
   return (imagePath) => {
-    // Only modify in production
     if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
       if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
+        return imagePath.startsWith('/')
+          ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
       }
+      return imagePath; // Handle imported images
     }
-    return imagePath;
+    return imagePath; // Return as-is in development
   };
 };
+
 const MyFavorites = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
 
-  const header_image_light = '/images/Profile/header-image.png';
-  const header_image_dark = '/images/Profile/header-image-dark.png';
-  const bookImage = '/images/Profile/book-image.jpg';
-  const authorImage = '/images/Profile/author-image.jpg';
+  // Image paths (ensure these exist in /public/images/)
+  const header_image_light = '/images/header-image.png';
+  const header_image_dark = '/images/header-image-dark.png';
+  const bookImage = '/images/book-image.jpg';
+  const authorImage = '/images/author-image.jpg';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
@@ -129,12 +125,13 @@ const MyFavorites = ({ isDarkMode }) => {
 
   return (
     <div className={styles.container}>
-      {/* Header - Matches Gurbani page */}
+      {/* Header */}
       <div className={styles.header}>
         <img
           src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Favorites Header"
           className={styles.headerImage}
+          onError={() => console.error('Failed to load header image')}
         />
         <div className={styles.headerText}>
           <h1>MY FAVORITES</h1>
@@ -142,7 +139,7 @@ const MyFavorites = ({ isDarkMode }) => {
         </div>
       </div>
 
-      {/* Breadcrumb - Matches standard */}
+      {/* Breadcrumb */}
       <div className={styles.breadcrumb}>
         <Link to="/"><span>Home</span></Link> / 
         <Link to="/collections"><span>Collections</span></Link> /
@@ -395,7 +392,7 @@ const MyFavorites = ({ isDarkMode }) => {
         )}
       </div>
 
-      {/* Saved for Later Section (Moved Outside Tabs) */}
+      {/* Saved for Later Section */}
       <div className={styles.content}>
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
@@ -464,122 +461,158 @@ const MyFavorites = ({ isDarkMode }) => {
 };
 
 // Card Components
-const EbookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
-  <div className={styles.card}>
-    <div className={styles.cardImageContainer}>
-      <img src={useProductionImagePath(item.image)} alt={item.title} className={styles.cardImage} />
-      <div className={styles.cardBadge}>Ebook</div>
-      <div className={styles.cardMenuContainer}>
-        <button className={styles.cardMenu} onClick={toggleMenu}>
-          <FiMoreVertical />
-        </button>
-        {isMenuOpen && (
-          <div className={styles.menuDropdown}>
-            <button onClick={onRemove}>Remove from Favorites</button>
-          </div>
-        )}
-      </div>
-    </div>
-    <div className={styles.cardContent}>
-      <h3 className={styles.cardTitle}>{item.title}</h3>
-      <p className={styles.cardAuthor}>{item.author}</p>
-      <div className={styles.cardMeta}>
-        <div className={styles.rating}>
-          <span className={styles.ratingValue}>{item.rating}</span>
-          <div className={styles.stars} style={{ '--rating': item.rating }} />
-        </div>
-        <div className={styles.progressBar}>
-          <div 
-            className={styles.progressFill} 
-            style={{ width: `${item.progress}%` }}
-          />
-          <span className={styles.progressText}>{item.progress}%</span>
+const EbookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => {
+  const getImagePath = useProductionImagePath();
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardImageContainer}>
+        <img 
+          src={getImagePath(item.image)} 
+          alt={item.title} 
+          className={styles.cardImage} 
+          onError={() => console.error(`Failed to load image: ${item.image}`)}
+        />
+        <div className={styles.cardBadge}>Ebook</div>
+        <div className={styles.cardMenuContainer}>
+          <button className={styles.cardMenu} onClick={toggleMenu}>
+            <FiMoreVertical />
+          </button>
+          {isMenuOpen && (
+            <div className={styles.menuDropdown}>
+              <button onClick={onRemove}>Remove from Favorites</button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  </div>
-);
-
-const AudiobookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
-  <div className={styles.card}>
-    <div className={styles.cardImageContainer}>
-      <img src={useProductionImagePath(item.image)} alt={item.title} className={styles.cardImage} />
-      <div className={styles.cardBadge}>Audiobook</div>
-      <div className={styles.cardMenuContainer}>
-        <button className={styles.cardMenu} onClick={toggleMenu}>
-          <FiMoreVertical />
-        </button>
-        {isMenuOpen && (
-          <div className={styles.menuDropdown}>
-            <button onClick={onRemove}>Remove from Favorites</button>
+      <div className={styles.cardContent}>
+        <h3 className={styles.cardTitle}>{item.title}</h3>
+        <p className={styles.cardAuthor}>{item.author}</p>
+        <div className={styles.cardMeta}>
+          <div className={styles.rating}>
+            <span className={styles.ratingValue}>{item.rating}</span>
+            <div className={styles.stars} style={{ '--rating': item.rating }} />
           </div>
-        )}
-      </div>
-    </div>
-    <div className={styles.cardContent}>
-      <h3 className={styles.cardTitle}>{item.title}</h3>
-      <p className={styles.cardAuthor}>{item.author}</p>
-      <div className={styles.cardMeta}>
-        <div className={styles.rating}>
-          <span className={styles.ratingValue}>{item.rating}</span>
-          <div className={styles.stars} style={{ '--rating': item.rating }} />
+          <div className={styles.progressBar}>
+            <div 
+              className={styles.progressFill} 
+              style={{ width: `${item.progress}%` }}
+            />
+            <span className={styles.progressText}>{item.progress}%</span>
+          </div>
         </div>
-        <div className={styles.duration}>{item.duration}</div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
-const AuthorCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
-  <div className={styles.authorCard}>
-    <div className={styles.authorImageContainer}>
-      <img src={useProductionImagePath(item.image)} alt={item.name} className={styles.authorImage} />
-      <div className={styles.cardMenuContainer}>
-        <button className={styles.cardMenu} onClick={toggleMenu}>
-          <FiMoreVertical />
-        </button>
-        {isMenuOpen && (
-          <div className={styles.menuDropdown}>
-            <button onClick={onRemove}>Remove from Favorites</button>
-          </div>
-        )}
-      </div>
-    </div>
-    <div className={styles.authorContent}>
-      <h3 className={styles.authorName}>{item.name}</h3>
-      <div className={styles.authorMeta}>
-        <span>{item.books} books</span>
-        <span>{item.followers} followers</span>
-      </div>
-    </div>
-  </div>
-);
+const AudiobookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => {
+  const getImagePath = useProductionImagePath();
 
-const SavedCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
-  <div className={styles.card}>
-    <div className={styles.cardImageContainer}>
-      <img src={useProductionImagePath(item.image)} alt={item.title} className={styles.cardImage} />
-      <div className={styles.cardBadge}>{item.type}</div>
-      <div className={styles.cardMenuContainer}>
-        <button className={styles.cardMenu} onClick={toggleMenu}>
-          <FiMoreVertical />
-        </button>
-        {isMenuOpen && (
-          <div className={styles.menuDropdown}>
-            <button onClick={onRemove}>Remove from Saved</button>
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardImageContainer}>
+        <img 
+          src={getImagePath(item.image)} 
+          alt={item.title} 
+          className={styles.cardImage} 
+          onError={() => console.error(`Failed to load image: ${item.image}`)}
+        />
+        <div className={styles.cardBadge}>Audiobook</div>
+        <div className={styles.cardMenuContainer}>
+          <button className={styles.cardMenu} onClick={toggleMenu}>
+            <FiMoreVertical />
+          </button>
+          {isMenuOpen && (
+            <div className={styles.menuDropdown}>
+              <button onClick={onRemove}>Remove from Favorites</button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className={styles.cardContent}>
+        <h3 className={styles.cardTitle}>{item.title}</h3>
+        <p className={styles.cardAuthor}>{item.author}</p>
+        <div className={styles.cardMeta}>
+          <div className={styles.rating}>
+            <span className={styles.ratingValue}>{item.rating}</span>
+            <div className={styles.stars} style={{ '--rating': item.rating }} />
           </div>
-        )}
+          <div className={styles.duration}>{item.duration}</div>
+        </div>
       </div>
     </div>
-    <div className={styles.cardContent}>
-      <h3 className={styles.cardTitle}>{item.title}</h3>
-      <div className={styles.savedMeta}>
-        <span className={styles.savedType}>{item.type}</span>
-        <span className={styles.savedDate}>{item.added}</span>
+  );
+};
+
+const AuthorCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => {
+  const getImagePath = useProductionImagePath();
+
+  return (
+    <div className={styles.authorCard}>
+      <div className={styles.authorImageContainer}>
+        <img 
+          src={getImagePath(item.image)} 
+          alt={item.name} 
+          className={styles.authorImage} 
+          onError={() => console.error(`Failed to load image: ${item.image}`)}
+        />
+        <div className={styles.cardMenuContainer}>
+          <button className={styles.cardMenu} onClick={toggleMenu}>
+            <FiMoreVertical />
+          </button>
+          {isMenuOpen && (
+            <div className={styles.menuDropdown}>
+              <button onClick={onRemove}>Remove from Favorites</button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className={styles.authorContent}>
+        <h3 className={styles.authorName}>{item.name}</h3>
+        <div className={styles.authorMeta}>
+          <span>{item.books} books</span>
+          <span>{item.followers} followers</span>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+const SavedCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => {
+  const getImagePath = useProductionImagePath();
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardImageContainer}>
+        <img 
+          src={getImagePath(item.image)} 
+          alt={item.title} 
+          className={styles.cardImage} 
+          onError={() => console.error(`Failed to load image: ${item.image}`)}
+        />
+        <div className={styles.cardBadge}>{item.type}</div>
+        <div className={styles.cardMenuContainer}>
+          <button className={styles.cardMenu} onClick={toggleMenu}>
+            <FiMoreVertical />
+          </button>
+          {isMenuOpen && (
+            <div className={styles.menuDropdown}>
+              <button onClick={onRemove}>Remove from Saved</button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className={styles.cardContent}>
+        <h3 className={styles.cardTitle}>{item.title}</h3>
+        <div className={styles.savedMeta}>
+          <span className={styles.savedType}>{item.type}</span>
+          <span className={styles.savedDate}>{item.added}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // List Item Components
 const EbookListItem = ({ item, onRemove, isMenuOpen, toggleMenu }) => (

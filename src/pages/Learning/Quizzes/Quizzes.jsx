@@ -32,6 +32,7 @@ const Quizzes = ({ isDarkMode }) => {
   const [selectedQuiz, setSelectedQuiz] = useState('quiz1');
   const [timeLeft, setTimeLeft] = useState(null);
   const [timerStarted, setTimerStarted] = useState(false);
+  const [timerPaused, setTimerPaused] = useState(false); // New state for pause
   const [showTimeUp, setShowTimeUp] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
 
@@ -544,11 +545,16 @@ const Quizzes = ({ isDarkMode }) => {
   const startTimer = () => {
     setTimeLeft(quizDurations[selectedQuiz]);
     setTimerStarted(true);
+    setTimerPaused(false); // Ensure timer is not paused when starting
+  };
+
+  const togglePauseResume = () => {
+    setTimerPaused(!timerPaused); // Toggle pause state
   };
 
   const handleStartQuiz = () => {
     if (timerStarted) {
-      setShowWarning(true);
+      setShowWarning(true); // Show warning if quiz is already started
     } else {
       resetQuiz();
       startTimer();
@@ -556,12 +562,13 @@ const Quizzes = ({ isDarkMode }) => {
   };
 
   useEffect(() => {
-    if (timerStarted && timeLeft > 0) {
+    if (timerStarted && !timerPaused && timeLeft > 0) {
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             setShowTimeUp(true);
             setTimerStarted(false);
+            setTimerPaused(false);
             clearInterval(timer);
             return 0;
           }
@@ -570,7 +577,7 @@ const Quizzes = ({ isDarkMode }) => {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [timerStarted, timeLeft]);
+  }, [timerStarted, timerPaused, timeLeft]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -579,7 +586,7 @@ const Quizzes = ({ isDarkMode }) => {
   };
 
   const handleAnswer = (isCorrect, optionId) => {
-    if (isEvaluated || timeLeft <= 0) return;
+    if (isEvaluated || timeLeft <= 0 || timerPaused) return;
 
     setSelectedOption(optionId);
     setIsEvaluated(true);
@@ -598,6 +605,7 @@ const Quizzes = ({ isDarkMode }) => {
       } else {
         setShowSummary(true);
         setTimerStarted(false);
+        setTimerPaused(false);
       }
     }, 1500);
   };
@@ -606,6 +614,7 @@ const Quizzes = ({ isDarkMode }) => {
     if (timeLeft > 0) {
       setShowSummary(true);
       setTimerStarted(false);
+      setTimerPaused(false);
     }
   };
 
@@ -637,6 +646,7 @@ const Quizzes = ({ isDarkMode }) => {
     setIsEvaluated(false);
     setTimeLeft(quizDurations[selectedQuiz]);
     setTimerStarted(false);
+    setTimerPaused(false);
   };
 
   const handleQuizChange = (e) => {
@@ -757,8 +767,11 @@ const Quizzes = ({ isDarkMode }) => {
             <span className={styles.timerText}>
               Time Left: {timeLeft !== null ? formatTime(timeLeft) : '00:00'}
             </span>
-            <button className={styles.startQuizButton} onClick={handleStartQuiz}>
-              Start Quiz
+            <button
+              className={styles.startQuizButton}
+              onClick={timerStarted ? togglePauseResume : handleStartQuiz}
+            >
+              {timerStarted ? (timerPaused ? 'Resume' : 'Pause') : 'Start Quiz'}
             </button>
           </div>
           <div className={styles.questionSection}>
@@ -775,7 +788,7 @@ const Quizzes = ({ isDarkMode }) => {
                   className={styles.optionButton}
                   style={getOptionStyle(option)}
                   onClick={() => handleAnswer(option.isCorrect, option.id)}
-                  disabled={isEvaluated || timeLeft <= 0}
+                  disabled={isEvaluated || timeLeft <= 0 || timerPaused}
                 >
                   {option.text}
                 </button>
@@ -785,7 +798,7 @@ const Quizzes = ({ isDarkMode }) => {
           <div className={styles.navigationButtons}>
             <button
               className={styles.prevButton}
-              disabled={currentQuestion === 0 || timeLeft <= 0}
+              disabled={currentQuestion === 0 || timeLeft <= 0 || timerPaused}
               onClick={() => setCurrentQuestion(currentQuestion - 1)}
             >
               Previous
@@ -794,7 +807,7 @@ const Quizzes = ({ isDarkMode }) => {
               <button
                 className={styles.nextButton}
                 onClick={() => setCurrentQuestion(currentQuestion + 1)}
-                disabled={!isEvaluated || timeLeft <= 0}
+                disabled={!isEvaluated || timeLeft <= 0 || timerPaused}
               >
                 Next
               </button>
@@ -802,7 +815,7 @@ const Quizzes = ({ isDarkMode }) => {
               <button
                 className={styles.submitButton}
                 onClick={handleSubmitQuiz}
-                disabled={timeLeft <= 0}
+                disabled={timeLeft <= 0 || timerPaused}
               >
                 Submit Quiz
               </button>
@@ -950,11 +963,19 @@ const Quizzes = ({ isDarkMode }) => {
           ))}
         </div>
       </div>
+
       {showSummary && (
         <div className={styles.summaryPopup}>
           <div className={`${styles.summaryContent} ${styles.success}`}>
             <div className={styles.circularProgress}>
-              <svg viewBox="0 0 36 36" className={styles.circularChart}>
+              <svg
+                viewBox="0 0 36 36"
+                className={styles.circularChart}
+                style={{
+                  width: `${100 + (score / questions.length) * 60}px`, // 100px to 160px based on score
+                  height: `${100 + (score / questions.length) * 60}px`,
+                }}
+              >
                 <path
                   className={styles.circleBg}
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"

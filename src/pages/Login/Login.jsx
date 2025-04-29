@@ -5,8 +5,6 @@ import 'react-toastify/dist/ReactToastify.css';
 // import HCaptcha from '@hcaptcha/react-hcaptcha';
 import styles from './Login.module.css';
 import { FaGoogle, FaFacebook, FaGamepad, FaCoins } from 'react-icons/fa';
-import latest_content from '../../images/Login/latest_content.jpg';
-import games from '../../images/Login/games.jpg';
 import { useAuth } from '../../context/AuthContext';
 
 const useProductionImagePath = () => {
@@ -33,6 +31,10 @@ const Login = ({ isDarkMode, apiString }) => {
   const formSideImage = '/images/Login/right_section.png';
   const headerImageLight = '/images/Login/background.jpeg';
   const headerImageDark = '/images/Login/background-dark.jpeg';
+  const latest_content = '/images/Login/latest_content.jpg';
+  const games = '../../images/Login/games.jpg';
+
+
 
   const navigate = useNavigate();
   const { login } = useAuth();

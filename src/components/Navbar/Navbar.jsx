@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './Navbar.module.css';
-import logo_virsaa from '../../images/logo.png'
 import { 
   FaBars, 
   FaSearch, 
@@ -16,12 +15,30 @@ import {
   FaSignOutAlt,
   FaBell,
 } from 'react-icons/fa';
-// import virsaa_logo from '../../images/logo.png';
-import result_image from '../../images/search_result.jpeg';
-import userImage from '../../images/Login/user-placeholder.jpg';
 import { useAuth } from '../../context/AuthContext';
 
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    if (process.env.NODE_ENV === 'production') {
+      if (typeof imagePath === 'string') {
+        return imagePath.startsWith('/')
+          ? imagePath
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
+
+
 const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
+  const logo_virsaa = '/images/logo.png'
+  const result_image = '/images/search_result.jpeg';
+  const userImage = '/images/Login/user-placeholder.jpg';
+
+  const getImagepath = useProductionImagePath();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
@@ -99,7 +116,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
         <div className={styles.leftSection}>
         <div className={styles.logoContainer}>
           <img 
-            src={logo_virsaa} 
+            src={getImagepath(logo_virsaa)} 
             alt="VIRSAA Logo" 
             className={styles.logoImage}
           />
@@ -142,7 +159,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
           {isLoggedIn ? (
             <div className={styles.userProfile} onClick={toggleProfileSidebar}>
               <img 
-                src={userData?.profileImage || userImage} 
+                src={getImagepath(userData?.profileImage || userImage)} 
                 alt="User" 
                 className={styles.userImage}
               />
@@ -181,7 +198,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
           <div className={styles.resultsList}>
             {[...Array(8)].map((_, index) => (
               <div key={index} className={styles.resultItem}>
-                <img src={result_image} alt="Result" className={styles.resultImage} />
+                <img src={getImagepath(result_image)} alt="Result" className={styles.resultImage} />
                 <div className={styles.resultContent}>
                   <h3>Result Title {index + 1}</h3>
                   <p>This is a description for Result {index + 1}.</p>
@@ -203,7 +220,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
           
           <div className={styles.userInfo}>
             <img 
-              src={userData?.profileImage || userImage} 
+              src={getImagepath(userData?.profileImage || userImage)} 
               alt="User" 
               className={styles.sidebarUserImage}
             />

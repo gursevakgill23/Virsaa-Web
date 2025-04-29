@@ -3,12 +3,29 @@ import { FaCheck, FaStar, FaDownload, FaAd } from 'react-icons/fa';
 import styles from './Membership.module.css';
 
 // Import header images for light and dark mode
-import headerLight from '../../images/Membership/header-image.jpg'; // Replace with your light mode image
-import headerDark from '../../images/Membership/header-image-dark.png'; // Replace with your dark mode image
+
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    if (process.env.NODE_ENV === 'production') {
+      if (typeof imagePath === 'string') {
+        return imagePath.startsWith('/')
+          ? imagePath
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 
 const Membership = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
   // Memoize the header image based on dark/light mode
   const headerImage = useMemo(() => (isDarkMode ? headerDark : headerLight), [isDarkMode]);
+  const headerLight = '/images/Membership/header-image.jpg'; // Replace with your light mode image
+  const headerDark = '/images/Membership/header-image-dark.png'; // Replace with your dark mode image
+
 
   // Subscription Plans Data
   const plans = [
@@ -83,7 +100,7 @@ const Membership = ({ isDarkMode }) => {
       {/* Header Section */}
       <div
         className={styles.header}
-        style={{ backgroundImage: `url(${headerImage})` }}
+        style={{ backgroundImage: `url(${getImagePath(headerImage)})` }}
       >
         <div className={styles.textOverlay}>
           <h1 className={styles.headline}>Choose Your Plan</h1>

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link,useNavigate } from 'react-router-dom';
 import { FaCrown, FaSearch, FaFilter, FaTimes, FaPlayCircle, FaVideo, FaHeadphones, FaLock, FaMicrophone, FaPlay, FaPause, FaStepBackward, FaStepForward, FaVolumeUp, FaExpand } from 'react-icons/fa';
 import styles from './Gurbani.module.css';
-import audioFile from "../../images/Gurbani/Nitnem.mp3";
-import videoFile from "../../images/Gurbani/Aarti.mp4";
+import audioFile from "./assets/Nitnem.mp3";
+import videoFile from "./assets/Aarti.mp4";
 
 const useProductionImagePath = () => {
   

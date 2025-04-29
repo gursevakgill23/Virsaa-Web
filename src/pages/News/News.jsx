@@ -7,16 +7,33 @@ import 'swiper/css/navigation';
 import styles from './News.module.css';
 
 // Import images for header
-import headerLight from '../../images/News/header-image.jpg'; // Replace with your light mode image
-import headerDark from '../../images/News/header-image-dark.png'; // Replace with your dark mode image
-
-// Import images for sections
-import latestNewsImage from '../../images/News/latest-news.jpg';
-import upcomingEventsImage from '../../images/News/upcoming-events.jpg';
-import featuredNewsImage from '../../images/News/featured-news.jpg';
 import { Link } from 'react-router-dom';
 
+const useProductionImagePath = () => {
+  return (imagePath) => {
+    if (process.env.NODE_ENV === 'production') {
+      if (typeof imagePath === 'string') {
+        return imagePath.startsWith('/')
+          ? imagePath
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
+
 const News = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
+  const headerLight = '/images/News/header-image.jpg'; // Replace with your light mode image
+  const headerDark = '/images/News/header-image-dark.png'; // Replace with your dark mode image
+
+  // const images for sections
+  const latestNewsImage = '/images/News/latest-news.jpg';
+  const upcomingEventsImage = '/images/News/upcoming-events.jpg';
+  const featuredNewsImage = '/images/News/featured-news.jpg';
+
   const headerRef = useRef(null);
 
   // Memoize the header image based on dark/light mode
@@ -196,7 +213,7 @@ const News = ({ isDarkMode }) => {
           {newsItems.map((news, index) => (
             <div key={news.id} className={styles.newsCard}>
               <div className={styles.imageContainer}>
-                <img src={latestNewsImage} alt={news.title} className={styles.newsImage} />
+                <img src={getImagePath(latestNewsImage)} alt={news.title} className={styles.newsImage} />
                 <div className={styles.overlay}>
                   <h3>{news.title}</h3>
                   <p>{news.excerpt}</p>
@@ -235,7 +252,7 @@ const News = ({ isDarkMode }) => {
         >
           {events.map((event) => (
             <SwiperSlide key={event.id} className={styles.eventCard}>
-              <img src={upcomingEventsImage} alt={event.title} className={styles.eventImage} />
+              <img src={getImagePath(upcomingEventsImage)} alt={event.title} className={styles.eventImage} />
               <div className={styles.eventDetails}>
                 <h3>{event.title}</h3>
                 <p>
@@ -261,7 +278,7 @@ const News = ({ isDarkMode }) => {
         <div className={styles.featuredGrid}>
           {featuredNews.map((news) => (
             <div key={news.id} className={styles.featuredCard}>
-              <img src={news.image} alt={news.title} className={styles.featuredImage} />
+              <img src={getImagePath(news.image)} alt={news.title} className={styles.featuredImage} />
               <div className={styles.featuredContent}>
                 <h3>{news.title}</h3>
                 <p>{news.description}</p>

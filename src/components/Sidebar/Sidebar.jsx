@@ -6,9 +6,30 @@ import { MdChevronRight } from 'react-icons/md';
 import styles from './Sidebar.module.css';
 import { BsCollectionFill } from "react-icons/bs";
 import { IoIosPeople } from "react-icons/io";
-import sidebar_header from '../../images/sidebar-header.png';
+
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
 
 const Sidebar = ({ open, closeSidebar }) => {
+  const sidebar_header = '/images/sidebar-header.png';
+  const getImagePath = useProductionImagePath();
   const [activeMenu, setActiveMenu] = useState(null);
   const sidebarRef = useRef(null);
   const location = useLocation();
@@ -90,7 +111,7 @@ const Sidebar = ({ open, closeSidebar }) => {
         </button>
         
         <div className={styles.sidebarContent}>
-          <img src={sidebar_header} alt="Sidebar" className={styles.sidebarImage} />
+          <img src={getImagePath(sidebar_header)} alt="Sidebar" className={styles.sidebarImage} />
           <h3>Did You Know?</h3>
           <p>Fun facts about Punjabi culture and Sikhism:</p>
           <ul>

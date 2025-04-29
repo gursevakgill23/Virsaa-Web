@@ -1022,10 +1022,8 @@
 
 /* Found Cell */
 .cell.found {
-  background: #4CAF50;
-  color: #F5F5F5;
-  border: 2px solid #FFD700;
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+  color: black;
+  border: 20px solid #03ff0b;
   animation: foundPulse 0.5s ease;
 }
 

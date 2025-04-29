@@ -4,13 +4,15 @@ import L from 'leaflet';
 import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import styles from './GurdwaraAccess.module.css';
-import header_image_light from '../../images/gurdwaraAccess/header-image.jpg';
-import header_image_dark from '../../images/gurdwaraAccess/header-image-dark.png';
-import iconRetinaUrl from '../../images/gurdwaraAccess/marker-icon-2x.png';
-import iconUrl from '../../images/gurdwaraAccess/marker-icon.png';
-import iconShadowUrl from '../../images/gurdwaraAccess/marker-shadow.png';
 import { FaCaretRight, FaSearch, FaLocationArrow } from 'react-icons/fa';
-import gurdwaraHistoryImage from '../../images/gurdwaraAccess/gurdwara-history.jpg';
+
+
+const gurdwaraHistoryImage = '../../images/gurdwaraAccess/gurdwara-history.jpg';
+const header_image_light = '../../images/gurdwaraAccess/header-image.jpg';
+const header_image_dark = '../../images/gurdwaraAccess/header-image-dark.png';
+const iconRetinaUrl = '../../images/gurdwaraAccess/marker-icon-2x.png';
+const iconUrl = '../../images/gurdwaraAccess/marker-icon.png';
+const iconShadowUrl = '../../images/gurdwaraAccess/marker-shadow.png';
 
 const useProductionImagePath = () => {
   

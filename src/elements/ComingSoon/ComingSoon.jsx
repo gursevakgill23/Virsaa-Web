@@ -1,11 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ComingSoon.module.css'; // Import CSS Module
-import comingsoon1 from '../../images/comingsoon1.jpeg';
-import comingsoon2 from '../../images/comingsoon2.jpg';
-import comingsoon3 from '../../images/comingsoon3.png';
-import comingsoon4 from '../../images/comingsoon4.jpg';
+
+const useProductionImagePath = () => {
+  
+  return (imagePath) => {
+    // Only modify in production
+    if (process.env.NODE_ENV === 'production') {
+      // Handle both imported images and public folder images
+      if (typeof imagePath === 'string') {
+        // For public folder images
+        return imagePath.startsWith('/') 
+          ? imagePath 
+          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+      } else {
+        // For imported images
+        return imagePath.default || imagePath;
+      }
+    }
+    return imagePath;
+  };
+};
+
 
 const ComingSoon = ({ isDarkMode }) => {
+  const getImagePath = useProductionImagePath();
+    const comingsoon1 = '/images/comingsoon1.jpeg';
+    const comingsoon2 = '/images/comingsoon2.jpg';
+    const comingsoon3 = '/images/comingsoon3.png';
+    const comingsoon4 = '/images/comingsoon4.jpg';
   // Data for text and images
   const contentArray = [
     { text: 'Content Coming Soon', image: comingsoon1 },
@@ -47,7 +69,7 @@ const ComingSoon = ({ isDarkMode }) => {
         {/* Right Side - Image */}
         <div className={styles.rightSide}>
           <img
-            src={contentArray[activeIndex].image}
+            src={getImagePath(contentArray[activeIndex].image)}
             alt="Coming Soon"
             className={styles.horizontalImage}
           />

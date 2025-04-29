@@ -1045,7 +1045,7 @@
     padding: 1.5rem;
   }
   .breadcrumb{
-    margin: 1/5rem;
+    margin: 1.5rem;
   }
 
   .discussionSection {
@@ -1106,4 +1106,58 @@ svg.defs-only {
   padding: 0;
   border: none;
   overflow: hidden;
+}
+
+
+.circularChart {
+  width: 140px; /* Consistent size for visibility */
+  height: 140px;
+  margin: 0 auto;
+  display: block;
+}
+
+.circleBg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.3); /* Semi-transparent white for background */
+  stroke-width: 3; /* Slightly thicker for balance */
+}
+
+.circle {
+  fill: none;
+  stroke: green; /* Solid green to match modal's success background */
+  stroke-width: 4; /* Thicker stroke for "filled" effect */
+  stroke-linecap: round; /* Smooth ends for the arc */
+  transition: stroke-dasharray 0.8s ease-in-out; /* Smooth progress animation */
+  transform: rotate(-90deg); /* Start arc from top */
+  transform-origin: 50% 50%; /* Rotate around center */
+}
+
+.summaryContent.success .circularProgress {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.summaryScore,
+.summaryBadge,
+.summaryAchievement {
+  font-size: 1.2rem;
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+.closeButton {
+  padding: 0.8rem 2rem;
+  background: linear-gradient(45deg, #ffffff, #e0e0e0);
+  color: #333;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-top: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.closeButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
 }

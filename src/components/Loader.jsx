@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { TailSpin } from 'react-loader-spinner'; // Import the spinner component
-import logo from '../images/logo.png'; // Replace with the path to your logo
 const useProductionImagePath = () => {
   return (imagePath) => {
     // Only modify in production
@@ -22,6 +21,7 @@ const useProductionImagePath = () => {
 
 
 const Loader = ({ onLoadingComplete }) => {
+  const logo = '/images/logo.png'; // Replace with the path to your logo
   const getImagePath = useProductionImagePath();
 
   const [loading, setLoading] = useState(true);
