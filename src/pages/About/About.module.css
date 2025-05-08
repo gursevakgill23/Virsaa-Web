@@ -27,7 +27,7 @@
 
 .heroOverlay {
   position: absolute;
-  top: 35%;
+  top: 30%;
   left: 5%;
   bottom: 0;
   display: flex;
@@ -342,11 +342,11 @@ a {
 /* Responsive Design */
 @media (max-width: 992px) {
   .heroTagline {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 
   .heroDescription {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
 
   .sectionTitle {

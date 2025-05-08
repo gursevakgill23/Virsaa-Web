@@ -603,7 +603,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2rem;
-  margin: 0 auto;
+  margin: 2rem auto;
   align-items: stretch;
 }
 
@@ -611,6 +611,7 @@
   flex: 1 1 30%;
   display: flex;
   align-items: stretch;
+  height:350px;
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
@@ -680,7 +681,7 @@
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 2rem;
-  margin: 0 auto;
+  margin: 2rem auto;
 }
 
 .card {
@@ -751,6 +752,9 @@
 
   .heritageContainer {
     gap: 20px;
+  }
+  .heritageImage{
+    height: 450px;
   }
 }
 
