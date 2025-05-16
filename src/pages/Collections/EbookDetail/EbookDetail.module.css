@@ -784,6 +784,9 @@
     position: relative;
     overflow: hidden;
 }
+.actionButtons{
+    gap: 0.5rem;
+}
 
 /* Shimmer Effect - Only for Related Books Section */
 .rightColumn .skeletonRelatedImageContainer::after,
@@ -834,6 +837,9 @@
     }
     .ebookCover {
         height: 400px;
+    }
+    .actionButtons{
+        gap: 1rem;
     }
     
     .rightColumn .relatedCard {

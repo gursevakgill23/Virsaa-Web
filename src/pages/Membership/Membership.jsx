@@ -3,7 +3,8 @@ import { FaCheck, FaStar, FaDownload, FaAd } from 'react-icons/fa';
 import styles from './Membership.module.css';
 
 // Import header images for light and dark mode
-
+const headerLight = '/images/Membership/header-image.jpg'; // Replace with your light mode image
+const headerDark = '/images/Membership/header-image-dark.png'; // Replace with your dark mode image
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
@@ -23,8 +24,6 @@ const Membership = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
   // Memoize the header image based on dark/light mode
   const headerImage = useMemo(() => (isDarkMode ? headerDark : headerLight), [isDarkMode]);
-  const headerLight = '/images/Membership/header-image.jpg'; // Replace with your light mode image
-  const headerDark = '/images/Membership/header-image-dark.png'; // Replace with your dark mode image
 
 
   // Subscription Plans Data

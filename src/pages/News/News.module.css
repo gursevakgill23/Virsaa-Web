@@ -76,7 +76,7 @@ a {
     font-size: 2rem;
     font-family: serif;
     color: var(--headline-color);
-    margin-bottom: 2rem;
+    margin: 2rem 0;
   }
   
   .newsGrid {
@@ -142,6 +142,7 @@ a {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    margin-top: 25px;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
   
@@ -175,7 +176,7 @@ a {
   
   /* Featured News Section */
   .featuredNews {
-    padding: 0 2rem;
+    padding:2rem;
   }
   
   .featuredGrid {
@@ -213,6 +214,7 @@ a {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    margin-top: 20px;
     transition: background-color 0.3s ease;
   }
   

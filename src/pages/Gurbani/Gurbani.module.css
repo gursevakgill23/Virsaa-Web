@@ -1151,10 +1151,10 @@ a {
 }
 
 .shapeContent h3 {
-  font-size: 0.75rem;
+  font-size: 1.25rem;
   margin-top: 15px;
   margin-bottom: 0;
-  color: black;
+  color: white;
 }
 
 .shapeHoverContent {
@@ -1175,14 +1175,14 @@ a {
 }
 
 .shapeHoverContent p {
-  font-size: 0.5rem;
+  font-size: 0.75rem;
   margin: 10px 0;
-  color: black;
+  color: white;
 }
 
 .shapeButton {
   padding: 8px;
-  font-size: 0.5rem;
+  font-size: 0.55rem;
   border: none;
   border-radius: 5px;
   background-color: var(--button-bg-color);

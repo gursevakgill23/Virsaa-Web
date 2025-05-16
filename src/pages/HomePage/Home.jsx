@@ -32,7 +32,7 @@ const Home = ({ isDarkMode }) => {
   const slide3Light = '../../images/header-slide3.jpg';
 
   // Dark mode images
-  const slide1Dark = '../../images/header-slide1-dark.jpg';
+  const slide1Dark = '../../images/header-slide1-dark.jpeg';
   const slide2Dark = '../../images/header-slide2-dark.jpg';
   const slide3Dark = '../../images/header-slide3-dark.jpg';
 
