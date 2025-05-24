@@ -37,8 +37,8 @@ const MyFavorites = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
 
   // Image paths (ensure these exist in /public/images/)
-  const header_image_light = '/images/header-image.png';
-  const header_image_dark = '/images/header-image-dark.png';
+  const header_image_light = '/images/Profile/header-image.png';
+  const header_image_dark = '/images/Profile/header-image-dark.png';
   const bookImage = '/images/book-image.jpg';
   const authorImage = '/images/author-image.jpg';
 

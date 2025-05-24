@@ -27,7 +27,7 @@ import About from './pages/About/About';
 import Quizzes from './pages/Learning/Quizzes/Quizzes';
 import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
 import AuthorDetail from './pages/Collections/AuthorDetail/AuthorDetail';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import AudiobookDetail from './pages/Collections/AudiobookDetail/AudiobookDetail';
 import { WordSearchGamePlay } from './pages/Learning/Games/WordSearch/WordSearch';
 import MemoryMatch from './pages/Learning/Games/MemoryMatch/MemoryMatch';
@@ -36,9 +36,33 @@ import MyFavorites from './pages/Profile/MyFavorites/MyFavorites';
 import Settings from './pages/Profile/Settings/Settings';
 import History from './pages/Profile/History/History';
 import Notifications from './pages/Profile/Notifications/Notifications';
+import CompleteProfile from './pages/Profile/CompleteProfile/CompleteProfile';
+import LearningMaterial from './pages/Learning/LearningMaterial/LearningMaterial';
 
 // Define your API base URL
-const API_STRING = "http://localhost:5118";
+const API_STRING = "http://localhost:8000";
+
+// Component to handle profile completion check
+const ProfileRoute = ({ isDarkMode, apiString }) => {
+  const { userData } = useAuth();
+
+  // Check if profile is complete
+  const isProfileComplete = userData && (
+    userData.first_name &&
+    userData.last_name &&
+    userData.profile_photo &&
+    userData.about_me &&
+    userData.preferred_content?.length > 0 &&
+    userData.dob &&
+    userData.gender !== 'prefer_not_to_say'
+  );
+
+  return isProfileComplete ? (
+    <MyProfile isDarkMode={isDarkMode} apiString={apiString} />
+  ) : (
+    <CompleteProfile isDarkMode={isDarkMode} apiString={apiString} />
+  );
+};
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -134,13 +158,14 @@ const App = () => {
             <Route path="/gurdwara-access/history/:id" element={<GurdwaraHistory isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/news" element={<News isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/about" element={<About isDarkMode={isDarkMode} apiString={API_STRING} />} />
-            <Route path="/my-profile" element={<MyProfile isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/my-profile" element={<ProfileRoute isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/account-settings" element={<Settings isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
             <Route path="/my-favorites" element={<MyFavorites isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
             <Route path="/history" element={<History isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
             <Route path="/notifications" element={<Notifications isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
+            <Route path="/learning/quizzes/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/learning-material/:id" element={<LearningMaterial isDarkMode={isDarkMode} apiString={API_STRING} />} />
 
-            <Route path="/quizzes/quizz/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/ebooks/ebook/:id" element={<EbookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/authors/author/:id" element={<AuthorDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/audiobooks/audiobook/:id" element={<AudiobookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />

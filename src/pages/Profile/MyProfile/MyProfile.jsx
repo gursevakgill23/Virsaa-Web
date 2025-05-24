@@ -1,96 +1,219 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { 
   FaCrown, FaAward, FaBook, FaClock, 
   FaCloud, FaEdit, FaSave, FaTimes, FaVenusMars,
   FaCalendarAlt, FaHeart, FaPen 
 } from 'react-icons/fa';
 import styles from './MyProfile.module.css';
+import { useAuth } from '../../../context/AuthContext';
 
 const useProductionImagePath = () => {
-  
   return (imagePath) => {
-    // Only modify in production
     if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
       if (typeof imagePath === 'string') {
-        // For public folder images
         return imagePath.startsWith('/') 
           ? imagePath 
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {
-        // For imported images
         return imagePath.default || imagePath;
       }
     }
     return imagePath;
   };
 };
-const MyProfile = ({ isDarkMode }) => {
+
+// Static achievements data as a fallback
+const staticAchievements = [
+  {
+    name: "First Steps",
+    icon: <FaBook />,
+    progress: 100,
+    description: "Completed your first session",
+  },
+  {
+    name: "Spiritual Seeker",
+    icon: <FaAward />,
+    progress: 50,
+    description: "Reached 50% progress in spiritual learning",
+  },
+  {
+    name: "Daily Devotee",
+    icon: <FaClock />,
+    progress: 25,
+    description: "Maintained a 3-day streak",
+  },
+];
+
+const MyProfile = ({ isDarkMode, apiString }) => {
+  const { accessToken, logout } = useAuth();
+  const navigate = useNavigate();
   const header_image_light = '../../../images/Gurbani/header-image.png';
   const header_image_dark = '../../../images/Gurbani/header-image-dark.png';
   const getImagePath = useProductionImagePath();
-  const [userData, setUserData] = useState({
-    name: 'Jaspreet Singh',
-    joinDate: 'Member since March 2021',
-    status: 'Gold Member',
-    bio: 'Spiritual seeker and Gurbani enthusiast',
-    dob: '1990-05-15',
-    sex: 'Male',
-    preferredContent: ['Shabad', 'Kirtan', 'History'],
-    stats: {
-      sessions: 142,
-      completed: 87,
-      streak: 15,
-      storage: '4.7/10GB'
-    },
-    achievements: [
-      { name: 'Nitnem Master', icon: <FaBook />, progress: 100 },
-      { name: 'Early Riser', icon: <FaClock />, progress: 75 },
-      { name: 'Scholar', icon: <FaAward />, progress: 60 }
-    ]
-  });
 
+  // State for user data, initialized with API response
+  const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [editSection, setEditSection] = useState(null);
   const [editData, setEditData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     bio: '',
     dob: '',
-    sex: '',
+    gender: '',
     preferredContent: []
   });
+  const [error, setError] = useState(null);
 
+  // Fetch user profile on mount
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch(`${apiString}/api/auth/profile/`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.status === 401) {
+          logout();
+          navigate('/login');
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch profile');
+        }
+
+        const data = await response.json();
+        // Check if achievements are provided by the backend; if not, use static data
+        const achievements = data.achievements && data.achievements.length > 0 
+          ? data.achievements.map(achievement => ({
+              ...achievement,
+              icon: mapIcon(achievement.icon),
+            }))
+          : staticAchievements;
+
+        setUserData({
+          first_name: data.first_name,
+          last_name: data.last_name,
+          joinDate: data.joined_date,
+          status: data.membership_level,
+          bio: data.about_me || '',
+          dob: data.dob || '',
+          gender: data.gender || '',
+          preferredContent: data.preferred_content || [],
+          profile_photo: data.profile_photo,
+          stats: {
+            sessions: 0,
+            completed: 0,
+            streak: 0,
+            storage: 0,
+          },
+          achievements: achievements,
+        });
+        setEditData({
+          first_name: data.first_name,
+          last_name: data.last_name,
+          bio: data.about_me || '',
+          dob: data.dob || '',
+          gender: data.gender || '',
+          preferredContent: data.preferred_content || [],
+        });
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setTimeout(() => setIsLoading(false), 1200);
+      }
+    };
+
+    if (accessToken) {
+      fetchProfile();
+    } else {
+      navigate('/login');
+    }
+  }, [accessToken, navigate, logout, apiString]);
+
+  // Map icon strings to React components (used if backend provides achievements)
+  const mapIcon = (iconName) => {
+    const iconMap = {
+      FaBook: <FaBook />,
+      FaClock: <FaClock />,
+      FaAward: <FaAward />,
+    };
+    return iconMap[iconName] || <FaAward />;
+  };
 
   const startEditing = (section) => {
     setEditSection(section);
     setEditData({
-      name: userData.name,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
       bio: userData.bio,
       dob: userData.dob,
-      sex: userData.sex,
-      preferredContent: [...userData.preferredContent]
+      gender: userData.gender,
+      preferredContent: [...userData.preferredContent],
     });
+    setError(null);
   };
 
   const cancelEditing = () => {
     setEditSection(null);
+    setError(null);
   };
 
-  const saveChanges = () => {
-    setUserData(prev => ({
-      ...prev,
-      name: editData.name,
-      bio: editData.bio,
-      dob: editData.dob,
-      sex: editData.sex,
-      preferredContent: [...editData.preferredContent]
-    }));
-    setEditSection(null);
+  const saveChanges = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('first_name', editData.first_name);
+      formData.append('last_name', editData.last_name);
+      formData.append('about_me', editData.bio);
+      formData.append('dob', editData.dob);
+      formData.append('gender', editData.gender);
+      formData.append('preferred_content', JSON.stringify(editData.preferredContent));
+
+      const response = await fetch(`${apiString}/api/auth/complete-profile/`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      if (response.status === 401) {
+        logout();
+        navigate('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+
+      // Removed unused 'result' variable
+      setUserData(prev => ({
+        ...prev,
+        first_name: editData.first_name,
+        last_name: editData.last_name,
+        bio: editData.bio,
+        dob: editData.dob,
+        gender: editData.gender,
+        preferredContent: [...editData.preferredContent],
+      }));
+      toast.success('Changes Saved Successfully!', {
+        position: 'top-center',
+        autoClose: 2000,
+        theme: isDarkMode ? 'dark' : 'light',
+      });
+      setEditSection(null);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -107,11 +230,22 @@ const MyProfile = ({ isDarkMode }) => {
     });
   };
 
-  const contentOptions = ['Shabad', 'Kirtan', 'History', 'Philosophy', 'Language', 'Children'];
+  const contentOptions = ['fiction', 'sikh_history', 'punjabi_culture', 'spirituality', 'non_fiction', 'poetry', 'audiobook', 'ebook'];
+
+  if (!userData) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className={styles.container}>
-      {/* Header - Matches Gurbani page */}
+      {/* Toast Notifications */}
+      {error && (
+        <div className={styles.errorToast}>
+          {error}
+        </div>
+      )}
+
+      {/* Header */}
       <div className={styles.header}>
         <img
           src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
@@ -124,7 +258,7 @@ const MyProfile = ({ isDarkMode }) => {
         </div>
       </div>
 
-      {/* Breadcrumb - Matches standard */}
+      {/* Breadcrumb */}
       <div className={styles.breadcrumb}>
         <Link to="/"><span>Home</span></Link> / 
         <Link to="/account"><span> My Account</span></Link>
@@ -137,7 +271,7 @@ const MyProfile = ({ isDarkMode }) => {
         ) : (
           <div className={styles.avatarWrapper}>
             <img 
-              src={getImagePath("https://randomuser.me/api/portraits/men/32.jpg")} 
+              src={userData.profile_photo || getImagePath("https://randomuser.me/api/portraits/men/32.jpg")} 
               alt="User" 
               className={styles.avatar}
             />
@@ -162,8 +296,15 @@ const MyProfile = ({ isDarkMode }) => {
             <>
               <input
                 type="text"
-                name="name"
-                value={editData.name}
+                name="first_name"
+                value={editData.first_name}
+                onChange={handleInputChange}
+                className={styles.editInput}
+              />
+              <input
+                type="text"
+                name="last_name"
+                value={editData.last_name}
                 onChange={handleInputChange}
                 className={styles.editInput}
               />
@@ -181,7 +322,7 @@ const MyProfile = ({ isDarkMode }) => {
             </>
           ) : (
             <>
-              <h2>{userData.name}</h2>
+              <h2>{`${userData.first_name} ${userData.last_name}`}</h2>
               <div className={styles.membershipBadge}>
                 <FaCrown /> {userData.status}
               </div>
@@ -267,15 +408,15 @@ const MyProfile = ({ isDarkMode }) => {
             <div className={styles.detailRow}>
               <span className={styles.detailIcon}><FaVenusMars /></span>
               <select
-                name="sex"
-                value={editData.sex}
+                name="gender"
+                value={editData.gender}
                 onChange={handleInputChange}
                 className={styles.editSelect}
               >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-                <option value="">Prefer not to say</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
               </select>
             </div>
             
@@ -297,7 +438,7 @@ const MyProfile = ({ isDarkMode }) => {
             
             <div className={styles.detailRow}>
               <span className={styles.detailIcon}><FaVenusMars /></span>
-              <span>Sex: {userData.sex || "Not specified"}</span>
+              <span>Gender: {userData.gender || "Not specified"}</span>
             </div>
           </>
         )}
@@ -358,7 +499,7 @@ const MyProfile = ({ isDarkMode }) => {
         )}
       </div>
 
-      {/* Stats Overview */}
+      {/* Stats Overview (Placeholder) */}
       <div className={styles.statsSection}>
         <h3 className={styles.sectionTitle}>Your Spiritual Journey</h3>
         <div className={styles.statsGrid}>
@@ -404,6 +545,7 @@ const MyProfile = ({ isDarkMode }) => {
               <div key={index} className={styles.achievementCard}>
                 <div className={styles.achievementIcon}>{item.icon}</div>
                 <h4>{item.name}</h4>
+                <p>{item.description}</p>
                 <div className={styles.progressBar}>
                   <div 
                     className={styles.progressFill} 

@@ -95,6 +95,7 @@
   font-size: 1rem;
   background: var(--input-bg-color);
   color: var(--text-color);
+  width: 100%;
 }
 
 .input:focus {
@@ -213,6 +214,44 @@
   border: 1px solid var(--button-hover-text-color);
 }
 
+.passwordContainer {
+  position: relative;
+  width: 100%;
+}
+
+.togglePassword {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--text-color, #333);
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.togglePassword:hover {
+  color: var(--primary-color, #007bff);
+}
+
+/* Ensure input padding accommodates the icon */
+.input {
+  padding-right: 40px; /* Add space for the eye icon */
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .togglePassword {
+  color: var(--text-color-dark, #ccc);
+}
+
+[data-theme="dark"] .togglePassword:hover {
+  color: var(--primary-color-dark, #66b0ff);
+}
+
 /* Responsive Design */
 @media (max-width: 992px) {
   .headerText h1 {
@@ -301,14 +340,14 @@
 }
 
 .rememberMe input[type="checkbox"]:checked {
-  background-color: var(--button-bg-color);
-  border-color: var(--button-bg-color);
+  border-color:var(--button-bg-color);
+  color: var(--button-bg-color);
+
 }
 
 .rememberMe input[type="checkbox"]:checked::after {
   content: "✓";
   position: absolute;
-  color: white;
   font-size: 14px;
   top: 50%;
   left: 50%;

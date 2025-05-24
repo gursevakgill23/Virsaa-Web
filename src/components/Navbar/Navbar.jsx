@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import styles from './Navbar.module.css';
 import { 
   FaBars, 
@@ -32,21 +33,77 @@ const useProductionImagePath = () => {
   };
 };
 
-
-const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
-  const logo_virsaa = '/images/logo.png'
+const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
+  const logo_virsaa = '/images/logo.png';
   const result_image = '/images/search_result.jpeg';
   const userImage = '/images/Login/user-placeholder.jpg';
 
-  const getImagepath = useProductionImagePath();
+  const getImagePath = useProductionImagePath();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
+  const [profileData, setProfileData] = useState(null); // State to store fetched profile data
   const navbarRef = useRef(null);
   const navigate = useNavigate();
   
-  const { isLoggedIn, userData, logout } = useAuth();
+  const { isLoggedIn, userData, accessToken, logout } = useAuth();
+
+  // Fetch profile data when the profile sidebar is opened
+  useEffect(() => {
+    if (showProfileSidebar && accessToken) {
+      const fetchProfile = async () => {
+        try {
+          const response = await fetch(`${apiString}/api/auth/profile/`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.status === 401) {
+            await logout();
+            navigate('/login');
+            toast.error('Session expired. Please log in again.', {
+              position: 'top-center',
+              autoClose: 3000,
+              theme: isDarkMode ? 'dark' : 'light',
+            });
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch profile data');
+          }
+
+          const data = await response.json();
+          setProfileData({
+            first_name: data.first_name || '',
+            last_name: data.last_name || '',
+            profile_photo: data.profile_photo || userImage,
+            email: data.email || userData?.email || '',
+          });
+        } catch (error) {
+          console.error('Error fetching profile data:', error);
+          toast.error('Failed to load profile data.', {
+            position: 'top-center',
+            autoClose: 3000,
+            theme: isDarkMode ? 'dark' : 'light',
+          });
+          // Fallback to userData if fetch fails
+          setProfileData({
+            first_name: userData?.first_name || '',
+            last_name: userData?.last_name || '',
+            profile_photo: userData?.profile_photo || userImage,
+            email: userData?.email || '',
+          });
+        }
+      };
+
+      fetchProfile();
+    }
+  }, [showProfileSidebar, accessToken, logout, navigate, isDarkMode, userData, apiString]);
 
   const handleDropdown = () => {
     setShowDropdown(!showDropdown);
@@ -64,10 +121,25 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
     setShowProfileSidebar(!showProfileSidebar);
   };
 
-  const handleLogout = () => {
-    logout();
-    setShowProfileSidebar(false);
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      console.log('Initiating logout from navbar');
+      await logout();
+      toast.success('Logged out successfully!', {
+        position: 'top-center',
+        autoClose: 2000,
+        theme: isDarkMode ? 'dark' : 'light',
+      });
+      setShowProfileSidebar(false);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('Logout failed. Please try again.', {
+        position: 'top-center',
+        autoClose: 5000,
+        theme: isDarkMode ? 'dark' : 'light',
+      });
+    }
   };
 
   useEffect(() => {
@@ -82,8 +154,6 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
     };
   }, [showSearch, showProfileSidebar]);
 
-
-  // Touch event handlers for swipe to open
   const handleTouchStart = (e) => {
     if (window.innerWidth > 480) return;
     setTouchStart(e.touches[0].clientX);
@@ -93,7 +163,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
     if (!touchStart || window.innerWidth > 480) return;
     const touchEnd = e.touches[0].clientX;
     const difference = touchStart - touchEnd;
-    if (difference > 50) { // Swipe left to right
+    if (difference > 50) {
       toggleSidebar();
       setTouchStart(null);
     }
@@ -112,19 +182,16 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Left Side: Logo and Arrow Button */}
         <div className={styles.leftSection}>
-        <div className={styles.logoContainer}>
-          <img 
-            src={getImagepath(logo_virsaa)} 
-            alt="VIRSAA Logo" 
-            className={styles.logoImage}
-          />
+          <div className={styles.logoContainer}>
+            <img 
+              src={getImagePath(logo_virsaa)} 
+              alt="VIRSAA Logo" 
+              className={styles.logoImage}
+            />
+          </div>
         </div>
 
-        </div>
-
-        {/* Center: Nav Links */}
         <div className={styles.navLinks}>
           <Link to="/home">Home</Link>
           <div className={styles.dropdown} onMouseEnter={handleDropdown} onMouseLeave={handleDropdown}>
@@ -144,7 +211,6 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
           <Link to="/about">About</Link>
         </div>
 
-        {/* Right Side: Search, Menu Icon, Theme Toggle, and User Profile */}
         <div className={styles.navRight}>
           <button className={styles.searchIcon} onClick={toggleSearch}>
             <FaSearch />
@@ -159,7 +225,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
           {isLoggedIn ? (
             <div className={styles.userProfile} onClick={toggleProfileSidebar}>
               <img 
-                src={getImagepath(userData?.profileImage || userImage)} 
+                src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)} 
                 alt="User" 
                 className={styles.userImage}
               />
@@ -177,7 +243,6 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
         </div>
       </nav>
 
-      {/* Search Section */}
       {showSearch && (
         <div className={styles.searchSection}>
           <form className={styles.searchForm}>
@@ -194,11 +259,10 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
             </button>
           </form>
 
-          {/* Results List */}
           <div className={styles.resultsList}>
             {[...Array(8)].map((_, index) => (
               <div key={index} className={styles.resultItem}>
-                <img src={getImagepath(result_image)} alt="Result" className={styles.resultImage} />
+                <img src={getImagePath(result_image)} alt="Result" className={styles.resultImage} />
                 <div className={styles.resultContent}>
                   <h3>Result Title {index + 1}</h3>
                   <p>This is a description for Result {index + 1}.</p>
@@ -209,7 +273,6 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
         </div>
       )}
 
-      {/* Profile Sidebar */}
       {showProfileSidebar && (
         <div className={styles.profileSidebar}>
           <div className={styles.sidebarHeader}>
@@ -220,12 +283,18 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
           
           <div className={styles.userInfo}>
             <img 
-              src={getImagepath(userData?.profileImage || userImage)} 
+              src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)} 
               alt="User" 
               className={styles.sidebarUserImage}
             />
-            <h3>{userData?.username || 'User'}</h3>
-            <p>{userData?.email || ''}</p>
+            <h3>
+              {profileData?.first_name && profileData?.last_name 
+                ? `${profileData.first_name} ${profileData.last_name}`
+                : userData?.first_name && userData?.last_name 
+                  ? `${userData.first_name} ${userData.last_name}`
+                  : userData?.username || 'User'}
+            </h3>
+            <p>{profileData?.email || userData?.email || ''}</p>
           </div>
           
           <div className={styles.sidebarMenu}>

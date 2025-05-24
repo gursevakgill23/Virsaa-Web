@@ -1,32 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-// import HCaptcha from '@hcaptcha/react-hcaptcha';
+import ReCAPTCHA from 'react-google-recaptcha';
 import styles from './Login.module.css';
-import { FaGoogle, FaFacebook, FaGamepad, FaCoins } from 'react-icons/fa';
+import { FaGoogle, FaFacebook, FaGamepad, FaCoins, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
-    // Only modify in production
     if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
       if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
+        return imagePath.startsWith('/')
+          ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {
-        // For imported images
         return imagePath.default || imagePath;
       }
     }
     return imagePath;
   };
 };
-const Login = ({ isDarkMode, apiString }) => {
+
+const Login = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const recaptchaRef = useRef(null);
 
   const formSideImage = '/images/Login/right_section.png';
   const headerImageLight = '/images/Login/background.jpeg';
@@ -34,123 +35,128 @@ const Login = ({ isDarkMode, apiString }) => {
   const latest_content = '/images/Login/latest_content.jpg';
   const games = '../../images/Login/games.jpg';
 
-
-
-  const navigate = useNavigate();
-  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    rememberMe: false
+    rememberMe: false,
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [captchaToken, setCaptchaToken] = useState(null);
-  // const captchaRef = useRef(null);
-
+  const [showPassword, setShowPassword] = useState(false);
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
-  // Dummy data for Latest Content
+  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+  console.log('Login API URL:', apiUrl);
+
   const latestContent = [
     { id: 1, image: latest_content, title: 'Content 1', description: 'Description for Content 1' },
     { id: 2, image: latest_content, title: 'Content 2', description: 'Description for Content 2' },
     { id: 3, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
     { id: 4, image: latest_content, title: 'Content 4', description: 'Description for Content 4' },
-    { id: 5, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
+    { id: 5, image: latest_content, title: 'Content 5', description: 'Description for Content 5' },
   ];
 
-  // Dummy data for Popular in Kids
   const popularInKids = [
     { id: 1, image: games, title: 'Game 1', level: 'Beginner', fees: 50 },
     { id: 2, image: games, title: 'Game 2', level: 'Intermediate', fees: 100 },
     { id: 3, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
     { id: 4, image: games, title: 'Game 4', level: 'Expert', fees: 200 },
-    { id: 5, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
+    { id: 5, image: games, title: 'Game 5', level: 'Advanced', fees: 150 },
   ];
 
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [id]: type === 'checkbox' ? checked : value
+      [id]: type === 'checkbox' ? checked : value,
     }));
-    
     if (errors[id]) {
       setErrors(prev => ({ ...prev, [id]: '' }));
     }
   };
 
-  // const onCaptchaVerify = (token) => {
-  //   setCaptchaToken(token);
-  //   if (errors.captcha) {
-  //     setErrors(prev => ({ ...prev, captcha: '' }));
-  //   }
-  // };
-
-  // const onCaptchaError = (error) => {
-  //   console.error("hCaptcha Error:", error);
-  //   setErrors(prev => ({ ...prev, captcha: 'Please complete the captcha' }));
-  // };
+  const togglePasswordVisibility = () => {
+    setShowPassword(prev => !prev);
+  };
 
   const validateForm = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!emailRegex.test(formData.email)) {
       newErrors.email = 'Invalid email format';
     }
-    
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     }
-    
+
+    const captchaToken = recaptchaRef.current?.getValue();
+    if (!captchaToken) {
+      newErrors.captcha = 'Please complete the reCAPTCHA challenge';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      const response = await fetch(`${apiString}/api/Auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'captchaValidated': 'true' // Bypassing captcha validation
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          rememberMe: formData.rememberMe
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+      const captchaToken = recaptchaRef.current.getValue();
+      if (!captchaToken) {
+        throw new Error('Please complete the reCAPTCHA challenge');
       }
-      
-      login(data.data.accessToken, data.data.user, formData.rememberMe);
-      
-      toast.success('Login Successful! Redirecting...', {
-        position: "top-center",
-        autoClose: 2000,
-        theme: isDarkMode ? "dark" : "light",
+
+      console.log('Submitting login request:', { email: formData.email, captcha: captchaToken, apiUrl });
+      const response = await axios.post(`${apiUrl}/api/auth/login/`, {
+        login: formData.email,
+        password: formData.password,
+        captcha: captchaToken,
       });
-      
+
+      console.log('Login response:', response.data);
+      login(
+        response.data.access,
+        response.data.refresh,
+        {
+          id: response.data.user.id,
+          username: response.data.user.username,
+          email: response.data.user.email,
+          first_name: response.data.user.first_name,
+          last_name: response.data.user.last_name,
+          profile_photo: response.data.user.profile_photo,
+          membership_level: response.data.user.membership_level,
+          last_logined: response.data.user.last_logined,
+          joined_date: response.data.user.joined_date,
+          theme_preference: response.data.user.theme_preference,
+        },
+        formData.rememberMe
+      );
+
+      toast.success('Login Successful! Redirecting...', {
+        position: 'top-center',
+        autoClose: 2000,
+        theme: isDarkMode ? 'dark' : 'light',
+      });
+
       setTimeout(() => navigate('/'), 2000);
     } catch (error) {
-      toast.error(error.message || 'An error occurred during login', {
-        position: "top-center",
+      const errorMessage = error.response?.data?.login?.[0] ||
+                          error.response?.data?.error ||
+                          error.message ||
+                          'An error occurred during login';
+      console.error('Login error:', errorMessage);
+      toast.error(errorMessage, {
+        position: 'top-center',
         autoClose: 5000,
-        theme: isDarkMode ? "dark" : "light",
+        theme: isDarkMode ? 'dark' : 'light',
       });
     } finally {
       setIsSubmitting(false);
@@ -160,7 +166,7 @@ const Login = ({ isDarkMode, apiString }) => {
   return (
     <div className={styles.container} data-theme={isDarkMode ? 'dark' : 'light'}>
       <ToastContainer />
-      
+
       {/* Header Section */}
       <div className={styles.header}>
         <div
@@ -200,15 +206,34 @@ const Login = ({ isDarkMode, apiString }) => {
               <label htmlFor="password" className={styles.label}>
                 Password
               </label>
-              <input
-                type="password"
-                id="password"
-                className={`${styles.input} ${errors.password ? styles.errorInput : ''}`}
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={handleChange}
-              />
+              <div className={styles.passwordContainer}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  className={`${styles.input} ${errors.password ? styles.errorInput : ''}`}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className={styles.togglePassword}
+                  onClick={togglePasswordVisibility}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
               {errors.password && <div className={styles.errorMessage}>{errors.password}</div>}
+            </div>
+
+            {/* reCAPTCHA */}
+            <div className={styles.inputGroup}>
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                size="normal"
+                sitekey={process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY}
+              />
+              {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
             </div>
 
             {/* Remember Me & Forgot Password */}
@@ -231,8 +256,8 @@ const Login = ({ isDarkMode, apiString }) => {
             </div>
 
             {/* Login Button */}
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className={styles.loginButton}
               disabled={isSubmitting}
             >
