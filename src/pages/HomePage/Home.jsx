@@ -1,70 +1,127 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate,Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { MdPlayArrow, MdClose } from "react-icons/md";
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext'; // Import your AuthContext
 import styles from './Home.module.css';
 import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 
+// Define S3 base URL as a constant
+const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
+
+// Utility function to handle S3-based image paths
 const useProductionImagePath = () => {
-  
   return (imagePath) => {
-    // Only modify in production
+    if (!imagePath) {
+      console.log('Image path is null/undefined, using default:', imagePath);
+      return getProductionImagePath('/images/Collections/book-image.jpg');
+    }
+
+    if (typeof imagePath === 'string' && imagePath.startsWith('https://')) {
+      console.log('Full URL detected, returning:', imagePath);
+      return imagePath;
+    }
+
+    if (typeof imagePath === 'string') {
+      const cleanedPath = imagePath.replace(/^\/+|\/+$/g, '').replace(/ /g, '%20');
+      const fullUrl = `${S3_BASE_URL}/${cleanedPath}`;
+      console.log('Processed relative path to:', fullUrl);
+      return fullUrl;
+    }
+
     if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
       if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
+        return imagePath.startsWith('/')
+          ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {
-        // For imported images
-        return imagePath.default || imagePath;
+        return imagePath.default || imagePath || getProductionImagePath('/images/Collections/book-image.jpg');
       }
     }
-    return imagePath;
+
+    return imagePath || getProductionImagePath('/images/Collections/book-image.jpg');
   };
 };
+
+// Utility function to handle public/static images (restored)
+const getProductionImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (typeof imagePath === 'string') {
+      return imagePath.startsWith('/')
+        ? imagePath
+        : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    } else {
+      return imagePath.default || imagePath;
+    }
+  }
+  return imagePath;
+};
+
 const Home = ({ isDarkMode }) => {
-  const getImagePath = useProductionImagePath();
-  const slide1Light = '../../images/header-slide1.jpg';
-  const slide2Light = '../../images/header-slide2.jpg';
-  const slide3Light = '../../images/header-slide3.jpg';
+  const getS3ImagePath = useProductionImagePath();
+  const getStaticImagePath = getProductionImagePath;
+  const slide1Light = getStaticImagePath('../../images/header-slide1.jpg');
+  const slide2Light = getStaticImagePath('../../images/header-slide2.jpg');
+  const slide3Light = getStaticImagePath('../../images/header-slide3.jpg');
 
   // Dark mode images
-  const slide1Dark = '../../images/header-slide1-dark.jpeg';
-  const slide2Dark = '../../images/header-slide2-dark.jpg';
-  const slide3Dark = '../../images/header-slide3-dark.jpg';
+  const slide1Dark = getStaticImagePath('../../images/header-slide1-dark.jpeg');
+  const slide2Dark = getStaticImagePath('../../images/header-slide2-dark.jpg');
+  const slide3Dark = getStaticImagePath('../../images/header-slide3-dark.jpg');
 
-  const book_image = '../../images/book-image.jpg';
-  const audiobooks_kirtan = '../../images/audiobooks_kirtan.jpg';
-  const learning_resources = '../../images/learning_resources.jpg';
-  const games_quizzes = '../../images/games_quizzes.jpg';
-  const sikh_history = '../../images/sikh_history.jpg';
-  const recent_news = '../../images/recent_news.jpg';
-  const gurbani = '../../images/gurbani.jpg';
-  const heritage = '../../images/heritage.jpg';
+  const audiobooks_kirtan = getStaticImagePath('../../images/audiobooks_kirtan.jpg');
+  const learning_resources = getStaticImagePath('../../images/learning_resources.jpg');
+  const games_quizzes = getStaticImagePath('../../images/games_quizzes.jpg');
+  const sikh_history = getStaticImagePath('../../images/sikh_history.jpg');
+  const recent_news = getStaticImagePath('../../images/recent_news.jpg');
+  const gurbani = getStaticImagePath('../../images/gurbani.jpg');
+  const heritage = getStaticImagePath('../../images/heritage.jpg');
+
   const [imageIndex, setImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const imageRefs = useRef([]);
   const navigate = useNavigate();
 
-  const { isLoggedIn } = useAuth(); // Get auth state
+  // State for fetched ebooks
+  const [latestBooks, setLatestBooks] = useState([]);
+
+  const { isLoggedIn } = useAuth();
   const [showHukamnamaToast, setShowHukamnamaToast] = useState(false);
   const [showHukamnamaModal, setShowHukamnamaModal] = useState(false);
   const [activeTab, setActiveTab] = useState('hukamnama');
   const toastTimer = useRef(null);
 
-  // Show toast when component mounts - appears every time now
+  // Fetch ebooks for the "Explore Our Latest Books" section
+  useEffect(() => {
+    const fetchBooks = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch('http://localhost:8000/collections/ebooks/');
+        const data = await response.json();
+        console.log('Fetched ebooks for Home page:', data);
+        const sortedBooks = data.sort((a, b) => b.id - a.id).slice(0, 12);
+        setLatestBooks(sortedBooks);
+      } catch (error) {
+        console.error('Error fetching ebooks:', error);
+      } finally {
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 4000);
+      }
+    };
+
+    fetchBooks();
+  }, []);
+
+  // Show toast when component mounts - appears every time
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowHukamnamaToast(true);
-      // Hide after 5 seconds
       toastTimer.current = setTimeout(() => {
         setShowHukamnamaToast(false);
       }, 8000);
-    }, 2000); // Show after 2 seconds delay
-    
+    }, 2000);
+
     return () => {
       clearTimeout(timer);
       clearTimeout(toastTimer.current);
@@ -81,58 +138,46 @@ const Home = ({ isDarkMode }) => {
     setShowHukamnamaModal(false);
   };
 
- // Sample Hukamnama data - could be fetched from API based on auth state
-const hukamnamaData = {
-  punjabi: `ਹੁਕਮਿ ਰਜਾਈ ਚਲਣਾ ਨਾਨਕ ਲਿਖਿਆ ਨਾਲਿ ॥
-  ਗਾਵੀਐ ਸੁਣੀਐ ਮਨਿ ਰਖੀਐ ਭਾਉ ॥
-  ਦੁਖੁ ਪਰਹਰਿ ਸੁਖੁ ਘਰਿ ਲੈ ਜਾਇ ॥
-  ਗੁਰਮੁਖਿ ਨਾਦੰ ਗੁਰਮੁਖਿ ਵੇਦੰ ਗੁਰਮੁਖਿ ਰਹਿਆ ਸਮਾਈ ॥
-  ਗੁਰੁ ਈਸਰੁ ਗੁਰੁ ਗੋਰਖੁ ਬਰਮਾ ਗੁਰੁ ਪਾਰਬਤੀ ਮਾਈ ॥
-  ਜੇ ਹਉ ਜਾਣਾ ਆਖਾ ਨਾਹੀ ਕਹਣਾ ਕਥਨੁ ਨ ਜਾਈ ॥`,
-  
-  english: isLoggedIn 
-    ? `By the Hukam of His Command, He leads us to walk on the Path; O Nanak, it is written in our destiny.
-    Sing, and listen, and let your mind be filled with love.
-    Your pain shall be sent far away, and peace shall come to your home.
-    The Guru's Word is the Sound-current of the Naad; the Guru's Word is the Wisdom of the Vedas; the Guru's Word is all-pervading.
-    The Guru is Shiva, the Guru is Vishnu and Brahma; the Guru is Paarvati and Lakhshmi.
-    Even knowing God, I cannot describe Him; He cannot be described in words.`
-    : `Sign in to view the full Hukamnama translation`,
-    
-  arth: isLoggedIn 
-    ? `The Almighty directs all beings according to His Will; O Nanak, our destiny is pre-ordained by Him.
-    We should sing the Lord's praises, listen to them, and cherish love for Him in our hearts.
-    By doing so, all sufferings will depart and tranquility will come to abide in our homes.
-    The Guru's teachings connect us with the divine sound current, contain the essence of all scriptures, and are all-pervading.
-    The Guru has the attributes of all deities - Shiva, Vishnu, Brahma, Parvati and Lakshmi.
-    Even if I try to describe God, I cannot - He is beyond all description and explanation.`
-    : `Sign in to view the detailed explanation`,
-    
-  reference: {
-    source: "Sri Guru Granth Sahib Ji",
-    ang: 2,
-    raag: "Japji Sahib",
-    writer: "Guru Nanak Dev Ji"
-  }
-};
+  const hukamnamaData = {
+    punjabi: `ਹੁਕਮਿ ਰਜਾਈ ਚਲਣਾ ਨਾਨਕ ਲਿਖਿਆ ਨਾਲਿ ॥
+    ਗਾਵੀਐ ਸੁਣੀਐ ਮਨਿ ਰਖੀਐ ਭਾਉ ॥
+    ਦੁਖੁ ਪਰਹਰਿ ਸੁਖੁ ਘਰਿ ਲੈ ਜਾਇ ॥
+    ਗੁਰਮੁਖਿ ਨਾਦੰ ਗੁਰਮੁਖਿ ਵੇਦੰ ਗੁਰਮੁਖਿ ਰਹਿਆ ਸਮਾਈ ॥
+    ਗੁਰੁ ਈਸਰੁ ਗੁਰੁ ਗੋਰਖੁ ਬਰਮਾ ਗੁਰੁ ਪਾਰਬਤੀ ਮਾਈ ॥
+    ਜੇ ਹਉ ਜਾਣਾ ਆਖਾ ਨਾਹੀ ਕਹਣਾ ਕਥਨੁ ਨ ਜਾਈ ॥`,
 
-  // Memoize the bgImages array to prevent unnecessary recalculations
+    english: isLoggedIn
+      ? `By the Hukam of His Command, He leads us to walk on the Path; O Nanak, it is written in our destiny.
+      Sing, and listen, and let your mind be filled with love.
+      Your pain shall be sent far away, and peace shall come to your home.
+      The Guru's Word is the Sound-current of the Naad; the Guru's Word is the Wisdom of the Vedas; the Guru's Word is all-pervading.
+      The Guru is Shiva, the Guru is Vishnu and Brahma; the Guru is Paarvati and Lakhshmi.
+      Even knowing God, I cannot describe Him; He cannot be described in words.`
+      : `Sign in to view the full Hukamnama translation`,
+
+    arth: isLoggedIn
+      ? `The Almighty directs all beings according to His Will; O Nanak, our destiny is pre-ordained by Him.
+      We should sing the Lord's praises, listen to them, and cherish love for Him in our hearts.
+      By doing so, all sufferings will depart and tranquility will come to abide in our homes.
+      The Guru's teachings connect us with the divine sound current, contain the essence of all scriptures, and are all-pervading.
+      The Guru has the attributes of all deities - Shiva, Vishnu, Brahma, Parvati and Lakshmi.
+      Even if I try to describe God, I cannot - He is beyond all description and explanation.`
+      : `Sign in to view the detailed explanation`,
+
+    reference: {
+      source: "Sri Guru Granth Sahib Ji",
+      ang: 2,
+      raag: "Japji Sahib",
+      writer: "Guru Nanak Dev Ji"
+    }
+  };
+
   const bgImages = useMemo(() => {
     return isDarkMode
       ? [slide1Dark, slide2Dark, slide3Dark]
       : [slide1Light, slide2Light, slide3Light];
-  }, [isDarkMode]);
+  }, [isDarkMode,slide1Dark,slide1Light,slide2Dark,slide2Light,slide3Dark,slide3Light]);
 
-  useEffect(() => {
-    // Simulate loading for 2 seconds
-    const loadingTimer = setTimeout(() => {
-      setIsLoading(false);
-    }, 4000);
-
-    return () => clearTimeout(loadingTimer);
-  }, []);
-
-  // Function to change the image automatically
   useEffect(() => {
     const interval = setInterval(() => {
       setImageIndex((prevIndex) => (prevIndex + 1) % bgImages.length);
@@ -141,7 +186,6 @@ const hukamnamaData = {
     return () => clearInterval(interval);
   }, [bgImages.length]);
 
-  // Add animation on page load for book images
   useEffect(() => {
     if (!isLoading) {
       imageRefs.current.forEach((image, index) => {
@@ -166,6 +210,7 @@ const hukamnamaData = {
   const goToCollections = () => {
     navigate('/collections/ebooks');
   };
+
   const textContent = [
     {
       h1: 'Ebooks and Audiobooks',
@@ -181,73 +226,8 @@ const hukamnamaData = {
     },
   ];
 
-  const books = [
-    {
-      id: 1,
-      image: book_image,
-      name: 'Heer Ranjha',
-      writer: 'Waris Shah',
-    },
-    {
-      id: 2,
-      image: book_image,
-      name: 'Pinjar',
-      writer: 'Amrita Pritam',
-    },
-    {
-      id: 3,
-      image: book_image,
-      name: 'Sadda Punjab',
-      writer: 'Nanak Singh',
-    },
-    {
-      id: 4,
-      image: book_image,
-      name: 'Ik Si Punjab',
-      writer: 'Surjit Patar',
-    },
-    {
-      id: 5,
-      image: book_image,
-      name: 'Loona',
-      writer: 'Shiv Kumar Batalvi',
-    },
-    {
-      id: 6,
-      image: book_image,
-      name: 'Mera Pind',
-      writer: 'Gurdial Singh',
-    },
-    {
-      id: 7,
-      image: book_image,
-      name: 'Chitta Lahu',
-      writer: 'Nanak Singh',
-      rating: '4.3',
-    },
-    {
-      id: 8,
-      image: book_image,
-      name: 'Sunehray Din',
-      writer: 'Kartar Singh Duggal',
-    },
-    {
-      id: 9,
-      image: book_image,
-      name: 'Punjab Diyan Lok Kathavan',
-      writer: 'Devinder Satyarthi',
-    },
-    {
-      id: 10,
-      image: book_image,
-      name: 'Raseedi Ticket',
-      writer: 'Amrita Pritam',
-    },
-  ];
-
   return (
     <div className={styles.homeContainer}>
-      {/* Hukamnama Toast Notification - appears every time */}
       {showHukamnamaToast && (
         <div className={styles.hukamnamaToast} onClick={handleToastClick}>
           <div className={styles.toastContent}>
@@ -257,32 +237,31 @@ const hukamnamaData = {
         </div>
       )}
 
-      {/* Hukamnama Modal */}
       {showHukamnamaModal && (
         <div className={styles.hukamnamaModalOverlay}>
           <div className={styles.hukamnamaModal}>
             <button className={styles.modalCloseButton} onClick={closeModal}>
               <MdClose />
             </button>
-            
+
             <h2 className={styles.modalTitle}>Today's Hukamnama</h2>
             <h3 className={styles.modalSubtitle}>ਅੱਜ ਦਾ ਹੁਕਮਨਾਮਾ</h3>
-            
+
             <div className={styles.tabContainer}>
-              <button 
+              <button
                 className={`${styles.tabButton} ${activeTab === 'hukamnama' ? styles.activeTab : ''}`}
                 onClick={() => setActiveTab('hukamnama')}
               >
                 Hukamnama
               </button>
-              <button 
+              <button
                 className={`${styles.tabButton} ${activeTab === 'arth' ? styles.activeTab : ''}`}
                 onClick={() => setActiveTab('arth')}
               >
                 ਅਰਥ (Meaning)
               </button>
             </div>
-            
+
             <div className={styles.tabContent}>
               {activeTab === 'hukamnama' ? (
                 <>
@@ -293,7 +272,7 @@ const hukamnamaData = {
                 <p className={styles.arthText}>{hukamnamaData.arth}</p>
               )}
             </div>
-            
+
             <div className={styles.modalFooter}>
               {!isLoggedIn && (
                 <button className={styles.modalActionButton}>
@@ -317,7 +296,7 @@ const hukamnamaData = {
               key={index}
               className={styles.imageSlide}
               style={{
-                backgroundImage: `url(${image})`,
+                backgroundImage: `url(${getStaticImagePath(image)})`,
                 transform: `translateY(${(index - imageIndex) * 100}%)`,
                 transition: 'transform 0.5s ease',
               }}
@@ -330,7 +309,6 @@ const hukamnamaData = {
           ))}
         </div>
 
-        {/* Play Button */}
         <div className={styles.playButtonContainer}>
           <a
             href="https://www.youtube.com/watch?v=L-1UAORcX4c&ab_channel=Cogito"
@@ -356,38 +334,35 @@ const hukamnamaData = {
         </div>
       </div>
 
-      {/* Explore Books Section */}
       <div className={styles.exploreBooksSection}>
         <h2 className={styles.sectionTitle}>Explore Our Latest Books</h2>
         <div className={styles.booksGrid}>
           {isLoading ? (
-            // Skeleton loading state
-            Array(10).fill().map((_, index) => (
+            Array(12).fill().map((_, index) => (
               <div key={`skeleton-${index}`} className={styles.bookCardSkeleton}>
                 <div className={styles.skeletonImageContainer}>
-                  <div className={styles.skeletonImage}>
-                  </div>
+                  <div className={styles.skeletonImage}></div>
                 </div>
                 <div className={styles.skeletonText}></div>
                 <div className={styles.skeletonTextSmall}></div>
               </div>
             ))
           ) : (
-            // Actual book cards
-            books.slice(0, 10).map((book, index) => (
+            latestBooks.map((book, index) => (
               <Link to={`/collections/ebooks/ebook/${book.id}`} key={book.id}>
-              <div key={book.id} className={styles.bookCard}>
-                <div className={styles.imageContainer}>
-                  <img
-                    ref={(el) => (imageRefs.current[index] = el)}
-                    src={getImagePath(book.image)}
-                    alt={book.name}
-                    className={styles.bookImage}
-                  />
+                <div className={styles.bookCard}>
+                  <div className={styles.imageContainer}>
+                    <img
+                      ref={(el) => (imageRefs.current[index] = el)}
+                      src={getS3ImagePath(book.cover_image) || getStaticImagePath('/images/Collections/book-image.jpg')}
+                      alt={book.title}
+                      className={styles.bookImage}
+                      onError={(e) => console.log(`Book image failed to load: ${book.title}`, book.cover_image, e)}
+                    />
+                  </div>
+                  <h3 className={styles.bookName}>{book.title}</h3>
+                  <p className={styles.writerName}>By {book.author?.name || 'Unknown Author'}</p>
                 </div>
-                <h3 className={styles.bookName}>{book.name}</h3>
-                <p className={styles.writerName}>By {book.writer}</p>
-              </div>
               </Link>
             ))
           )}
@@ -397,12 +372,11 @@ const hukamnamaData = {
         </button>
       </div>
 
-      {/* Heritage Section */}
       <section className={styles.heritageSection}>
         <h1 className={styles.heritageHeading}>Explore The Richness Of Punjabi & Sikh Heritage</h1>
         <div className={styles.heritageContainer}>
           <div className={styles.heritageImage}>
-            <img src={getImagePath(heritage)} alt="Punjabi & Sikh Heritage" />
+            <img src={getStaticImagePath(heritage)} alt="Punjabi & Sikh Heritage" />
           </div>
           <div className={styles.heritageContent}>
             <div className={styles.heritageItem}>
@@ -436,83 +410,80 @@ const hukamnamaData = {
         </div>
       </section>
 
-      {/* Listen, Learn, and Play Section */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Listen, Learn, And Play</h2>
         <div className={styles.cardContainer}>
           <Link to={'/collections'}>
-          <div className={styles.card}>
-            <div className={styles.cardImage}>
-              <img src={getImagePath(audiobooks_kirtan)} alt="Audiobooks and Kirtan" />
-              <div className={styles.cardOverlay}>
-                <h3>AUDIOBOOKS AND KIRTAN</h3>
-                <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
+            <div className={styles.card}>
+              <div className={styles.cardImage}>
+                <img src={getStaticImagePath(audiobooks_kirtan)} alt="Audiobooks and Kirtan" />
+                <div className={styles.cardOverlay}>
+                  <h3>AUDIOBOOKS AND KIRTAN</h3>
+                  <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
+                </div>
               </div>
             </div>
-          </div>
           </Link>
           <Link to={'/learning'}>
-          <div className={styles.card}>
-            <div className={styles.cardImage}>
-              <img src={getImagePath(learning_resources)} alt="Learning Resources" />
-              <div className={styles.cardOverlay}>
-                <h3>LEARNING RESOURCES</h3>
-                <p>Discover educational materials, books, and online courses to deepen your understanding of Punjabi culture and Sikh heritage.</p>
+            <div className={styles.card}>
+              <div className={styles.cardImage}>
+                <img src={getStaticImagePath(learning_resources)} alt="Learning Resources" />
+                <div className={styles.cardOverlay}>
+                  <h3>LEARNING RESOURCES</h3>
+                  <p>Discover educational materials, books, and online courses to deepen your understanding of Punjabi culture and Sikh heritage.</p>
+                </div>
               </div>
             </div>
-          </div>
           </Link>
           <Link to={'/learning'}>
-          <div className={styles.card}>
-            <div className={styles.cardImage}>
-              <img src={getImagePath(games_quizzes)} alt="Games and Quizzes" />
-              <div className={styles.cardOverlay}>
-                <h3>GAMES AND QUIZZES</h3>
-                <p>Engage in fun and interactive games and quizzes to test your knowledge of Punjabi culture and Sikh history.</p>
+            <div className={styles.card}>
+              <div className={styles.cardImage}>
+                <img src={getStaticImagePath(games_quizzes)} alt="Games and Quizzes" />
+                <div className={styles.cardOverlay}>
+                  <h3>GAMES AND QUIZZES</h3>
+                  <p>Engage in fun and interactive games and quizzes to test your knowledge of Punjabi culture and Sikh history.</p>
+                </div>
               </div>
             </div>
-          </div>
           </Link>
-          <div className={styles.card}>
           <Link to={'/sikh-history'}>
-            <div className={styles.cardImage}>
-              <img src={getImagePath(sikh_history)} alt="Sikh History" />
-              <div className={styles.cardOverlay}>
-                <h3>SIKH HISTORY</h3>
-                <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
+            <div className={styles.card}>
+              <div className={styles.cardImage}>
+                <img src={getStaticImagePath(sikh_history)} alt="Sikh History" />
+                <div className={styles.cardOverlay}>
+                  <h3>SIKH HISTORY</h3>
+                  <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
+                </div>
               </div>
             </div>
-            </Link>
-          </div>
-          <div className={styles.card}>
+          </Link>
           <Link to={'/news'}>
-            <div className={styles.cardImage}>
-              <img src={getImagePath(recent_news)} alt="Recent News" />
-              <div className={styles.cardOverlay}>
-                <h3>RECENT NEWS</h3>
-                <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
+            <div className={styles.card}>
+              <div className={styles.cardImage}>
+                <img src={getStaticImagePath(recent_news)} alt="Recent News" />
+                <div className={styles.cardOverlay}>
+                  <h3>RECENT NEWS</h3>
+                  <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
+                </div>
               </div>
             </div>
-            </Link>
-
-          </div>
-          <div className={styles.card}>
+          </Link>
           <Link to={'/gurbani'}>
-            <div className={styles.cardImage}>
-              <img src={getImagePath(gurbani)} alt="Gurbani" />
-              <div className={styles.cardOverlay}>
-                <h3>GURBANI</h3>
-                <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
+            <div className={styles.card}>
+              <div className={styles.cardImage}>
+                <img src={getStaticImagePath(gurbani)} alt="Gurbani" />
+                <div className={styles.cardOverlay}>
+                  <h3>GURBANI</h3>
+                  <p>Immerse yourself in the divine melodies of Gurbani and explore a vast collection of audiobooks on Sikh history and spirituality.</p>
+                </div>
               </div>
             </div>
-            </Link>
-          </div>
+          </Link>
         </div>
       </section>
-      <ChatButton isDarkMode={isDarkMode} />      
+      <ChatButton isDarkMode={isDarkMode} />
     </div>
   );
 };
 
 export default Home;
-

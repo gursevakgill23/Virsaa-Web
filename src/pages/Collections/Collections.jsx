@@ -3,40 +3,71 @@ import { Link, useLocation } from "react-router-dom";
 import styles from "./Collections.module.css";
 import { FaFilter, FaTimes } from "react-icons/fa";
 
-// Utility function to handle production image paths
+// Define S3 base URL as a constant
+const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
+
+// Utility function to handle S3-based image paths
 const useProductionImagePath = () => {
-  
   return (imagePath) => {
-    // Only modify in production
+    if (!imagePath) {
+      console.log('Image path is null/undefined, using default:', imagePath);
+      return getProductionImagePath('/images/Collections/book-image.jpg');
+    }
+
+    if (typeof imagePath === 'string' && imagePath.startsWith('https://')) {
+      console.log('Full URL detected, returning:', imagePath);
+      return imagePath;
+    }
+
+    if (typeof imagePath === 'string') {
+      const cleanedPath = imagePath.replace(/^\/+|\/+$/g, '').replace(/ /g, '%20');
+      const fullUrl = `${S3_BASE_URL}/${cleanedPath}`;
+      console.log('Processed relative path to:', fullUrl);
+      return fullUrl;
+    }
+
     if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
       if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
+        return imagePath.startsWith('/')
+          ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {
-        // For imported images
-        return imagePath.default || imagePath;
+        return imagePath.default || imagePath || getProductionImagePath('/images/Collections/book-image.jpg');
       }
     }
-    return imagePath;
+
+    return imagePath || getProductionImagePath('/images/Collections/book-image.jpg');
   };
 };
 
+// Utility function to handle public/static images (restored)
+const getProductionImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (typeof imagePath === 'string') {
+      return imagePath.startsWith('/')
+        ? imagePath
+        : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    } else {
+      return imagePath.default || imagePath;
+    }
+  }
+  return imagePath;
+};
+
 const Collections = ({ isDarkMode }) => {
-  const getImagePath = useProductionImagePath();
+  const getS3ImagePath = useProductionImagePath();
+  const getStaticImagePath = getProductionImagePath;
   const location = useLocation();
   const pathSegments = location.pathname.split('/').filter(segment => segment);
   const currentSection = pathSegments.length > 1 ? pathSegments[1] : 'ebooks';
-  
-  // Image paths - now using public folder
-  const header_image_light = "/images/Collections/header-image-light.png";
-  const header_image_dark = "/images/Collections/header-image-dark.png";
-  const book_image = "/images/Collections/book-image.jpg";
+
+  // Image paths for header
+  const header_image_light = getStaticImagePath("/images/Collections/header-image-light.png");
+  const header_image_dark = getStaticImagePath("/images/Collections/header-image-dark.png");
+  const default_book_image = getStaticImagePath("/images/Collections/book-image.jpg");
 
   const getHeaderSubtitle = () => {
-    switch(currentSection) {
+    switch (currentSection) {
       case 'ebooks':
         return 'Ebooks';
       case 'audiobooks':
@@ -47,6 +78,14 @@ const Collections = ({ isDarkMode }) => {
         return 'Ebooks';
     }
   };
+
+  // State for data fetched from API
+  const [ebooks, setEbooks] = useState([]);
+  const [authors, setAuthors] = useState([]);
+  const [audiobooks, setAudiobooks] = useState([]);
+  const [trendingEbooks, setTrendingEbooks] = useState([]);
+  const [featuredAuthors, setFeaturedAuthors] = useState([]);
+  const [latestAudiobooks, setLatestAudiobooks] = useState([]);
 
   const [filters, setFilters] = useState({
     title: false,
@@ -68,12 +107,38 @@ const Collections = ({ isDarkMode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const cardsPerPage = 12;
 
+  // Fetch data from API
   useEffect(() => {
-    const loadingTimer = setTimeout(() => {
-      setIsLoading(false);
-    }, 3000);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const ebooksResponse = await fetch('http://localhost:8000/collections/ebooks/');
+        const ebooksData = await ebooksResponse.json();
+        console.log('Fetched ebooks:', ebooksData);
+        setEbooks(ebooksData);
 
-    return () => clearTimeout(loadingTimer);
+        const authorsResponse = await fetch('http://localhost:8000/collections/authors/');
+        const authorsData = await authorsResponse.json();
+        console.log('Fetched authors:', authorsData);
+        setAuthors(authorsData);
+        setFeaturedAuthors(authorsData.slice(0, 6));
+
+        const audiobooksResponse = await fetch('http://localhost:8000/collections/audiobooks/');
+        const audiobooksData = await audiobooksResponse.json();
+        console.log('Fetched audiobooks:', audiobooksData);
+        setAudiobooks(audiobooksData);
+        setLatestAudiobooks(audiobooksData.slice(0, 6));
+
+        const trending = ebooksData.filter(ebook => ebook.rating >= 4.7).slice(0, 6);
+        setTrendingEbooks(trending);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const handleFilterChange = (filterName) => {
@@ -113,86 +178,42 @@ const Collections = ({ isDarkMode }) => {
     });
   };
 
-  // Dummy data for Punjabi books
-  const cards = Array.from({ length: 24 }, (_, i) => ({
-    id: i + 1,
-    title: [
-      "Punjab Diyan Lok Kathavan",
-      "Ik Si Anita",
-      "Punjab Da Itihas",
-      "Heer Ranjha",
-      "Nanak Singh Diyan Kahaniyan",
-      "Punjabi Virsa",
-      "Sadda Punjab",
-      "Punjabi Lok Geet"
-    ][i % 8],
-    author: [
-      "Sohan Singh Sital",
-      "Nanak Singh",
-      "Kirpal Singh",
-      "Waris Shah",
-      "Nanak Singh",
-      "Gurbachan Singh Bhullar",
-      "Kartar Singh Duggal",
-      "Devinder Satyarthi"
-    ][i % 8],
-    rating: 4.0 + (i % 10) * 0.1,
-    image: book_image,
-    genre: [
-      "History",
-      "Novel",
-      "History",
-      "Poetry",
-      "Short Stories",
-      "Culture",
-      "Biography",
-      "Music"
-    ][i % 8],
-    pages: [320, 280, 450, 200, 150, 300, 400, 250][i % 8],
-  }));
+  const applyFilters = (items) => {
+    return items.filter((item) => {
+      if (filters.highRatings && item.rating < 4) return false;
+      if (filters.lessRatings && item.rating >= 3) return false;
 
-  // Trending Ebooks data
-  const trendingEbooks = [
-    { id: 101, title: "Punjab Di Kahani", author: "Sant Singh Sekhon", rating: 4.6, pages: 280 },
-    { id: 102, title: "Loona", author: "Shiv Kumar Batalvi", rating: 4.8, pages: 320 },
-    { id: 103, title: "Punjabi Lok Dhara", author: "Devinder Satyarthi", rating: 4.4, pages: 250 },
-    { id: 104, title: "Sadda Pind", author: "Gurdial Singh", rating: 4.7, pages: 350 },
-    { id: 105, title: "Ik Si Anita", author: "Nanak Singh", rating: 4.5, pages: 280 },
-    { id: 106, title: "Heer Waris Shah", author: "Waris Shah", rating: 4.9, pages: 200 },
-  ].map(item => ({ ...item, image: book_image }));
+      if (currentSection === 'ebooks' || currentSection === 'audiobooks') {
+        if (filters.history && item.genre !== "History" && item.genre !== "history") return false;
+        if (filters.novel && item.genre !== "Novel" && item.genre !== "novel") return false;
+        if (filters.biography && item.genre !== "Biography" && item.genre !== "biography") return false;
+        if (filters.fiction && item.genre !== "Fiction" && item.genre !== "fiction") return false;
+        if (filters.nonFiction && item.genre !== "Non-Fiction" && item.genre !== "nonFiction" && item.genre !== "non-fiction") return false;
+      } else if (currentSection === 'authors') {
+        const genres = item.genre ? item.genre.split(',').map(g => g.trim().toLowerCase()) : [];
+        if (filters.history && !genres.includes("history")) return false;
+        if (filters.novel && !genres.includes("novel")) return false;
+        if (filters.biography && !genres.includes("biography")) return false;
+        if (filters.fiction && !genres.includes("fiction")) return false;
+        if (filters.nonFiction && !genres.includes("non-fiction") && !genres.includes("nonfiction")) return false;
+      }
 
-  // Audiobooks data
-  const audiobooks = [
-    { id: 201, title: "Punjab Di Kahani", author: "Sant Singh Sekhon", rating: 4.7, duration: "5h 20m" },
-    { id: 202, title: "Loona", author: "Shiv Kumar Batalvi", rating: 4.9, duration: "6h 15m" },
-    { id: 203, title: "Sadda Pind", author: "Gurdial Singh", rating: 4.6, duration: "7h 30m" },
-    { id: 204, title: "Heer Waris Shah", author: "Waris Shah", rating: 4.8, duration: "4h 45m" },
-    { id: 205, title: "Ik Si Anita", author: "Nanak Singh", rating: 4.5, duration: "5h 10m" },
-    { id: 206, title: "Punjabi Lok Dhara", author: "Devinder Satyarthi", rating: 4.4, duration: "4h 20m" },
-  ].map(item => ({ ...item, image: book_image }));
+      return true;
+    });
+  };
 
-  // Featured Authors data
-  const featuredAuthors = [1, 2, 3, 4, 5, 6].map(id => ({
-    id,
-    name: ["Nanak Singh", "Amrita Pritam", "Gurdial Singh"][id % 3],
-    image: book_image
-  }));
-
-  // Apply filters
-  const filteredCards = cards.filter((card) => {
-    if (filters.history && card.genre !== "History") return false;
-    if (filters.novel && card.genre !== "Novel") return false;
-    if (filters.biography && card.genre !== "Biography") return false;
-    if (filters.fiction && card.genre !== "Fiction") return false;
-    if (filters.nonFiction && card.genre !== "Non-Fiction") return false;
-    if (filters.highRatings && card.rating < 4) return false;
-    if (filters.lessRatings && card.rating >= 3) return false;
-    return true;
-  });
+  let displayData = [];
+  if (currentSection === 'ebooks') {
+    displayData = applyFilters(ebooks);
+  } else if (currentSection === 'authors') {
+    displayData = applyFilters(authors);
+  } else if (currentSection === 'audiobooks') {
+    displayData = applyFilters(audiobooks);
+  }
 
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentCards = filteredCards.slice(indexOfFirstCard, indexOfLastCard);
+  const currentCards = displayData.slice(indexOfFirstCard, indexOfLastCard);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -200,9 +221,10 @@ const Collections = ({ isDarkMode }) => {
     <div className={styles.collectionsContainer}>
       <div className={styles.headerImageSection}>
         <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
+          src={getStaticImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Header"
           className={styles.headerImage}
+          onError={(e) => console.log('Header image failed to load:', e)}
         />
         <div className={styles.headerText}>
           <h1>COLLECTIONS</h1>
@@ -212,8 +234,8 @@ const Collections = ({ isDarkMode }) => {
 
       <div className={styles.breadcrumb}>
         <Link to="/"><span>Home</span></Link> /{" "}
-        <Link to="/collections"><span> Collections</span></Link> /{" "}
-        <span> {getHeaderSubtitle()}</span>
+        <Link to="/collections"><span>Collections</span></Link> /{" "}
+        <span>{getHeaderSubtitle()}</span>
       </div>
 
       <div className={styles.searchAndFilters}>
@@ -228,7 +250,6 @@ const Collections = ({ isDarkMode }) => {
       </div>
 
       <div className={styles.collectionsPage}>
-        {/* Filters Section */}
         <div className={`${styles.filtersSection} ${isFiltersOpen ? styles.filtersOpen : ""}`}>
           <div className={styles.fullScreenFilters}>
             <button className={styles.closeButton} onClick={closeFilters}>
@@ -270,14 +291,11 @@ const Collections = ({ isDarkMode }) => {
           </div>
         </div>
 
-        {/* Books Grid */}
         <div className={styles.gridContainer}>
           {isLoading ? (
             Array(cardsPerPage).fill().map((_, index) => (
               <div key={`skeleton-${index}`} className={styles.cardSkeleton}>
-                <div className={styles.skeletonImageContainer}>
-                  
-                </div>
+                <div className={styles.skeletonImageContainer}></div>
                 <div className={styles.skeletonContent}>
                   <div className={styles.skeletonTitle}></div>
                   <div className={styles.skeletonPages}></div>
@@ -285,28 +303,68 @@ const Collections = ({ isDarkMode }) => {
               </div>
             ))
           ) : (
-            currentCards.map((card) => (
-              <Link to={`/collections/ebooks/ebook/${card.id}`} key={card.id}>
-                <div className={styles.card}>
-                  <img
-                    src={getImagePath(card.image)}
-                    alt={card.title}
-                    className={styles.cardImage}
-                  />
-                  <div className={styles.cardContent}>
-                    <h3>{card.title}</h3>
-                    <p className={styles.pages}>{card.pages} pages</p>
-                  </div>
-                </div>
-              </Link>
-            ))
+            currentCards.map((item) => {
+              console.log('Rendering item:', item);
+              if (currentSection === 'ebooks') {
+                return (
+                  <Link to={`/collections/ebooks/ebook/${item.id}`} key={item.id}>
+                    <div className={styles.card}>
+                      <img
+                        src={getS3ImagePath(item.cover_image) || getStaticImagePath(default_book_image)}
+                        alt={item.title}
+                        className={styles.cardImage}
+                        onError={(e) => console.log(`Ebook image failed to load: ${item.title}`, item.cover_image, e)}
+                      />
+                      <div className={styles.cardContent}>
+                        <h3>{item.title}</h3>
+                        <p className={styles.pages}>{item.pages} pages</p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              } else if (currentSection === 'authors') {
+                return (
+                  <Link to={`/collections/authors/author/${item.id}`} key={item.id}>
+                    <div className={styles.card}>
+                      <img
+                        src={getS3ImagePath(item.image) || getStaticImagePath(default_book_image)}
+                        alt={item.name}
+                        className={styles.cardImage}
+                        onError={(e) => console.log(`Author image failed to load: ${item.name}`, item.image, e)}
+                      />
+                      <div className={styles.cardContent}>
+                        <h3>{item.name}</h3>
+                        <p className={styles.pages}>{item.genre}</p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              } else if (currentSection === 'audiobooks') {
+                return (
+                  <Link to={`/collections/audiobooks/audiobook/${item.id}`} key={item.id}>
+                    <div className={styles.card}>
+                      <img
+                        src={getS3ImagePath(item.cover) || getStaticImagePath(default_book_image)}
+                        alt={item.title}
+                        className={styles.cardImage}
+                        onError={(e) => console.log(`Audiobook image failed to load: ${item.title}`, item.cover, e)}
+                      />
+                      <div className={styles.cardContent}>
+                        <h3>{item.title}</h3>
+                        <p className={styles.duration}>{item.duration}</p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              }
+              return null;
+            })
           )}
         </div>
 
-        {/* Pagination */}
         <div className={styles.pagination}>
           {Array.from(
-            { length: Math.ceil(filteredCards.length / cardsPerPage) },
+            { length: Math.ceil(displayData.length / cardsPerPage) },
             (_, i) => (
               <button
                 key={i + 1}
@@ -320,29 +378,28 @@ const Collections = ({ isDarkMode }) => {
         </div>
       </div>
 
-      {/* Featured Authors Section */}
       <section className={styles.featuredAuthors}>
         <h2>Featured Authors</h2>
         <div className={styles.authorsGrid}>
           {isLoading ? (
             Array(6).fill().map((_, index) => (
               <div key={`author-skeleton-${index}`} className={styles.authorCardSkeleton}>
-                <div className={styles.skeletonAuthorImageContainer}>
-                </div>
+                <div className={styles.skeletonAuthorImageContainer}></div>
                 <div className={styles.skeletonAuthorText}></div>
               </div>
             ))
           ) : (
             featuredAuthors.map((author) => (
-              <Link 
-                to={`/collections/authors/author/${author.id}`} 
-                key={author.id} 
+              <Link
+                to={`/collections/authors/author/${author.id}`}
+                key={author.id}
                 className={styles.authorCard}
               >
                 <img
-                  src={getImagePath(author.image)}
+                  src={getS3ImagePath(author.image) || getStaticImagePath(default_book_image)}
                   alt={author.name}
                   className={styles.authorImage}
+                  onError={(e) => console.log(`Featured author image failed to load: ${author.name}`, author.image, e)}
                 />
                 <h3>{author.name}</h3>
               </Link>
@@ -351,15 +408,13 @@ const Collections = ({ isDarkMode }) => {
         </div>
       </section>
 
-      {/* Trending Ebooks Section */}
       <section className={styles.trendingSection}>
         <h2>Trending Ebooks</h2>
         <div className={styles.trendingGrid}>
           {isLoading ? (
             Array(6).fill().map((_, index) => (
               <div key={`trending-skeleton-${index}`} className={styles.trendingCardSkeleton}>
-                <div className={styles.skeletonTrendingImageContainer}>
-                </div>
+                <div className={styles.skeletonTrendingImageContainer}></div>
                 <div className={styles.skeletonTrendingText}></div>
               </div>
             ))
@@ -368,9 +423,10 @@ const Collections = ({ isDarkMode }) => {
               <Link to={`/collections/ebooks/ebook/${ebook.id}`} key={ebook.id}>
                 <div className={styles.trendingCard}>
                   <img
-                    src={getImagePath(ebook.image)}
+                    src={getS3ImagePath(ebook.cover_image) || getStaticImagePath(default_book_image)}
                     alt={ebook.title}
                     className={styles.trendingImage}
+                    onError={(e) => console.log(`Trending ebook image failed to load: ${ebook.title}`, ebook.cover_image, e)}
                   />
                   <div className={styles.trendingContent}>
                     <h3>{ebook.title}</h3>
@@ -383,26 +439,25 @@ const Collections = ({ isDarkMode }) => {
         </div>
       </section>
 
-      {/* Audiobooks Section */}
       <section className={styles.audiobooksSection}>
         <h2>Latest Audiobooks</h2>
         <div className={styles.audiobooksGrid}>
           {isLoading ? (
             Array(6).fill().map((_, index) => (
               <div key={`audiobook-skeleton-${index}`} className={styles.audiobookCardSkeleton}>
-                <div className={styles.skeletonAudiobookImageContainer}>
-                </div>
+                <div className={styles.skeletonAudiobookImageContainer}></div>
                 <div className={styles.skeletonAudiobookText}></div>
               </div>
             ))
           ) : (
-            audiobooks.map((audiobook) => (
+            latestAudiobooks.map((audiobook) => (
               <Link to={`/collections/audiobooks/audiobook/${audiobook.id}`} key={audiobook.id}>
                 <div className={styles.audiobookCard}>
                   <img
-                    src={getImagePath(audiobook.image)}
+                    src={getS3ImagePath(audiobook.cover) || getStaticImagePath(default_book_image)}
                     alt={audiobook.title}
                     className={styles.audiobookImage}
+                    onError={(e) => console.log(`Latest audiobook image failed to load: ${audiobook.title}`, audiobook.cover, e)}
                   />
                   <div className={styles.audiobookContent}>
                     <h3>{audiobook.title}</h3>
