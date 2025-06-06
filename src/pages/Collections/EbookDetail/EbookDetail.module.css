@@ -1,5 +1,3 @@
-/* EbookDetail.module.css */
-
 .ebookDetailContainer {
     width: 100%;
     padding-bottom: 2rem;
@@ -11,24 +9,24 @@
 /* Header Image Section */
 .headerImageSection {
     width: 100%;
-    height: 400px;
+    height: 400px; 
     overflow: hidden;
     position: relative;
 }
 
 .headerImage {
-    width: 100%;
+    width: 100%; 
     height: 100%;
     object-fit: cover;
 }
 
 .headerText {
-    position: absolute;
+    position: absolute;    
     top: 50%;
     left: 5%;
     transform: translateY(-50%);
     text-align: right;
-    color: var(--headline-color);
+    color: var(--headline-color); 
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
@@ -91,14 +89,15 @@
 /* Hero Section */
 .heroSection {
     display: flex;
-    flex-direction: column;
+    grid-template-columns: auto 1fr;
     gap: 2rem;
     margin-bottom: 3rem;
+    align-items: stretch;
 }
 
-@media (min-width: 768px) {
+@media (max-width: 768px) {
     .heroSection {
-        flex-direction: row;
+        flex-direction: column;
     }
 }
 
@@ -108,20 +107,24 @@
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: stretch;
 }
 
 @media (min-width: 768px) {
     .coverContainer {
-        width: 40%;
+        width: auto;
+        max-width: 40%;
     }
 }
 
 .ebookCover {
     width: 100%;
-    height: auto;
+    height: 100%;
     display: block;
-    aspect-ratio: 3/3;
     object-fit: cover;
+    aspect-ratio: 3 / 3;
+    max-width: 100%;
 }
 
 .detailsContainer {
@@ -129,6 +132,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    min-height: 100%;
 }
 
 .metaHeader {
@@ -169,7 +173,7 @@
     font-size: 1.2rem;
     margin: 0;
     color: var(--secondary-text-color);
-    font-weight: 400;
+    font-weight: normal;
 }
 
 .metaFooter {
@@ -206,7 +210,7 @@
 
 .actionButtons {
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     margin-top: 1rem;
     flex-wrap: wrap;
 }
@@ -226,7 +230,6 @@
 .primaryButton:hover {
     background-color: var(--button-hover-bg-color);
     color: var(--button-hover-text-color);
-    transform: translateY(-2px);
     border: 1px solid var(--button-hover-text-color);
 }
 
@@ -469,7 +472,7 @@
 .submitReviewButton:hover {
     background-color: var(--button-hover-bg-color);
     color: var(--button-hover-text-color);
-    border:1px solid var(--button-hover-text-color)
+    border: 1px solid var(--button-hover-text-color);
 }
 
 .submitReviewButton:disabled {
@@ -644,7 +647,6 @@
 
 .rightColumn .relatedCard {
     flex: 0 0 auto;
-    padding: 10px;
     width: 100%;
     display: flex;
     gap: 1rem;
@@ -653,7 +655,6 @@
     border-radius: 8px;
     transition: background-color 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
 }
 
 .rightColumn .relatedCard:hover {
@@ -673,6 +674,11 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.rightColumn .relatedInfo {
+    display: flex;
+    flex-direction: column;
 }
 
 .rightColumn .relatedTitle {
@@ -727,7 +733,6 @@
         padding: 15px;
         background-color: transparent;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
     }
 
     .rightColumn .relatedImageContainer {
@@ -739,6 +744,7 @@
         display: flex;
         justify-content: flex-end;
     }
+
     .rightColumn .scrollButtons .scrollButton {
         margin-left: 0.5rem;
         padding: 8px 10px;
@@ -747,7 +753,8 @@
         color: var(--button-text-color);
         border: 1px solid var(--button-text-color);
     }
-    .rightColumn .scrollButtons .scrollButton:hover{
+
+    .rightColumn .scrollButtons .scrollButton:hover {
         background-color: var(--button-hover-bg-color);
         color: var(--button-hover-text-color);
         border-color: var(--button-hover-text-color);
@@ -784,11 +791,8 @@
     position: relative;
     overflow: hidden;
 }
-.actionButtons{
-    gap: 0.5rem;
-}
 
-/* Shimmer Effect - Only for Related Books Section */
+/* Shimmer Effect */
 .rightColumn .skeletonRelatedImageContainer::after,
 .rightColumn .skeletonRelatedTitle::after,
 .rightColumn .skeletonRelatedAuthor::after {
@@ -823,6 +827,80 @@
     }
 }
 
+/* PDF Modal Styles */
+.pdfModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.pdfModalContent {
+    background-color: var(--section-bg-color);
+    width: 90%;
+    max-width: 800px;
+    height: 85vh;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.pdfModalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--card-bg-color);
+}
+
+.pdfModalHeader h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0;
+    font-family: serif;
+    color: var(--text-color);
+}
+
+.closeModalButton {
+    background-color: var(--button-bg-color, #007bff);
+    color: var(--button-text-color, #ffffff);
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.closeModalButton:hover {
+    background-color: var(--button-hover-bg-color, #0056b3);
+    color: var(--button-hover-text-color, #ffffff);
+    border: 1px solid var(--button-hover-text-color, #005e00);
+}
+
+.pdfModalBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.pdfError {
+    color: #d9534f;
+    font-size: 1rem;
+    text-align: center;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .headerText h1 {
@@ -835,11 +913,9 @@
     .title {
         font-size: 2rem;
     }
-    .ebookCover {
-        height: 400px;
-    }
-    .actionButtons{
-        gap: 1rem;
+    
+    .actionButtons {
+        gap: 0.75rem;
     }
     
     .rightColumn .relatedCard {
@@ -850,6 +926,24 @@
     .rightColumn .relatedImageContainer,
     .rightColumn .skeletonRelatedImageContainer {
         height: 220px;
+    }
+
+    .pdfModalContent {
+        width: 95%;
+        height: 90vh;
+    }
+
+    .pdfModalHeader h2 {
+        font-size: 1.2rem;
+    }
+
+    .closeModalButton {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    .pdfModalBody {
+        padding: 0.5rem;
     }
 }
 
@@ -864,9 +958,6 @@
     .headerText p {
         font-size: 0.75rem;
     }
-    .ebookCover {
-        height: 300px;
-    }
     
     .title {
         font-size: 1.8rem;
@@ -880,7 +971,29 @@
     .rightColumn .skeletonRelatedImageContainer {
         height: 180px;
     }
+    
     .reviewContent {
         font-size: 10px;
+    }
+
+    .pdfModalContent {
+        width: 98%;
+        height: 95vh;
+    }
+
+    .pdfModalHeader {
+        padding: 0.8rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .pdfModalHeader h2 {
+        font-size: 1rem;
+        flex: 1;
+    }
+
+    .closeModalButton {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.7rem;
     }
 }

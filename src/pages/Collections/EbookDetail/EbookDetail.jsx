@@ -1,33 +1,138 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar, FaSort } from 'react-icons/fa';
+import { FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar, FaSort } from 'react-icons/fa';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 import { Link } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import styles from './EbookDetail.module.css';
-import Loader from '../../../components/Loader'
+import Loader from '../../../components/Loader';
+import { useAuth } from '../../../context/AuthContext.jsx';
+import axios from 'axios';
+import { PDFViewer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-// Utility function to handle production image paths
+// S3 base URL (replace with your actual bucket name)
+const S3_BASE_URL = 'https://s3.amazonaws.com/your-bucket-name';
+
+// PDF styles
+const pdfStyles = StyleSheet.create({
+  page: {
+    backgroundColor: '#FFF',
+    padding: 20,
+    flexDirection: 'column',
+    fontSize: 12,
+    fontFamily: 'Helvetica',
+  },
+  coverPage: {
+    backgroundColor: 'white',
+    padding: 40,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coverTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
+  },
+  coverAuthor: {
+    fontSize: 16,
+    marginBottom: 10,
+    color: '#666',
+  },
+  chapterTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  content: {
+    lineHeight: 1.5,
+    color: '#444',
+  },
+  pageNumber: {
+    position: 'absolute',
+    bottom: 10,
+    right: 20,
+    fontSize: 10,
+    color: '#666',
+  },
+});
+
+// Utility function to handle S3-based images paths
 const useProductionImagePath = () => {
   return (imagePath) => {
-    // Only modify in production
-    if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
-      if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
-      }
+    if (!imagePath) {
+      return `${S3_BASE_URL}/images/Collections/book-image.jpg`;
     }
-    return imagePath;
+    if (typeof imagePath === 'string' && imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    if (typeof imagePath === 'string') {
+      const cleanedPath = imagePath.replace(/^\/+|\/+$/g, ' ').replace(/\s/g, '%20');
+      return `${S3_BASE_URL}/${cleanedPath}`;
+    }
+    return imagePath || `${S3_BASE_URL}/images/Collections/book-image.jpg`;
   };
 };
 
+// Utility function to handle public/static images
+const getProductionImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'development') {
+    if (typeof imagePath === 'string') {
+      return imagePath.startsWith('/')
+        ? imagePath
+        : `/${imagePath.replace(/.*static\/media/, 'static/media/')}`;
+    }
+    return imagePath?.default || imagePath || '/images/Collections/book-image.jpg';
+  }
+  return imagePath || '/images/Collections/book-image.jpg';
+};
+
+// PDF Document Component
+const MyDocument = ({ ebook }) => (
+  <Document>
+    {/* Cover Page */}
+    <Page size="A4" style={pdfStyles.coverPage}>
+      <View>
+        <Text style={pdfStyles.coverTitle}>{ebook?.title || 'Untitled Ebook'}</Text>
+        <Text style={pdfStyles.coverAuthor}>{ebook?.author || 'Unknown Author'}</Text>
+      </View>
+    </Page>
+    {/* Chapter Pages */}
+    {ebook?.chapters?.map((chapter, index) => (
+      <Page key={chapter.id} size="A4" style={pdfStyles.page}>
+        <View>
+          <Text style={pdfStyles.chapterTitle}>
+            Chapter {chapter.id}:: {chapter.title}
+          </Text>
+          <Text style={pdfStyles.content}>
+            This is a placeholder for the content of {chapter.title}. Actual content would be fetched from the backend or provided in the PDF file.
+          </Text>
+        </View>
+        <Text style={pdfStyles.pageNumber}>Page {index + 2}</Text>
+      </Page>
+    ))}
+    {/* Additional Pages if Needed */}
+    {Array.from({ length: (ebook?.pages || 0) - (ebook?.chapters?.length || 0) - 1 }, (_, index) => (
+      <Page key={`extra-${index}`} size="A4" style={pdfStyles.page}>
+        <View>
+          <Text style={pdfStyles.content}>
+            Page {ebook?.chapters?.length + index + 2} content. This is a placeholder for additional pages.
+          </Text>
+        </View>
+        <Text style={pdfStyles.pageNumber}>Page {ebook?.chapters?.length + index + 2}</Text>
+      </Page>
+    ))}
+  </Document>
+);
+
 const EbookDetail = ({ isDarkMode }) => {
-  const getImagePath = useProductionImagePath();
+  const { isLoggedIn, accessToken, userData } = useAuth();
+  const getS3ImagePath = useProductionImagePath();
+  const getStaticImagePath = getProductionImagePath;
   const { id } = useParams();
   const navigate = useNavigate();
   const [ebook, setEbook] = useState(null);
@@ -37,16 +142,17 @@ const EbookDetail = ({ isDarkMode }) => {
   const [saved, setSaved] = useState(false);
   const [expandedChapter, setExpandedChapter] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
-  
-  // Image paths - now using public folder
-  const header_image_dark = "/images/Collections/header-image-dark.png";
-  const header_image_light = "/images/Collections/header-image-light.png";
-  const bookImage = "/images/Collections/book-image.jpg";
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState(null);
+
+  // Image paths
+  const header_image_dark = getStaticImagePath("/images/Collections/header-image-dark.png");
+  const header_image_light = getStaticImagePath("/images/Collections/header-image-light.png");
 
   // Review form state
   const [reviewForm, setReviewForm] = useState({
-    name: '',
-    email: '',
     rating: 0,
     review: '',
   });
@@ -58,91 +164,115 @@ const EbookDetail = ({ isDarkMode }) => {
   useEffect(() => {
     const fetchEbook = async () => {
       setIsLoading(true);
-      setTimeout(() => {
+      try {
+        const ebookResponse = await fetch(`http://localhost:8000/collections/ebooks/${id}/`);
+        if (!ebookResponse.ok) {
+          throw new Error('Failed to fetch ebook details');
+        }
+        const ebookData = await ebookResponse.json();
         setEbook({
-          id,
-          title: "Heer Ranjha",
-          author: "Waris Shah",
-          cover: bookImage,
-          rating: 4.8,
-          reviews: 1243,
-          pages: 320,
-          format: "PDF/EPUB",
-          genre: "Punjabi Poetry",
-          description: `Heer Ranjha is one of the most famous tragic romances of the Punjab. The story depicts the love of Heer and her lover Ranjha, and their eventual tragic end. This epic has been written by various poets, but Waris Shah's version is the most notable.
-
-          The story is set in the Punjab region of South Asia, and follows the lives of Heer, a beautiful woman from a wealthy family, and Ranjha, a young man from a poor family. Despite their different social standings, they fall deeply in love. However, their love is forbidden by Heer's family, who arrange for her to marry another man.
-
-          The poem is considered one of the quintessential works of classical Punjabi literature. It tells a story of intense love, separation, and eventual tragedy. Waris Shah's version, written in 1766, is particularly renowned for its lyrical beauty and philosophical depth. The story has been adapted into numerous plays, films, and television series across South Asia.`,
-          chapters: [
-            { id: 1, title: "Introduction", page: 1, locked: false },
-            { id: 2, title: "Heer's Childhood", page: 15, locked: false },
-            { id: 3, title: "Meeting Ranjha", page: 32, locked: false },
-            { id: 4, title: "Family Opposition", page: 78, locked: true },
-            { id: 5, title: "Separation", page: 112, locked: true },
-          ],
+          ...ebookData,
+          cover: ebookData.cover_image,
+          author: ebookData.author?.name || 'Unknown Author',
+          reviews: ebookData.reviews?.length || 0,
+          chapters: ebookData.chapters || [],
         });
-        
-        // Mock reviews data
-        const mockReviews = Array.from({ length: 20 }, (_, i) => ({
-          id: i + 1,
-          name: ['Amanpreet', 'Gurpreet', 'Harpreet', 'Jaspreet', 'Manpreet', 'Navpreet'][i % 6],
-          date: new Date(Date.now() - (i * 86400000)).toLocaleDateString(),
-          rating: [4, 5, 3, 4, 5, 4, 3, 5, 4, 5][i % 10],
-          review: [
-            "This book changed my perspective on Punjabi literature. The depth of emotions is incredible!",
-            "A timeless classic that everyone should read at least once in their lifetime.",
-            "The poetic language is beautiful, though some parts were difficult to understand.",
-            "Waris Shah's masterpiece truly captures the essence of Punjabi culture.",
-            "I couldn't put it down! The story is so engaging and emotional.",
-            "The translation is excellent, making it accessible to non-Punjabi speakers.",
-            "A bit overrated in my opinion, but still a good read.",
-            "The character development is exceptional, especially Heer's transformation.",
-            "I loved how the author portrayed the cultural context of the time.",
-            "The ending was heartbreaking but perfect for the story."
-          ][i % 10],
-          helpful: Math.floor(Math.random() * 50)
-        }));
-        
-        setReviews(mockReviews);
-        setIsLoading(false);
-        
-        // Simulate separate loading for related books
-        setTimeout(() => {
-          setEbook(prev => ({
-            ...prev,
-            related: [
-              { id: 101, title: "Sohni Mahiwal", author: "Hashim Shah", cover: bookImage },
-              { id: 102, title: "Mirza Sahiban", author: "Piloo", cover: bookImage },
-              { id: 103, title: "Sassi Punnun", author: "Shah Hussain", cover: bookImage },
-              { id: 104, title: "Yusuf Zulekha", author: "Hamid", cover: bookImage },
-              { id: 105, title: "Punjab Diyan Lok Kathavan", author: "Devinder Satyarthi", cover: bookImage },
-              { id: 106, title: "Sohni Mahiwal", author: "Hashim Shah", cover: bookImage },
-              { id: 107, title: "Mirza Sahiban", author: "Piloo", cover: bookImage },
-              { id: 108, title: "Sassi Punnun", author: "Shah Hussain", cover: bookImage },
-              { id: 109, title: "Yusuf Zulekha", author: "Hamid", cover: bookImage },
-              { id: 110, title: "Punjab Diyan Lok Kathavan", author: "Devinder Satyarthi", cover: bookImage },
-            ]
-          }));
+
+        const reviewsResponse = await fetch(`http://localhost:8000/collections/ebooks/${id}/reviews/`);
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json();
+          setReviews(reviewsData.map(review => ({
+            id: review.id,
+            name: review.user || 'Anonymous',
+            date: new Date(review.date).toLocaleDateString(),
+            rating: review.rating,
+            review: review.review,
+            helpful: review.helpful || 0,
+          })));
+        }
+
+        setTimeout(async () => {
+          const relatedResponse = await fetch(`http://localhost:8000/collections/ebooks/?author__name=${encodeURIComponent(ebookData.author?.name || '')}`);
+          if (relatedResponse.ok) {
+            const relatedData = await relatedResponse.json();
+            setEbook(prev => ({
+              ...prev,
+              related: relatedData
+                .filter(item => item.id !== parseInt(id))
+                .slice(0, 10)
+                .map(item => ({
+                  id: item.id,
+                  title: item.title,
+                  author: item.author?.name || 'Unknown Author',
+                  cover: item.cover_image,
+                })),
+            }));
+          }
           setRelatedLoading(false);
-        }, 1500);
-      }, 1000);
+        }, 1000);
+      } catch (error) {
+        console.error('Error fetching ebook data:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchEbook();
   }, [id]);
+
+  const handleReadNow = async () => {
+    setPdfLoading(true);
+    setPdfError(null);
+    try {
+      const response = await fetch(`http://localhost:8000/collections/ebooks/${id}/read_pdf/`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(isLoggedIn && accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch PDF URL (Status: ${response.status})`);
+      }
+      const data = await response.json();
+      if (!data.pdf_url) {
+        throw new Error('No PDF URL provided by backend');
+      }
+      setPdfUrl(data.pdf_url);
+      setShowPdfModal(true);
+    } catch (error) {
+      console.error('Error fetching PDF URL:', error);
+      setPdfError(error.message || 'Failed to load PDF. Falling back to generated PDF.');
+      setShowPdfModal(true);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleLike = () => {
+    setLiked(!liked);
+    toast.success(liked ? 'Ebook unliked!' : 'Ebook liked!', {
+      position: 'top-right',
+      autoClose: 3000,
+    });
+  };
 
   const toggleChapter = (chapterId) => {
     setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
   };
 
   const handleReadChapter = (chapterId) => {
-    alert(`Reading Chapter ${chapterId}`);
+    toast.info(`Reading Chapter ${chapterId}`, {
+      position: 'top-right',
+      autoClose: 3000,
+    });
   };
 
   const scrollRelated = (direction, sectionId) => {
     const container = document.querySelector(`.${styles.relatedScrollContainer}[data-section="${sectionId}"]`);
-    const scrollAmount = direction === 'left' ? -300 : 300;
-    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    if (container) {
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
   };
 
   const handleRatingChange = (rating) => {
@@ -154,30 +284,60 @@ const EbookDetail = ({ isDarkMode }) => {
     setReviewForm({ ...reviewForm, [name]: value });
   };
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const newReview = {
-        id: reviews.length + 1,
-        name: reviewForm.name,
-        date: new Date().toLocaleDateString(),
-        rating: reviewForm.rating,
-        review: reviewForm.review,
-        helpful: 0
-      };
-      
-      setReviews([newReview, ...reviews]);
-      setReviewForm({
-        name: '',
-        email: '',
-        rating: 0,
-        review: '',
+    if (!isLoggedIn) {
+      toast.warn('Please log in to submit a review.', {
+      position: 'top-right',
+      autoClose: 3000,
       });
+      navigate('/login');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await axios.post(
+        `http://localhost:8000/collections/reviews/`,
+        {
+          ebook_id: id,
+          rating: reviewForm.rating,
+          review: reviewForm.review,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const userFullName = userData?.first_name && userData?.last_name
+        ? `${userData.first_name} ${userData.last_name}`
+        : userData?.username || 'Anonymous';
+      setReviews([
+        {
+          id: response.data.id,
+          name: userFullName,
+          date: new Date(response.data.date).toLocaleDateString(),
+          rating: response.data.rating,
+          review: response.data.review,
+          helpful: response.data.helpful || 0,
+        },
+        ...reviews,
+      ]);
+      setReviewForm({ rating: 0, review: '' });
+      toast.success('Review submitted successfully!', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+    } catch (error) {
+      console.error('Error submitting review:', error.response?.data || error);
+      toast.error('Failed to submit review. Please try again.', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   const loadMoreReviews = () => {
@@ -185,9 +345,9 @@ const EbookDetail = ({ isDarkMode }) => {
   };
 
   const toggleHelpful = (reviewId) => {
-    setReviews(reviews.map(review => 
-      review.id === reviewId 
-        ? { ...review, helpful: review.helpful + 1 } 
+    setReviews(reviews.map(review =>
+      review.id === reviewId
+        ? { ...review, helpful: review.helpful + 1 }
         : review
     ));
   };
@@ -195,54 +355,64 @@ const EbookDetail = ({ isDarkMode }) => {
   const sortedReviews = [...reviews].sort((a, b) => {
     if (sortBy === 'newest') {
       return b.id - a.id;
-    } else {
-      return b.helpful - a.helpful;
     }
+    return b.helpful - a.helpful;
   });
 
   const displayedReviews = sortedReviews.slice(0, visibleReviews);
 
+  const truncatedDescription = ebook?.description
+    ? ebook.description.split(' ').slice(0, 7).join(' ') + (ebook.description.split(' ').length > 7 ? '...' : '')
+    : '';
+
   if (isLoading) {
-    return <div className={styles.ebookDetailContainer}><Loader/></div>;
+    return (
+      <div className={styles.ebookDetailContainer}>
+        <Loader />
+      </div>
+    );
+  }
+
+  if (!ebook) {
+    return (
+      <div className={styles.ebookDetailContainer}>
+        Ebook not found
+      </div>
+    );
   }
 
   return (
     <div className={styles.ebookDetailContainer}>
+      <ToastContainer />
       <div className={styles.headerImageSection}>
         <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
+          src={getStaticImagePath(isDarkMode ? header_image_dark : header_image_light)}
           alt="Header"
           className={styles.headerImage}
+          onError={(e) => console.error('Header image failed to load:', e)}
         />
         <div className={styles.headerText}>
-          <h1>HEER RANJHA</h1>
-          <p>Heer Ranjha is one of the most famous tragic romances of the Punjab</p>
+          <h1>{ebook.title.toUpperCase()}</h1>
+          <p>{truncatedDescription}</p>
         </div>
       </div>
 
-      <div className={styles.breadcrumb}>
-        <Link to="/">
-          <span>Home</span>
-        </Link>{" "}
-        /{" "}
-        <Link to="/collections">
-          <span> Collections</span>
-        </Link>{" "}
-        /{" "}
-        <Link to="/collections/ebooks">
-          <span> Ebooks</span>
-        </Link>{" "}
-        / <span> Heer Ranjha</span>
-      </div>
+      <nav className={styles.breadcrumb}>
+        <Link to="/">Home</Link> /{" "}
+        <Link to="/collections">Collections</Link> /{" "}
+        <Link to="/collections/ebooks">Ebooks</Link> /{" "}
+        <span>{ebook.title}</span>
+      </nav>
 
       <div className={styles.mainContentContainer}>
         <div className={styles.leftColumn}>
-          <div className={styles.heroSection}>
+          <section className={styles.heroSection}>
             <div className={styles.coverContainer}>
-              <img 
-                src={getImagePath(ebook.cover)} 
-                alt={ebook.title} 
+              <img
+                src={getS3ImagePath(ebook.cover)}
+                alt={ebook.title}
                 className={styles.ebookCover}
+                onError={(e) => console.error(`Ebook cover failed to load: ${ebook.cover}`, e)}
               />
             </div>
 
@@ -260,16 +430,17 @@ const EbookDetail = ({ isDarkMode }) => {
               <div className={styles.metaFooter}>
                 <span>{ebook.pages} pages</span>
                 <span>•</span>
-                <span>{ebook.format}</span>
+                <span>PDF/EPUB</span>
               </div>
 
               <div className={styles.descriptionContainer}>
                 <h3 className={styles.sectionTitle}>Description</h3>
                 <div className={styles.descriptionText}>
-                  {showFullDescription ? ebook.description : `${ebook.description.split('\n')[0]}\n\n${ebook.description.split('\n')[1]}`}
-                  <button 
+                  {showFullDescription ? ebook.description : `${ebook.description.split('\n')[0]}\n\n${ebook.description.split('\n')[1] || ''}`}
+                  <button
                     className={styles.showMoreButton}
                     onClick={() => setShowFullDescription(!showFullDescription)}
+                    aria-label={showFullDescription ? "Show less description" : "Show more description"}
                   >
                     {showFullDescription ? 'Show Less' : 'Show More'}
                   </button>
@@ -277,156 +448,154 @@ const EbookDetail = ({ isDarkMode }) => {
               </div>
 
               <div className={styles.actionButtons}>
-                <button className={styles.primaryButton}>Read Now</button>
-                <button className={styles.secondaryButton}>Download</button>
-                <button 
-                  className={styles.iconButton} 
-                  onClick={() => setLiked(!liked)}
-                  aria-label={liked ? "Unlike" : "Like"}
+                <button
+                  className={styles.primaryButton}
+                  onClick={handleReadNow}
+                  disabled={pdfLoading}
+                  aria-label="Read ebook now"
                 >
-                  {liked ? <FaHeart color="red" /> : <FaRegHeart />}
+                  {pdfLoading ? 'Loading...' : 'Read Now'}
                 </button>
-                <button 
+                <button
+                  className={styles.secondaryButton}
+                  onClick={handleLike}
+                  aria-label={liked ? "Unlike ebook" : "Like ebook"}
+                >
+                  {liked ? 'Unlike PDF' : 'Like PDF'}
+                </button>
+                <button
                   className={styles.iconButton}
                   onClick={() => setSaved(!saved)}
-                  aria-label={saved ? "Unsave" : "Save for later"}
+                  aria-label={saved ? "Unsave ebook" : "Save ebook for later"}
                 >
                   {saved ? <FaBookmark color="var(--icon-color)" /> : <FaRegBookmark />}
                 </button>
-                <button className={styles.iconButton} aria-label="Share">
+                <button
+                  className={styles.iconButton}
+                  aria-label="Share ebook"
+                >
                   <FaShareAlt />
                 </button>
               </div>
             </div>
-          </div>
+          </section>
 
           <section className={styles.chaptersSection}>
             <h3 className={styles.sectionTitle}>Chapters</h3>
             <div className={styles.chaptersList}>
               {ebook.chapters.map((chapter) => (
-                <div key={chapter.id} className={styles.chapterItem}>
-                  <div 
-                    className={styles.chapterHeader}
-                    onClick={() => toggleChapter(chapter.id)}
-                  >
-                    <span className={styles.chapterNumber}>Chapter {chapter.id}</span>
-                    <h4 className={styles.chapterTitle}>{chapter.title}</h4>
-                    <span className={styles.chapterPage}>Page {chapter.page}</span>
-                    {expandedChapter === chapter.id ? <IoIosArrowUp /> : <IoIosArrowDown />}
-                  </div>
-                  {expandedChapter === chapter.id && (
-                    <div className={styles.chapterContent}>
-                      <p className={styles.chapterSummary}>
-                        This chapter details {chapter.title.toLowerCase()}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                      </p>
-                      {chapter.locked ? (
-                        <button className={styles.lockedButton}>Unlock with Premium</button>
-                      ) : (
-                        <button 
+                <Fragment key={chapter.id}>
+                  <div className={styles.chapterItem}>
+                    <div
+                      className={styles.chapterHeader}
+                      onClick={() => toggleChapter(chapter.id)}
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={expandedChapter === chapter.id}
+                      aria-label={`Toggle chapter ${chapter.title}`}
+                    >
+                      <span className={styles.chapterNumber}>Chapter {chapter.id}</span>
+                      <h4 className={styles.chapterTitle}>{chapter.title}</h4>
+                      <span className={styles.chapterPage}>Order {chapter.order}</span>
+                      {expandedChapter === chapter.id ? <IoIosArrowUp /> : <IoIosArrowDown />}
+                    </div>
+                    {expandedChapter === chapter.id && (
+                      <div className={styles.chapterContent}>
+                        <p className={styles.chapterSummary}>
+                          This chapter details {chapter.title.toLowerCase()}.
+                        </p>
+                        <button
                           className={styles.readChapterButton}
                           onClick={() => handleReadChapter(chapter.id)}
+                          aria-label={`Read chapter ${chapter.title}`}
                         >
                           Read This Chapter
                         </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
+                  </div>
+                </Fragment>
               ))}
             </div>
           </section>
 
           <section className={styles.reviewsSection}>
             <h3 className={styles.sectionTitle}>Ratings & Reviews</h3>
-            
+
             <div className={styles.reviewFormContainer}>
               <h4>Write a Review</h4>
-              <form onSubmit={handleSubmitReview}>
-                <div className={styles.formGroup}>
-                  <label htmlFor="name">Name</label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={reviewForm.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                
-                <div className={styles.formGroup}>
-                  <label htmlFor="email">Email</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={reviewForm.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                
-                <div className={styles.formGroup}>
-                  <label>Rating</label>
-                  <div className={styles.ratingInput}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => handleRatingChange(star)}
-                        className={styles.starButton}
-                      >
-                        {star <= reviewForm.rating ? (
-                          <FaStar className={styles.starFilled} />
-                        ) : (
-                          <FaRegStar className={styles.starEmpty} />
-                        )}
-                      </button>
-                    ))}
-                    <span className={styles.ratingText}>
-                      {reviewForm.rating > 0 ? `${reviewForm.rating} star${reviewForm.rating !== 1 ? 's' : ''}` : 'Select rating'}
-                    </span>
+              {!isLoggedIn ? (
+                <p>
+                  Please <Link to="/login">log in</Link> to submit a review.
+                </p>
+              ) : (
+                <form onSubmit={handleSubmitReview} aria-label="Submit a review">
+                  <div className={styles.formGroup}>
+                    <label>Rating</label>
+                    <div className={styles.ratingInput}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => handleRatingChange(star)}
+                          className={styles.starButton}
+                          aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
+                        >
+                          {star <= reviewForm.rating ? (
+                            <FaStar className={styles.starFilled} />
+                          ) : (
+                            <FaRegStar className={styles.starEmpty} />
+                          )}
+                        </button>
+                      ))}
+                      <span className={styles.ratingText}>
+                        {reviewForm.rating > 0 ? `${reviewForm.rating} star${reviewForm.rating !== 1 ? 's' : ''}` : 'Select rating'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                
-                <div className={styles.formGroup}>
-                  <label htmlFor="review">Your Review</label>
-                  <textarea
-                    id="review"
-                    name="review"
-                    value={reviewForm.review}
-                    onChange={handleInputChange}
-                    rows="4"
-                    required
-                  />
-                </div>
-                
-                <button 
-                  type="submit" 
-                  className={styles.submitReviewButton}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit Review'}
-                </button>
-              </form>
+
+                  <div className={styles.formGroup}>
+                    <label htmlFor="review">Your Review</label>
+                    <textarea
+                      id="review"
+                      name="review"
+                      value={reviewForm.review}
+                      onChange={handleInputChange}
+                      rows="4"
+                      required
+                      aria-required="true"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className={styles.submitReviewButton}
+                    disabled={isSubmitting || reviewForm.rating === 0}
+                    aria-label="Submit review"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                </form>
+              )}
             </div>
-            
+
             <div className={styles.reviewsListContainer}>
               <div className={styles.reviewsHeader}>
                 <h4>{reviews.length} Reviews</h4>
                 <div className={styles.sortDropdown}>
                   <FaSort className={styles.sortIcon} />
-                  <select 
+                  <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                     className={styles.sortSelect}
+                    aria-label="Sort reviews"
                   >
                     <option value="newest">Newest First</option>
                     <option value="top">Top Comments</option>
                   </select>
                 </div>
               </div>
-              
+
               <div className={styles.reviewsList}>
                 {displayedReviews.map((review) => (
                   <div key={review.id} className={styles.reviewItem}>
@@ -440,9 +609,13 @@ const EbookDetail = ({ isDarkMode }) => {
                       </div>
                       <div className={styles.reviewRating}>
                         {[...Array(5)].map((_, i) => (
-                          i < review.rating ? 
-                            <FaStar key={i} className={styles.starFilled} /> : 
-                            <FaRegStar key={i} className={styles.starEmpty} />
+                          <Fragment key={i}>
+                            {i < review.rating ? (
+                              <FaStar className={styles.starFilled} aria-label="Filled star" />
+                            ) : (
+                              <FaRegStar className={styles.starEmpty} aria-label="Empty star" />
+                            )}
+                          </Fragment>
                         ))}
                       </div>
                     </div>
@@ -450,9 +623,10 @@ const EbookDetail = ({ isDarkMode }) => {
                       {review.review}
                     </div>
                     <div className={styles.reviewActions}>
-                      <button 
+                      <button
                         className={styles.helpfulButton}
                         onClick={() => toggleHelpful(review.id)}
+                        aria-label={`Mark review by ${review.name} as helpful`}
                       >
                         Helpful ({review.helpful})
                       </button>
@@ -460,11 +634,12 @@ const EbookDetail = ({ isDarkMode }) => {
                   </div>
                 ))}
               </div>
-              
+
               {visibleReviews < reviews.length && (
-                <button 
+                <button
                   className={styles.loadMoreButton}
                   onClick={loadMoreReviews}
+                  aria-label="Load more reviews"
                 >
                   Show More Reviews
                 </button>
@@ -478,16 +653,24 @@ const EbookDetail = ({ isDarkMode }) => {
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Related Books</h3>
               <div className={styles.scrollButtons}>
-                <button onClick={() => scrollRelated('left', 'related')} className={styles.scrollButton}>
+                <button
+                  onClick={() => scrollRelated('left', 'related')}
+                  className={styles.scrollButton}
+                  aria-label="Scroll left through related books"
+                >
                   <FaChevronLeft />
                 </button>
-                <button onClick={() => scrollRelated('right', 'related')} className={styles.scrollButton}>
+                <button
+                  onClick={() => scrollRelated('right', 'related')}
+                  className={styles.scrollButton}
+                  aria-label="Scroll right through related books"
+                >
                   <FaChevronRight />
                 </button>
               </div>
             </div>
-            <div 
-              className={styles.relatedScrollContainer} 
+            <div
+              className={styles.relatedScrollContainer}
               data-section="related"
             >
               <div className={styles.relatedGrid}>
@@ -497,9 +680,21 @@ const EbookDetail = ({ isDarkMode }) => {
                   ))
                 ) : (
                   ebook.related.map((book) => (
-                    <div key={book.id} className={styles.relatedCard} onClick={() => navigate(`/ebooks/${book.id}`)}>
+                    <div
+                      key={book.id}
+                      className={styles.relatedCard}
+                      onClick={() => navigate(`/collections/ebooks/ebook/${book.id}`)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View details for ${book.title}`}
+                    >
                       <div className={styles.relatedImageContainer}>
-                        <img src={getImagePath(book.cover)} alt={book.title} className={styles.relatedCover} />
+                        <img
+                          src={getS3ImagePath(book.cover)}
+                          alt={book.title}
+                          className={styles.relatedCover}
+                          onError={(e) => console.error(`Related book cover failed to load: ${book.cover}`, e)}
+                        />
                       </div>
                       <div className={styles.relatedInfo}>
                         <h4 className={styles.relatedTitle}>{book.title}</h4>
@@ -514,18 +709,26 @@ const EbookDetail = ({ isDarkMode }) => {
 
           <section className={styles.recommendedSection}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Because you liked Sassi Punnun</h3>
+              <h3 className={styles.sectionTitle}>Because you liked {ebook.title}</h3>
               <div className={styles.scrollButtons}>
-                <button onClick={() => scrollRelated('left', 'recommended')} className={styles.scrollButton}>
+                <button
+                  onClick={() => scrollRelated('left', 'recommended')}
+                  className={styles.scrollButton}
+                  aria-label="Scroll left through recommended books"
+                >
                   <FaChevronLeft />
                 </button>
-                <button onClick={() => scrollRelated('right', 'recommended')} className={styles.scrollButton}>
+                <button
+                  onClick={() => scrollRelated('right', 'recommended')}
+                  className={styles.scrollButton}
+                  aria-label="Scroll right through recommended books"
+                >
                   <FaChevronRight />
                 </button>
               </div>
             </div>
-            <div 
-              className={styles.relatedScrollContainer} 
+            <div
+              className={styles.relatedScrollContainer}
               data-section="recommended"
             >
               <div className={styles.relatedGrid}>
@@ -535,11 +738,23 @@ const EbookDetail = ({ isDarkMode }) => {
                   ))
                 ) : (
                   [...ebook.related].reverse().map((book) => (
-                    <div key={book.id} className={styles.relatedCard} onClick={() => navigate(`/ebooks/${book.id}`)}>
+                    <div
+                      key={book.id}
+                      className={styles.relatedCard}
+                      onClick={() => navigate(`/collections/ebooks/ebook/${book.id}`)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View details for ${book.title}`}
+                    >
                       <div className={styles.relatedImageContainer}>
-                        <img src={getImagePath(book.cover)} alt={book.title} className={styles.relatedCover} />
+                        <img
+                          src={getS3ImagePath(book.cover)}
+                          alt={book.title}
+                          className={styles.relatedCover}
+                          onError={(e) => console.error(`Recommended book cover failed to load: ${book.cover}`, e)}
+                        />
                       </div>
-                      <div className={styles.relatedTextContent}>
+                      <div className={styles.relatedInfo}>
                         <h4 className={styles.relatedTitle}>{book.title}</h4>
                         <p className={styles.relatedAuthor}>{book.author}</p>
                       </div>
@@ -551,22 +766,60 @@ const EbookDetail = ({ isDarkMode }) => {
           </section>
         </div>
       </div>
+
+      {showPdfModal && (
+        <div className={styles.pdfModal}>
+          <div className={styles.pdfModalContent}>
+            <div className={styles.pdfModalHeader}>
+              <h2>{ebook.title}</h2>
+              <button
+                onClick={() => setShowPdfModal(false)}
+                className={styles.closeModalButton}
+                aria-label="Close PDF modal"
+              >
+                Close
+              </button>
+            </div>
+            <div className={styles.pdfModalBody}>
+              {pdfError && !pdfUrl ? (
+                <div>
+                  <p className={styles.pdfError}>{pdfError}</p>
+                  <PDFViewer width="100%" height="100%" showToolbar={true}>
+                    <MyDocument ebook={ebook} />
+                  </PDFViewer>
+                </div>
+              ) : pdfLoading ? (
+                <Loader />
+              ) : pdfUrl ? (
+                <iframe
+                  src={pdfUrl}
+                  width="100%"
+                  height="100%"
+                  title="Ebook PDF"
+                  style={{ border: 'none' }}
+                  onError={(e) => console.error('Failed to load PDF iframe:', e)}
+                />
+              ) : (
+                <PDFViewer width="100%" height="100%" showToolbar={true}>
+                  <MyDocument ebook={ebook} />
+                </PDFViewer>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const RelatedCardSkeleton = () => {
-
-  return (
-    <div className={styles.relatedCard}>
-      <div className={styles.skeletonRelatedImageContainer}>
-      </div>
-      <div className={styles.relatedCardText}>
-        <div className={styles.skeletonRelatedTitle}></div>
-        <div className={styles.skeletonRelatedAuthor}></div>
-      </div>
+const RelatedCardSkeleton = () => (
+  <div className={styles.relatedCard}>
+    <div className={styles.skeletonRelatedImageContainer}></div>
+    <div className={styles.relatedInfo}>
+      <div className={styles.skeletonRelatedTitle}></div>
+      <div className={styles.skeletonRelatedAuthor}></div>
     </div>
-  );
-};
+  </div>
+);
 
 export default EbookDetail;
