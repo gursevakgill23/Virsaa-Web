@@ -104,7 +104,6 @@ const Signup = ({ isDarkMode, apiString }) => {
     setIsSubmitting(true);
     
     try {
-      // Get reCAPTCHA token
       const captchaToken = recaptchaRef.current.getValue();
       if (!captchaToken) {
         setErrors(prev => ({ ...prev, captcha: 'Please complete the reCAPTCHA challenge' }));
@@ -133,9 +132,6 @@ const Signup = ({ isDarkMode, apiString }) => {
         throw new Error(data.message || 'Registration failed');
       }
       
-      // Skip logging in the user
-      // Removed: login(data.access, { id: data.user.id, username: data.user.username, email: data.user.email }, false);
-
       toast.success('Registration Successful! Redirecting to Login...', {
         position: 'top-center',
         autoClose: 3000,
@@ -148,7 +144,7 @@ const Signup = ({ isDarkMode, apiString }) => {
       });
       
       setTimeout(() => {
-        navigate('/login');  // Redirect to login page instead of home
+        navigate('/login');
       }, 3000);
     } catch (error) {
       toast.error(error.message || 'An error occurred during registration', {
@@ -166,18 +162,14 @@ const Signup = ({ isDarkMode, apiString }) => {
     }
   };
 
-  // Debug environment variables
   useEffect(() => {
-    console.log('RECAPTCHA Public Key:', process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY);
     console.log('API URL:', apiString);
-    console.log('All process.env:', process.env);
   }, [apiString]);
 
   return (
     <div className={styles.container} data-theme={isDarkMode ? 'dark' : 'light'}>
       <ToastContainer />
       
-      {/* Header Section */}
       <div className={styles.header}>
         <div
           className={styles.headerImage}
@@ -190,13 +182,10 @@ const Signup = ({ isDarkMode, apiString }) => {
         </div>
       </div>
 
-      {/* Form Container with Left and Right Sections */}
       <div className={styles.formContainer}>
-        {/* Left Section - Signup Form */}
         <div className={styles.leftSection}>
           <h2 className={styles.formTitle}>Signup</h2>
           <form className={styles.form} onSubmit={handleSubmit}>
-            {/* First Name */}
             <div className={styles.inputGroup}>
               <label htmlFor="firstName" className={styles.label}>
                 First Name
@@ -212,7 +201,6 @@ const Signup = ({ isDarkMode, apiString }) => {
               {errors.firstName && <div className={styles.errorMessage}>{errors.firstName}</div>}
             </div>
             
-            {/* Last Name */}
             <div className={styles.inputGroup}>
               <label htmlFor="lastName" className={styles.label}>
                 Last Name
@@ -228,7 +216,6 @@ const Signup = ({ isDarkMode, apiString }) => {
               {errors.lastName && <div className={styles.errorMessage}>{errors.lastName}</div>}
             </div>
             
-            {/* Username */}
             <div className={styles.inputGroup}>
               <label htmlFor="username" className={styles.label}>
                 Username
@@ -244,7 +231,6 @@ const Signup = ({ isDarkMode, apiString }) => {
               {errors.username && <div className={styles.errorMessage}>{errors.username}</div>}
             </div>
             
-            {/* Email */}
             <div className={styles.inputGroup}>
               <label htmlFor="email" className={styles.label}>
                 Email
@@ -260,7 +246,6 @@ const Signup = ({ isDarkMode, apiString }) => {
               {errors.email && <div className={styles.errorMessage}>{errors.email}</div>}
             </div>
 
-            {/* Password */}
             <div className={styles.inputGroup}>
               <label htmlFor="password" className={styles.label}>
                 Password
@@ -276,7 +261,6 @@ const Signup = ({ isDarkMode, apiString }) => {
               {errors.password && <div className={styles.errorMessage}>{errors.password}</div>}
             </div>
 
-            {/* Confirm Password */}
             <div className={styles.inputGroup}>
               <label htmlFor="confirmPassword" className={styles.label}>
                 Confirm Password
@@ -292,7 +276,6 @@ const Signup = ({ isDarkMode, apiString }) => {
               {errors.confirmPassword && <div className={styles.errorMessage}>{errors.confirmPassword}</div>}
             </div>
 
-            {/* reCAPTCHA */}
             <div className={styles.inputGroup}>
               <ReCAPTCHA
                 ref={recaptchaRef}
@@ -302,7 +285,6 @@ const Signup = ({ isDarkMode, apiString }) => {
               {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
             </div>
 
-            {/* Signup Button */}
             <button
               type="submit"
               className={styles.signupButton}
@@ -313,7 +295,6 @@ const Signup = ({ isDarkMode, apiString }) => {
               ) : 'Signup'}
             </button>
 
-            {/* Social Signup Buttons */}
             <div className={styles.socialLogin}>
               <button type="button" className={styles.googleButton}>
                 <FaGoogle /> Signup with Google
@@ -325,7 +306,6 @@ const Signup = ({ isDarkMode, apiString }) => {
           </form>
         </div>
 
-        {/* Right Section - Login Prompt */}
         <div className={styles.rightSection}>
           <div className={styles.rightContent}>
             <img src={getImagePath(formSideImage)} alt="Side" className={styles.rightImage} />
@@ -340,7 +320,6 @@ const Signup = ({ isDarkMode, apiString }) => {
         </div>
       </div>
 
-      {/* Latest Content Section */}
       <div className={styles.latestContent}>
         <h2 className={styles.sectionTitle}>Latest Content</h2>
         <div className={styles.cardGrid}>
@@ -354,7 +333,6 @@ const Signup = ({ isDarkMode, apiString }) => {
         </div>
       </div>
 
-      {/* Popular in Kids Section */}
       <div className={styles.popularInKids}>
         <h2 className={styles.sectionTitle}>Popular in Kids</h2>
         <div className={styles.cardGrid}>

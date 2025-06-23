@@ -8,13 +8,12 @@ import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 
 // Define S3 base URL as a constant
 const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
-
 // Utility function to handle S3-based image paths
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (!imagePath) {
-      console.log('Image path is null/undefined, using default:', imagePath);
-      return getProductionImagePath('/images/Collections/book-image.jpg');
+      console.log('Image path is null/undefined, using default');
+      return `${S3_BASE_URL}/images/Collections/book-image.jpg`;
     }
 
     if (typeof imagePath === 'string' && imagePath.startsWith('https://')) {
@@ -22,24 +21,8 @@ const useProductionImagePath = () => {
       return imagePath;
     }
 
-    if (typeof imagePath === 'string') {
-      const cleanedPath = imagePath.replace(/^\/+|\/+$/g, '').replace(/ /g, '%20');
-      const fullUrl = `${S3_BASE_URL}/${cleanedPath}`;
-      console.log('Processed relative path to:', fullUrl);
-      return fullUrl;
-    }
-
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
-          ? imagePath
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath || getProductionImagePath('/images/Collections/book-image.jpg');
-      }
-    }
-
-    return imagePath || getProductionImagePath('/images/Collections/book-image.jpg');
+    console.log('Invalid image path, using default:', imagePath);
+    return `${S3_BASE_URL}/images/Collections/book-image.jpg`;
   };
 };
 

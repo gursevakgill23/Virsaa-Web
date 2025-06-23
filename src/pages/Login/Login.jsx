@@ -23,7 +23,7 @@ const useProductionImagePath = () => {
   };
 };
 
-const Login = ({ isDarkMode }) => {
+const Login = ({ isDarkMode, apiString }) => {
   const getImagePath = useProductionImagePath();
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -44,9 +44,6 @@ const Login = ({ isDarkMode }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
-
-  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-  console.log('Login API URL:', apiUrl);
 
   const latestContent = [
     { id: 1, image: latest_content, title: 'Content 1', description: 'Description for Content 1' },
@@ -114,8 +111,8 @@ const Login = ({ isDarkMode }) => {
         throw new Error('Please complete the reCAPTCHA challenge');
       }
 
-      console.log('Submitting login request:', { email: formData.email, captcha: captchaToken, apiUrl });
-      const response = await axios.post(`${apiUrl}/api/auth/login/`, {
+      console.log('Submitting login request to:', `${apiString}/api/auth/login/`);
+      const response = await axios.post(`${apiString}/api/auth/login/`, {
         login: formData.email,
         password: formData.password,
         captcha: captchaToken,

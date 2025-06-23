@@ -40,7 +40,7 @@ import CompleteProfile from './pages/Profile/CompleteProfile/CompleteProfile';
 import LearningMaterial from './pages/Learning/LearningMaterial/LearningMaterial';
 
 // Define your API base URL
-const API_STRING = "http://localhost:8000";
+const API_STRING = "http://virsaa-prod.eba-7cc3yk92.us-east-1.elasticbeanstalk.com";
 
 // Component to handle profile completion check
 const ProfileRoute = ({ isDarkMode, apiString }) => {
