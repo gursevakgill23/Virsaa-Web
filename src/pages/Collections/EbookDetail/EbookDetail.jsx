@@ -11,8 +11,8 @@ import { useAuth } from '../../../context/AuthContext.jsx';
 import axios from 'axios';
 import { PDFViewer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-// S3 base URL (replace with your actual bucket name)
-const S3_BASE_URL = 'https://s3.amazonaws.com/your-bucket-name';
+// S3 base URL (updated to match the response)
+const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
 
 // PDF styles
 const pdfStyles = StyleSheet.create({
@@ -70,10 +70,6 @@ const useProductionImagePath = () => {
     if (typeof imagePath === 'string' && imagePath.startsWith('https://')) {
       return imagePath;
     }
-    if (typeof imagePath === 'string') {
-      const cleanedPath = imagePath.replace(/^\/+|\/+$/g, ' ').replace(/\s/g, '%20');
-      return `${S3_BASE_URL}/${cleanedPath}`;
-    }
     return imagePath || `${S3_BASE_URL}/images/Collections/book-image.jpg`;
   };
 };
@@ -129,7 +125,7 @@ const MyDocument = ({ ebook }) => (
   </Document>
 );
 
-const EbookDetail = ({ isDarkMode }) => {
+const EbookDetail = ({ isDarkMode, apiString }) => {
   const { isLoggedIn, accessToken, userData } = useAuth();
   const getS3ImagePath = useProductionImagePath();
   const getStaticImagePath = getProductionImagePath;
@@ -165,36 +161,39 @@ const EbookDetail = ({ isDarkMode }) => {
     const fetchEbook = async () => {
       setIsLoading(true);
       try {
-        const ebookResponse = await fetch(`http://localhost:8000/collections/ebooks/${id}/`);
-        if (!ebookResponse.ok) {
+        const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000'; // Use prop with fallback
+        const ebookResponse = await axios.get(`${apiUrl}/collections/ebooks/${id}/`);
+        if (!ebookResponse.data) {
           throw new Error('Failed to fetch ebook details');
         }
-        const ebookData = await ebookResponse.json();
+        const ebookData = ebookResponse.data;
+        // Map author ID to name (assuming a simple mapping; adjust if a separate API call is needed)
+        const authorName = ebookData.author ? `Author ${ebookData.author}` : 'Unknown Author'; // Placeholder
         setEbook({
           ...ebookData,
           cover: ebookData.cover_image,
-          author: ebookData.author?.name || 'Unknown Author',
-          reviews: ebookData.reviews?.length || 0,
+          author: authorName,
+          reviews: Array.isArray(ebookData.reviews) ? ebookData.reviews.length : 0,
           chapters: ebookData.chapters || [],
+          pdf_file: ebookData.pdf_file, // Directly use pdf_file from response
         });
 
-        const reviewsResponse = await fetch(`http://localhost:8000/collections/ebooks/${id}/reviews/`);
-        if (reviewsResponse.ok) {
-          const reviewsData = await reviewsResponse.json();
-          setReviews(reviewsData.map(review => ({
-            id: review.id,
+        const reviewsResponse = await axios.get(`${apiUrl}/collections/ebooks/${id}/reviews/`);
+        if (reviewsResponse.data) {
+          setReviews(reviewsResponse.data.map(review => ({
+            id: review.id || Date.now() + Math.random(), // Fallback if no id
             name: review.user || 'Anonymous',
             date: new Date(review.date).toLocaleDateString(),
-            rating: review.rating,
-            review: review.review,
+            rating: review.rating || 0,
+            review: review.review || 'No review text',
             helpful: review.helpful || 0,
           })));
         }
 
         setTimeout(async () => {
-          const relatedResponse = await fetch(`http://localhost:8000/collections/ebooks/?author__name=${encodeURIComponent(ebookData.author?.name || '')}`);
-          if (relatedResponse.ok) {
-            const relatedData = await relatedResponse.json();
+          const relatedResponse = await axios.get(`${apiUrl}/collections/ebooks/?author__name=${encodeURIComponent(authorName)}`);
+          if (relatedResponse.data) {
+            const relatedData = relatedResponse.data;
             setEbook(prev => ({
               ...prev,
               related: relatedData
@@ -203,7 +202,7 @@ const EbookDetail = ({ isDarkMode }) => {
                 .map(item => ({
                   id: item.id,
                   title: item.title,
-                  author: item.author?.name || 'Unknown Author',
+                  author: item.author ? `Author ${item.author}` : 'Unknown Author', // Placeholder
                   cover: item.cover_image,
                 })),
             }));
@@ -217,27 +216,25 @@ const EbookDetail = ({ isDarkMode }) => {
       }
     };
     fetchEbook();
-  }, [id]);
+  }, [id, apiString]);
 
   const handleReadNow = async () => {
     setPdfLoading(true);
     setPdfError(null);
     try {
-      const response = await fetch(`http://localhost:8000/collections/ebooks/${id}/read_pdf/`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(isLoggedIn && accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-        },
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch PDF URL (Status: ${response.status})`);
+      const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
+      if (isLoggedIn && accessToken) {
+        const response = await axios.get(`${apiUrl}/collections/ebooks/${id}/read_pdf/`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (response.data && response.data.pdf_url) {
+          setPdfUrl(response.data.pdf_url);
+        } else {
+          setPdfUrl(ebook.pdf_file); // Fallback to pdf_file if read_pdf endpoint returns nothing
+        }
+      } else {
+        setPdfUrl(ebook.pdf_file); // Public access fallback
       }
-      const data = await response.json();
-      if (!data.pdf_url) {
-        throw new Error('No PDF URL provided by backend');
-      }
-      setPdfUrl(data.pdf_url);
       setShowPdfModal(true);
     } catch (error) {
       console.error('Error fetching PDF URL:', error);
@@ -288,16 +285,17 @@ const EbookDetail = ({ isDarkMode }) => {
     e.preventDefault();
     if (!isLoggedIn) {
       toast.warn('Please log in to submit a review.', {
-      position: 'top-right',
-      autoClose: 3000,
+        position: 'top-right',
+        autoClose: 3000,
       });
       navigate('/login');
       return;
     }
     setIsSubmitting(true);
     try {
+      const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
       const response = await axios.post(
-        `http://localhost:8000/collections/reviews/`,
+        `${apiUrl}/collections/reviews/`,
         {
           ebook_id: id,
           rating: reviewForm.rating,
@@ -418,9 +416,9 @@ const EbookDetail = ({ isDarkMode }) => {
 
             <div className={styles.detailsContainer}>
               <div className={styles.metaHeader}>
-                <span className={styles.genre}>{ebook.genre}</span>
+                <span className={styles.genre}>{ebook.genre || 'Unknown Genre'}</span>
                 <div className={styles.rating}>
-                  ⭐ {ebook.rating} <span className={styles.reviews}>({ebook.reviews} reviews)</span>
+                  ⭐ {ebook.rating || 0} <span className={styles.reviews}>({ebook.reviews} reviews)</span>
                 </div>
               </div>
 

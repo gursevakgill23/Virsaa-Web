@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MdPlayArrow, MdClose } from "react-icons/md";
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
-import { useAuth } from '../../context/AuthContext'; // Import your AuthContext
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 import styles from './Home.module.css';
 import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 
@@ -40,7 +41,7 @@ const getProductionImagePath = (imagePath) => {
   return imagePath;
 };
 
-const Home = ({ isDarkMode }) => {
+const Home = ({ isDarkMode, apiString }) => {
   const getS3ImagePath = useProductionImagePath();
   const getStaticImagePath = getProductionImagePath;
   const slide1Light = getStaticImagePath('../../images/header-slide1.jpg');
@@ -68,24 +69,27 @@ const Home = ({ isDarkMode }) => {
   // State for fetched ebooks
   const [latestBooks, setLatestBooks] = useState([]);
 
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, accessToken } = useAuth();
   const [showHukamnamaToast, setShowHukamnamaToast] = useState(false);
   const [showHukamnamaModal, setShowHukamnamaModal] = useState(false);
   const [activeTab, setActiveTab] = useState('hukamnama');
   const toastTimer = useRef(null);
 
-  // Fetch ebooks for the "Explore Our Latest Books" section
+  // Fetch ebooks for the "Explore Our Latest Books" section with authentication
   useEffect(() => {
     const fetchBooks = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('http://localhost:8000/collections/ebooks/');
-        const data = await response.json();
-        console.log('Fetched ebooks for Home page:', data);
-        const sortedBooks = data.sort((a, b) => b.id - a.id).slice(0, 12);
+        const apiUrl = apiString.replace(/\/$/, ''); // Remove trailing slash
+        const config = {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        };
+        const response = await axios.get(`${apiUrl}/collections/ebooks/`, config);
+        console.log('Fetched ebooks for Home page:', response.data);
+        const sortedBooks = response.data.sort((a, b) => b.id - a.id).slice(0, 12);
         setLatestBooks(sortedBooks);
       } catch (error) {
-        console.error('Error fetching ebooks:', error);
+        console.error('Error fetching ebooks:', error.response?.status, error.response?.data);
       } finally {
         setTimeout(() => {
           setIsLoading(false);
@@ -93,8 +97,29 @@ const Home = ({ isDarkMode }) => {
       }
     };
 
-    fetchBooks();
-  }, []);
+    const fetchPublicBooks = async () => {
+      setIsLoading(true);
+      try {
+        const apiUrl = apiString.replace(/\/$/, ''); // Remove trailing slash
+        const response = await axios.get(`${apiUrl}/collections/ebooks/`);
+        console.log('Fetched public ebooks for Home page:', response.data);
+        const sortedBooks = response.data.sort((a, b) => b.id - a.id).slice(0, 12);
+        setLatestBooks(sortedBooks);
+      } catch (error) {
+        console.error('Error fetching public ebooks:', error.response?.status, error.response?.data);
+      } finally {
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 4000);
+      }
+    };
+
+    if (isLoggedIn && accessToken) {
+      fetchBooks();
+    } else {
+      fetchPublicBooks();
+    }
+  }, [isLoggedIn, accessToken, apiString]);
 
   // Show toast when component mounts - appears every time
   useEffect(() => {
@@ -159,7 +184,7 @@ const Home = ({ isDarkMode }) => {
     return isDarkMode
       ? [slide1Dark, slide2Dark, slide3Dark]
       : [slide1Light, slide2Light, slide3Light];
-  }, [isDarkMode,slide1Dark,slide1Light,slide2Dark,slide2Light,slide3Dark,slide3Light]);
+  }, [isDarkMode, slide1Dark, slide1Light, slide2Dark, slide2Light, slide3Dark, slide3Light]);
 
   useEffect(() => {
     const interval = setInterval(() => {

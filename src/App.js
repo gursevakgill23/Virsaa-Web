@@ -107,7 +107,7 @@ const App = () => {
                     location.pathname === '/learning/games/memory-match';
 
   return (
-    <AuthProvider>
+    <AuthProvider apiString={API_STRING}> {/* Explicitly pass apiString prop */}
       <CssBaseline />
       <ToastContainer
         position="top-center"

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children, apiString }) => {
   const [authState, setAuthState] = useState({
     isLoggedIn: false,
     userData: null,
@@ -17,13 +17,11 @@ export const AuthProvider = ({ children }) => {
   });
   const navigate = useNavigate();
 
-  // Function to determine if the profile is complete
   const checkProfileCompleteness = (userData) => {
     if (!userData) return false;
     const { about_me, dob } = userData;
     const isAboutMeFilled = about_me && about_me.trim() !== '';
     const isDobFilled = !!dob;
-    // Require about_me and dob to be filled
     return isAboutMeFilled && isDobFilled;
   };
 
@@ -53,16 +51,15 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      if (!process.env.REACT_APP_API_URL) {
-        console.warn('REACT_APP_API_URL is not defined in .env. Falling back to default:', apiUrl);
+      const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000'; // Guard against undefined
+      if (!apiString) {
+        console.warn('apiString is not defined. Falling back to default:', apiUrl);
       }
 
       try {
         console.log('Verifying token with /api/auth/profile/ using API URL:', apiUrl);
-        const response = await axios.get(`${apiUrl}/api/auth/profile/`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const config = { headers: { Authorization: `Bearer ${accessToken}` } };
+        const response = await axios.get(`${apiUrl}/api/auth/profile/`, config);
         console.log('Profile verification successful:', response.data);
         const isPremium = response.data.membership_level === 'Premium';
         const isProfileComplete = checkProfileCompleteness(response.data);
@@ -89,9 +86,8 @@ export const AuthProvider = ({ children }) => {
 
             Cookies.set('accessToken', newAccessToken, { expires: 1, path: '/' });
 
-            const retryResponse = await axios.get(`${apiUrl}/api/auth/profile/`, {
-              headers: { Authorization: `Bearer ${newAccessToken}` },
-            });
+            const retryConfig = { headers: { Authorization: `Bearer ${newAccessToken}` } };
+            const retryResponse = await axios.get(`${apiUrl}/api/auth/profile/`, retryConfig);
             console.log('Retry profile verification successful:', retryResponse.data);
             const isPremium = retryResponse.data.membership_level === 'Premium';
             const isProfileComplete = checkProfileCompleteness(retryResponse.data);
@@ -120,9 +116,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     initializeAuth();
-  }, [navigate]);
+  }, [navigate, apiString]);
 
-  // Axios interceptor for token refresh
   useEffect(() => {
     const requestInterceptor = axios.interceptors.request.use(
       async (config) => {
@@ -150,8 +145,9 @@ export const AuthProvider = ({ children }) => {
           originalRequest._retry = true;
           try {
             console.log('Interceptor: Attempting token refresh');
+            const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000'; // Guard against undefined
             const refreshResponse = await axios.post(
-              `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/token/refresh/`,
+              `${apiUrl}/api/auth/token/refresh/`,
               { refresh: authState.refreshToken }
             );
             const newAccessToken = refreshResponse.data.access;
@@ -183,7 +179,7 @@ export const AuthProvider = ({ children }) => {
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, [authState.accessToken, authState.refreshToken, navigate]);
+  }, [authState.accessToken, authState.refreshToken, navigate, apiString]);
 
   const handleCleanup = () => {
     console.log('Cleaning up authentication state');
@@ -227,7 +223,7 @@ export const AuthProvider = ({ children }) => {
 
     if (refreshToken && accessToken) {
       try {
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+        const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
         console.log('Sending logout request to backend using API URL:', apiUrl);
         await axios.post(`${apiUrl}/api/auth/logout/`, {
           refresh_token: refreshToken,
@@ -254,12 +250,11 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
     try {
       console.log('Fetching updated user data from /api/auth/profile/');
-      const response = await axios.get(`${apiUrl}/api/auth/profile/`, {
-        headers: { Authorization: `Bearer ${authState.accessToken}` },
-      });
+      const config = { headers: { Authorization: `Bearer ${authState.accessToken}` } };
+      const response = await axios.get(`${apiUrl}/api/auth/profile/`, config);
       console.log('Updated user data fetched:', response.data);
       const isPremium = response.data.membership_level === 'Premium';
       const isProfileComplete = checkProfileCompleteness(response.data);
