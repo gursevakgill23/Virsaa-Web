@@ -37,16 +37,14 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const logo_virsaa = '/images/logo.png';
   const result_image = '/images/search_result.jpeg';
   const userImage = '/images/Login/user-placeholder.jpg';
-
   const getImagePath = useProductionImagePath();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
-  const [profileData, setProfileData] = useState(null); // State to store fetched profile data
+  const [profileData, setProfileData] = useState(null);
   const navbarRef = useRef(null);
   const navigate = useNavigate();
-  
   const { isLoggedIn, userData, accessToken, logout } = useAuth();
 
   // Fetch profile data when the profile sidebar is opened
@@ -91,7 +89,6 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
             autoClose: 3000,
             theme: isDarkMode ? 'dark' : 'light',
           });
-          // Fallback to userData if fetch fails
           setProfileData({
             first_name: userData?.first_name || '',
             last_name: userData?.last_name || '',

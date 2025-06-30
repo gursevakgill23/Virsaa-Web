@@ -11,8 +11,19 @@ import { useAuth } from '../../../context/AuthContext.jsx';
 import axios from 'axios';
 import { PDFViewer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-// S3 base URL (updated to match the response)
+// S3 base URL
 const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
+const DEFAULT_IMAGE_PATH = '../../images/Collections/book-image.jpg';
+
+// Utility function to shuffle an array (Fisher-Yates shuffle)
+const shuffleArray = (array) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 // PDF styles
 const pdfStyles = StyleSheet.create({
@@ -61,48 +72,67 @@ const pdfStyles = StyleSheet.create({
   },
 });
 
-// Utility function to handle S3-based images paths
+// Utility function to handle S3-based image paths
 const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (!imagePath) {
-      return `${S3_BASE_URL}/images/Collections/book-image.jpg`;
+  return (imagePath, context = 'unknown', getStaticImagePath) => {
+    if (!imagePath || imagePath === '') {
+      console.log(`Image path is null, undefined, or empty for ${context}, using default: ${DEFAULT_IMAGE_PATH}`);
+      return getStaticImagePath(DEFAULT_IMAGE_PATH);
     }
+
     if (typeof imagePath === 'string' && imagePath.startsWith('https://')) {
+      console.log(`Full URL detected for ${context}: ${imagePath}`);
       return imagePath;
     }
-    return imagePath || `${S3_BASE_URL}/images/Collections/book-image.jpg`;
+
+    if (typeof imagePath === 'string') {
+      const encodedPath = encodeURI(imagePath);
+      console.log(`Encoded image path for ${context}: ${encodedPath}`);
+      return `${S3_BASE_URL}/${encodedPath}`;
+    }
+
+    console.log(`Invalid image path for ${context}, using default: ${DEFAULT_IMAGE_PATH}`, imagePath);
+    return getStaticImagePath(DEFAULT_IMAGE_PATH);
   };
 };
 
 // Utility function to handle public/static images
 const getProductionImagePath = (imagePath) => {
-  if (process.env.NODE_ENV === 'development') {
-    if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
-        ? imagePath
-        : `/${imagePath.replace(/.*static\/media/, 'static/media/')}`;
-    }
-    return imagePath?.default || imagePath || '/images/Collections/book-image.jpg';
+  if (!imagePath) {
+    console.log(`getProductionImagePath: Image path is null/undefined, using default: ${DEFAULT_IMAGE_PATH}`);
+    return `/images/Collections/book-image.jpg`;
   }
-  return imagePath || '/images/Collections/book-image.jpg';
+
+  if (typeof imagePath === 'string') {
+    if (process.env.NODE_ENV === 'production') {
+      const normalizedPath = imagePath.startsWith('/')
+        ? imagePath
+        : `/images/Collections/${imagePath.split('/').pop()}`;
+      console.log(`getProductionImagePath (production): Returning ${normalizedPath}`);
+      return normalizedPath;
+    }
+    console.log(`getProductionImagePath (development): Returning ${imagePath}`);
+    return imagePath;
+  }
+
+  console.log(`getProductionImagePath: Invalid image path, using default: ${DEFAULT_IMAGE_PATH}`);
+  return `/images/Collections/book-image.jpg`;
 };
 
 // PDF Document Component
 const MyDocument = ({ ebook }) => (
   <Document>
-    {/* Cover Page */}
     <Page size="A4" style={pdfStyles.coverPage}>
       <View>
         <Text style={pdfStyles.coverTitle}>{ebook?.title || 'Untitled Ebook'}</Text>
         <Text style={pdfStyles.coverAuthor}>{ebook?.author || 'Unknown Author'}</Text>
       </View>
     </Page>
-    {/* Chapter Pages */}
     {ebook?.chapters?.map((chapter, index) => (
       <Page key={chapter.id} size="A4" style={pdfStyles.page}>
         <View>
           <Text style={pdfStyles.chapterTitle}>
-            Chapter {chapter.id}:: {chapter.title}
+            Chapter {chapter.id}: {chapter.title}
           </Text>
           <Text style={pdfStyles.content}>
             This is a placeholder for the content of {chapter.title}. Actual content would be fetched from the backend or provided in the PDF file.
@@ -111,7 +141,6 @@ const MyDocument = ({ ebook }) => (
         <Text style={pdfStyles.pageNumber}>Page {index + 2}</Text>
       </Page>
     ))}
-    {/* Additional Pages if Needed */}
     {Array.from({ length: (ebook?.pages || 0) - (ebook?.chapters?.length || 0) - 1 }, (_, index) => (
       <Page key={`extra-${index}`} size="A4" style={pdfStyles.page}>
         <View>
@@ -146,6 +175,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   // Image paths
   const header_image_dark = getStaticImagePath("/images/Collections/header-image-dark.png");
   const header_image_light = getStaticImagePath("/images/Collections/header-image-light.png");
+  const default_book_image = getStaticImagePath(DEFAULT_IMAGE_PATH);
 
   // Review form state
   const [reviewForm, setReviewForm] = useState({
@@ -161,27 +191,29 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     const fetchEbook = async () => {
       setIsLoading(true);
       try {
-        const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000'; // Use prop with fallback
+        const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
+        console.log(`Fetching ebook with ID: ${id}`);
         const ebookResponse = await axios.get(`${apiUrl}/collections/ebooks/${id}/`);
         if (!ebookResponse.data) {
           throw new Error('Failed to fetch ebook details');
         }
         const ebookData = ebookResponse.data;
-        // Map author ID to name (assuming a simple mapping; adjust if a separate API call is needed)
-        const authorName = ebookData.author ? `Author ${ebookData.author}` : 'Unknown Author'; // Placeholder
+        console.log('Ebook data:', ebookData);
+        const authorName = ebookData.author ? `Author ${ebookData.author}` : 'Unknown Author';
         setEbook({
           ...ebookData,
           cover: ebookData.cover_image,
           author: authorName,
           reviews: Array.isArray(ebookData.reviews) ? ebookData.reviews.length : 0,
           chapters: ebookData.chapters || [],
-          pdf_file: ebookData.pdf_file, // Directly use pdf_file from response
+          pdf_file: ebookData.pdf_file,
         });
 
         const reviewsResponse = await axios.get(`${apiUrl}/collections/ebooks/${id}/reviews/`);
+        console.log('Reviews data:', reviewsResponse.data);
         if (reviewsResponse.data) {
           setReviews(reviewsResponse.data.map(review => ({
-            id: review.id || Date.now() + Math.random(), // Fallback if no id
+            id: review.id || Date.now() + Math.random(),
             name: review.user || 'Anonymous',
             date: new Date(review.date).toLocaleDateString(),
             rating: review.rating || 0,
@@ -191,26 +223,45 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
         }
 
         setTimeout(async () => {
-          const relatedResponse = await axios.get(`${apiUrl}/collections/ebooks/?author__name=${encodeURIComponent(authorName)}`);
-          if (relatedResponse.data) {
-            const relatedData = relatedResponse.data;
+          console.log(`Fetching related books for author: ${authorName}`);
+          let relatedResponse = await axios.get(`${apiUrl}/collections/ebooks/?author__name=${encodeURIComponent(authorName)}`);
+          console.log('Related books response:', relatedResponse.data);
+          let relatedData = relatedResponse.data;
+
+          // Fallback to all ebooks if no related books found
+          if (!relatedData || relatedData.length === 0) {
+            console.log('No related books found, fetching all ebooks');
+            relatedResponse = await axios.get(`${apiUrl}/collections/ebooks/`);
+            relatedData = relatedResponse.data;
+            console.log('All ebooks response:', relatedData);
+          }
+
+          if (relatedData) {
+            const filteredData = relatedData.filter(item => item.id !== parseInt(id));
+            console.log('Filtered related books (excluding current ebook):', filteredData);
+            const shuffledRelated = shuffleArray(
+              filteredData.map(item => ({
+                id: item.id,
+                title: item.title,
+                author: item.author ? `Author ${item.author}` : 'Unknown Author',
+                cover: item.cover_image,
+              }))
+            ).slice(0, 5);
+            console.log('Shuffled and limited related books:', shuffledRelated);
             setEbook(prev => ({
               ...prev,
-              related: relatedData
-                .filter(item => item.id !== parseInt(id))
-                .slice(0, 10)
-                .map(item => ({
-                  id: item.id,
-                  title: item.title,
-                  author: item.author ? `Author ${item.author}` : 'Unknown Author', // Placeholder
-                  cover: item.cover_image,
-                })),
+              related: shuffledRelated,
             }));
+          } else {
+            console.log('No related books available');
+            setEbook(prev => ({ ...prev, related: [] }));
           }
           setRelatedLoading(false);
         }, 1000);
       } catch (error) {
         console.error('Error fetching ebook data:', error);
+        setEbook(prev => ({ ...prev, related: [] }));
+        setRelatedLoading(false);
       } finally {
         setIsLoading(false);
       }
@@ -230,10 +281,10 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
         if (response.data && response.data.pdf_url) {
           setPdfUrl(response.data.pdf_url);
         } else {
-          setPdfUrl(ebook.pdf_file); // Fallback to pdf_file if read_pdf endpoint returns nothing
+          setPdfUrl(ebook.pdf_file);
         }
       } else {
-        setPdfUrl(ebook.pdf_file); // Public access fallback
+        setPdfUrl(ebook.pdf_file);
       }
       setShowPdfModal(true);
     } catch (error) {
@@ -407,10 +458,10 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
           <section className={styles.heroSection}>
             <div className={styles.coverContainer}>
               <img
-                src={getS3ImagePath(ebook.cover)}
+                src={getS3ImagePath(ebook.cover, `ebook cover: ${ebook.title}`, getStaticImagePath) || default_book_image}
                 alt={ebook.title}
                 className={styles.ebookCover}
-                onError={(e) => console.error(`Ebook cover failed to load: ${ebook.cover}`, e)}
+                onError={(e) => console.error(`Ebook cover failed to load: ${ebook.title}, path: ${getS3ImagePath(ebook.cover, `ebook cover: ${ebook.title}`, getStaticImagePath)}`, e)}
               />
             </div>
 
@@ -676,6 +727,8 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                   Array(5).fill().map((_, index) => (
                     <RelatedCardSkeleton key={`related-skeleton-${index}`} />
                   ))
+                ) : ebook.related.length === 0 ? (
+                  <p>No related books available.</p>
                 ) : (
                   ebook.related.map((book) => (
                     <div
@@ -688,10 +741,10 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                     >
                       <div className={styles.relatedImageContainer}>
                         <img
-                          src={getS3ImagePath(book.cover)}
+                          src={getS3ImagePath(book.cover, `related book: ${book.title}`, getStaticImagePath) || default_book_image}
                           alt={book.title}
                           className={styles.relatedCover}
-                          onError={(e) => console.error(`Related book cover failed to load: ${book.cover}`, e)}
+                          onError={(e) => console.error(`Related book cover failed to load: ${book.title}, path: ${getS3ImagePath(book.cover, `related book: ${book.title}`, getStaticImagePath)}`, e)}
                         />
                       </div>
                       <div className={styles.relatedInfo}>
@@ -734,6 +787,8 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                   Array(5).fill().map((_, index) => (
                     <RelatedCardSkeleton key={`recommended-skeleton-${index}`} />
                   ))
+                ) : ebook.related.length === 0 ? (
+                  <p>No recommended books available.</p>
                 ) : (
                   [...ebook.related].reverse().map((book) => (
                     <div
@@ -746,10 +801,10 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                     >
                       <div className={styles.relatedImageContainer}>
                         <img
-                          src={getS3ImagePath(book.cover)}
+                          src={getS3ImagePath(book.cover, `recommended book: ${book.title}`, getStaticImagePath) || default_book_image}
                           alt={book.title}
                           className={styles.relatedCover}
-                          onError={(e) => console.error(`Recommended book cover failed to load: ${book.cover}`, e)}
+                          onError={(e) => console.error(`Recommended book cover failed to load: ${book.title}, path: ${getS3ImagePath(book.cover, `recommended book: ${book.title}`, getStaticImagePath)}`, e)}
                         />
                       </div>
                       <div className={styles.relatedInfo}>

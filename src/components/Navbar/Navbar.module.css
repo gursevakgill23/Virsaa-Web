@@ -1,35 +1,46 @@
-
 /* Navbar Styles */
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  position: absolute;
+  padding: 8px 20px; /* Reduced padding to decrease height */
+  position: sticky;
   top: 0;
-  left: 0;
   width: 100%;
   z-index: 100;
+  background-color: var(--section-bg-color, #ffffff) !important; /* Permanent background with fallback */
+}
+
+/* Ensure no parent interference */
+body, html {
+  margin: 0;
+  padding: 0;
+  background: none !important; /* Prevent body background interference */
+}
+
+/* Debug parent elements */
+.navbar-container {
+  background: transparent !important; /* Ensure wrapper div is transparent */
 }
 
 .logoContainer {
   display: flex;
   align-items: center;
-  height: 60px; /* Adjust based on your logo's aspect ratio */
-  width: 70px;
+  height: 40px; /* Reduced height */
+  width: 50px; /* Reduced width */
 }
 
 .logoImage {
-  height: 100%; /* This will make the image fill the container height */
-  width: auto; /* Maintain aspect ratio */
-  object-fit: contain; /* Ensures the whole logo is visible */
+  height: 100%;
+  width: auto;
+  object-fit: contain;
 }
 
-/* If you want to add any hover effects or transitions: */
 .logoImage:hover {
   opacity: 0.9;
   transition: opacity 0.2s ease;
 }
+
 .navLinks {
   display: flex;
   gap: 20px;
@@ -56,7 +67,7 @@
   position: absolute;
   top: 100%;
   left: 0;
-  background-color: var(--section-bg-color);
+  background-color: var(--section-bg-color, #ffffff);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
@@ -127,7 +138,7 @@
   object-fit: cover;
 }
 
-/* Profile Sidebar - Modern Version */
+/* Profile Sidebar */
 .profileSidebar {
   position: fixed;
   top: 0;
@@ -258,8 +269,6 @@
   transform: translateX(-3px);
 }
 
-
-/* Logout Button - Styled like link */
 .logoutButton {
   background: none;
   border: none;
@@ -274,16 +283,15 @@
   align-items: center;
 }
 
-/* Ensure it matches other menu items hover state */
 .logoutButton:hover {
   background: rgba(255, 255, 255, 0.05);
   padding-left: 28px;
 }
 
-/* Remove default button focus styles */
 .logoutButton:focus {
   outline: none;
 }
+
 /* Search Section */
 .searchSection {
   width: 100%;
@@ -308,12 +316,12 @@
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 0.9;
+  font-size: 0.9rem;
   outline: none;
 }
 
 .searchButton {
-  padding:  8px;
+  padding: 8px;
   background-color: var(--button-bg-color);
   color: var(--button-text-color);
   border: none;
@@ -419,7 +427,7 @@
   transform: translateY(-2px);
   border: 1px solid var(--button-hover-text-color);
 }
-/* Premium Button in Navbar */
+
 .getPremiumButton {
   background-color: var(--button-hover-bg-color);
   color: var(--button-hover-text-color);
@@ -439,12 +447,10 @@
   transform: translateY(-2px);
 }
 
-
-
 /* Media Queries */
 @media (max-width: 1200px) {
   .navbar {
-    padding: 10px 3%;
+    padding: 8px 3%; /* Adjusted padding */
   }
 }
 
@@ -456,13 +462,13 @@
 
 @media (max-width: 768px) {
   .navbar {
-    padding: 10px 15px;
+    padding: 6px 15px; /* Further reduced padding */
   }
   
-  .logo {
-    height: 50px;
-    width: 50px;
-    min-width: 50px;
+  .logoContainer {
+    height: 35px; /* Adjusted for smaller screens */
+    width: 40px;
+    min-width: 40px;
   }
   
   .navRight {
@@ -506,16 +512,14 @@
 
 @media (max-width: 576px) {
   .navbar {
-    padding: 8px 10px;
+    padding: 6px 10px;
   }
   
   .logoContainer {
-    font-size: 15px;  
+    height: 30px; /* Further reduced */
+    width: 35px;
   }
-  .saaWrapper{
-    height: 20px;
-    width: 40px;
-  }  
+  
   .searchIcon,
   .menuIcon,
   .themeToggle {
@@ -545,7 +549,16 @@
 }
 
 @media (max-width: 480px) {
-  .loginButton,.getPremiumButton {
+  .navbar {
+    padding: 5px 8px; /* Minimal padding for smallest screens */
+  }
+  
+  .logoContainer {
+    height: 25px; /* Minimal logo size */
+    width: 30px;
+  }
+  
+  .loginButton, .getPremiumButton {
     padding: 4px 8px;
     font-size: 0.65rem;
   }

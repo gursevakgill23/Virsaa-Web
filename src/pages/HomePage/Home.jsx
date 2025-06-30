@@ -9,6 +9,7 @@ import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 
 // Define S3 base URL as a constant
 const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
+
 // Utility function to handle S3-based image paths
 const useProductionImagePath = () => {
   return (imagePath) => {
@@ -22,12 +23,19 @@ const useProductionImagePath = () => {
       return imagePath;
     }
 
+    // Encode relative paths to handle spaces and special characters
+    if (typeof imagePath === 'string') {
+      const encodedPath = encodeURI(imagePath);
+      console.log('Encoded image path:', encodedPath);
+      return `${S3_BASE_URL}/${encodedPath}`;
+    }
+
     console.log('Invalid image path, using default:', imagePath);
     return `${S3_BASE_URL}/images/Collections/book-image.jpg`;
   };
 };
 
-// Utility function to handle public/static images (restored)
+// Utility function to handle public/static images
 const getProductionImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
