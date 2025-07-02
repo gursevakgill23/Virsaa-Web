@@ -50,6 +50,7 @@
     "swiper": "^11.2.6",
     "three": "^0.176.0",
     "tsparticles": "^3.8.1",
+    "vercel": "^44.2.8",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
