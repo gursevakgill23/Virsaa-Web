@@ -26,8 +26,8 @@ const CompleteProfile = ({ isDarkMode, apiString }) => {
   const navigate = useNavigate();
   const getImagePath = useProductionImagePath();
 
-  const header_image_light = '../../../images/Gurbani/header-image.png';
-  const header_image_dark = '../../../images/Gurbani/header-image-dark.png';
+  const header_image_light = '../../../images/header-image.png';
+  const header_image_dark = '../../../images/header-image-dark.png';
   const placeholder_user_image = '../../../images/placeholder-user.png';
 
   const [formData, setFormData] = useState({

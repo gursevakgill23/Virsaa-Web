@@ -27,8 +27,8 @@ const useProductionImagePath = () => {
 const Gurbani = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
 
-  const header_image_light = '/images/Gurbani/header-image.png';
-  const header_image_dark = '/images/Gurbani/header-image-dark.png';
+  const header_image_light = '/images/header-image.png';
+  const header_image_dark = '/images/header-image-dark.png';
   const gurbaniImage = '/images/Gurbani/gurbani.png';
   const audioKirtanImage = '/images/Gurbani/audio-kirtan.jpg';
   const videoKirtanImage = '/images/Gurbani/video-kirtan.jpg';

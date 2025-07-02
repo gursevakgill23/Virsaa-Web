@@ -49,8 +49,8 @@ const staticAchievements = [
 const MyProfile = ({ isDarkMode, apiString }) => {
   const { accessToken, logout } = useAuth();
   const navigate = useNavigate();
-  const header_image_light = '../../../images/Gurbani/header-image.png';
-  const header_image_dark = '../../../images/Gurbani/header-image-dark.png';
+  const header_image_light = '../../../images/header-image.png';
+  const header_image_dark = '../../../images/header-image-dark.png';
   const getImagePath = useProductionImagePath();
 
   // State for user data, initialized with API response

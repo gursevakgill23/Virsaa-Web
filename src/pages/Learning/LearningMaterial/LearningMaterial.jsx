@@ -24,8 +24,8 @@ const LearningMaterial = ({ isDarkMode }) => {
   const { id } = useParams();
   const { isLoggedIn, isPremium, accessToken } = useAuth();
   const getImagePath = useProductionImagePath();
-  const headerLight = '/images/Learning/header-image.png';
-  const headerDark = '/images/Learning/header-image-dark.png';
+  const headerLight = '/images/header-image.png';
+  const headerDark = '/images/header-image-dark.png';
   const [item, setItem] = useState(null);
   const [discussionPosts, setDiscussionPosts] = useState([]);
   const [newPostContent, setNewPostContent] = useState('');

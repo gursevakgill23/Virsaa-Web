@@ -28,8 +28,8 @@ const GurdwaraServices = ({ isDarkMode }) => {
   const { id } = useParams();
   
   // Image paths - now using public folder
-  const header_image_light = "/images/gurdwaraAccess/header-image.jpg";
-  const header_image_dark = "/images/gurdwaraAccess/header-image-dark.png";
+  const header_image_light = "/images/header-image.jpg";
+  const header_image_dark = "/images/header-image-dark.png";
 
   // Mock data - in a real app, you would fetch this based on the id
   const gurdwaras = [

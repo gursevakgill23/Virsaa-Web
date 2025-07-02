@@ -28,8 +28,8 @@ const useProductionImagePath = () => {
 };
 const Settings = ({ isDarkMode, toggleTheme }) => {
   const getImagePath = useProductionImagePath();
-  const header_image_light = '../../../images/Profile/header-image.png';
-  const header_image_dark = '../../../images/Profile/header-image-dark.png';
+  const header_image_light = '../../../images/header-image.png';
+  const header_image_dark = '../../../images/header-image-dark.png';
 
   const [activeTab, setActiveTab] = useState('general');
   const [showMobileMenu, setShowMobileMenu] = useState(false);

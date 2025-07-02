@@ -41,9 +41,9 @@ const AudiobookDetail = ({ isDarkMode }) => {
   const audioRef = useRef(null);
   
   // Image paths
-  const header_image_dark = "/images/Collections/header-image-dark.png";
-  const header_image_light = "/images/Collections/header-image-light.png";
-  const bookImage = "/images/Collections/book-image.jpg";
+  const header_image_dark = "/images/header-image-dark.png";
+  const header_image_light = "/images/header-image-light.png";
+  const bookImage = "/images/book-image.jpg";
   const audioFile = "/images/Collections/Nitnem.mp3";
 
   // Review form state

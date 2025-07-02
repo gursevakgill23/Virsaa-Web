@@ -2,6 +2,7 @@
 .homeContainer {
   background-color: var(--section-bg-color);
 }
+
 /* Hukamnama Toast Styles */
 .hukamnamaToast {
   position: fixed;
@@ -242,7 +243,6 @@
   position: absolute;
   top: 20%;
   left: 5%;
-  width: 100%;
   color: var(--text-color);
   padding: 20px;
   border-radius: 10px;
@@ -391,14 +391,19 @@
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
+  height: 450px; /* Set fixed height for all book cards */
+  display: flex;
+  flex-direction: column;
 }
+
 .imageContainer {
   width: 100%;
-  height: 350px;
+  height: 400px; /* Increased image height */
   padding: 15px;
   border-radius: 10px;
   overflow: hidden;
   position: relative;
+  flex-grow: 1; /* Allow image container to take available space */
 }
 
 .bookImage {
@@ -412,16 +417,17 @@
 }
 
 .bookImage:hover {
-  transform: scale(2.05);
+  transform: scale(1.05); /* Reduced scale for hover to prevent overflow */
   transition: transform 0.3s ease-in-out;
 }
 
 .bookName {
-  font-size: 1rem;
+  font-size: 1.1rem; /* Slightly larger font for book title */
   margin: 0;
   font-weight: 550;
   font-family: serif;
   color: var(--text-color);
+  flex-shrink: 0; /* Prevent title from shrinking */
 }
 
 .bookName:hover {
@@ -429,12 +435,13 @@
 }
 
 .writerName {
-  font-size: 0.75rem;
+  font-size: 0.85rem; /* Slightly larger font for writer name */
   color: var(--secondary-text-color);
   margin-bottom: 10px;
   margin-top: 0;
   text-align: center;
   margin-right: 15px;
+  flex-shrink: 0; /* Prevent writer name from shrinking */
 }
 
 .allBooksButton {
@@ -464,11 +471,14 @@
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
+  height: 450px; /* Match book card height */
+  display: flex;
+  flex-direction: column;
 }
 
 .skeletonImageContainer {
   width: 100%;
-  height: 280px;
+  height: 400px; /* Match increased image height */
   position: relative;
   margin-bottom: 10px;
   background-color: var(--skeleton-bg-color);
@@ -554,7 +564,8 @@
   margin: 0 auto;
   margin-bottom: 10px;
 }
-.skeletonImageContainer::after{
+
+.skeletonImageContainer::after {
   content: '';
   position: absolute;
   top: 0;
@@ -588,8 +599,8 @@
 
 /* Heritage Section */
 .heritageSection {
-  padding: 2rem ;
-  background-color: var(--section-bg-color);
+  padding: 2rem;
+ background-color: var(--section-bg-color);
 }
 
 .heritageHeading {
@@ -611,7 +622,7 @@
   flex: 1 1 30%;
   display: flex;
   align-items: stretch;
-  height:350px;
+  height: 350px;
   animation: appear linear;
   animation-timeline: view();
   animation-range: entry 0;
@@ -658,17 +669,17 @@
   color: var(--secondary-text-color);
   line-height: 1.6;
 }
-@keyframes  appear{
-  from{
-  opacity: 0;
-  scale:0.5
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    scale: 0.5;
   }
-  to{
+  to {
     opacity: 1;
     scale: 1;
-  } 
+  }
 }
-
 
 /* Listen, Learn, and Play Section */
 .section {
@@ -753,7 +764,7 @@
   .heritageContainer {
     gap: 20px;
   }
-  .heritageImage{
+  .heritageImage {
     height: 450px;
   }
 }

@@ -28,8 +28,8 @@ const GurdwaraHistory = ({ isDarkMode }) => {
   const [mainImage, setMainImage] = useState(0);
   
   // Image paths - now using public folder
-  const header_image_light = "/images/gurdwaraAccess/header-image.jpg";
-  const header_image_dark = "/images/gurdwaraAccess/header-image-dark.png";
+  const header_image_light = "/images/header-image.jpg";
+  const header_image_dark = "/images/header-image-dark.png";
   const history_images = [
     "/images/gurdwaraAccess/history/history1.jpg",
     "/images/gurdwaraAccess/history/history2.jpg",

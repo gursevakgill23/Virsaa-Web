@@ -24,8 +24,8 @@ const useProductionImagePath = () => {
 };
 const History = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
-  const header_image_light = '/images/Profile/header-image.png';
-  const header_image_dark = '/images/Profile/header-image-dark.png';
+  const header_image_light = '/images/header-image.png';
+  const header_image_dark = '/images/header-image-dark.png';
 
   const [userData] = useState({
     username: 'Jaspreet Singh',

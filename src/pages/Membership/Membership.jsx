@@ -3,8 +3,8 @@ import { FaCheck, FaStar, FaDownload, FaAd } from 'react-icons/fa';
 import styles from './Membership.module.css';
 
 // Import header images for light and dark mode
-const headerLight = '/images/Membership/header-image.jpg'; // Replace with your light mode image
-const headerDark = '/images/Membership/header-image-dark.png'; // Replace with your dark mode image
+const headerLight = '/images/header-image.jpg'; // Replace with your light mode image
+const headerDark = '/images/header-image-dark.png'; // Replace with your dark mode image
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {

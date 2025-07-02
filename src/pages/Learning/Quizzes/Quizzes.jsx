@@ -23,8 +23,8 @@ const Quizzes = ({ isDarkMode }) => {
   const { id } = useParams();
   const { isLoggedIn, accessToken } = useAuth();
   const getImagePath = useProductionImagePath();
-  const headerLight = '/images/Quizzes/header-image.jpg';
-  const headerDark = '/images/Quizzes/header-image-dark.png';
+  const headerLight = '/images/header-image.jpg';
+  const headerDark = '/images/header-image-dark.png';
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);

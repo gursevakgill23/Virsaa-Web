@@ -59,8 +59,8 @@ const Collections = ({ isDarkMode, apiString }) => {
   const currentSection = pathSegments.length > 1 ? pathSegments[1] : "ebooks";
 
   // Image paths for header
-  const header_image_light = getStaticImagePath('../../images/Collections/header-image-light.png');
-  const header_image_dark = getStaticImagePath('../../images/Collections/header-image-dark.png');
+  const header_image_light = getStaticImagePath('../../images/header-image.png');
+  const header_image_dark = getStaticImagePath('../../images/header-image-dark.png');
   const default_book_image = getStaticImagePath(DEFAULT_IMAGE_PATH);
 
   const getHeaderSubtitle = () => {

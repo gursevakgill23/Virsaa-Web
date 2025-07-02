@@ -32,8 +32,8 @@ const Learning = ({ isDarkMode }) => {
   const [allCards, setAllCards] = useState([]);
   const [games, setGames] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
-  const header_image_light = '/images/Learning/header-image.png';
-  const header_image_dark = '/images/Learning/header-image-dark.png';
+  const header_image_light = '/images/header-image.png';
+  const header_image_dark = '/images/header-image-dark.png';
 
   useEffect(() => {
     const fetchItems = async () => {

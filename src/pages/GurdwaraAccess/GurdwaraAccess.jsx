@@ -8,8 +8,8 @@ import { FaCaretRight, FaSearch, FaLocationArrow } from 'react-icons/fa';
 
 
 const gurdwaraHistoryImage = '../../images/gurdwaraAccess/gurdwara-history.jpg';
-const header_image_light = '../../images/gurdwaraAccess/header-image.jpg';
-const header_image_dark = '../../images/gurdwaraAccess/header-image-dark.png';
+const header_image_light = '../../images/header-image.jpg';
+const header_image_dark = '../../images/header-image-dark.png';
 const iconRetinaUrl = '../../images/gurdwaraAccess/marker-icon-2x.png';
 const iconUrl = '../../images/gurdwaraAccess/marker-icon.png';
 const iconShadowUrl = '../../images/gurdwaraAccess/marker-shadow.png';

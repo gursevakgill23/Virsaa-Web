@@ -23,8 +23,8 @@ const useProductionImagePath = () => {
 const About = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
   const teamMember = '../../images/About/team-member.jpg';
-  const headerDark = '../../images/About/header-image-dark.png';
-  const headerLight = '../../images/About/header-image.jpg';
+  const headerDark = '../../images/header-image-dark.png';
+  const headerLight = '../../images/header-image.jpg';
   const heritageImage = '../../images/About/heritage.jpg';
   const communityImage = '../../images/About/community.jpg';
   const digitizationImage = '../../images/About/digitization.jpg';

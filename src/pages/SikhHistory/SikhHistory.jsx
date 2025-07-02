@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import styles from './SikhHistory.module.css';
 import ComingSoon from '../../elements/ComingSoon/ComingSoon';
 
-const header_image_light = '/images/sikhHistory/header-image.png';
-const header_image_dark = '/images/sikhHistory/header-image-dark.png';
+const header_image_light = '/images/header-image.png';
+const header_image_dark = '/images/header-image-dark.png';
 const filter_image = '/images/sikhHistory/filter_image.jpeg';
 const sikh_history = '/images/sikhHistory/sikh_history1.jpg';
 const book_image = '/images/book-image.jpg';

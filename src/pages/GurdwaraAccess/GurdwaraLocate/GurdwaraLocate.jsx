@@ -30,8 +30,8 @@ const GurdwaraLocate = ({ isDarkMode }) => {
   const { id } = useParams();
   
   // Image paths - now using public folder
-  const header_image_light = "/images/gurdwaraAccess/header-image.jpg";
-  const header_image_dark = "/images/gurdwaraAccess/header-image-dark.png";
+  const header_image_light = "/images/header-image.jpg";
+  const header_image_dark = "/images/header-image-dark.png";
   const marker_icon = "/images/gurdwaraAccess/marker-icon.png";
   const marker_icon_2x = "/images/gurdwaraAccess/marker-icon-2x.png";
   const marker_shadow = "/images/gurdwaraAccess/marker-shadow.png";

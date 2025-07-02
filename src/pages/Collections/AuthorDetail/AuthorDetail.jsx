@@ -37,9 +37,9 @@ const AuthorDetail = ({ isDarkMode }) => {
   const [activeTab, setActiveTab] = useState('biography');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showMobileTabs, setShowMobileTabs] = useState(false);
-  const header_image_dark = "/images/Collections/header-image-dark.png";
-  const header_image_light = "/images/Collections/header-image-light.png";
-  const authorImage = "/images/Collections/author-image.jpg";
+  const header_image_dark = "/images/header-image-dark.png";
+  const header_image_light = "/images/header-image-light.png";
+  const authorImage = "/images/author-image.jpg";
 
   
   const [reviewForm, setReviewForm] = useState({
