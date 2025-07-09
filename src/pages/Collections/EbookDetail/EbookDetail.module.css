@@ -762,6 +762,41 @@
     }
 }
 
+/* Scrollable Container for Related Books */
+.related-scroll-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    gap: 16px;
+    padding: 10px;
+    width: 100%;
+}
+
+.relatedGrid {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+}
+
+.relatedCard {
+    flex: 0 0 auto;
+    width: 200px; /* Adjust based on your design */
+}
+
+/* Optional: Make scrollbar visible for debugging */
+.related-scroll-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.related-scroll-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.related-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
 /* Skeleton Styles - Only for Related Books Section */
 .rightColumn .skeletonRelatedImageContainer {
     width: 100px;
@@ -839,17 +874,21 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    overflow: auto;
 }
 
 .pdfModalContent {
     background-color: var(--section-bg-color);
-    width: 90%;
+    width: 90vw;
     max-width: 800px;
-    height: 85vh;
+    min-width: 300px;
+    height: 90vh;
+    max-height: 100vh;
     border-radius: 12px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
 }
 
 .pdfModalHeader {
@@ -888,21 +927,48 @@
 .pdfModalBody {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
+    padding: 0.5rem;
     background-color: #ffffff;
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pdfViewerContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pdfViewer {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border: none;
+}
+
+.pdfIframe {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border: none;
 }
 
 .pdfError {
     color: #d9534f;
     font-size: 1rem;
     text-align: center;
+    margin-bottom: 1rem;
 }
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
+    .headerImageSection {
+        height: 300px;
+    }
+
     .headerText h1 {
         font-size: 2rem;
     }
@@ -929,8 +995,13 @@
     }
 
     .pdfModalContent {
-        width: 95%;
-        height: 90vh;
+        width: 95vw;
+        height: 95vh;
+        min-width: 280px;
+    }
+
+    .pdfModalHeader {
+        padding: 0.8rem 1rem;
     }
 
     .pdfModalHeader h2 {
@@ -943,13 +1014,23 @@
     }
 
     .pdfModalBody {
-        padding: 0.5rem;
+        padding: 0.3rem;
+    }
+
+    .pdfViewer {
+        width: 100%;
+        height: 100%;
+    }
+
+    .pdfIframe {
+        width: 100%;
+        height: 100%;
     }
 }
 
 @media (max-width: 480px) {
     .headerImageSection {
-        height: 300px;
+        height: 250px;
     }
     
     .headerText h1 {
@@ -977,12 +1058,13 @@
     }
 
     .pdfModalContent {
-        width: 98%;
-        height: 95vh;
+        width: 98vw;
+        height: 98vh;
+        min-width: 250px;
     }
 
     .pdfModalHeader {
-        padding: 0.8rem 1rem;
+        padding: 0.6rem 0.8rem;
         flex-wrap: wrap;
         gap: 0.5rem;
     }
@@ -995,5 +1077,19 @@
     .closeModalButton {
         padding: 0.4rem 0.8rem;
         font-size: 0.7rem;
+    }
+
+    .pdfModalBody {
+        padding: 0.2rem;
+    }
+
+    .pdfViewer {
+        width: 100%;
+        height: 100%;
+    }
+
+    .pdfIframe {
+        width: 100%;
+        height: 100%;
     }
 }

@@ -424,7 +424,7 @@
 
 .scorerName {
   font-size: 1.2rem;
-  color: #343a40;
+  color: var(--secondary-color);
   font-weight: 500;
 }
 
@@ -847,7 +847,7 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: fadeIn 0.4s ease-out;
+  animation: fade jurors
 }
 
 .summaryContent {
@@ -1108,7 +1108,6 @@ svg.defs-only {
   overflow: hidden;
 }
 
-
 .circularChart {
   width: 140px; /* Consistent size for visibility */
   height: 140px;
@@ -1160,4 +1159,177 @@ svg.defs-only {
 .closeButton:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Tournament Modal */
+.tournamentModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.tournamentModalContent {
+  background: var(--card-bg-color);
+  padding: 2rem;
+  border-radius: 15px;
+  text-align: center;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.tournamentModalContent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  background: linear-gradient(90deg, #4ECDC4, #88d8c0);
+}
+
+.tournamentModalSubheading {
+  font-size: 1.1rem;
+  color: #FF8E53;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.tournamentModalTitle {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  color: #FF6B6B;
+  font-weight: 600;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.tournamentModalTitle::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
+  border-radius: 3px;
+}
+
+.tournamentModalCloseIcon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-color);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.tournamentModalCloseIcon:hover {
+  color: #FF6B6B;
+}
+
+.tournamentScoresList {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--section-bg-color);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.tournamentScoresList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tournamentScoresList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tournamentScoresList::-webkit-scrollbar-thumb {
+  background: #4ECDC4;
+  border-radius: 3px;
+}
+
+.tournamentScoreCard {
+  background: var(--card-bg-color);
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  border-left: 4px solid #4ECDC4;
+}
+
+.tournamentScoreCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.tournamentScoreCard:nth-child(1) {
+  border-left-color: #FFD700; /* Gold */
+}
+
+.tournamentScoreCard:nth-child(2) {
+  border-left-color: #C0C0C0; /* Silver */
+}
+
+.tournamentScoreCard:nth-child(3) {
+  border-left-color: #CD7F32; /* Bronze */
+}
+
+.tournamentScoreUser {
+  font-size: 1.2rem;
+  color: var(--secondary-color);
+  font-weight: 500;
+}
+
+.tournamentScoreValue {
+  font-size: 1rem;
+  color: var(--text-color);
+  font-weight: bold;
+  background: var(--section-bg-color);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+}
+
+.tournamentStartButton {
+  padding: 0.8rem 2rem;
+  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 auto;
+}
+
+.tournamentStartButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }

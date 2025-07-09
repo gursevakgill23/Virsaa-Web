@@ -3,28 +3,31 @@ import { Link, useParams } from 'react-router-dom';
 import styles from './Quizzes.module.css';
 import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
+import { FaLock, FaTimes } from 'react-icons/fa';
 
-const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
-          ? imagePath
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath;
-      }
+const FALLBACK_API_URL = 'http://virsaa-prod.eba-7cc3yk92.us-east-1.elasticbeanstalk.com';
+
+// Utility function to handle public/static images
+const getProductionImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (typeof imagePath === 'string') {
+      return imagePath.startsWith('/')
+        ? imagePath
+        : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    } else {
+      return imagePath.default || imagePath;
     }
-    return imagePath;
-  };
+  }
+  return imagePath;
 };
 
-const Quizzes = ({ isDarkMode }) => {
+const Quizzes = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
-  const { isLoggedIn, accessToken } = useAuth();
-  const getImagePath = useProductionImagePath();
-  const headerLight = '/images/header-image.jpg';
-  const headerDark = '/images/header-image-dark.png';
+  const { isLoggedIn, isPremium, accessToken, API_STRING } = useAuth();
+  const effectiveApiString = apiString || API_STRING || FALLBACK_API_URL;
+  const getStaticImagePath = getProductionImagePath;
+  const headerLight = getStaticImagePath('/images/header-image.png');
+  const headerDark = getStaticImagePath('/images/header-image-dark.png');
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -42,43 +45,111 @@ const Quizzes = ({ isDarkMode }) => {
   const [newPostContent, setNewPostContent] = useState('');
   const [replyContent, setReplyContent] = useState({});
   const [showAllReplies, setShowAllReplies] = useState({});
+  const [topScorers, setTopScorers] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [badges, setBadges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showTournamentModal, setShowTournamentModal] = useState(false);
+  const [selectedTournament, setSelectedTournament] = useState(null);
+  const [tournamentScores, setTournamentScores] = useState([]);
 
   const quizDuration = 10 * 60; // Default 10 minutes
 
   useEffect(() => {
+    console.log('useAuth output:', { isLoggedIn, isPremium, accessToken, API_STRING });
+    console.log('Effective API_STRING:', effectiveApiString);
+
+    const config = isLoggedIn && accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
+      : {};
+
     const fetchQuizData = async () => {
-      setIsLoading(true);
       try {
-        const response = await axios.get(`http://localhost:8000/api/learning/learning-material/${id}/`, {
-          headers: isLoggedIn ? { Authorization: `Bearer ${accessToken}` } : {},
-        });
+        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/`, config);
+        console.log('Fetched quiz:', response.data);
         setQuiz(response.data);
         setQuestions(response.data.questions || []);
         setTimeLeft(quizDuration);
       } catch (err) {
-        console.error('Error fetching quiz data:', err);
-        setError('Failed to load quiz data');
-      } finally {
-        setIsLoading(false);
+        const errorMessage = err.response
+          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Resource not found'}`
+          : 'Network error or server unreachable';
+        console.error('Error fetching quiz data:', errorMessage, err);
+        setError(errorMessage);
       }
     };
 
     const fetchDiscussions = async () => {
       try {
-        const response = await axios.get(`http://localhost:8000/api/learning/learning-material/${id}/discussions/`, {
-          headers: isLoggedIn ? { Authorization: `Bearer ${accessToken}` } : {},
-        });
-        setDiscussionPosts(response.data);
+        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/discussions/`, config);
+        console.log('Fetched discussions:', response.data);
+        setDiscussionPosts(response.data.map(post => ({ ...post, replies: post.replies || [] })));
       } catch (err) {
-        console.error('Error fetching discussions:', err);
+        const errorMessage = err.response
+          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Discussions not found'}`
+          : 'Network error or server unreachable';
+        console.error('Error fetching discussions:', errorMessage, err);
+        setError(errorMessage);
       }
     };
 
-    fetchQuizData();
-    fetchDiscussions();
-  }, [id, isLoggedIn, accessToken, quizDuration]);
+    const fetchTopScorers = async () => {
+      try {
+        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/top_scorers/`, config);
+        console.log('Fetched top scorers:', response.data);
+        setTopScorers(response.data);
+      } catch (err) {
+        const errorMessage = err.response
+          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Top scorers not found'}`
+          : 'Network error or server unreachable';
+        console.error('Error fetching top scorers:', errorMessage, err);
+        setError(errorMessage);
+      }
+    };
+
+    const fetchTournaments = async () => {
+      try {
+        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/tournaments/`, config);
+        console.log('Fetched tournaments:', response.data);
+        setTournaments(response.data);
+      } catch (err) {
+        const errorMessage = err.response
+          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Tournaments not found'}`
+          : 'Network error or server unreachable';
+        console.error('Error fetching tournaments:', errorMessage, err);
+        setError(errorMessage);
+      }
+    };
+
+    const fetchBadges = async () => {
+      if (!isLoggedIn || !accessToken) return;
+      try {
+        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/badges/`, config);
+        console.log('Fetched badges:', response.data);
+        setBadges(response.data);
+      } catch (err) {
+        const errorMessage = err.response
+          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Badges not found'}`
+          : 'Network error or server unreachable';
+        console.error('Error fetching badges:', errorMessage, err);
+        setError(errorMessage);
+      }
+    };
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      await Promise.all([fetchQuizData(), fetchDiscussions(), fetchTopScorers(), fetchTournaments(), fetchBadges()]);
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, [id, isLoggedIn, isPremium, quizDuration, accessToken, API_STRING, effectiveApiString]);
+
+  useEffect(() => {
+    console.log('showTournamentModal changed:', showTournamentModal);
+  }, [showTournamentModal]);
 
   const startTimer = () => {
     setTimeLeft(quizDuration);
@@ -90,13 +161,44 @@ const Quizzes = ({ isDarkMode }) => {
     setTimerPaused(!timerPaused);
   };
 
-  const handleStartQuiz = () => {
+  const handleStartQuiz = async (tournamentId = null) => {
+    if (!quiz || (quiz.is_restricted && !isLoggedIn) || (quiz.is_premium && !isPremium)) {
+      setError(quiz?.is_premium ? 'Premium subscription required' : 'Please log in to start the quiz');
+      return;
+    }
     if (timerStarted) {
       setShowWarning(true);
-    } else {
-      resetQuiz();
-      startTimer();
+      return;
     }
+    if (tournamentId) {
+      if (!isLoggedIn || !accessToken) {
+        setError('Please log in to join the tournament');
+        return;
+      }
+      try {
+        console.log('Attempting to join tournament with ID:', tournamentId);
+        console.log('API Endpoint:', `${effectiveApiString.replace(/\/$/, "")}/api/learning/tournaments/${tournamentId}/join/`);
+        console.log('Access Token:', accessToken);
+        const response = await axios.post(
+          `${effectiveApiString.replace(/\/$/, "")}/api/learning/tournaments/${tournamentId}/join/`,
+          {},
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        console.log('Joined tournament:', response.data);
+        setTournamentScores(response.data.scores || []);
+      } catch (err) {
+        console.error('Error joining tournament:', err);
+        const errorMessage = err.response
+          ? `HTTP ${err.response.status}: ${err.response.data.error || 'Failed to join tournament'}`
+          : 'Network error or server unreachable';
+        console.error('Full error response:', err.response ? err.response.data : err);
+        setError(errorMessage);
+        return;
+      }
+    }
+    resetQuiz(tournamentId);
+    startTimer();
+    setShowTournamentModal(false);
   };
 
   useEffect(() => {
@@ -115,7 +217,7 @@ const Quizzes = ({ isDarkMode }) => {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [timerStarted, timerPaused, timeLeft, quizDuration]);
+  }, [timerStarted, timerPaused, timeLeft]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -150,15 +252,20 @@ const Quizzes = ({ isDarkMode }) => {
   };
 
   const submitScore = async () => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || !accessToken) return;
     try {
+      const endpoint = selectedTournament
+        ? `${effectiveApiString.replace(/\/$/, "")}/api/learning/tournaments/${selectedTournament}/submit_score/`
+        : `${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/submit_score/`;
       await axios.post(
-        `http://localhost:8000/api/learning/items/${id}/submit_score/`,
+        endpoint,
         { score },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
+      console.log('Score submitted successfully');
     } catch (err) {
       console.error('Error submitting score:', err);
+      setError('Failed to submit score');
     }
   };
 
@@ -183,7 +290,7 @@ const Quizzes = ({ isDarkMode }) => {
 
   const handleWarningContinue = () => {
     setShowWarning(false);
-    resetQuiz();
+    resetQuiz(selectedTournament);
     startTimer();
   };
 
@@ -191,7 +298,7 @@ const Quizzes = ({ isDarkMode }) => {
     setShowWarning(false);
   };
 
-  const resetQuiz = () => {
+  const resetQuiz = (tournamentId = null) => {
     setCurrentQuestion(0);
     setScore(0);
     setSelectedAnswers([]);
@@ -200,28 +307,29 @@ const Quizzes = ({ isDarkMode }) => {
     setTimeLeft(quizDuration);
     setTimerStarted(false);
     setTimerPaused(false);
+    setSelectedTournament(tournamentId);
   };
 
   const handlePostSubmit = async (e) => {
     e.preventDefault();
     if (!isLoggedIn) {
-      alert('Please log in to post a discussion');
+      setError('Please log in to post a discussion');
       return;
     }
     if (newPostContent.trim()) {
       try {
         const response = await axios.post(
-          `http://localhost:8000/api/learning/learning-material/${id}/add_discussion/`,
-          { content: newPostContent, learning_item: id },
+          `${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/add_discussion/`,
+          { content: newPostContent, quiz: id },
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
-        // Ensure new post has replies initialized as an empty array
         const newPost = { ...response.data, replies: response.data.replies || [] };
-        console.log('New post:', newPost); // Debug
+        console.log('New post:', newPost);
         setDiscussionPosts([...discussionPosts, newPost]);
         setNewPostContent('');
       } catch (err) {
         console.error('Error posting discussion:', err);
+        setError('Failed to post discussion');
       }
     }
   };
@@ -229,13 +337,13 @@ const Quizzes = ({ isDarkMode }) => {
   const handleReplySubmit = async (postId, e) => {
     e.preventDefault();
     if (!isLoggedIn) {
-      alert('Please log in to post a reply');
+      setError('Please log in to post a reply');
       return;
     }
     if (replyContent[postId]?.trim()) {
       try {
         const response = await axios.post(
-          `http://localhost:8000/api/learning/learning-material/${id}/add_reply/`,
+          `${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/add_reply/`,
           { content: replyContent[postId], post_id: postId },
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
@@ -249,6 +357,7 @@ const Quizzes = ({ isDarkMode }) => {
         setReplyContent({ ...replyContent, [postId]: '' });
       } catch (err) {
         console.error('Error posting reply:', err);
+        setError('Failed to post reply');
       }
     }
   };
@@ -258,6 +367,25 @@ const Quizzes = ({ isDarkMode }) => {
       ...prev,
       [postId]: !prev[postId],
     }));
+  };
+
+  const handleOpenTournamentModal = async (tournamentId) => {
+    console.log('handleOpenTournamentModal called with tournamentId:', tournamentId);
+    console.log('Auth status:', { isLoggedIn, accessToken });
+    setSelectedTournament(tournamentId);
+    // Mock scores for display in modal (replace with real API call if endpoint exists)
+    setTournamentScores([
+      { user: 'User1', score: 90 },
+      { user: 'User2', score: 85 },
+      { user: 'User3', score: 80 },
+    ]);
+    setShowTournamentModal(true);
+  };
+
+  const closeTournamentModal = () => {
+    setShowTournamentModal(false);
+    setSelectedTournament(null);
+    setTournamentScores([]);
   };
 
   const getOptionStyle = (option) => {
@@ -278,11 +406,15 @@ const Quizzes = ({ isDarkMode }) => {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className={styles.loading}>Loading...</div>;
   }
 
   if (error) {
-    return <div>{error}</div>;
+    return <div className={styles.error}>{error}</div>;
+  }
+
+  if (!quiz) {
+    return <div className={styles.error}>Quiz not found</div>;
   }
 
   return (
@@ -290,17 +422,21 @@ const Quizzes = ({ isDarkMode }) => {
       <div
         className={styles.headerSection}
         style={{
-          backgroundImage: `url(${isDarkMode ? getImagePath(headerDark) : getImagePath(headerLight)})`,
+          backgroundImage: `url(${isDarkMode ? headerDark : headerLight})`,
         }}
       >
         <div className={styles.textOverlay}>
-          <h1 className={styles.headerTitle}>{quiz?.title || 'Test Your Knowledge'}</h1>
-          <p className={styles.headerDescription}>
-            {quiz?.description || 'Explore quizzes, join tournaments, and earn badges to showcase your expertise!'}
-          </p>
-          <button className={styles.headerButton} onClick={handleStartQuiz}>
+          <h1 className={styles.headerTitle}>{quiz.title}</h1>
+          <p className={styles.headerDescription}>{quiz.description}</p>
+          <button className={styles.headerButton} onClick={() => handleStartQuiz()}>
             Start New Quiz
           </button>
+          {(quiz.is_restricted || quiz.is_premium) && (
+            <div className={styles.lockOverlay}>
+              <FaLock />
+              <p>{quiz.is_premium ? 'Premium Required' : 'Login Required'}</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -326,7 +462,7 @@ const Quizzes = ({ isDarkMode }) => {
             </span>
             <button
               className={styles.startQuizButton}
-              onClick={timerStarted ? togglePauseResume : handleStartQuiz}
+              onClick={timerStarted ? togglePauseResume : () => handleStartQuiz()}
             >
               {timerStarted ? (timerPaused ? 'Resume' : 'Pause') : 'Start Quiz'}
             </button>
@@ -385,16 +521,16 @@ const Quizzes = ({ isDarkMode }) => {
           <div className={styles.topScorersSection}>
             <h2 className={styles.sectionTitle}>Today's Top Scorers</h2>
             <div className={styles.scorersList}>
-              {[
-                { name: 'John Doe', score: 95 },
-                { name: 'Jane Smith', score: 90 },
-                { name: 'Alice Johnson', score: 85 },
-              ].map((scorer, index) => (
-                <div key={index} className={styles.scorerCard}>
-                  <span className={styles.scorerName}>{scorer.name}</span>
-                  <span className={styles.scorerScore}>{scorer.score} Points</span>
-                </div>
-              ))}
+              {topScorers.length > 0 ? (
+                topScorers.map((scorer, index) => (
+                  <div key={index} className={styles.scorerCard}>
+                    <span className={styles.scorerName}>{scorer.user}</span>
+                    <span className={styles.scorerScore}>{scorer.score} Points</span>
+                  </div>
+                ))
+              ) : (
+                <p>No top scorers available.</p>
+              )}
             </div>
           </div>
         </div>
@@ -402,36 +538,49 @@ const Quizzes = ({ isDarkMode }) => {
         <div className={styles.sidebar}>
           <div className={styles.tournamentsSection}>
             <h2 className={styles.sidebarTitle}>Live Tournaments</h2>
+            {console.log('Tournaments:', tournaments)}
             <div className={styles.tournamentList}>
-              {[
-                { title: 'Punjabi Culture Challenge', timeLeft: '2h 30m', participants: 150 },
-                { title: 'Sikh History Trivia', timeLeft: '1h 45m', participants: 90 },
-              ].map((tournament, index) => (
-                <div key={index} className={styles.tournamentCard}>
-                  <h3 className={styles.tournamentTitle}>{tournament.title}</h3>
-                  <p className={styles.tournamentTime}>Time Left: {tournament.timeLeft}</p>
-                  <p className={styles.tournamentParticipants}>
-                    {tournament.participants} Participants
-                  </p>
-                  <button className={styles.joinButton}>Join Now</button>
-                </div>
-              ))}
+              {tournaments.filter(tournament => tournament.is_active).length > 0 ? (
+                tournaments
+                  .filter(tournament => tournament.is_active)
+                  .slice(0, 3)
+                  .map((tournament, index) => (
+                    <div key={index} className={styles.tournamentCard}>
+                      <h3 className={styles.tournamentTitle}>{tournament.title}</h3>
+                      <p className={styles.tournamentTime}>Time Left: {tournament.time_left}</p>
+                      <p className={styles.tournamentParticipants}>
+                        {tournament.participant_count} Participants
+                      </p>
+                      <button
+                        className={styles.joinButton}
+                        onClick={() => handleOpenTournamentModal(tournament.id)}
+                      >
+                        Join Now
+                      </button>
+                    </div>
+                  ))
+              ) : (
+                <p>No active tournaments available.</p>
+              )}
             </div>
           </div>
 
           <div className={styles.badgesSection}>
             <h2 className={styles.sidebarTitle}>Your Badges</h2>
             <div className={styles.badgesGrid}>
-              {[
-                { icon: '🏆', title: 'Quiz Master', description: 'Complete 50 quizzes.' },
-                { icon: '🎖️', title: 'Tournament Champion', description: 'Win 3 tournaments.' },
-              ].map((badge, index) => (
-                <div key={index} className={styles.badgeCard}>
-                  <div className={styles.badgeIcon}>{badge.icon}</div>
-                  <h3 className={styles.badgeTitle}>{badge.title}</h3>
-                  <p className={styles.badgeDescription}>{badge.description}</p>
-                </div>
-              ))}
+              {badges.length > 0 ? (
+                badges.map((badge, index) => (
+                  <div key={index} className={styles.badgeCard}>
+                    <div className={styles.badgeIcon}>
+                      {badge.badge_type === 'quiz_master' ? '🏆' : '🎖️'}
+                    </div>
+                    <h3 className={styles.badgeTitle}>{badge.display_name}</h3>
+                    <p className={styles.badgeDescription}>{badge.description}</p>
+                  </div>
+                ))
+              ) : (
+                <p>No badges earned yet.</p>
+              )}
             </div>
           </div>
         </div>
@@ -452,58 +601,62 @@ const Quizzes = ({ isDarkMode }) => {
           </button>
         </div>
         <div className={styles.postsList}>
-          {discussionPosts.map((post) => (
-            <div key={post.id} className={styles.postCard}>
-              <div className={styles.postHeader}>
-                <span className={styles.postAuthor}>{post.author}</span>
-                <span className={styles.postTimestamp}>
-                  {new Date(post.created_at).toLocaleString()}
-                </span>
-              </div>
-              <p className={styles.postContent}>{post.content}</p>
-              <div className={styles.replies}>
-                {(post.replies || [])
-                  .slice(0, showAllReplies[post.id] ? (post.replies || []).length : 2)
-                  .map((reply) => (
-                    <div key={reply.id} className={styles.replyCard}>
-                      <div className={styles.postHeader}>
-                        <span className={styles.postAuthor}>{reply.author}</span>
-                        <span className={styles.postTimestamp}>
-                          {new Date(reply.created_at).toLocaleString()}
-                        </span>
+          {discussionPosts.length > 0 ? (
+            discussionPosts.map((post) => (
+              <div key={post.id} className={styles.postCard}>
+                <div className={styles.postHeader}>
+                  <span className={styles.postAuthor}>{post.author}</span>
+                  <span className={styles.postTimestamp}>
+                    {new Date(post.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <p className={styles.postContent}>{post.content}</p>
+                <div className={styles.replies}>
+                  {(post.replies || [])
+                    .slice(0, showAllReplies[post.id] ? post.replies.length : 2)
+                    .map((reply) => (
+                      <div key={reply.id} className={styles.replyCard}>
+                        <div className={styles.postHeader}>
+                          <span className={styles.postAuthor}>{reply.author}</span>
+                          <span className={styles.postTimestamp}>
+                            {new Date(reply.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className={styles.postContent}>{reply.content}</p>
                       </div>
-                      <p className={styles.postContent}>{reply.content}</p>
-                    </div>
-                  ))}
-                {(post.replies || []).length > 2 && (
+                    ))}
+                  {post.replies.length > 2 && (
+                    <button
+                      className={styles.showMoreButton}
+                      onClick={() => toggleShowReplies(post.id)}
+                    >
+                      {showAllReplies[post.id] ? 'Show Less' : 'Show More'}
+                    </button>
+                  )}
+                </div>
+                <div className={styles.replyForm}>
+                  <textarea
+                    className={styles.replyTextarea}
+                    value={replyContent[post.id] || ''}
+                    onChange={(e) =>
+                      setReplyContent({ ...replyContent, [post.id]: e.target.value })
+                    }
+                    placeholder="Write a reply..."
+                    disabled={!isLoggedIn}
+                  ></textarea>
                   <button
-                    className={styles.showMoreButton}
-                    onClick={() => toggleShowReplies(post.id)}
+                    onClick={(e) => handleReplySubmit(post.id, e)}
+                    className={styles.replyButton}
+                    disabled={!isLoggedIn}
                   >
-                    {showAllReplies[post.id] ? 'Show Less' : 'Show More'}
+                    Reply
                   </button>
-                )}
+                </div>
               </div>
-              <div className={styles.replyForm}>
-                <textarea
-                  className={styles.replyTextarea}
-                  value={replyContent[post.id] || ''}
-                  onChange={(e) =>
-                    setReplyContent({ ...replyContent, [post.id]: e.target.value })
-                  }
-                  placeholder="Write a reply..."
-                  disabled={!isLoggedIn}
-                ></textarea>
-                <button
-                  onClick={(e) => handleReplySubmit(post.id, e)}
-                  className={styles.replyButton}
-                  disabled={!isLoggedIn}
-                >
-                  Reply
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p>No discussions available.</p>
+          )}
         </div>
       </div>
 
@@ -567,6 +720,40 @@ const Quizzes = ({ isDarkMode }) => {
                 Continue
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showTournamentModal && (
+        console.log('Rendering tournament modal with scores:', tournamentScores),
+        <div key={selectedTournament} className={styles.tournamentModal}>
+          <div className={styles.tournamentModalContent}>
+            <button className={styles.tournamentModalCloseIcon} onClick={closeTournamentModal}>
+              <FaTimes />
+            </button>
+            <p className={styles.tournamentModalSubheading}>I can beat that!</p>
+            <h2 className={styles.tournamentModalTitle}>Join Tournament</h2>
+            <div className={styles.tournamentScoresList}>
+              {tournamentScores.length > 0 ? (
+                tournamentScores.map((score, index) => (
+                  <div key={index} className={styles.tournamentScoreCard}>
+                    <span className={styles.tournamentScoreUser}>{score.user}</span>
+                    <span className={styles.tournamentScoreValue}>{score.score} Points</span>
+                  </div>
+                ))
+              ) : (
+                <p>No scores available for this tournament.</p>
+              )}
+            </div>
+            <button
+              className={styles.tournamentStartButton}
+              onClick={() => {
+                handleStartQuiz(selectedTournament);
+                // Do not close modal here; let handleStartQuiz handle it
+              }}
+            >
+              Start
+            </button>
           </div>
         </div>
       )}

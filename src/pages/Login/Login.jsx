@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -23,7 +23,7 @@ const useProductionImagePath = () => {
   };
 };
 
-const Login = ({ isDarkMode, apiString }) => {
+const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
   const getImagePath = useProductionImagePath();
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -44,6 +44,12 @@ const Login = ({ isDarkMode, apiString }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
+
+  // Log environment variables and reCAPTCHA state
+  console.log('Environment Variables:', {
+    REACT_APP_RECAPTCHA_PUBLIC_KEY: process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY,
+    REACT_APP_API_URL: process.env.REACT_APP_API_URL,
+  });
 
   const latestContent = [
     { id: 1, image: latest_content, title: 'Content 1', description: 'Description for Content 1' },
@@ -107,16 +113,20 @@ const Login = ({ isDarkMode, apiString }) => {
 
     try {
       const captchaToken = recaptchaRef.current.getValue();
+      console.log('reCAPTCHA Token:', captchaToken);
       if (!captchaToken) {
         throw new Error('Please complete the reCAPTCHA challenge');
       }
 
-      console.log('Submitting login request to:', `${apiString}/api/auth/login/`);
-      const response = await axios.post(`${apiString}/api/auth/login/`, {
+      const payload = {
         login: formData.email,
         password: formData.password,
         captcha: captchaToken,
-      });
+      };
+      console.log('Request Payload:', payload);
+
+      console.log('Submitting login request to:', `${apiString}/api/auth/login/`);
+      const response = await axios.post(`${apiString}/api/auth/login/`, payload);
 
       console.log('Login response:', response.data);
       login(
@@ -145,11 +155,13 @@ const Login = ({ isDarkMode, apiString }) => {
 
       setTimeout(() => navigate('/'), 2000);
     } catch (error) {
-      const errorMessage = error.response?.data?.login?.[0] ||
-                          error.response?.data?.error ||
-                          error.message ||
-                          'An error occurred during login';
-      console.error('Login error:', errorMessage);
+      const errorMessage =
+        error.response?.data?.login?.[0] ||
+        error.response?.data?.error ||
+        error.response?.data?.captcha?.[0] ||
+        error.message ||
+        'An error occurred during login';
+      console.error('Login error:', errorMessage, error.response?.data);
       toast.error(errorMessage, {
         position: 'top-center',
         autoClose: 5000,
@@ -157,8 +169,16 @@ const Login = ({ isDarkMode, apiString }) => {
       });
     } finally {
       setIsSubmitting(false);
+      recaptchaRef.current?.reset();
     }
   };
+
+  // Log reCAPTCHA initialization status
+  useEffect(() => {
+    if (!recaptchaRef.current) {
+      console.error('reCAPTCHA ref is not initialized');
+    }
+  }, []);
 
   return (
     <div className={styles.container} data-theme={isDarkMode ? 'dark' : 'light'}>
@@ -229,6 +249,8 @@ const Login = ({ isDarkMode, apiString }) => {
                 ref={recaptchaRef}
                 size="normal"
                 sitekey={process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY}
+                onChange={(token) => console.log('reCAPTCHA onChange Token:', token)}
+                onErrored={() => console.error('reCAPTCHA Error: Failed to load or initialize')}
               />
               {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
             </div>

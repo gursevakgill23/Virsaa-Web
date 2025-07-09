@@ -11,8 +11,8 @@ import { useAuth } from '../../../context/AuthContext.jsx';
 import axios from 'axios';
 import { PDFViewer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-// S3 base URL
-const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
+// S3 base URL with regional endpoint
+const S3_BASE_URL = 'https://virsaa-media-2025.s3.us-east-1.amazonaws.com';
 const DEFAULT_IMAGE_PATH = '../../images/Collections/book-image.jpg';
 
 // Utility function to shuffle an array (Fisher-Yates shuffle)
@@ -72,26 +72,32 @@ const pdfStyles = StyleSheet.create({
   },
 });
 
-// Utility function to handle S3-based image paths
+// Utility function to handle S3-based image and PDF paths
 const useProductionImagePath = () => {
-  return (imagePath, context = 'unknown', getStaticImagePath) => {
-    if (!imagePath || imagePath === '') {
-      console.log(`Image path is null, undefined, or empty for ${context}, using default: ${DEFAULT_IMAGE_PATH}`);
+  return (filePath, context = 'unknown', getStaticImagePath, isPdf = false) => {
+    if (!filePath || filePath === '') {
+      console.log(`File path is null, undefined, or empty for ${context}, using default: ${DEFAULT_IMAGE_PATH}`);
       return getStaticImagePath(DEFAULT_IMAGE_PATH);
     }
 
-    if (typeof imagePath === 'string' && imagePath.startsWith('https://')) {
-      console.log(`Full URL detected for ${context}: ${imagePath}`);
-      return imagePath;
+    if (typeof filePath === 'string' && filePath.startsWith('https://')) {
+      console.log(`Full URL detected for ${context}: ${filePath}`);
+      return filePath;
     }
 
-    if (typeof imagePath === 'string') {
-      const encodedPath = encodeURI(imagePath);
+    if (typeof filePath === 'string') {
+      // For PDFs, preserve the exact path (including '+' for spaces) without encoding
+      if (isPdf) {
+        console.log(`PDF path for ${context}: ${filePath}`);
+        return `${S3_BASE_URL}/${filePath}`;
+      }
+      // For images, encode the path to handle spaces and special characters
+      const encodedPath = encodeURI(filePath);
       console.log(`Encoded image path for ${context}: ${encodedPath}`);
       return `${S3_BASE_URL}/${encodedPath}`;
     }
 
-    console.log(`Invalid image path for ${context}, using default: ${DEFAULT_IMAGE_PATH}`, imagePath);
+    console.log(`Invalid file path for ${context}, using default: ${DEFAULT_IMAGE_PATH}`, filePath);
     return getStaticImagePath(DEFAULT_IMAGE_PATH);
   };
 };
@@ -174,7 +180,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
 
   // Image paths
   const header_image_dark = getStaticImagePath("/images/header-image-dark.png");
-  const header_image_light = getStaticImagePath("/images/header-image-light.png");
+  const header_image_light = getStaticImagePath("/images/header-image.png");
   const default_book_image = getStaticImagePath(DEFAULT_IMAGE_PATH);
 
   // Review form state
@@ -279,12 +285,15 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (response.data && response.data.pdf_url) {
+          console.log(`Received PDF URL from backend: ${response.data.pdf_url}`);
           setPdfUrl(response.data.pdf_url);
         } else {
-          setPdfUrl(ebook.pdf_file);
+          console.log(`Falling back to ebook.pdf_file: ${ebook.pdf_file}`);
+          setPdfUrl(getS3ImagePath(ebook.pdf_file, `ebook PDF: ${ebook.title}`, getStaticImagePath, true));
         }
       } else {
-        setPdfUrl(ebook.pdf_file);
+        console.log(`No authentication, using ebook.pdf_file: ${ebook.pdf_file}`);
+        setPdfUrl(getS3ImagePath(ebook.pdf_file, `ebook PDF: ${ebook.title}`, getStaticImagePath, true));
       }
       setShowPdfModal(true);
     } catch (error) {
@@ -316,10 +325,15 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   };
 
   const scrollRelated = (direction, sectionId) => {
-    const container = document.querySelector(`.${styles.relatedScrollContainer}[data-section="${sectionId}"]`);
+    console.log('scrollRelated called with:', direction, sectionId);
+    const container = document.querySelector(`.${styles.relatedScrollContainer}[data-section="${sectionId}"]`) || 
+                     document.querySelector(`.related-scroll-container[data-section="${sectionId}"]`);
+    console.log('Container found:', container);
     if (container) {
       const scrollAmount = direction === 'left' ? -300 : 300;
       container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    } else {
+      console.error('Scroll container not found for section:', sectionId);
     }
   };
 
@@ -719,7 +733,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
               </div>
             </div>
             <div
-              className={styles.relatedScrollContainer}
+              className={`${styles.relatedScrollContainer} related-scroll-container`}
               data-section="related"
             >
               <div className={styles.relatedGrid}>
@@ -779,7 +793,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
               </div>
             </div>
             <div
-              className={styles.relatedScrollContainer}
+              className={`${styles.relatedScrollContainer} related-scroll-container`}
               data-section="recommended"
             >
               <div className={styles.relatedGrid}>
@@ -853,7 +867,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                   onError={(e) => console.error('Failed to load PDF iframe:', e)}
                 />
               ) : (
-                <PDFViewer width="100%" height="100%" showToolbar={true}>
+                <PDFViewer width="100%" height="100%" showToolbar="true">
                   <MyDocument ebook={ebook} />
                 </PDFViewer>
               )}

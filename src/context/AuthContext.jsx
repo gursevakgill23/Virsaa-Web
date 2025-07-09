@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import Cookies from 'js-cookie';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -16,14 +16,32 @@ export const AuthProvider = ({ children, apiString }) => {
     isProfileComplete: false,
   });
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const checkProfileCompleteness = (userData) => {
+  const publicRoutes = useMemo(() => [
+    '/login',
+    '/signup',
+    '/forgot-password',
+    '/forgot-password/:email/:token',
+    '/about',
+    '/news',
+  ], []); // Empty dependency array since publicRoutes is static
+
+  const isPublicRoute = useCallback(() => {
+    return publicRoutes.some((route) =>
+      route.includes(':')
+        ? location.pathname.match(route.replace(/:email|:token/g, '[^/]+'))
+        : location.pathname === route
+    );
+  }, [location.pathname, publicRoutes]);
+
+  const checkProfileCompleteness = useCallback((userData) => {
     if (!userData) return false;
     const { about_me, dob } = userData;
     const isAboutMeFilled = about_me && about_me.trim() !== '';
     const isDobFilled = !!dob;
     return isAboutMeFilled && isDobFilled;
-  };
+  }, []);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -37,6 +55,13 @@ export const AuthProvider = ({ children, apiString }) => {
         hasUser: !!user,
       });
 
+      // Skip auth check for public routes
+      if (isPublicRoute()) {
+        console.log('Public route detected, skipping auth check:', location.pathname);
+        setAuthState((prev) => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       if (!accessToken || !refreshToken || !user) {
         console.log('Missing tokens or user data, setting unauthenticated state');
         setAuthState({
@@ -48,16 +73,14 @@ export const AuthProvider = ({ children, apiString }) => {
           isPremium: false,
           isProfileComplete: false,
         });
+        navigate('/login');
         return;
       }
 
-      const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000'; // Guard against undefined
-      if (!apiString) {
-        console.warn('apiString is not defined. Falling back to default:', apiUrl);
-      }
+      const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
+      console.log('Verifying token with /api/auth/profile/ using API URL:', apiUrl);
 
       try {
-        console.log('Verifying token with /api/auth/profile/ using API URL:', apiUrl);
         const config = { headers: { Authorization: `Bearer ${accessToken}` } };
         const response = await axios.get(`${apiUrl}/api/auth/profile/`, config);
         console.log('Profile verification successful:', response.data);
@@ -116,18 +139,22 @@ export const AuthProvider = ({ children, apiString }) => {
     };
 
     initializeAuth();
-  }, [navigate, apiString]);
+  }, [navigate, apiString, location.pathname, isPublicRoute, checkProfileCompleteness]);
 
   useEffect(() => {
     const requestInterceptor = axios.interceptors.request.use(
       async (config) => {
+        // Skip adding Authorization header for public routes or specific auth endpoints
         if (
           config.url.includes('/api/auth/') &&
           !config.url.includes('/login/') &&
-          !config.url.includes('/token/refresh/')
+          !config.url.includes('/token/refresh/') &&
+          !config.url.includes('/forget-password/') &&
+          !config.url.includes('/verify-reset-code/') &&
+          !config.url.includes('/reset-password/')
         ) {
           if (!authState.accessToken) {
-            console.log('No access token, will redirect to login');
+            console.log('No access token for protected route, skipping Authorization header');
             return config;
           }
           config.headers.Authorization = `Bearer ${authState.accessToken}`;
@@ -145,7 +172,7 @@ export const AuthProvider = ({ children, apiString }) => {
           originalRequest._retry = true;
           try {
             console.log('Interceptor: Attempting token refresh');
-            const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000'; // Guard against undefined
+            const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
             const refreshResponse = await axios.post(
               `${apiUrl}/api/auth/token/refresh/`,
               { refresh: authState.refreshToken }
@@ -179,7 +206,7 @@ export const AuthProvider = ({ children, apiString }) => {
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, [authState.accessToken, authState.refreshToken, navigate, apiString]);
+  }, [authState.accessToken, authState.refreshToken, navigate, apiString, isPublicRoute]);
 
   const handleCleanup = () => {
     console.log('Cleaning up authentication state');

@@ -3,25 +3,57 @@ import { Link } from 'react-router-dom';
 import { FaFilter, FaTimes, FaChevronLeft, FaChevronRight, FaLock } from 'react-icons/fa';
 import styles from './Learning.module.css';
 import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 
+// Define S3 base URL and default image path
+const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
+const DEFAULT_IMAGE_PATH = '/images/Learning/learning.jpg';
+const FALLBACK_API_URL = 'http://virsaa-prod.eba-7cc3yk92.us-east-1.elasticbeanstalk.com';
+
+// Utility function to handle S3-based image paths (from Collections.jsx)
 const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
-          ? imagePath
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath;
-      }
+  return (imagePath, context = 'unknown', getStaticImagePath) => {
+    // Handle null, undefined, or empty string
+    if (!imagePath || imagePath === '') {
+      console.log(`Image path is null, undefined, or empty for ${context}, using default: ${DEFAULT_IMAGE_PATH}`);
+      return getStaticImagePath(DEFAULT_IMAGE_PATH);
     }
-    return imagePath;
+
+    if (typeof imagePath === "string" && imagePath.startsWith("https://")) {
+      console.log(`Full URL detected for ${context}, returning: ${imagePath}`);
+      return imagePath;
+    }
+
+    // Encode relative paths to handle spaces and special characters
+    if (typeof imagePath === "string") {
+      const encodedPath = encodeURI(imagePath);
+      console.log(`Encoded image path for ${context}: ${encodedPath}`);
+      return `${S3_BASE_URL}/${encodedPath}`;
+    }
+
+    console.log(`Invalid image path for ${context}, using default: ${DEFAULT_IMAGE_PATH}`, imagePath);
+    return getStaticImagePath(DEFAULT_IMAGE_PATH);
   };
 };
 
+// Utility function to handle public/static images (from Collections.jsx)
+const getProductionImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (typeof imagePath === 'string') {
+      return imagePath.startsWith('/')
+        ? imagePath
+        : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    } else {
+      return imagePath.default || imagePath;
+    }
+  }
+  return imagePath;
+};
+
 const Learning = ({ isDarkMode }) => {
-  const { isLoggedIn, isPremium } = useAuth();
-  const getImagePath = useProductionImagePath();
+  const { isLoggedIn, isPremium, accessToken, API_STRING } = useAuth();
+  const getStaticImagePath = getProductionImagePath;
+  const getS3ImagePath = useProductionImagePath();
   const [activeTab, setActiveTab] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -32,31 +64,31 @@ const Learning = ({ isDarkMode }) => {
   const [allCards, setAllCards] = useState([]);
   const [games, setGames] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
-  const header_image_light = '/images/header-image.png';
-  const header_image_dark = '/images/header-image-dark.png';
+  const [error, setError] = useState(null);
+  const header_image_light = getStaticImagePath('/images/header-image.png');
+  const header_image_dark = getStaticImagePath('/images/header-image-dark.png');
+  const default_learning_image = getStaticImagePath(DEFAULT_IMAGE_PATH);
 
   useEffect(() => {
+    console.log('useAuth output:', { isLoggedIn, isPremium, accessToken, API_STRING }); // Debug AuthContext
     const fetchItems = async () => {
       setIsLoading(true);
+      setError(null);
+      const apiUrl = API_STRING || FALLBACK_API_URL;
+      console.log('API_STRING:', API_STRING, 'Using apiUrl:', apiUrl); // Debug
       try {
-        const response = await fetch('http://localhost:8000/api/learning/items/categorized/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch learning items');
-        }
-
-        const data = await response.json();
+        const config = isLoggedIn && accessToken
+          ? { headers: { Authorization: `Bearer ${accessToken}` } }
+          : {};
+        const response = await axios.get(`${apiUrl.replace(/\/$/, "")}/api/learning/items/categorized/`, config);
+        console.log('Fetched data:', response.data); // Debug
+        const data = response.data;
 
         const mappedCards = [
           ...data.learning.map(item => ({
             id: item.id,
             type: 'learning',
-            image: item.image || 'images/Learning/learning.jpg',
+            image: item.image || DEFAULT_IMAGE_PATH,
             title: item.title,
             description: item.description || 'No description available',
             category: item.category || 'Uncategorized',
@@ -67,7 +99,7 @@ const Learning = ({ isDarkMode }) => {
           ...data.quiz.map(item => ({
             id: item.id,
             type: 'quiz',
-            image: item.image || 'images/Learning/quizzes.jpg',
+            image: item.image || DEFAULT_IMAGE_PATH,
             title: item.title,
             description: item.description || 'No description available',
             category: item.category || 'Uncategorized',
@@ -78,7 +110,7 @@ const Learning = ({ isDarkMode }) => {
           ...data.game.map(item => ({
             id: item.id,
             type: 'game',
-            image: item.image || 'images/Learning/games.jpg',
+            image: item.image || DEFAULT_IMAGE_PATH,
             title: item.title,
             description: item.description || 'No description available',
             category: item.category || 'Uncategorized',
@@ -92,7 +124,7 @@ const Learning = ({ isDarkMode }) => {
           id: item.id,
           title: item.title,
           description: item.description || 'No description available',
-          image: item.image || 'images/Learning/games.jpg',
+          image: item.image || DEFAULT_IMAGE_PATH,
           link: item.link || `/learning/games/${item.id}`,
           is_restricted: item.is_restricted,
           is_premium: item.is_premium,
@@ -102,7 +134,7 @@ const Learning = ({ isDarkMode }) => {
           id: item.id,
           title: item.title,
           description: item.description || 'No description available',
-          image: item.image || 'images/Learning/quizzes.jpg',
+          image: item.image || DEFAULT_IMAGE_PATH,
           link: `/learning/quizzes/${item.id}`,
           is_restricted: item.is_restricted,
           is_premium: item.is_premium,
@@ -112,7 +144,11 @@ const Learning = ({ isDarkMode }) => {
         setGames(mappedGames);
         setQuizzes(mappedQuizzes);
       } catch (error) {
-        console.error('Error fetching learning items:', error);
+        const errorMessage = error.response
+          ? `HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`
+          : error.message || 'Network error or server unreachable';
+        console.error('Error fetching learning items:', errorMessage, error);
+        setError(errorMessage);
         setAllCards([]);
         setGames([]);
         setQuizzes([]);
@@ -122,7 +158,7 @@ const Learning = ({ isDarkMode }) => {
     };
 
     fetchItems();
-  }, []);
+  }, [isLoggedIn, isPremium, accessToken, API_STRING]);
 
   const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
@@ -184,7 +220,7 @@ const Learning = ({ isDarkMode }) => {
       <header
         className={styles.header}
         style={{ 
-          backgroundImage: `url(${isDarkMode ? getImagePath(header_image_dark) : getImagePath(header_image_light)})` 
+          backgroundImage: `url(${isDarkMode ? header_image_dark : header_image_light})` 
         }}
       >
         <h1>Welcome to the Learning Hub</h1>
@@ -193,8 +229,10 @@ const Learning = ({ isDarkMode }) => {
 
       <div className={styles.breadcrumb}>
         <Link to={'/'}><span>Home</span></Link> / 
-        <Link to={'/learning'}><span> Learning</span></Link>
+        <Link to={'/learning'}><span>Learning</span></Link>
       </div>
+
+      {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.tabContainer}>
         <div className={styles.tabs}>
@@ -316,7 +354,15 @@ const Learning = ({ isDarkMode }) => {
               isCardAccessible(card) ? (
                 <Link to={card.link} key={card.id} className={styles.card}>
                   <div className={styles.cardImageContainer}>
-                    <img src={getImagePath(card.image)} alt={card.title} className={styles.cardImage} />
+                    <img 
+                      src={getS3ImagePath(card.image, `card: ${card.title}`, getStaticImagePath) || default_learning_image} 
+                      alt={card.title} 
+                      className={styles.cardImage}
+                      onError={(e) => {
+                        console.error(`Card image failed to load: ${card.title}, path: ${getS3ImagePath(card.image, `card: ${card.title}`, getStaticImagePath)}`, e);
+                        e.target.src = default_learning_image; // Fallback to default image
+                      }}
+                    />
                     <div className={styles.cardOverlay}>
                       <h3>{card.title}</h3>
                       <p>{card.description}</p>
@@ -327,7 +373,16 @@ const Learning = ({ isDarkMode }) => {
               ) : (
                 <div key={card.id} className={styles.card}>
                   <div className={styles.cardImageContainer}>
-                    <img src={getImagePath(card.image)} alt={card.title} className={styles.cardImage} style={{ opacity: 0.5 }} />
+                    <img 
+                      src={getS3ImagePath(card.image, `card: ${card.title}`, getStaticImagePath) || default_learning_image} 
+                      alt={card.title} 
+                      className={styles.cardImage} 
+                      style={{ opacity: 0.5 }}
+                      onError={(e) => {
+                        console.error(`Card image failed to load: ${card.title}, path: ${getS3ImagePath(card.image, `card: ${card.title}`, getStaticImagePath)}`, e);
+                        e.target.src = default_learning_image; // Fallback to default image
+                      }}
+                    />
                     <div className={styles.cardOverlay}>
                       <h3>{card.title}</h3>
                       <p>{card.description}</p>
@@ -376,7 +431,14 @@ const Learning = ({ isDarkMode }) => {
                   <FaChevronLeft />
                 </button>
                 <Link to={games[gameIndex].link} className={styles.carouselContent}>
-                  <img src={getImagePath(games[gameIndex].image)} alt={games[gameIndex].title} />
+                  <img 
+                    src={getS3ImagePath(games[gameIndex].image, `game: ${games[gameIndex].title}`, getStaticImagePath) || default_learning_image} 
+                    alt={games[gameIndex].title}
+                    onError={(e) => {
+                      console.error(`Game image failed to load: ${games[gameIndex].title}, path: ${getS3ImagePath(games[gameIndex].image, `game: ${games[gameIndex].title}`, getStaticImagePath)}`, e);
+                      e.target.src = default_learning_image; // Fallback to default image
+                    }}
+                  />
                   <h3>{games[gameIndex].title}</h3>
                   <p>{games[gameIndex].description}</p>
                 </Link>
@@ -403,7 +465,14 @@ const Learning = ({ isDarkMode }) => {
                 isCardAccessible(quiz) ? (
                   <Link to={quiz.link} key={quiz.id} className={styles.quizCard}>
                     <div className={styles.quizFront}>
-                      <img src={getImagePath(quiz.image)} alt={quiz.title} />
+                      <img 
+                        src={getS3ImagePath(quiz.image, `quiz: ${quiz.title}`, getStaticImagePath) || default_learning_image} 
+                        alt={quiz.title}
+                        onError={(e) => {
+                          console.error(`Quiz image failed to load: ${quiz.title}, path: ${getS3ImagePath(quiz.image, `quiz: ${quiz.title}`, getStaticImagePath)}`, e);
+                          e.target.src = default_learning_image; // Fallback to default image
+                        }}
+                      />
                       <h3>{quiz.title}</h3>
                     </div>
                     <div className={styles.quizBack}>
@@ -414,7 +483,15 @@ const Learning = ({ isDarkMode }) => {
                 ) : (
                   <div key={quiz.id} className={styles.quizCard}>
                     <div className={styles.quizFront}>
-                      <img src={getImagePath(quiz.image)} alt={quiz.title} style={{ opacity: 0.5 }} />
+                      <img 
+                        src={getS3ImagePath(quiz.image, `quiz: ${quiz.title}`, getStaticImagePath) || default_learning_image} 
+                        alt={quiz.title} 
+                        style={{ opacity: 0.5 }}
+                        onError={(e) => {
+                          console.error(`Quiz image failed to load: ${quiz.title}, path: ${getS3ImagePath(quiz.image, `quiz: ${quiz.title}`, getStaticImagePath)}`, e);
+                          e.target.src = default_learning_image; // Fallback to default image
+                        }}
+                      />
                       <h3>{quiz.title}</h3>
                     </div>
                     <div className={styles.quizBack}>

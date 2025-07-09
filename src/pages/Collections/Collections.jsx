@@ -5,34 +5,40 @@ import { FaFilter, FaTimes } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import axios from "axios";
 
-// Define S3 base URL as a constant
-const S3_BASE_URL = 'https://virsaa-media-2025.s3.amazonaws.com';
+// Define S3 base URL with regional endpoint
+const S3_BASE_URL = 'https://virsaa-media-2025.s3.us-east-1.amazonaws.com';
 const DEFAULT_IMAGE_PATH = '../../images/Collections/book-image.jpg';
 
-// Utility function to handle S3-based image paths
+// Utility function to handle S3-based image and PDF paths
 const useProductionImagePath = () => {
-  return (imagePath, context = 'unknown', getStaticImagePath) => {
+  return (filePath, context = 'unknown', getStaticImagePath, isPdf = false) => {
     // Handle null, undefined, or empty string
-    if (!imagePath || imagePath === '') {
-      console.log(`Image path is null, undefined, or empty for ${context}, using default: ${DEFAULT_IMAGE_PATH}`);
+    if (!filePath || filePath === '') {
+      console.log(`File path is null, undefined, or empty for ${context}, using default: ${DEFAULT_IMAGE_PATH}`);
       return getStaticImagePath(DEFAULT_IMAGE_PATH);
     }
 
-    if (typeof imagePath === "string" && imagePath.startsWith("https://")) {
+    if (typeof filePath === "string" && filePath.startsWith("https://")) {
       // Temporary fix for /uthors/ typo in author image URLs
-      const correctedPath = imagePath.replace('/uthors/', '/authors/');
+      const correctedPath = filePath.replace('/uthors/', '/authors/');
       console.log(`Full URL detected for ${context}, returning: ${correctedPath}`);
       return correctedPath;
     }
 
-    // Encode relative paths to handle spaces and special characters
-    if (typeof imagePath === "string") {
-      const encodedPath = encodeURI(imagePath);
+    // For PDFs, preserve the exact path (including '+' for spaces) without encoding
+    if (isPdf) {
+      console.log(`PDF path for ${context}: ${filePath}`);
+      return `${S3_BASE_URL}/${filePath}`;
+    }
+
+    // For images, encode relative paths to handle spaces and special characters
+    if (typeof filePath === "string") {
+      const encodedPath = encodeURI(filePath);
       console.log(`Encoded image path for ${context}: ${encodedPath}`);
       return `${S3_BASE_URL}/${encodedPath}`;
     }
 
-    console.log(`Invalid image path for ${context}, using default: ${DEFAULT_IMAGE_PATH}`, imagePath);
+    console.log(`Invalid file path for ${context}, using default: ${DEFAULT_IMAGE_PATH}`, filePath);
     return getStaticImagePath(DEFAULT_IMAGE_PATH);
   };
 };

@@ -1,3 +1,4 @@
+// src/App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
@@ -13,6 +14,7 @@ import './App.css';
 import SikhHistory from './pages/SikhHistory/SikhHistory';
 import Login from './pages/Login/Login';
 import Signup from './pages/Signup/Signup';
+import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
 import Membership from './pages/Membership/Membership';
 import GurdwaraAccess from './pages/GurdwaraAccess/GurdwaraAccess';
 import GurdwaraAccessButton from './pages/GurdwaraAccess/GurdwaraAccessButton/GurdwaraAccessButton';
@@ -107,7 +109,7 @@ const App = () => {
                     location.pathname === '/learning/games/memory-match';
 
   return (
-    <AuthProvider apiString={API_STRING}> {/* Explicitly pass apiString prop */}
+    <AuthProvider apiString={API_STRING}>
       <CssBaseline />
       <ToastContainer
         position="top-center"
@@ -151,6 +153,8 @@ const App = () => {
             <Route path="/learning" element={<Learning isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/login" element={<Login isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/signup" element={<Signup isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/forgot-password" element={<ForgotPassword isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/forgot-password/:email/:token" element={<ForgotPassword isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/premium" element={<Membership isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/gurdwara-access" element={<GurdwaraAccess isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/gurdwara-access/locate/:id" element={<GurdwaraLocate isDarkMode={isDarkMode} apiString={API_STRING} />} />
@@ -165,14 +169,12 @@ const App = () => {
             <Route path="/notifications" element={<Notifications isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
             <Route path="/learning/quizzes/:id" element={<Quizzes isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/learning-material/:id" element={<LearningMaterial isDarkMode={isDarkMode} apiString={API_STRING} />} />
-
             <Route path="/collections/ebooks/ebook/:id" element={<EbookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/authors/author/:id" element={<AuthorDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/collections/audiobooks/audiobook/:id" element={<AudiobookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/learning/games/shabd-khoj" element={<WordSearchGamePlay isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/learning/games/memory-match" element={<MemoryMatch isDarkMode={isDarkMode} apiString={API_STRING} />} />
           </Routes>
-          {/* Conditionally render Footer, excluding game pages */}
           {!isGamePage && <Footer isDarkMode={isDarkMode} apiString={API_STRING} />}
           <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />
         </>

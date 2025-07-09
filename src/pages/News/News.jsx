@@ -26,7 +26,7 @@ const useProductionImagePath = () => {
 
 const News = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
-  const headerLight = '/images/header-image.jpg'; // Replace with your light mode image
+  const headerLight = '/images/header-image.png'; // Replace with your light mode image
   const headerDark = '/images/header-image-dark.png'; // Replace with your dark mode image
 
   // const images for sections

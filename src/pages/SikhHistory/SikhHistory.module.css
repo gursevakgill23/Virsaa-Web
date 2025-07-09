@@ -3,12 +3,19 @@
   background-color: var(--section-bg-color);
   color: var(--text-color);
   overflow-x: hidden;
+    line-height: 1.6;
+
 }
 
 .header {
-  position: relative;
-  text-align: center;  
   height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  color: var(--text-color);
 }
 
 .headerImage {
