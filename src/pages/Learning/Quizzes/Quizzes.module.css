@@ -411,15 +411,15 @@
 }
 
 .scorerCard:nth-child(1) {
-  border-left-color: #FFD700; /* Gold */
+  border-left-color: #FFD700;
 }
 
 .scorerCard:nth-child(2) {
-  border-left-color: #C0C0C0; /* Silver */
+  border-left-color: #C0C0C0;
 }
 
 .scorerCard:nth-child(3) {
-  border-left-color: #CD7F32; /* Bronze */
+  border-left-color: #CD7F32;
 }
 
 .scorerName {
@@ -847,7 +847,7 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: fade jurors;
+  animation: fadeIn 0.4s ease-out;
 }
 
 .summaryContent {
@@ -1044,7 +1044,8 @@
     gap: 2rem;
     padding: 1.5rem;
   }
-  .breadcrumb{
+
+  .breadcrumb {
     margin: 1.5rem;
   }
 
@@ -1109,7 +1110,7 @@ svg.defs-only {
 }
 
 .circularChart {
-  width: 140px; /* Consistent size for visibility */
+  width: 140px;
   height: 140px;
   margin: 0 auto;
   display: block;
@@ -1117,18 +1118,18 @@ svg.defs-only {
 
 .circleBg {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.3); /* Semi-transparent white for background */
-  stroke-width: 3; /* Slightly thicker for balance */
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 3;
 }
 
 .circle {
   fill: none;
-  stroke: green; /* Solid green to match modal's success background */
-  stroke-width: 4; /* Thicker stroke for "filled" effect */
-  stroke-linecap: round; /* Smooth ends for the arc */
-  transition: stroke-dasharray 0.8s ease-in-out; /* Smooth progress animation */
-  transform: rotate(-90deg); /* Start arc from top */
-  transform-origin: 50% 50%; /* Rotate around center */
+  stroke: green;
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.8s ease-in-out;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
 }
 
 .summaryContent.success .circularProgress {
@@ -1286,15 +1287,15 @@ svg.defs-only {
 }
 
 .tournamentScoreCard:nth-child(1) {
-  border-left-color: #FFD700; /* Gold */
+  border-left-color: #FFD700;
 }
 
 .tournamentScoreCard:nth-child(2) {
-  border-left-color: #C0C0C0; /* Silver */
+  border-left-color: #C0C0C0;
 }
 
 .tournamentScoreCard:nth-child(3) {
-  border-left-color: #CD7F32; /* Bronze */
+  border-left-color: #CD7F32;
 }
 
 .tournamentScoreUser {
