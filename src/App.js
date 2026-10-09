@@ -42,8 +42,7 @@ import CompleteProfile from './pages/Profile/CompleteProfile/CompleteProfile';
 import LearningMaterial from './pages/Learning/LearningMaterial/LearningMaterial';
 
 // Define your API base URL
-const API_STRING = "http://virsaa-prod.eba-7cc3yk92.us-east-1.elasticbeanstalk.com";
-
+const API_STRING = process.env.REACT_APP_API_URL;
 // Component to handle profile completion check
 const ProfileRoute = ({ isDarkMode, apiString }) => {
   const { userData } = useAuth();
