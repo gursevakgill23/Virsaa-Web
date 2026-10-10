@@ -14,7 +14,7 @@
   "routes": [
     {
       "src": "/backend/(.*)",
-      "dest": "http://virsaa-prod.eba-xiub3ptb.us-east-2.elasticbeanstalk.com/$1"
+      "dest": "http://virsaa-api.us-east-2.elasticbeanstalk.com/$1"
     },
     {
       "src": "/(.*)",
