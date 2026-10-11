@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { FaLock, FaPlay, FaCrown, FaSignInAlt } from 'react-icons/fa';
+import { FaLock, FaPlay, FaCrown, FaSignInAlt, FaCheckCircle, FaClock, FaStar } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import styles from './LearningMaterial.module.css';
 import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
+import learningApi from '../../../api/learningApi';
+import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
@@ -27,6 +29,12 @@ const getYouTubeEmbedUrl = (url) => {
   return match ? `https://www.youtube.com/embed/${match[1]}` : '';
 };
 
+// The first paragraph is the summary; the rest is the lesson itself
+const splitDescription = (text = '') => {
+  const parts = String(text).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+  return { intro: parts[0] || '', body: parts.slice(1) };
+};
+
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : '');
 
 const LearningMaterial = ({ isDarkMode, apiString }) => {
@@ -47,6 +55,9 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [progress, setProgress] = useState(null);     // { status, percent }
+  const [reward, setReward] = useState(null);         // shown after "Mark as complete"
+  const [savingProgress, setSavingProgress] = useState(false);
 
   useEffect(() => {
     const headers = isLoggedIn && accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
@@ -56,6 +67,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       try {
         const response = await axios.get(`${apiUrl}/api/learning/learning-material/${id}/`, { headers });
         setItem(response.data);
+        setProgress(response.data.my_progress || null);
         setError(null);
       } catch (err) {
         console.error('Error fetching learning item:', err.response?.status || err.message);
@@ -84,6 +96,34 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
     if (!isLoggedIn) return false;
     if (item.is_premium && !isPremium) return false;
     return true;
+  };
+
+  // Opening a lesson marks it "in progress" (signed-in users only)
+  useEffect(() => {
+    if (!item || !isLoggedIn || !accessToken || item.type !== 'learning' || !isAccessible()) return;
+    if (progress) return;
+    learningApi.saveProgress(apiUrl, accessToken, item.id, { progress_percent: 10 })
+      .then((data) => setProgress({ status: data.progress.status, percent: data.progress.progress_percent }))
+      .catch((err) => console.error('Error saving progress:', err.response?.status || err.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item, isLoggedIn, accessToken]);
+
+  const markComplete = async () => {
+    if (!isLoggedIn) {
+      setFormError('Sign in to track your progress.');
+      return;
+    }
+    setSavingProgress(true);
+    try {
+      const data = await learningApi.saveProgress(apiUrl, accessToken, item.id, { completed: true });
+      setProgress({ status: data.progress.status, percent: data.progress.progress_percent });
+      setReward({ xp: data.xp_earned, coins: data.coins_earned, badges: data.new_badges || [] });
+    } catch (err) {
+      console.error('Error completing lesson:', err.response?.status || err.message);
+      setFormError('Your progress couldn’t be saved. Try again.');
+    } finally {
+      setSavingProgress(false);
+    }
   };
 
   const handlePostSubmit = async (e) => {
@@ -158,6 +198,13 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
   }
 
   const embedUrl = getYouTubeEmbedUrl(item.video_file);
+  // Newer lessons keep the lesson text in `content`; older ones put it all in `description`
+  const split = splitDescription(item.description);
+  const intro = split.intro;
+  const body = item.content
+    ? String(item.content).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean)
+    : split.body;
+  const isDone = progress?.status === 'completed';
   const open = isAccessible();
 
   return (
@@ -166,7 +213,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
         compact
         image={headerImage}
         title={item.title || 'Learning Material'}
-        subtitle={item.description || 'Explore detailed learning materials to enhance your knowledge!'}
+        subtitle={intro || 'Explore detailed learning materials to enhance your knowledge!'}
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Learning', to: '/learning' }, { label: item.title }]}
       >
         <button
@@ -181,9 +228,13 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       <section className={styles.section} ref={contentRef} aria-label="Lesson">
         {open ? (
           <article className={styles.lesson}>
-            {item.category && <span className={styles.chip}>{item.category}</span>}
+            <div className={styles.chipRow}>
+              {item.category && <span className={styles.chip}>{item.category}</span>}
+              {item.duration_minutes && <span className={styles.chip}><FaClock aria-hidden="true" /> {item.duration_minutes} min</span>}
+              {item.difficulty && <span className={styles.chip}>{item.difficulty}</span>}
+              {isDone && <span className={`${styles.chip} ${styles.chipDone}`}><FaCheckCircle aria-hidden="true" /> Completed</span>}
+            </div>
             <h2 className={styles.sectionTitle}>{item.title}</h2>
-            {item.description && <p className={styles.lessonText}>{item.description}</p>}
             {embedUrl && (
               <div className={styles.videoFrame}>
                 <iframe
@@ -192,6 +243,41 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
+              </div>
+            )}
+            {body.length > 0 ? (
+              <div className={styles.lessonBody}>
+                {body.map((para, i) => (
+                  <p key={i} className={styles.lessonText}>{para}</p>
+                ))}
+              </div>
+            ) : (
+              intro && !embedUrl && <p className={styles.lessonText}>{intro}</p>
+            )}
+
+            {item.type === 'learning' && (
+              <div className={styles.completeBar}>
+                {isDone ? (
+                  <p className={styles.completeText}><FaCheckCircle aria-hidden="true" /> You’ve finished this lesson.</p>
+                ) : (
+                  <>
+                    <p className={styles.completeText}>
+                      Finished? Mark it complete to earn {item.xp_reward || 0} XP{item.coin_reward ? ` and ${item.coin_reward} coins` : ''}.
+                    </p>
+                    <button type="button" className={styles.primaryButton} onClick={markComplete} disabled={savingProgress}>
+                      <FaCheckCircle aria-hidden="true" /> {savingProgress ? 'Saving…' : 'Mark as complete'}
+                    </button>
+                  </>
+                )}
+                {reward && (
+                  <ul className={styles.rewardList} role="status">
+                    <li><FaStar aria-hidden="true" /> +{reward.xp} XP{reward.coins ? ` · +${reward.coins} coins` : ''}</li>
+                    {reward.badges.map((b) => (
+                      <li key={b.key}><BadgeIcon name={b.icon} image={b.image} /> Badge earned: {b.name}</li>
+                    ))}
+                  </ul>
+                )}
+                {!isLoggedIn && <p className={styles.formNote}><Link to="/login">Sign in</Link> to track your progress and earn XP.</p>}
               </div>
             )}
           </article>

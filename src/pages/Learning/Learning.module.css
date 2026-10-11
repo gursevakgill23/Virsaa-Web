@@ -556,3 +556,25 @@
     bottom: 16px;
   }
 }
+
+/* "Completed", "Best 7/8", "6 min" under a card */
+.cardStatus {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.cardStatusDone {
+  color: #1f6b3e;
+  background: #dff3e6;
+}
+
+[data-theme='dark'] .cardStatusDone {
+  color: #bfeccf;
+  background: rgba(60, 190, 115, 0.2);
+}

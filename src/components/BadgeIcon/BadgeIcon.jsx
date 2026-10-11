@@ -1,0 +1,25 @@
+import React from 'react';
+import {
+  FaBookOpen, FaGraduationCap, FaUniversity, FaQuestionCircle, FaCompass, FaCrown, FaStar, FaGem,
+  FaBolt, FaGamepad, FaDiceD6, FaFont, FaSearch, FaBrain, FaMedal, FaFlag, FaTrophy, FaFire,
+  FaCalendarCheck, FaChartLine, FaCoins, FaAward,
+} from 'react-icons/fa';
+
+/*
+ * Badges store an icon name (e.g. "FaTrophy") in the database.
+ * Only the icons listed here are bundled; anything else falls back to a medal.
+ * Add an entry here when you give a badge a new icon name in the admin.
+ */
+const ICONS = {
+  FaBookOpen, FaGraduationCap, FaUniversity, FaQuestionCircle, FaCompass, FaCrown, FaStar, FaGem,
+  FaBolt, FaGamepad, FaDiceD6, FaFont, FaSearch, FaBrain, FaMedal, FaFlag, FaTrophy, FaFire,
+  FaCalendarCheck, FaChartLine, FaCoins, FaAward,
+};
+
+const BadgeIcon = ({ name, image, ...rest }) => {
+  if (image) return <img src={image} alt="" style={{ width: '1em', height: '1em', objectFit: 'contain' }} {...rest} />;
+  const Icon = ICONS[name] || FaMedal;
+  return <Icon aria-hidden="true" {...rest} />;
+};
+
+export default BadgeIcon;

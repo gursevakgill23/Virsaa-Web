@@ -328,18 +328,6 @@
   background-position: center;
 }
 
-.mapImage.traditional { background-image: url('assets/themes/traditional.jpg'); }
-.mapImage.cultural { background-image: url('assets/themes/cultural.jpg'); }
-.mapImage.gold { background-image: url('assets/themes/gold.jpg'); }
-.mapImage.nature { background-image: url('assets/themes/nature.jpg'); }
-.mapImage.abstract { background-image: url('assets/themes/abstract.jpg'); }
-.mapImage.jungle { background-image: url('assets/themes/jungle.jpg'); }
-.mapImage.mountain { background-image: url('assets/themes/mountain.jpg'); }
-.mapImage.cosmic { background-image: url('assets/themes/cosmic.jpg'); }
-.mapImage.mystic { background-image: url('assets/themes/mystic.jpg'); }
-.mapImage.poetry { background-image: url('assets/themes/poetry.jpg'); }
-.mapImage.snow { background-image: url('assets/themes/snow.jpeg'); }
-.mapImage.sand { background-image: url('assets/themes/sand.jpg'); }
 
 .mapImage::before {
   content: '';
@@ -813,18 +801,6 @@
   box-shadow: var(--shadow-deep);
 }
 
-.board.traditional { background-image: url('assets/themes/traditional.jpg'); }
-.board.cultural { background-image: url('assets/themes/cultural.jpg'); }
-.board.gold { background-image: url('assets/themes/gold.jpg'); }
-.board.nature { background-image: url('assets/themes/nature.jpg'); }
-.board.abstract { background-image: url('assets/themes/abstract.jpg'); }
-.board.jungle { background-image: url('assets/themes/jungle.jpg'); }
-.board.mountain { background-image: url('assets/themes/mountain.jpg'); }
-.board.cosmic { background-image: url('assets/themes/cosmic.jpg'); }
-.board.mystic { background-image: url('assets/themes/mystic.jpg'); }
-.board.poetry { background-image: url('assets/themes/poetry.jpg'); }
-.board.snow { background-image: url('assets/themes/snow.jpeg'); }
-.board.sand { background-image: url('assets/themes/sand.jpg'); }
 
 .boardOverlay {
   position: absolute;
@@ -1954,4 +1930,10 @@
 
 .mapCard.locked .mapInfo {
   opacity: 0.9;
+}
+
+/* Badges earned, on the end-of-game card */
+.completedContent .achievementsList {
+  margin-bottom: 20px;
+  text-align: left;
 }

@@ -34,6 +34,8 @@ import AudiobookDetail from './pages/Collections/AudiobookDetail/AudiobookDetail
 import { WordSearchGamePlay } from './pages/Learning/Games/WordSearch/WordSearch';
 import MemoryMatch from './pages/Learning/Games/MemoryMatch/MemoryMatch';
 import ProfileRoute from './pages/Profile/ProfileRoute';
+import Checkout from './pages/Checkout/Checkout';
+import Payment from './pages/Payment/Payment';
 import MyFavorites from './pages/Profile/MyFavorites/MyFavorites';
 import Settings from './pages/Profile/Settings/Settings';
 import History from './pages/Profile/History/History';
@@ -153,6 +155,8 @@ const App = () => {
             <Route path="/collections/audiobooks/audiobook/:id" element={<AudiobookDetail isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/learning/games/shabd-khoj" element={<WordSearchGamePlay isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/learning/games/memory-match" element={<MemoryMatch isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/checkout" element={<Checkout isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/payment/:reference" element={<Payment isDarkMode={isDarkMode} apiString={API_STRING} />} />
           </Routes>
           {!isGamePage && <Footer isDarkMode={isDarkMode} apiString={API_STRING} />}
           <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />

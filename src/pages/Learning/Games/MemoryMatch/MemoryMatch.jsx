@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../../../context/AuthContext';
+import learningApi from '../../../../api/learningApi';
+import BadgeIcon from '../../../../components/BadgeIcon/BadgeIcon';
+import useGameWallet from '../useGameWallet';
 import styles from './MemoryMatch.module.css';
 import { Howl } from 'howler';
-import { FaCoins, FaUser, FaSignInAlt, FaEdit, FaCreditCard, FaSignOutAlt, FaCog, FaPlay, FaList, FaClock, FaExchangeAlt, FaStar, FaTachometerAlt, FaAward, FaBrain, FaBolt } from 'react-icons/fa';
+import { FaCoins, FaUser, FaSignInAlt, FaEdit, FaCreditCard, FaSignOutAlt, FaCog, FaPlay, FaList, FaClock, FaExchangeAlt, FaStar, FaTachometerAlt } from 'react-icons/fa';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import foundSound from './assets/sounds/found.mp3';
-import achievementSound from './assets/sounds/level-up.mp3';
-import completeSound from './assets/sounds/complete.mp3';
+import { SOUND_URLS, HOW_TO_PLAY_VIDEO } from '../gameAssets';
 
 
 const userDefault = '/images/games/user-default.jpg';
@@ -24,7 +26,7 @@ const holi = '/images/games/holi.jpg';
 const diwali = '/images/games/diwali.jpg';
 const kangha = '/images/games/kangha.jpg';
 const kara = '/images/games/kara.jpg';
-const ik_onkar = '/images/games/basant.jpg';
+const ik_onkar = '/images/games/ik-onkar.jpg';
 const khanda = '/images/games/khanda.jpg';
 const kirpan = '/images/games/kirpan.jpg';
 
@@ -48,37 +50,13 @@ const useProductionImagePath = () => {
   };
 };
 
-/*
- * Game progress (coins, XP, welcome bonus, game name/avatar) is kept in its own
- * browser storage key. It used to be saved by calling the auth `login()` with the
- * wrong arguments, which crashed the page and could overwrite the login session.
- */
-const GAME_PROFILE_KEY = 'virsaa_game_profile';
-const GAME_FIELDS = ['coins', 'xp', 'welcomeBonusGiven', 'name', 'avatar'];
-const loadGameProfile = () => {
-  try {
-    return JSON.parse(localStorage.getItem(GAME_PROFILE_KEY)) || {};
-  } catch {
-    return {};
-  }
-};
-const pickGameFields = (obj = {}) => GAME_FIELDS.reduce((acc, key) => {
-  if (obj[key] !== undefined) acc[key] = obj[key];
-  return acc;
-}, {});
-const writeGameProfile = (fields) => {
-  try {
-    localStorage.setItem(GAME_PROFILE_KEY, JSON.stringify({ ...loadGameProfile(), ...fields }));
-  } catch {
-    /* storage unavailable (private mode): progress just isn't kept */
-  }
-};
+const GAME_KEY = 'memory_match';
 
 // Initialize sound effects
 const sounds = {
-  found: new Howl({ src: [foundSound] }),
-  achievement: new Howl({ src: [achievementSound] }),
-  complete: new Howl({ src: [completeSound] }),
+  found: new Howl({ src: [SOUND_URLS.found] }),
+  achievement: new Howl({ src: [SOUND_URLS.levelUp] }),
+  complete: new Howl({ src: [SOUND_URLS.complete] }),
 };
 
 // Card sets
@@ -104,37 +82,39 @@ const cardSets = {
   ],
 };
 
-// Mock APIs
-const fetchTopScorers = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return [
-    { id: 1, name: 'VirsaaMaster', score: 5000, avatar: userDefault },
-    { id: 2, name: 'PunjabPro', score: 4500, avatar: userDefault },
-    { id: 3, name: 'SikhStar', score: 4000, avatar: userDefault },
-  ];
+// Top scorers this month from the server
+const fetchTopScorers = async (apiString) => {
+  const data = await learningApi.leaderboard(apiString, { game_key: GAME_KEY, period: 'month', limit: 5 });
+  return (data.results || []).map((row) => ({
+    id: row.user_id,
+    name: row.name,
+    score: row.score,
+    avatar: row.avatar || userDefault,
+  }));
 };
 
-const fetchUserAchievements = async (userId) => {
-  await new Promise(resolve => setTimeout(resolve, 800));
-  if (!userId) return [];
-  return [
-    { id: 1, name: 'Vaisakhi Master', description: 'Match 50 festival cards', earned: true, icon: <FaAward /> },
-    { id: 2, name: 'Memory Guru', description: 'Complete 100 matches', earned: false, icon: <FaBrain />, progress: '20/100' },
-    { id: 3, name: 'Speed Sikh', description: 'Finish Time Attack in 30s', earned: false, icon: <FaBolt /> },
-  ];
+// Achievements for this game (and general ones) with the player's progress
+const fetchUserAchievements = async (apiString, token) => {
+  const data = await learningApi.achievements(apiString, token, GAME_KEY);
+  return (data.achievements || []).map((a) => ({
+    id: a.key,
+    name: a.name,
+    description: a.description,
+    earned: a.earned,
+    icon: <BadgeIcon name={a.icon} image={a.image} />,
+    progress: !a.earned && a.target > 1 ? `${a.current}/${a.target}` : null,
+  }));
 };
 
-const fetchUserGameStats = async (userId) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  if (!userId) return null;
+// The player's Memory Match record from the server
+const fetchUserGameStats = async (apiString, token) => {
+  const { stats } = await learningApi.summary(apiString, token);
+  const game = stats.per_game?.[GAME_KEY] || {};
   return {
-    totalMatches: 75,
-    wins: 50,
-    losses: 25,
-    totalCoinsWon: 5000,
-    level: 10,
-    xp: 850,
-    maxXp: 1000,
+    totalMatches: game.played || 0,
+    wins: game.won || 0,
+    losses: (game.played || 0) - (game.won || 0),
+    totalCoinsWon: stats.coins_earned_total || 0,
   };
 };
 
@@ -151,18 +131,20 @@ const gameModes = [
   { id: 'puzzle', name: 'Puzzle', description: 'Match partial images' },
 ];
 
-const MemoryMatch = () => {
+const MemoryMatch = ({ apiString }) => {
   const getImagePath = useProductionImagePath();
 
-  const { isLoggedIn, userData: authUser, logout } = useAuth();
-  // Game progress merged over the signed-in user (see GAME_PROFILE_KEY above)
-  const [gameProfile, setGameProfile] = useState(loadGameProfile);
-  const userData = useMemo(() => (authUser ? { ...authUser, ...gameProfile } : null), [authUser, gameProfile]);
-  const saveGameUser = useCallback((updated) => {
-    const fields = pickGameFields(updated);
-    setGameProfile((prev) => ({ ...prev, ...fields }));
-    writeGameProfile(fields);
-  }, []);
+  const { isLoggedIn, accessToken, userData: authUser, logout } = useAuth();
+  // Coins, XP and the game name/avatar: saved on the server when signed in, in the browser for guests
+  const wallet = useGameWallet({ apiString, accessToken, isLoggedIn, gameKey: GAME_KEY });
+  const defaultName = [authUser?.first_name, authUser?.last_name].filter(Boolean).join(' ') || authUser?.username || 'Player';
+  const userData = useMemo(() => (authUser ? {
+    ...authUser,
+    coins: wallet.coins,
+    xp: wallet.xp,
+    name: wallet.name || defaultName,
+    avatar: wallet.avatar || authUser.profile_photo || '',
+  } : null), [authUser, wallet.coins, wallet.xp, wallet.name, wallet.avatar, defaultName]);
   const navigate = useNavigate();
 
   // State management
@@ -177,8 +159,7 @@ const MemoryMatch = () => {
   const [matchedPairs, setMatchedPairs] = useState([]);
   const [timeLeft, setTimeLeft] = useState(60);
   const [score, setScore] = useState(0);
-  const [coins, setCoins] = useState(userData?.coins || 0);
-  const [xp, setXp] = useState(userData?.xp || 0);
+  const coins = wallet.coins;
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [playAsGuest, setPlayAsGuest] = useState(false);
   const [topScorers, setTopScorers] = useState([]);
@@ -188,8 +169,14 @@ const MemoryMatch = () => {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [userStats, setUserStats] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [newName, setNewName] = useState(userData?.name || 'Gursevak Singh');
+  const [newName, setNewName] = useState(userData?.name || '');
   const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
+  const [newAvatarFile, setNewAvatarFile] = useState(null);
+  const [lastResult, setLastResult] = useState(null);   // server reply: XP, badges, best score
+  const [refreshKey, setRefreshKey] = useState(0);
+  const scoreRef = useRef(0);
+  const matchedRef = useRef(0);
+  const timeLeftRef = useRef(0);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showCardModal, setShowCardModal] = useState(null);
@@ -288,38 +275,61 @@ const MemoryMatch = () => {
   };
 
   // Handle game end with useCallback
-  const handleGameEnd = useCallback((completed) => {
+  // Tell the player if their coins couldn't be loaded
+  useEffect(() => {
+    if (wallet.error) toast.error(wallet.error, { toastId: 'wallet-error' });
+  }, [wallet.error]);
+
+  // Latest values for the timers, which run outside React's render cycle
+  useEffect(() => { scoreRef.current = score; }, [score]);
+  useEffect(() => { matchedRef.current = matchedPairs.length; }, [matchedPairs]);
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
+
+  const { submitResult } = wallet;
+  const handleGameEnd = useCallback((completed, finalScore = scoreRef.current) => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (countdownRef.current) clearInterval(countdownRef.current);
 
-    const earned = completed ? 100 + Math.floor(timeLeft / 5) : 10; // Fewer coins for loss
+    const remaining = completed ? timeLeftRef.current : 0;
+    const earned = completed ? 100 + Math.floor(remaining / 5) : 10; // Fewer coins for loss
     setCoinsEarned(earned);
-    setCoins(prev => prev + earned);
     setGameResult(completed ? 'win' : 'lose');
+    setLastResult(null);
 
     if (completed) {
       setChapter(prev => prev + 1);
       sounds.complete.play();
     }
 
-    if (isLoggedIn) {
-      const updatedUser = { ...userData, coins: coins + earned, xp: xp + (completed ? 50 : 10) };
-      saveGameUser(updatedUser);
-      setUserStats(prev => (prev && {
-        ...prev,
-        totalMatches: prev.totalMatches + 1,
-        wins: completed ? prev.wins + 1 : prev.wins,
-        losses: completed ? prev.losses : prev.losses + 1,
-        totalCoinsWon: prev.totalCoinsWon + earned,
-        xp: prev.xp + (completed ? 50 : 10),
-      }));
+    if (isLoggedIn || playAsGuest) {
+      const timed = selectedMode.id !== 'zen';
+      submitResult({
+        score: finalScore,
+        completed,
+        time_taken_seconds: timed ? Math.max(1, selectedDifficulty.timeLimit - remaining) : null,
+        coins_earned: earned,
+        xp_earned: completed ? 50 : 10,
+        level: `${selectedMode.id} / ${selectedDifficulty.id} / ${selectedCardSet}`.slice(0, 50),
+        details: {
+          mode: selectedMode.id,
+          difficulty: selectedDifficulty.id,
+          card_set: selectedCardSet,
+          pairs_matched: completed ? selectedDifficulty.cardCount / 2 : matchedRef.current,
+          pairs_total: selectedDifficulty.cardCount / 2,
+        },
+      }).then((data) => {
+        if (!data) return;
+        setLastResult(data);
+        setCoinsEarned(data.coins_earned);
+        setRefreshKey((k) => k + 1); // reload stats, achievements and top scorers
+      });
     }
 
     setShowGameEndModal(true);
     setGameState('select');
     setShowMemorizeScreen(false);
     setCountdown(null);
-  }, [isLoggedIn, userData, saveGameUser, coins, xp, timeLeft]);
+  }, [isLoggedIn, playAsGuest, submitResult, selectedMode.id, selectedDifficulty, selectedCardSet]);
 
   // Handle countdown and game start
   useEffect(() => {
@@ -357,13 +367,15 @@ const MemoryMatch = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const scorers = await fetchTopScorers();
+        const scorers = await fetchTopScorers(apiString).catch(() => []);
         setTopScorers(scorers);
         setLoadingTopScorers(false);
-        if (isLoggedIn && userData) {
-          const achievements = await fetchUserAchievements(userData.id);
+        if (isLoggedIn && accessToken) {
+          const [achievements, stats] = await Promise.all([
+            fetchUserAchievements(apiString, accessToken).catch(() => []),
+            fetchUserGameStats(apiString, accessToken).catch(() => null),
+          ]);
           setUserAchievements(achievements);
-          const stats = await fetchUserGameStats(userData.id);
           setUserStats(stats);
         }
         setLoadingAchievements(false);
@@ -374,7 +386,8 @@ const MemoryMatch = () => {
       }
     };
     loadData();
-  }, [isLoggedIn, userData]);
+    // refreshKey reloads everything after a game is saved
+  }, [isLoggedIn, accessToken, apiString, refreshKey]);
 
   // Handle click outside profile dropdown
   useEffect(() => {
@@ -414,11 +427,11 @@ const MemoryMatch = () => {
       if (first.pairId === second.pairId && first.type !== second.type) {
         setMatchedPairs(prev => [...prev, first.pairId]);
         setCards(prev => prev.map(c => (c.pairId === first.pairId ? { ...c, isMatched: true } : c)));
-        setScore(prev => prev + (selectedMode.id === 'timeAttack' ? 100 : 50));
-        setXp(prev => prev + 10);
+        const points = selectedMode.id === 'timeAttack' ? 100 : 50;
+        setScore(prev => prev + points);
         sounds.found.play();
         if (matchedPairs.length + 1 === selectedDifficulty.cardCount / 2) {
-          handleGameEnd(true);
+          handleGameEnd(true, score + points);
         }
       } else {
         setTimeout(() => {
@@ -430,10 +443,14 @@ const MemoryMatch = () => {
   };
 
   // Handle profile update
-  const handleProfileUpdate = () => {
+  const handleProfileUpdate = async () => {
     if (isLoggedIn) {
-      const updatedUser = { ...userData, name: newName, avatar: newAvatar };
-      saveGameUser(updatedUser);
+      const ok = await wallet.saveProfile({ name: newName.trim(), avatarFile: newAvatarFile, avatarPreview: newAvatar });
+      if (!ok) {
+        toast.error('Your game profile couldn’t be saved. Try again.');
+        return;
+      }
+      setNewAvatarFile(null);
       setEditingProfile(false);
     }
   };
@@ -442,6 +459,7 @@ const MemoryMatch = () => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setNewAvatarFile(file);
       const reader = new FileReader();
       reader.onload = (event) => setNewAvatar(event.target.result);
       reader.readAsDataURL(file);
@@ -449,13 +467,11 @@ const MemoryMatch = () => {
   };
 
   // Handle buy coins
+  // Buying coins: go to checkout, then come back to this game afterwards
   const handleBuyCoins = (amount) => {
+    setShowCoinShop(false);
     if (isLoggedIn) {
-      const newCoins = coins + amount;
-      setCoins(newCoins);
-      const updatedUser = { ...userData, coins: newCoins };
-      saveGameUser(updatedUser);
-      setShowCoinShop(false);
+      navigate(`/checkout?product=coins_${amount}&return=/learning/games/memory-match`);
     } else {
       navigate('/login');
     }
@@ -486,9 +502,9 @@ const MemoryMatch = () => {
               {coins} <FaCoins />
             </span>
             <div className={styles.levelProgress}>
-              <span>Level {userStats?.level || 1}</span>
+              <span>Level {wallet.level}</span>
               <div className={styles.progressBar}>
-                <div style={{ width: `${((userStats?.xp || 0) / (userStats?.maxXp || 1000)) * 100}%` }}></div>
+                <div style={{ width: `${(wallet.xpIntoLevel / (wallet.xpPerLevel || 500)) * 100}%` }}></div>
               </div>
             </div>
             <button onClick={() => setShowSettings(true)} className={styles.settingsButton} aria-label="Settings">
@@ -623,9 +639,10 @@ const MemoryMatch = () => {
       <div className={styles.modal}>
         <h2>{language === 'punjabi' ? 'ਸਿੱਕੇ ਦੀ ਦੁਕਾਨ' : 'Coin Shop'}</h2>
         <div className={styles.shopOptions}>
-          <button onClick={() => handleBuyCoins(100)}>100 Coins - $0.99</button>
-          <button onClick={() => handleBuyCoins(500)}>500 Coins - $4.99</button>
-          <button onClick={() => handleBuyCoins(1000)}>1000 Coins - $9.99</button>
+          <button onClick={() => handleBuyCoins(100)}>100 + 10 bonus coins · $1.99 CAD</button>
+          <button onClick={() => handleBuyCoins(250)}>250 + 30 bonus coins · $3.99 CAD</button>
+          <button onClick={() => handleBuyCoins(500)}>500 + 75 bonus coins · $6.99 CAD</button>
+          <button onClick={() => handleBuyCoins(1000)}>1,000 + 200 bonus coins · $12.99 CAD</button>
         </div>
         <button onClick={() => setShowCoinShop(false)}>{language === 'punjabi' ? 'ਬੰਦ ਕਰੋ' : 'Close'}</button>
       </div>
@@ -864,7 +881,7 @@ const MemoryMatch = () => {
     <div className={styles.modalOverlay}>
       <div className={styles.modal}>
         <h2>{language === 'punjabi' ? 'ਕਿਵੇਂ ਖੇਡਣਾ' : 'How to Play'}</h2>
-        <video controls src="./assets/videos/how-to-play.mp4" className={styles.video} loading="lazy"></video>
+        <video controls src={HOW_TO_PLAY_VIDEO} className={styles.video} loading="lazy"></video>
         <button onClick={() => setShowHowToPlay(false)}>{language === 'punjabi' ? 'ਬੰਦ ਕਰੋ' : 'Close'}</button>
       </div>
     </div>
@@ -909,6 +926,17 @@ const MemoryMatch = () => {
         <div className={styles.coinsInfo}>
           <p>{language === 'punjabi' ? `ਕਮਾਏ ਸਿੱਕੇ: ${coinsEarned}` : `Coins Earned: ${coinsEarned}`}</p>
           <p>{language === 'punjabi' ? `ਕੁੱਲ ਸਿੱਕੇ: ${coins}` : `Total Coins: ${coins}`}</p>
+          {lastResult && (
+            <p>
+              +{lastResult.xp_earned} XP
+              {lastResult.is_new_best && lastResult.score > 0 ? (language === 'punjabi' ? ' · ਨਵਾਂ ਰਿਕਾਰਡ!' : ' · New personal best!') : ''}
+            </p>
+          )}
+          {(lastResult?.new_badges || []).map((b) => (
+            <p key={b.key}>
+              <BadgeIcon name={b.icon} image={b.image} /> {language === 'punjabi' ? 'ਨਵਾਂ ਬੈਜ: ' : 'Badge earned: '}{b.name}
+            </p>
+          ))}
         </div>
         <button onClick={() => setShowGameEndModal(false)}>
           {language === 'punjabi' ? 'ਬੰਦ ਕਰੋ' : 'Close'}

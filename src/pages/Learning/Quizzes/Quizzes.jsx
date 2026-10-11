@@ -8,6 +8,8 @@ import {
 import PageHero from '../../../components/PageHero/PageHero';
 import styles from './Quizzes.module.css';
 import { useAuth } from '../../../context/AuthContext';
+import learningApi from '../../../api/learningApi';
+import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 
 // Utility function to handle public/static images
 const getProductionImagePath = (imagePath) => {
@@ -22,13 +24,35 @@ const getProductionImagePath = (imagePath) => {
   return imagePath;
 };
 
-const QUIZ_DURATION = 10 * 60; // 10 minutes
+const QUIZ_DURATION = 10 * 60; // used when the quiz has no time limit set in the admin
 const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const RING = 2 * Math.PI * 52;
 
 const formatTime = (seconds) => {
   const s = Math.max(0, seconds || 0);
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+};
+
+// "2d 4h left" from the tournament's end_time
+const tournamentTimeLeft = (end) => {
+  const ms = new Date(end) - Date.now();
+  if (!end || Number.isNaN(ms)) return '';
+  if (ms <= 0) return 'Ended';
+  const h = Math.floor(ms / 3600000);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ${h % 24}h left`;
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m left` : `${m}m left`;
+};
+
+// "4 minutes", "1 min 30 s"
+const describeDuration = (seconds) => {
+  if (!seconds) return '';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (!m) return `${s} seconds`;
+  if (!s) return `${m} minute${m === 1 ? '' : 's'}`;
+  return `${m} min ${s} s`;
 };
 
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : '');
@@ -92,6 +116,13 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const [showTournamentModal, setShowTournamentModal] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [tournamentScores, setTournamentScores] = useState([]);
+  const [answers, setAnswers] = useState({});               // { questionId: optionId } for server marking
+  const [questionTimeLeft, setQuestionTimeLeft] = useState(null);
+  const [result, setResult] = useState(null);               // what the server sent back after submitting
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const startedAtRef = useRef(null);
+  const pausedMsRef = useRef(0);
+  const pauseStartRef = useRef(null);
 
   useEffect(() => {
     const config = isLoggedIn && accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {};
@@ -104,7 +135,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
         const response = await axios.get(`${base}/learning-material/${id}/`, config);
         setQuiz(response.data);
         setQuestions(response.data.questions || []);
-        setTimeLeft(QUIZ_DURATION);
+        setTimeLeft(response.data.time_limit_seconds || QUIZ_DURATION);
       } catch (err) {
         console.error('Error fetching quiz:', err.response?.status || err.message);
         setError(err.response?.status === 404 ? 'This quiz doesn’t exist.' : 'This quiz couldn’t be loaded.');
@@ -122,7 +153,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
         fetchQuizData(),
         quiet('discussions', axios.get(`${base}/learning-material/${id}/discussions/`, config), setDiscussionPosts,
           (d) => d.map((post) => ({ ...post, replies: post.replies || [] }))),
-        quiet('top scorers', axios.get(`${base}/learning-material/${id}/top_scorers/`, config), setTopScorers),
+        quiet('top scorers', axios.get(`${base}/items/${id}/leaderboard/`, config), setTopScorers),
         quiet('tournaments', axios.get(`${base}/tournaments/`, config), setTournaments),
         isLoggedIn && accessToken
           ? quiet('badges', axios.get(`${base}/learning-material/${id}/badges/`, config), setBadges)
@@ -155,14 +186,53 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   }, [timerStarted, timerPaused, timeLeft]);
 
   const isBlocked = quiz && ((quiz.is_restricted && !isLoggedIn) || (quiz.is_premium && !isPremium));
+  const quizDuration = quiz?.time_limit_seconds || QUIZ_DURATION;
+  const perQuestionLimit = (q) => q?.time_limit_seconds || quiz?.time_per_question_seconds || null;
+
+  // Per-question timer (only when the quiz or question has one set in the admin)
+  useEffect(() => {
+    if (!timerStarted || timerPaused || isEvaluated || questionTimeLeft === null) return undefined;
+    if (questionTimeLeft <= 0) {
+      // Out of time for this question: count it as wrong and move on
+      handleAnswer(false, null);
+      return undefined;
+    }
+    const t = setTimeout(() => setQuestionTimeLeft((v) => (v === null ? v : v - 1)), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timerStarted, timerPaused, isEvaluated, questionTimeLeft]);
+
+  // Reset the per-question timer when the question changes
+  useEffect(() => {
+    if (timerStarted) setQuestionTimeLeft(perQuestionLimit(questions[currentQuestion]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQuestion, timerStarted]);
 
   const startTimer = () => {
-    setTimeLeft(QUIZ_DURATION);
+    setTimeLeft(quizDuration);
     setTimerStarted(true);
     setTimerPaused(false);
+    startedAtRef.current = Date.now();
+    pausedMsRef.current = 0;
+    pauseStartRef.current = null;
+    setQuestionTimeLeft(perQuestionLimit(questions[0]));
   };
 
-  const togglePauseResume = () => setTimerPaused(!timerPaused);
+  const togglePauseResume = () => {
+    // Paused time doesn't count towards "time taken"
+    if (!timerPaused) {
+      pauseStartRef.current = Date.now();
+    } else if (pauseStartRef.current) {
+      pausedMsRef.current += Date.now() - pauseStartRef.current;
+      pauseStartRef.current = null;
+    }
+    setTimerPaused(!timerPaused);
+  };
+
+  const secondsTaken = () => {
+    if (!startedAtRef.current) return null;
+    return Math.max(1, Math.round((Date.now() - startedAtRef.current - pausedMsRef.current) / 1000));
+  };
 
   const resetQuiz = (tournamentId = null) => {
     setCurrentQuestion(0);
@@ -170,10 +240,13 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     setSelectedAnswers([]);
     setSelectedOption(null);
     setIsEvaluated(false);
-    setTimeLeft(QUIZ_DURATION);
+    setTimeLeft(quizDuration);
     setTimerStarted(false);
     setTimerPaused(false);
     setSelectedTournament(tournamentId);
+    setAnswers({});
+    setQuestionTimeLeft(null);
+    setResult(null);
   };
 
   const handleStartQuiz = async (tournamentId = null) => {
@@ -192,12 +265,8 @@ const Quizzes = ({ isDarkMode, apiString }) => {
         return;
       }
       try {
-        const response = await axios.post(
-          `${apiUrl}/api/learning/tournaments/${tournamentId}/join/`,
-          {},
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        setTournamentScores(response.data.scores || []);
+        const data = await learningApi.joinTournament(apiUrl, accessToken, tournamentId);
+        setTournamentScores(data.scores || []);
       } catch (err) {
         console.error('Error joining tournament:', err.response?.status || err.message);
         setNotice(err.response?.data?.error || 'You couldn’t join the tournament. Try again.');
@@ -210,24 +279,45 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     consoleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const submitScore = async (finalScore) => {
+  // The server marks the answers and returns score, XP, coins and any new badges
+  const submitScore = async (finalScore, finalAnswers, completed = true) => {
     if (!isLoggedIn || !accessToken) return;
+    const payload = {
+      score: finalScore,
+      correct_count: finalScore,
+      total_questions: questions.length,
+      answers: finalAnswers,
+      time_taken_seconds: secondsTaken(),
+      completed,
+    };
+    setIsSubmitting(true);
     try {
-      const endpoint = selectedTournament
-        ? `${apiUrl}/api/learning/tournaments/${selectedTournament}/submit_score/`
-        : `${apiUrl}/api/learning/learning-material/${id}/submit_score/`;
-      await axios.post(endpoint, { score: finalScore }, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = selectedTournament
+        ? await learningApi.submitTournament(apiUrl, accessToken, selectedTournament, payload)
+        : await learningApi.submitQuiz(apiUrl, accessToken, id, payload);
+      setResult(data);
+      if (data.new_badges?.length) {
+        setBadges((prev) => [
+          ...data.new_badges.map((b) => ({ badge_type: b.key, display_name: b.name, description: b.description, badge: b })),
+          ...prev,
+        ]);
+      }
+      // Refresh the leaderboard with the new score
+      learningApi.itemLeaderboard(apiUrl, id).then(setTopScorers).catch(() => {});
     } catch (err) {
       console.error('Error submitting score:', err.response?.status || err.message);
-      setNotice('Your score couldn’t be saved.');
+      setNotice(err.response?.data?.error || 'Your score couldn’t be saved.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const finishQuiz = (finalScore) => {
-    submitScore(finalScore);
+  const finishQuiz = (finalScore, finalAnswers = answers) => {
+    submitScore(finalScore, finalAnswers, true);
     setShowSummary(true);
     setTimerStarted(false);
     setTimerPaused(false);
+    setQuestionTimeLeft(null);
   };
 
   const handleAnswer = (isCorrect, optionId) => {
@@ -235,20 +325,25 @@ const Quizzes = ({ isDarkMode, apiString }) => {
 
     // Work out the new score now: the timeout below would otherwise see the old value
     const newScore = isCorrect ? score + 1 : score;
+    const q = questions[currentQuestion];
+    const newAnswers = optionId != null && q ? { ...answers, [q.id]: optionId } : answers;
     setSelectedOption(optionId);
     setIsEvaluated(true);
     setSelectedAnswers([...selectedAnswers, { questionId: currentQuestion, optionId }]);
+    setAnswers(newAnswers);
     setScore(newScore);
 
+    // Leave time to read the explanation, if there is one
+    const delay = q?.explanation ? 3200 : 1500;
     setTimeout(() => {
       setSelectedOption(null);
       setIsEvaluated(false);
       if (currentQuestion < questions.length - 1) {
         setCurrentQuestion(currentQuestion + 1);
       } else {
-        finishQuiz(newScore);
+        finishQuiz(newScore, newAnswers);
       }
-    }, 1500);
+    }, delay);
   };
 
   const handleSubmitQuiz = () => {
@@ -257,6 +352,12 @@ const Quizzes = ({ isDarkMode, apiString }) => {
 
   const closeSummary = () => { setShowSummary(false); resetQuiz(); };
   const closeTimeUp = () => { setShowTimeUp(false); resetQuiz(); };
+
+  // Save a timed-out attempt too, so it counts in history and stats
+  useEffect(() => {
+    if (showTimeUp) submitScore(score, answers, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTimeUp]);
   const handleWarningContinue = () => { setShowWarning(false); resetQuiz(selectedTournament); startTimer(); };
   const handleWarningCancel = () => setShowWarning(false);
 
@@ -304,13 +405,11 @@ const Quizzes = ({ isDarkMode, apiString }) => {
 
   const handleOpenTournamentModal = (tournamentId) => {
     setSelectedTournament(tournamentId);
-    // Sample scores shown until the tournament has real ones (no scores endpoint yet).
-    setTournamentScores([
-      { user: 'User1', score: 90 },
-      { user: 'User2', score: 85 },
-      { user: 'User3', score: 80 },
-    ]);
+    setTournamentScores([]);
     setShowTournamentModal(true);
+    learningApi.tournamentLeaderboard(apiUrl, tournamentId)
+      .then((rows) => setTournamentScores(rows || []))
+      .catch((err) => console.error('Error fetching tournament scores:', err.response?.status || err.message));
   };
 
   const closeTournamentModal = () => {
@@ -349,9 +448,13 @@ const Quizzes = ({ isDarkMode, apiString }) => {
 
   const total = questions.length;
   const question = questions[currentQuestion];
-  const timeFraction = timeLeft / QUIZ_DURATION;
+  const timeFraction = timeLeft / quizDuration;
+  const qLimit = perQuestionLimit(question);
   const percent = total ? Math.round((score / total) * 100) : 0;
-  const activeTournaments = tournaments.filter((t) => t.is_active).slice(0, 3);
+  // Tournaments for this quiz first; fall back to any live tournament
+  const live = tournaments.filter((t) => t.is_active);
+  const forThisQuiz = live.filter((t) => String(t.learning_item) === String(id));
+  const activeTournaments = (forThisQuiz.length ? forThisQuiz : live).slice(0, 3);
   const playing = timerStarted && !timerPaused;
 
   return (
@@ -414,7 +517,9 @@ const Quizzes = ({ isDarkMode, apiString }) => {
                 {total ? `Question ${currentQuestion + 1} of ${total}` : 'No questions yet'}
               </h2>
               <p className={styles.consoleMeta}>
-                {timerStarted ? (timerPaused ? 'Paused' : 'In progress') : '10 minutes · answer as many as you can'}
+                {timerStarted
+                  ? (timerPaused ? 'Paused' : (questionTimeLeft !== null ? `${questionTimeLeft}s left for this question` : 'In progress'))
+                  : `${describeDuration(quizDuration)}${qLimit ? ` · ${qLimit}s per question` : ''} · pass mark ${quiz.pass_percentage || 60}%`}
               </p>
               {total > 0 && (
                 <ol className={styles.progress} aria-label="Progress">
@@ -461,9 +566,15 @@ const Quizzes = ({ isDarkMode, apiString }) => {
                   </button>
                 ))}
               </div>
+              {isEvaluated && question.explanation && (
+                <p className={styles.idleHint} role="status">{question.explanation}</p>
+              )}
               {!timerStarted && (
                 <p className={styles.idleHint}>
-                  {isBlocked ? 'This quiz is locked.' : 'Press Start to begin. The timer runs for 10 minutes.'}
+                  {isBlocked
+                    ? 'This quiz is locked.'
+                    : `Press Start to begin. The timer runs for ${describeDuration(quizDuration)}.`}
+                  {quiz.my_best && ` Your best: ${quiz.my_best.score}/${quiz.my_best.max_score ?? total}.`}
                 </p>
               )}
             </div>
@@ -514,7 +625,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
                   <li key={t.id} className={styles.tournament}>
                     <h3>{t.title}</h3>
                     <p className={styles.tournamentMeta}>
-                      <span><FaClock aria-hidden="true" /> {t.time_left}</span>
+                      <span><FaClock aria-hidden="true" /> {t.time_left || tournamentTimeLeft(t.end_time)}</span>
                       <span><FaUsers aria-hidden="true" /> {t.participant_count} joined</span>
                     </p>
                     <button type="button" className={styles.smallButton} onClick={() => handleOpenTournamentModal(t.id)}>
@@ -529,19 +640,22 @@ const Quizzes = ({ isDarkMode, apiString }) => {
           </section>
 
           <section className={styles.panel} aria-labelledby="scorers-title">
-            <h2 id="scorers-title" className={styles.panelTitle}><FaMedal aria-hidden="true" /> Today’s top scorers</h2>
+            <h2 id="scorers-title" className={styles.panelTitle}><FaMedal aria-hidden="true" /> Top scorers</h2>
             {topScorers.length > 0 ? (
               <ol className={styles.scorers}>
                 {topScorers.map((scorer, index) => (
                   <li key={`${scorer.user}-${index}`} className={styles.scorer}>
                     <span className={styles.rank}>{index + 1}</span>
-                    <span className={styles.scorerName}>{scorer.user}</span>
-                    <span className={styles.scorerScore}>{scorer.score} pts</span>
+                    <span className={styles.scorerName}>{scorer.name || scorer.user}</span>
+                    <span className={styles.scorerScore}>
+                      {scorer.score}{scorer.max_score ? `/${scorer.max_score}` : ' pts'}
+                      {scorer.time_taken_seconds ? ` · ${formatTime(scorer.time_taken_seconds)}` : ''}
+                    </span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className={styles.panelEmpty}>No scores yet today. Be the first.</p>
+              <p className={styles.panelEmpty}>No scores yet. Be the first.</p>
             )}
           </section>
 
@@ -552,7 +666,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
                 {badges.map((badge, index) => (
                   <li key={`${badge.badge_type}-${index}`} className={styles.badge}>
                     <span className={styles.badgeIcon} aria-hidden="true">
-                      {badge.badge_type === 'quiz_master' ? <FaTrophy /> : <FaMedal />}
+                      <BadgeIcon name={badge.badge?.icon || (badge.badge_type === 'quiz_master' ? 'FaTrophy' : 'FaMedal')} image={badge.badge?.image} />
                     </span>
                     <div>
                       <h3>{badge.display_name}</h3>
@@ -662,9 +776,33 @@ const Quizzes = ({ isDarkMode, apiString }) => {
             <span>{percent}%</span>
           </div>
           <h2 id="summary-title" className={styles.dialogTitle}>Quiz complete</h2>
-          <p className={styles.dialogText}>You scored {score} out of {total}.</p>
+          <p className={styles.dialogText}>
+            You got {score} out of {total} right{secondsTaken() ? ` in ${formatTime(secondsTaken())}` : ''}.
+            {quiz.pass_percentage ? (percent >= quiz.pass_percentage ? ' You passed.' : ` The pass mark is ${quiz.pass_percentage}%.`) : ''}
+          </p>
           {total > 0 && score === total && (
             <p className={styles.dialogHighlight}><FaTrophy aria-hidden="true" /> Perfect score</p>
+          )}
+          {isLoggedIn && isSubmitting && <p className={styles.dialogText}>Saving your score…</p>}
+          {result && (
+            <ul className={styles.badges}>
+              <li className={styles.badge}>
+                <span className={styles.badgeIcon} aria-hidden="true"><FaMedal /></span>
+                <div>
+                  <h3>+{result.xp_earned} XP{result.coins_earned ? ` · +${result.coins_earned} coins` : ''}</h3>
+                  <p>{result.is_new_best ? 'New personal best!' : `Your best is ${result.best_score}.`}</p>
+                </div>
+              </li>
+              {(result.new_badges || []).map((b) => (
+                <li key={b.key} className={styles.badge}>
+                  <span className={styles.badgeIcon} aria-hidden="true"><BadgeIcon name={b.icon} image={b.image} /></span>
+                  <div>
+                    <h3>Badge earned: {b.name}</h3>
+                    <p>{b.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
           {!isLoggedIn && <p className={styles.dialogText}><Link to="/login">Sign in</Link> to save your scores and earn badges.</p>}
           <div className={styles.dialogActions}>
@@ -677,7 +815,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
         <Dialog labelledBy="timeup-title" onClose={closeTimeUp}>
           <span className={styles.dialogIcon} aria-hidden="true"><FaClock /></span>
           <h2 id="timeup-title" className={styles.dialogTitle}>Time’s up</h2>
-          <p className={styles.dialogText}>The 10 minutes ran out before you finished. You can try again from the start.</p>
+          <p className={styles.dialogText}>Time ran out before you finished. You got {score} right. You can try again from the start.</p>
           <div className={styles.dialogActions}>
             <button type="button" className={styles.primaryButton} onClick={closeTimeUp}><FaRedo aria-hidden="true" /> Try again</button>
           </div>
@@ -708,7 +846,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
               {tournamentScores.map((s, index) => (
                 <li key={`${s.user}-${index}`} className={styles.scorer}>
                   <span className={styles.rank}>{index + 1}</span>
-                  <span className={styles.scorerName}>{s.user}</span>
+                  <span className={styles.scorerName}>{s.name || s.user}</span>
                   <span className={styles.scorerScore}>{s.score} pts</span>
                 </li>
               ))}

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaCheck, FaTimes, FaStar, FaDownload, FaAd, FaHeadset, FaBookOpen, FaChevronDown } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import PageHero from '../../components/PageHero/PageHero';
@@ -91,13 +92,18 @@ const Membership = ({ isDarkMode }) => {
   const headerImage = useMemo(() => getImagePath(isDarkMode ? headerDark : headerLight), [isDarkMode]);
   const [billing, setBilling] = useState('monthly');
   const yearly = billing === 'yearly';
+  const navigate = useNavigate();
 
-  // Checkout isn't built yet; say so instead of a button that silently does nothing
+  // Choosing a plan opens checkout with that plan and the selected billing period
   const handleChoosePlan = (planTitle) => {
-    toast.info(
-      planTitle ? `Checkout for the ${planTitle} plan is coming soon.` : 'Free trials are coming soon.',
-      { position: 'top-center', autoClose: 3000, theme: isDarkMode ? 'dark' : 'light' }
-    );
+    if (!planTitle) {
+      toast.info('Free trials are coming soon. Pick a plan below to get started.', {
+        position: 'top-center', autoClose: 3000, theme: isDarkMode ? 'dark' : 'light',
+      });
+      document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    navigate(`/checkout?product=${planTitle.toLowerCase()}_${billing}&return=/premium`);
   };
 
   const scrollToPlans = () => document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

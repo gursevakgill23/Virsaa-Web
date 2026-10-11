@@ -4,21 +4,22 @@
  * Features a dedicated game navbar, map selection, multilingual support (Punjabi/English),
  * timer-based gameplay, achievements, top scorers, hints, coin system, and user profile management.
  */
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../../../context/AuthContext';
+import learningApi from '../../../../api/learningApi';
+import BadgeIcon from '../../../../components/BadgeIcon/BadgeIcon';
+import useGameWallet from '../useGameWallet';
 import styles from './WordSearch.module.css';
 import { Howl } from 'howler';
-import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaEdit, FaCreditCard, FaTrash, FaSignOutAlt, FaGamepad, FaChevronLeft, FaChevronRight, FaMedal, FaFont, FaBolt } from 'react-icons/fa';
+import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaEdit, FaCreditCard, FaTrash, FaSignOutAlt, FaGamepad, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { GiTreasureMap, GiClockwork, GiStairsGoal } from 'react-icons/gi';
 import { IoMdTimer, IoMdSettings } from 'react-icons/io';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import wordsData from './wordData.json';
-import completSound from './assets/sounds/complete.mp3';
-import found from './assets/sounds/found.mp3';
-import levelUp from './assets/sounds/level-up.mp3';
+import { SOUND_URLS, themeBackground } from '../gameAssets';
 
 const playable1 = '/images/Learning/playables.jpg';
 const avatar = '/images/Learning/avatar.jpg';
@@ -39,76 +40,51 @@ const useProductionImagePath = () => {
   };
 };
 
-/*
- * Game progress (coins, XP, welcome bonus, game name/avatar) is kept in its own
- * browser storage key. It used to be saved by calling the auth `login()` with the
- * wrong arguments, which crashed the page and could overwrite the login session.
- */
-const GAME_PROFILE_KEY = 'virsaa_game_profile';
-const GAME_FIELDS = ['coins', 'xp', 'welcomeBonusGiven', 'name', 'avatar'];
-const loadGameProfile = () => {
-  try {
-    return JSON.parse(localStorage.getItem(GAME_PROFILE_KEY)) || {};
-  } catch {
-    return {};
-  }
-};
-const pickGameFields = (obj = {}) => GAME_FIELDS.reduce((acc, key) => {
-  if (obj[key] !== undefined) acc[key] = obj[key];
-  return acc;
-}, {});
-const writeGameProfile = (fields) => {
-  try {
-    localStorage.setItem(GAME_PROFILE_KEY, JSON.stringify({ ...loadGameProfile(), ...fields }));
-  } catch {
-    /* storage unavailable (private mode): progress just isn't kept */
-  }
-};
+const GAME_KEY = 'word_search';
 
 // Initialize sound effects for the game
 const sounds = {
-  complete: new Howl({ src: [completSound] }),
-  achievement: new Howl({ src: [levelUp] }),
-  coin: new Howl({ src: [found] }),
-  wordFound: new Howl({ src: [found] }),
-  error: new Howl({ src: ['./assets/sounds/error.mp3'] }),
+  complete: new Howl({ src: [SOUND_URLS.complete] }),
+  achievement: new Howl({ src: [SOUND_URLS.levelUp] }),
+  coin: new Howl({ src: [SOUND_URLS.found] }),
+  wordFound: new Howl({ src: [SOUND_URLS.found] }),
+  error: new Howl({ src: [SOUND_URLS.error] }),
 };
 
-// Mock API to fetch top scorers (to be replaced with actual API)
-const fetchTopScorers = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return [
-    { id: 1, name: 'WordMaster', score: 3250, avatar: avatar },
-    { id: 2, name: 'LexiconPro', score: 2850, avatar: avatar },
-    { id: 3, name: 'VocabKing', score: 2750, avatar: avatar },
-    { id: 4, name: 'AlphabetNinja', score: 2500, avatar: avatar },
-    { id: 5, name: 'LetterHunter', score: 2350, avatar: avatar },
-  ];
+// Top scorers this month from the server
+const fetchTopScorers = async (apiString) => {
+  const data = await learningApi.leaderboard(apiString, { game_key: GAME_KEY, period: 'month', limit: 5 });
+  return (data.results || []).map((row) => ({
+    id: row.user_id,
+    name: row.name,
+    score: row.score,
+    avatar: row.avatar || avatar,
+  }));
 };
 
-// Mock API to fetch user achievements (to be replaced with actual API)
-const fetchUserAchievements = async (userId) => {
-  await new Promise(resolve => setTimeout(resolve, 800));
-  if (!userId) return [];
-  return [
-    { id: 1, name: 'First Game', description: 'Complete your first game', earned: true, icon: <FaMedal /> },
-    { id: 2, name: 'Word Master', description: 'Find 50 words', earned: false, icon: <FaFont />, progress: '12/50' },
-    { id: 3, name: 'Speedster', description: 'Complete a game in under 2 minutes', earned: true, icon: <FaBolt /> },
-    { id: 4, name: 'Premium Player', description: 'Play a premium map', earned: false, icon: <FaGem /> },
-    { id: 5, name: 'Coin Collector', description: 'Earn 1000 coins', earned: false, icon: <FaCoins />, progress: '350/1000' },
-  ];
+// Achievements for this game (and general ones) with the player's progress
+const fetchUserAchievements = async (apiString, token) => {
+  const data = await learningApi.achievements(apiString, token, GAME_KEY);
+  return (data.achievements || []).map((a) => ({
+    id: a.key,
+    name: a.name,
+    description: a.description,
+    earned: a.earned,
+    icon: <BadgeIcon name={a.icon} image={a.image} />,
+    progress: !a.earned && a.target > 1 ? `${a.current}/${a.target}` : null,
+  }));
 };
 
-// Mock API to fetch user game stats (to be replaced with actual API)
-const fetchUserGameStats = async (userId) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  if (!userId) return null;
+// The player's Word Search record from the server
+const fetchUserGameStats = async (apiString, token) => {
+  const { stats } = await learningApi.summary(apiString, token);
+  const game = stats.per_game?.[GAME_KEY] || {};
   return {
-    totalMatches: 45,
-    wins: 30,
-    losses: 15,
-    totalCoinsWon: 3200,
-    totalCoinsLostOnHints: 150,
+    totalMatches: game.played || 0,
+    wins: game.won || 0,
+    losses: (game.played || 0) - (game.won || 0),
+    totalCoinsWon: stats.coins_earned_total || 0,
+    totalCoinsLostOnHints: stats.coins_spent_total || 0,
   };
 };
 
@@ -122,24 +98,22 @@ const fetchPaymentMethods = async (userId) => {
   ];
 };
 
-// Fetch words from the local JSON file based on map level, difficulty, and language
-const fetchWords = (map, difficulty, language) => {
+// Words come from the server (Admin > Learning api > Game words), by map level and difficulty
+const fetchWords = async (apiString, map, difficulty, language) => {
   try {
     const levelRange = map.id <= 10 ? '1-10' : '11-20';
-    const wordsArray = wordsData.levels[levelRange]?.[difficulty.toLowerCase()];
-    
-    if (!wordsArray || wordsArray.length < 5) {
+    const data = await learningApi.gameWords(apiString, GAME_KEY, {
+      level: levelRange,
+      difficulty: difficulty.toLowerCase(),
+      count: 10,
+    });
+    const words = data.words || [];
+    if (words.length < 5) {
       throw new Error(`Not enough words for level ${levelRange}, difficulty ${difficulty}`);
     }
-
-    console.log(`Fetched words for level ${levelRange}, difficulty ${difficulty}:`, wordsArray);
-
-    const shuffledWords = wordsArray.sort(() => Math.random() - 0.5);
-    const selectedWords = shuffledWords.slice(0, 10).map(word => language === 'punjabi' ? word.punjabi : word.word);
-    
-    return selectedWords;
+    return words.map((w) => (language === 'punjabi' ? w.punjabi : w.word));
   } catch (error) {
-    console.error('Error fetching words:', error);
+    console.error('Error fetching words:', error.response?.status || error.message);
     return [];
   }
 };
@@ -323,18 +297,22 @@ const WordSearch = () => {
 };
 
 // GamePlay component to be rendered in the new tab
-const WordSearchGamePlay = () => {
+const WordSearchGamePlay = ({ apiString }) => {
   const getImagePath = useProductionImagePath();
 
-  const { isLoggedIn, userData: authUser, logout } = useAuth();
-  // Game progress merged over the signed-in user (see GAME_PROFILE_KEY above)
-  const [gameProfile, setGameProfile] = useState(loadGameProfile);
-  const userData = useMemo(() => (authUser ? { ...authUser, ...gameProfile } : null), [authUser, gameProfile]);
-  const saveGameUser = useCallback((updated) => {
-    const fields = pickGameFields(updated);
-    setGameProfile((prev) => ({ ...prev, ...fields }));
-    writeGameProfile(fields);
-  }, []);
+  const { isLoggedIn, isPremium, accessToken, userData: authUser, logout } = useAuth();
+  // Coins, XP and the game name/avatar: saved on the server when signed in, in the browser for guests
+  const wallet = useGameWallet({ apiString, accessToken, isLoggedIn, gameKey: GAME_KEY });
+  const defaultName = [authUser?.first_name, authUser?.last_name].filter(Boolean).join(' ') || authUser?.username || 'Player';
+  const userData = useMemo(() => (authUser ? {
+    ...authUser,
+    isPremium,
+    coins: wallet.coins,
+    xp: wallet.xp,
+    welcomeBonusGiven: wallet.welcomeBonusGiven,
+    name: wallet.name || defaultName,
+    avatar: wallet.avatar || authUser.profile_photo || '',
+  } : null), [authUser, isPremium, wallet.coins, wallet.xp, wallet.welcomeBonusGiven, wallet.name, wallet.avatar, defaultName]);
   const navigate = useNavigate();
 
   // State management for the game
@@ -347,7 +325,7 @@ const WordSearchGamePlay = () => {
   const [foundWords, setFoundWords] = useState([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [score, setScore] = useState(0);
-  const [coins, setCoins] = useState(userData?.coins || 0);
+  const coins = wallet.coins;
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [playAsGuest, setPlayAsGuest] = useState(false);
   const [topScorers, setTopScorers] = useState([]);
@@ -371,8 +349,14 @@ const WordSearchGamePlay = () => {
   const [userStats, setUserStats] = useState(null);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [newName, setNewName] = useState(userData?.name || 'Gursevak Singh');
+  const [newName, setNewName] = useState(userData?.name || '');
   const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
+  const [newAvatarFile, setNewAvatarFile] = useState(null);
+  const [lastResult, setLastResult] = useState(null);   // server reply after a game: badges, best score
+  const scoreRef = useRef(0);
+  const foundCountRef = useRef(0);
+  const [gameWon, setGameWon] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState('game'); // New state for tab navigation
   const [displayCount, setDisplayCount] = useState(6); // Updated for Virsaa Playables
   const timerRef = useRef(null);
@@ -389,40 +373,48 @@ const WordSearchGamePlay = () => {
   };
 
   // Effect to handle welcome bonus on first load
+  // (the server decides the amount and gives it only once per account)
+  const { loaded: walletLoaded, welcomeBonusGiven, claimWelcomeBonus } = wallet;
   useEffect(() => {
-    if (!userData?.welcomeBonusGiven) {
-      const bonus = isLoggedIn ? (userData?.isPremium ? 500 : 200) : 100;
-      const newCoins = (userData?.coins || 0) + bonus;
-      setCoins(newCoins);
+    if (!walletLoaded || welcomeBonusGiven) return undefined;
+    let cancelled = false;
+    claimWelcomeBonus().then((bonus) => {
+      if (cancelled || !bonus) return;
       setWelcomeBonusAmount(bonus);
       setShowWelcomeBonus(true);
-
-      if (isLoggedIn) {
-        const updatedUser = { ...userData, coins: newCoins, welcomeBonusGiven: true };
-        saveGameUser(updatedUser);
-      }
-
       if (settings.soundEnabled) sounds.coin.play();
       setTimeout(() => setShowWelcomeBonus(false), 5000);
-    }
-  }, [isLoggedIn, userData, saveGameUser, settings.soundEnabled]);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletLoaded, welcomeBonusGiven, claimWelcomeBonus]);
+
+  // Tell the player if their coins couldn't be loaded
+  useEffect(() => {
+    if (wallet.error) toast.error(wallet.error, { toastId: 'wallet-error' });
+  }, [wallet.error]);
+
+  // Keep the latest score for the timer, which runs outside React's render cycle
+  useEffect(() => { scoreRef.current = score; }, [score]);
+  useEffect(() => { foundCountRef.current = foundWords.length; }, [foundWords]);
 
   // Effect to load top scorers, achievements, user stats, and payment methods
   useEffect(() => {
     const loadData = async () => {
       try {
-        const scorers = await fetchTopScorers();
+        const scorers = await fetchTopScorers(apiString).catch(() => []);
         setTopScorers(scorers);
         setLoadingTopScorers(false);
 
-        if (isLoggedIn && userData) {
-          const achievements = await fetchUserAchievements(userData.id);
+        if (isLoggedIn && accessToken) {
+          const [achievements, stats] = await Promise.all([
+            fetchUserAchievements(apiString, accessToken).catch(() => []),
+            fetchUserGameStats(apiString, accessToken).catch(() => null),
+          ]);
           setUserAchievements(achievements);
-
-          const stats = await fetchUserGameStats(userData.id);
           setUserStats(stats);
 
-          const methods = await fetchPaymentMethods(userData.id);
+          const methods = await fetchPaymentMethods(authUser?.id);
           setPaymentMethods(methods);
         }
         setLoadingAchievements(false);
@@ -433,7 +425,8 @@ const WordSearchGamePlay = () => {
       }
     };
     loadData();
-  }, [isLoggedIn, userData]);
+    // refreshKey reloads everything after a game is saved
+  }, [isLoggedIn, accessToken, apiString, authUser?.id, refreshKey]);
 
   // Effect to handle clicks outside the profile dropdown to close it
   useEffect(() => {
@@ -460,9 +453,9 @@ const WordSearchGamePlay = () => {
   const initializeBoard = async () => {
     if (!selectedMap) return;
 
-    const fetchedWords = await fetchWords(selectedMap, selectedMap.difficulty, selectedMap.language);
+    const fetchedWords = await fetchWords(apiString, selectedMap, selectedMap.difficulty, selectedMap.language);
     if (fetchedWords.length === 0) {
-      setErrorMessage('Failed to load words for the game. Please select a different map or try again.');
+      setErrorMessage('The words for this map couldn’t be loaded. Check your connection and try again.');
       console.error('No words fetched for the map:', selectedMap);
       setGameState('select');
       return;
@@ -620,15 +613,7 @@ const WordSearchGamePlay = () => {
         setScore(prev => prev + wordScore);
 
         if (foundWords.length + 1 === wordsToFind.length) {
-          handleGameEnd(true);
-        }
-
-        if (isLoggedIn && userStats) {
-          setUserStats(prev => (prev && {
-            ...prev,
-            totalMatches: prev.totalMatches + (foundWords.length + 1 === wordsToFind.length ? 1 : 0),
-            wins: prev.wins + (foundWords.length + 1 === wordsToFind.length ? 1 : 0),
-          }));
+          handleGameEnd(true, score + wordScore, foundWords.length + 1);
         }
       } else {
         if (settings.soundEnabled) sounds.error.play();
@@ -639,45 +624,39 @@ const WordSearchGamePlay = () => {
   };
 
   // Handle the end of the game (win or lose)
-  const handleGameEnd = (completed) => {
+  // Save the result (signed in: on the server, with badges and leaderboard; guest: in the browser)
+  const saveResult = async (result) => {
+    if (!isLoggedIn && !playAsGuest) return;
+    const data = await wallet.submitResult(result);
+    setLastResult(data);
+    if (data) setRefreshKey((k) => k + 1); // reload stats, achievements and top scorers
+  };
+
+  const handleGameEnd = (completed, finalScore = scoreRef.current, wordsFound = foundCountRef.current) => {
     clearInterval(timerRef.current);
+    setGameWon(completed);
+    const fullTime = Math.floor(selectedMap.timeLimit * selectedDifficulty.timeMultiplier);
+    const remaining = completed ? timeLeft : 0;
+    const base = {
+      score: Math.round(finalScore),
+      completed,
+      time_taken_seconds: Math.max(1, fullTime - remaining),
+      level: `${selectedMap.name} / ${selectedDifficulty.id}`.slice(0, 50),
+      details: { map_id: selectedMap.id, words_found: wordsFound, words_total: wordsToFind.length, language: selectedMap.language },
+    };
 
     if (completed) {
       const timeBonus = Math.floor(timeLeft / 10);
       const coinsEarned = Math.floor(selectedMap.reward * (timeLeft / selectedMap.timeLimit)) + timeBonus;
-
-      if (isLoggedIn || playAsGuest) {
-        const newCoins = coins + coinsEarned;
-        setCoins(newCoins);
-
-        if (isLoggedIn) {
-          const updatedUser = { ...userData, coins: newCoins };
-          saveGameUser(updatedUser);
-
-          setUserStats(prev => (prev && {
-            ...prev,
-            totalCoinsWon: prev.totalCoinsWon + coinsEarned,
-          }));
-        }
-
-        if (settings.soundEnabled) {
-          sounds.complete.play();
-          sounds.coin.play();
-        }
+      saveResult({ ...base, coins_earned: coinsEarned, xp_earned: 20 + wordsFound * 3 });
+      if ((isLoggedIn || playAsGuest) && settings.soundEnabled) {
+        sounds.complete.play();
+        sounds.coin.play();
       }
-
-      setGameState('completed');
     } else {
-      setGameState('completed');
-
-      if (isLoggedIn && userStats) {
-        setUserStats(prev => (prev && {
-          ...prev,
-          totalMatches: prev.totalMatches + 1,
-          losses: prev.losses + 1,
-        }));
-      }
+      saveResult({ ...base, coins_earned: 0, xp_earned: wordsFound * 2 });
     }
+    setGameState('completed');
   };
 
   // Handle map selection with access checks
@@ -711,51 +690,44 @@ const WordSearchGamePlay = () => {
     if (!selectedMap) return;
 
     if (selectedMap.entryFee > 0 && (isLoggedIn || playAsGuest)) {
-      if (coins < selectedMap.entryFee) {
-        setShowBuyCoins(true);
+      const paid = await wallet.spend(selectedMap.entryFee, `Entry fee: ${selectedMap.name}`);
+      if (!paid.ok) {
+        if (paid.reason === 'coins') setShowBuyCoins(true);
+        else setErrorMessage(paid.message);
         return;
       }
-      const newCoins = coins - selectedMap.entryFee;
-      setCoins(newCoins);
-
-      if (isLoggedIn) {
-        const updatedUser = { ...userData, coins: newCoins };
-        saveGameUser(updatedUser);
-      }
     }
+    setLastResult(null);
 
     setErrorMessage(null);
     await initializeBoard();
   };
 
   // Use a hint to reveal a word
-  const useHint = () => {
-    if (coins < 10) {
-      setShowBuyCoins(true);
+  // Hint: pay 10 coins first, then flash the first word you haven't found
+  const HINT_COST = 10;
+  const useHint = async () => {
+    const remainingWords = wordsToFind.filter(word => !foundWords.includes(word));
+    if (remainingWords.length === 0) return;
+    if (!isLoggedIn && !playAsGuest) {
+      setShowLoginModal(true);
       return;
     }
 
-    const remainingWords = wordsToFind.filter(word => !foundWords.includes(word));
-    if (remainingWords.length === 0) return;
+    const paid = await wallet.spend(HINT_COST, 'Hint');
+    if (!paid.ok) {
+      if (paid.reason === 'coins') setShowBuyCoins(true);
+      else toast.error(paid.message);
+      return;
+    }
 
     const hintWord = remainingWords[0];
-    const positions = wordPositions[hintWord];
-
-    setSelectedCells(positions);
+    setSelectedCells(wordPositions[hintWord] || []);
     setTimeout(() => setSelectedCells([]), 2000);
-
-    const newCoins = coins - 10;
-    setCoins(newCoins);
-
-    if (isLoggedIn) {
-      const updatedUser = { ...userData, coins: newCoins };
-      saveGameUser(updatedUser);
-
-      setUserStats(prev => (prev && {
-        ...prev,
-        totalCoinsLostOnHints: prev.totalCoinsLostOnHints + 10,
-      }));
-    }
+    setUserStats(prev => (prev && {
+      ...prev,
+      totalCoinsLostOnHints: prev.totalCoinsLostOnHints + HINT_COST,
+    }));
   };
 
   // Format time in MM:SS format
@@ -771,15 +743,14 @@ const WordSearchGamePlay = () => {
     setShowLoginModal(false);
   };
 
-  // Handle coin purchase
+  // Buying coins: go to checkout, then come back to this game afterwards
   const handleBuyCoins = (amount) => {
     if (!isLoggedIn) {
       setShowLoginModal(true);
       return;
     }
-
-    alert(`Redirecting to payment for ${amount} coins...`);
     setShowBuyCoins(false);
+    navigate(`/checkout?product=coins_${amount}&return=/learning/games/shabd-khoj`);
   };
 
   // Toggle sound settings
@@ -797,14 +768,14 @@ const WordSearchGamePlay = () => {
   };
 
   // Handle profile updates (avatar and name)
-  const handleProfileUpdate = () => {
+  const handleProfileUpdate = async () => {
     if (isLoggedIn) {
-      const updatedUser = {
-        ...userData,
-        name: newName,
-        avatar: newAvatar,
-      };
-      saveGameUser(updatedUser);
+      const ok = await wallet.saveProfile({ name: newName.trim(), avatarFile: newAvatarFile, avatarPreview: newAvatar });
+      if (!ok) {
+        setErrorMessage('Your game profile couldn’t be saved. Try again.');
+        return;
+      }
+      setNewAvatarFile(null);
       setEditingProfile(false);
       setShowProfileDropdown(false);
     }
@@ -814,6 +785,7 @@ const WordSearchGamePlay = () => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setNewAvatarFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         setNewAvatar(event.target.result);
@@ -852,7 +824,7 @@ const WordSearchGamePlay = () => {
     if (!selectedMap) return null;
 
     return (
-      <div className={`${styles.board} ${styles[selectedMap.theme]}`}>
+      <div className={styles.board} style={themeBackground(selectedMap.theme)}>
         <div className={styles.boardOverlay}></div>
         <div className={styles.boardGrid}>
           {board.map((row, rowIndex) => (
@@ -964,7 +936,7 @@ const WordSearchGamePlay = () => {
                 key={map.id}
                 className={`${styles.mapCard} ${map.premium ? styles.premium : ''} ${map.loginRequired ? styles.locked : ''}`}
               >
-                <div className={`${styles.mapImage} ${styles[map.theme]}`}>
+                <div className={styles.mapImage} style={themeBackground(map.theme)}>
                   {map.loginRequired && !isLoggedIn && (
                     <div className={styles.lockOverlay}>
                       <FaLock />
@@ -1220,18 +1192,22 @@ const WordSearchGamePlay = () => {
 
   // Render the game completion screen
   const renderCompletedScreen = () => {
-    const timeBonus = Math.floor(timeLeft / 10);
-    const coinsEarned = Math.floor(selectedMap.reward * (timeLeft / selectedMap.timeLimit)) + timeBonus;
+    const timeBonus = gameWon ? Math.floor(timeLeft / 10) : 0;
+    const estimate = gameWon ? Math.floor(selectedMap.reward * (timeLeft / selectedMap.timeLimit)) + timeBonus : 0;
+    // The server may cap coins; show what was actually saved when we have it
+    const coinsEarned = lastResult ? lastResult.coins_earned : estimate;
+    const pa = settings.language === 'punjabi';
 
     return (
       <div className={styles.completedScreen}>
         <div className={styles.completedContent}>
-          <h2>{settings.language === 'punjabi' ? 'ਵਧਾਈਆਂ!' : 'Congratulations!'}</h2>
+          <h2>{gameWon ? (pa ? 'ਵਧਾਈਆਂ!' : 'Congratulations!') : (pa ? 'ਸਮਾਂ ਖਤਮ!' : 'Time’s up!')}</h2>
           <p>
-            {settings.language === 'punjabi'
-              ? `ਤੁਸੀਂ ${selectedMap.name} ਮੈਪ ਪੂਰੀ ਕਰ ਲਈ ਹੈ!`
-              : `You completed the ${selectedMap.name} map!`}
+            {gameWon
+              ? (pa ? `ਤੁਸੀਂ ${selectedMap.name} ਮੈਪ ਪੂਰੀ ਕਰ ਲਈ ਹੈ!` : `You completed the ${selectedMap.name} map!`)
+              : (pa ? `ਤੁਸੀਂ ${foundWords.length}/${wordsToFind.length} ਸ਼ਬਦ ਲੱਭੇ।` : `You found ${foundWords.length} of ${wordsToFind.length} words.`)}
           </p>
+          {lastResult?.is_new_best && lastResult.score > 0 && <p><FaTrophy /> {pa ? 'ਨਵਾਂ ਨਿੱਜੀ ਰਿਕਾਰਡ!' : 'New personal best!'}</p>}
 
           <div className={styles.resultStats}>
             <div className={styles.statItem}>
@@ -1249,7 +1225,27 @@ const WordSearchGamePlay = () => {
                 {timeBonus > 0 && ` (+${timeBonus} bonus)`}
               </span>
             </div>
+            {lastResult && (
+              <div className={styles.statItem}>
+                <span>XP</span>
+                <span className={styles.statValue}>+{lastResult.xp_earned}</span>
+              </div>
+            )}
           </div>
+
+          {lastResult?.new_badges?.length > 0 && (
+            <div className={styles.achievementsList}>
+              {lastResult.new_badges.map((b) => (
+                <div key={b.key} className={`${styles.achievement} ${styles.earned}`}>
+                  <span className={styles.achievementIcon}><BadgeIcon name={b.icon} image={b.image} /></span>
+                  <div className={styles.achievementDetails}>
+                    <h4>{pa ? 'ਨਵਾਂ ਬੈਜ: ' : 'Badge earned: '}{b.name}</h4>
+                    <p>{b.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className={styles.completedActions}>
             <button className={styles.primaryButton} onClick={resetGame}>
@@ -1609,10 +1605,10 @@ const WordSearchGamePlay = () => {
             ) : (
               <div className={styles.profileInfo}>
                 <img src={getImagePath(userData.avatar || userDefault)} alt="User Avatar" className={styles.profileAvatar} />
-                <h4>{userData.name || 'Demo User'}</h4>
+                <h4>{userData.name}</h4>
                 <button
                   onClick={() => {
-                    setNewName(userData.name || 'Demo User');
+                    setNewName(userData.name || '');
                     setNewAvatar(userData.avatar || userDefault);
                     setEditingProfile(true);
                   }}
@@ -1715,7 +1711,7 @@ const WordSearchGamePlay = () => {
               >
                 <img src={getImagePath(userData.avatar || userDefault)} alt="User" className={styles.userAvatar} />
               </div>
-              <span>{userData.name || 'Demo User'}</span>
+              <span>{userData.name}</span>
               <span className={styles.coins}>
                 {coins} <FaCoins />
               </span>

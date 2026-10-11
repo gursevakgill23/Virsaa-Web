@@ -54,7 +54,21 @@ const BUILT_IN_GAMES = [
 // Work out which game page a database item opens.
 // Uses the item's link when it points at a game route (full URL or path),
 // otherwise recognises the game from its title.
+// "Completed", "In progress", "Best 7/8" for signed-in users
+const cardStatus = (item) => {
+  if (item.my_progress?.status === 'completed') return 'Completed';
+  if (item.my_progress) return 'In progress';
+  if (item.my_best) {
+    const max = item.my_best.max_score;
+    return max ? `Best ${item.my_best.score}/${max}` : `Best ${item.my_best.score}`;
+  }
+  if (item.duration_minutes) return `${item.duration_minutes} min`;
+  return '';
+};
+
 const gameRoute = (item) => {
+  if (item.game_key === 'word_search') return GAME_ROUTES.wordSearch;
+  if (item.game_key === 'memory_match') return GAME_ROUTES.memoryMatch;
   const known = Object.values(GAME_ROUTES);
   let path = item.link || '';
   try {
@@ -133,6 +147,7 @@ const Learning = ({ isDarkMode, apiString }) => {
           link,
           is_restricted: item.is_restricted,
           is_premium: item.is_premium,
+          status: cardStatus(item),
         });
 
         const learning = (data.learning || []).map((i) => map(i, 'learning', `/learning-material/${i.id}`));
@@ -223,6 +238,7 @@ const Learning = ({ isDarkMode, apiString }) => {
           <span className={styles.cardCategory}>{card.category}</span>
           <span className={styles.cardTitle}>{card.title}</span>
           {card.description && <span className={styles.cardText}>{card.description}</span>}
+          {card.status && <span className={`${styles.cardStatus} ${card.status === 'Completed' ? styles.cardStatusDone : ''}`}>{card.status}</span>}
         </span>
       </>
     );

@@ -2,14 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
-  FaCrown, FaAward, FaBook, FaClock,
-  FaCloud, FaEdit, FaSave, FaTimes, FaVenusMars,
+  FaCrown, FaBook, FaFire, FaGamepad, FaQuestionCircle, FaCoins, FaStar,
+  FaEdit, FaSave, FaTimes, FaVenusMars,
   FaCalendarAlt, FaHeart, FaPen, FaUser,
 } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
 import styles from './MyProfile.module.css';
 import { useAuth } from '../../../context/AuthContext';
+import learningApi from '../../../api/learningApi';
+import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
@@ -40,9 +42,7 @@ const formatDob = (iso) => {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
-// Map icon names sent by the backend to icons
-const ICONS = { FaBook: <FaBook />, FaClock: <FaClock />, FaAward: <FaAward /> };
-const mapIcon = (name) => ICONS[name] || <FaAward />;
+const ACHIEVEMENTS_SHOWN = 8;
 
 const MyProfile = ({ isDarkMode, apiString }) => {
   const { accessToken, logout } = useAuth();
@@ -97,8 +97,6 @@ const MyProfile = ({ isDarkMode, apiString }) => {
           gender: data.gender || '',
           preferredContent: data.preferred_content || [],
           profile_photo: data.profile_photo,
-          stats: { sessions: 0, completed: 0, streak: 0, storage: 0 },
-          achievements: (data.achievements || []).map((a) => ({ ...a, icon: mapIcon(a.icon) })),
         });
       } catch (err) {
         setLoadError(err.message || 'Your profile couldn’t be loaded.');
@@ -108,6 +106,32 @@ const MyProfile = ({ isDarkMode, apiString }) => {
     };
 
     fetchProfile();
+  }, [accessToken, apiString]);
+
+  // Learning progress, XP and achievements come from the learning API.
+  // If it can't be reached, the rest of the profile still shows.
+  const [journey, setJourney] = useState(null);
+  const [achievements, setAchievements] = useState([]);
+  const [showAllAchievements, setShowAllAchievements] = useState(false);
+
+  useEffect(() => {
+    if (!accessToken) return undefined;
+    let cancelled = false;
+    Promise.all([
+      learningApi.summary(apiString, accessToken),
+      learningApi.achievements(apiString, accessToken),
+    ])
+      .then(([summary, ach]) => {
+        if (cancelled) return;
+        setJourney({ ...summary.stats, wallet: summary.wallet });
+        // Earned first (newest first), then the closest to being earned
+        const rows = [...(ach.achievements || [])].sort((a, b) =>
+          (b.earned - a.earned)
+          || (a.earned ? new Date(b.earned_at) - new Date(a.earned_at) : b.progress - a.progress));
+        setAchievements(rows);
+      })
+      .catch((err) => console.error('Learning summary failed:', err.response?.status || err.message));
+    return () => { cancelled = true; };
   }, [accessToken, apiString]);
 
   const startEditing = (section) => {
@@ -398,25 +422,35 @@ const MyProfile = ({ isDarkMode, apiString }) => {
       {/* ---------- Journey ---------- */}
       <section className={styles.section} aria-labelledby="journey-title">
         <h2 id="journey-title" className={styles.sectionTitle}>Your journey</h2>
-        <p className={styles.lede}>Your reading and listening activity on Virsaa.</p>
+        <p className={styles.lede}>
+          {journey
+            ? `Level ${journey.level} · ${journey.wallet?.xp_into_level ?? 0} of ${journey.wallet?.xp_per_level ?? 500} XP to the next level`
+            : 'Your lessons, quizzes and games on Virsaa.'}
+        </p>
         <div className={styles.stats}>
-          <StatBox icon={<FaClock />} title="Sessions" value={userData.stats.sessions} />
-          <StatBox icon={<FaBook />} title="Completed" value={userData.stats.completed} />
-          <StatBox icon={<FaAward />} title="Day streak" value={userData.stats.streak} />
-          <StatBox icon={<FaCloud />} title="Storage" value={userData.stats.storage} />
+          <StatBox icon={<FaBook />} title="Lessons completed" value={journey?.lessons_completed ?? 0} />
+          <StatBox icon={<FaQuestionCircle />} title="Quizzes completed" value={journey?.quizzes_completed ?? 0} />
+          <StatBox icon={<FaGamepad />} title="Games played" value={journey?.games_played ?? 0} />
+          <StatBox icon={<FaFire />} title="Day streak" value={journey?.current_streak ?? 0} />
+          <StatBox icon={<FaStar />} title="XP" value={journey?.xp ?? 0} />
+          <StatBox icon={<FaCoins />} title="Coins" value={journey?.coins ?? 0} />
         </div>
       </section>
 
       <section className={styles.section} aria-labelledby="achievements-title">
         <h2 id="achievements-title" className={styles.sectionTitle}>Achievements</h2>
-        {userData.achievements.length > 0 ? (
+        {achievements.length > 0 ? (
+          <>
+          <p className={styles.lede}>
+            {achievements.filter((a) => a.earned).length} of {achievements.length} earned
+          </p>
           <ul className={styles.achievements}>
-            {userData.achievements.map((item, index) => (
-              <li key={`${item.name}-${index}`} className={`${styles.achievement} ${item.progress >= 100 ? styles.achievementDone : ''}`}>
-                <span className={styles.achievementIcon} aria-hidden="true">{item.icon}</span>
+            {(showAllAchievements ? achievements : achievements.slice(0, ACHIEVEMENTS_SHOWN)).map((item) => (
+              <li key={item.key} className={`${styles.achievement} ${item.earned ? styles.achievementDone : ''}`}>
+                <span className={styles.achievementIcon} aria-hidden="true"><BadgeIcon name={item.icon} image={item.image} /></span>
                 <div className={styles.achievementBody}>
                   <h4>{item.name}</h4>
-                  <p>{item.description}</p>
+                  <p>{item.description}{!item.earned && item.target > 1 ? ` (${item.current}/${item.target})` : ''}</p>
                   <div className={styles.progress} role="progressbar" aria-valuenow={item.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${item.name} progress`}>
                     <div className={styles.progressFill} style={{ width: `${Math.min(100, item.progress)}%` }} />
                   </div>
@@ -425,9 +459,15 @@ const MyProfile = ({ isDarkMode, apiString }) => {
               </li>
             ))}
           </ul>
+          {achievements.length > ACHIEVEMENTS_SHOWN && (
+            <button type="button" className={styles.secondaryButton} onClick={() => setShowAllAchievements((v) => !v)}>
+              {showAllAchievements ? 'Show fewer' : `Show all ${achievements.length}`}
+            </button>
+          )}
+          </>
         ) : (
           <p className={styles.emptyNote}>
-            No achievements yet. Read an <Link to="/collections/ebooks">ebook</Link> or finish a <Link to="/learning">lesson</Link> to earn your first one.
+            No achievements yet. Finish a <Link to="/learning">lesson</Link>, take a quiz or play a game to earn your first one.
           </p>
         )}
       </section>

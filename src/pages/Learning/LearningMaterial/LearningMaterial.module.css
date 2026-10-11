@@ -373,12 +373,93 @@
   text-transform: capitalize;
 }
 
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chipRow .chip {
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.chipDone {
+  color: #1f6b3e;
+  background: #dff3e6;
+}
+
+[data-theme='dark'] .chipDone {
+  color: #bfeccf;
+  background: rgba(60, 190, 115, 0.2);
+}
+
+.completeBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-color);
+}
+
+.completeText {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.rewardList {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rewardList li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  color: #7a5a12;
+  background: rgba(201, 162, 74, 0.18);
+}
+
+[data-theme='dark'] .rewardList li {
+  color: #f1d58c;
+}
+
 .lessonText {
   margin: 0 0 24px;
   font-size: 1.08rem;
   line-height: 1.7;
   color: var(--secondary-text-color);
   max-width: 68ch;
+}
+
+.lessonBody {
+  margin-top: 28px;
+}
+
+.lessonBody .lessonText {
+  margin-bottom: 16px;
+  color: var(--text-color);
+  white-space: pre-line;
+}
+
+.lessonBody .lessonText:last-child {
+  margin-bottom: 0;
 }
 
 /* Responsive 16:9 video sitting in a recessed "screen" */
