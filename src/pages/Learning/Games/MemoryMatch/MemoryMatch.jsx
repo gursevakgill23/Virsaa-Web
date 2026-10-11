@@ -38,7 +38,7 @@ const useProductionImagePath = () => {
       // Handle both imported images and public folder images
       if (typeof imagePath === 'string') {
         // For public folder images
-        return imagePath.startsWith('/') 
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) 
           ? imagePath 
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {

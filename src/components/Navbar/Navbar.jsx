@@ -24,7 +24,7 @@ const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {
