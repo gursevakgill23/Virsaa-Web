@@ -12,6 +12,7 @@ import { useAuth } from '../../../context/AuthContext.jsx';
 import axios from 'axios';
 import BookReader from '../../../components/BookReader/BookReader';
 import useLibraryItem from '../../../hooks/useLibraryItem';
+import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 
 const DEFAULT_IMAGE_PATH = '/images/Collections/book-image.jpg';
 
@@ -63,6 +64,8 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const library = useLibraryItem(apiString, 'ebook', id);
+  const recordHistory = useHistoryRecorder(apiString);
+  const readingRef = useRef(null); // last page reached, saved to History when the reader closes
   const { liked, saved } = library;
   const relatedRef = useRef(null);
   const recommendedRef = useRef(null);
@@ -182,9 +185,39 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     }
     setShowPdfModal(true);
     fetchPdfLink(); // links expire after an hour, so get a fresh one each time
+    if (ebook) recordHistory(historyEntry());
   };
 
-  const closeReader = () => setShowPdfModal(false);
+  const historyEntry = (extra = {}) => ({
+    type: 'ebook',
+    item_id: id,
+    title: ebook?.title,
+    path: `/collections/ebooks/ebook/${id}`,
+    image: ebook?.cover,
+    ...extra,
+  });
+
+  const handleReaderProgress = (page, numPages) => {
+    const progress = numPages ? (page / numPages) * 100 : 0;
+    readingRef.current = { progress, position: page };
+    recordHistory(historyEntry(readingRef.current), { progressOnly: true });
+  };
+
+  // Save the last page if the reader is left open and the user leaves the page
+  const flushRef = useRef(null);
+  flushRef.current = () => {
+    if (readingRef.current) recordHistory(historyEntry(readingRef.current), { progressOnly: true, force: true });
+  };
+  useEffect(() => {
+    const onHide = () => flushRef.current?.();
+    window.addEventListener('pagehide', onHide);
+    return () => { window.removeEventListener('pagehide', onHide); onHide(); readingRef.current = null; };
+  }, [id]);
+
+  const closeReader = () => {
+    setShowPdfModal(false);
+    if (readingRef.current) recordHistory(historyEntry(readingRef.current), { progressOnly: true, force: true });
+  };
 
 
   const handleShare = async () => {
@@ -573,6 +606,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
           linkError={pdfError}
           onRetry={fetchPdfLink}
           onClose={closeReader}
+          onProgress={handleReaderProgress}
         />
       )}
     </div>

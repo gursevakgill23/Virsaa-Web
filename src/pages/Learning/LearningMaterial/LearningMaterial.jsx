@@ -6,13 +6,14 @@ import styles from './LearningMaterial.module.css';
 import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
 import learningApi from '../../../api/learningApi';
+import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -46,6 +47,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
 
   // Uses the API address the app passes in (this used to be hard-coded to localhost)
   const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
+  const recordHistory = useHistoryRecorder(apiString);
 
   const [item, setItem] = useState(null);
   const [discussionPosts, setDiscussionPosts] = useState([]);
@@ -89,6 +91,19 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
     fetchItem();
     fetchDiscussions();
   }, [id, isLoggedIn, accessToken, apiUrl]);
+
+  // Opening a lesson adds it to History
+  useEffect(() => {
+    if (!item || String(item.id) !== String(id)) return;
+    recordHistory({
+      type: 'lesson',
+      item_id: item.id,
+      title: item.title,
+      path: `/learning-material/${item.id}`,
+      image: item.image_url || item.image || '',
+      ...(item.my_progress?.progress_percent != null ? { progress: item.my_progress.progress_percent } : {}),
+    });
+  }, [item, id, recordHistory]);
 
   const isAccessible = () => {
     if (!item) return false;

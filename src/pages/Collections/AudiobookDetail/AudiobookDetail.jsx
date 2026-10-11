@@ -10,6 +10,7 @@ import PageHero from '../../../components/PageHero/PageHero';
 import Loader from '../../../components/VirsaaLoader/Loader';
 import axios from 'axios';
 import useLibraryItem from '../../../hooks/useLibraryItem';
+import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
@@ -50,6 +51,8 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [relatedLoading, setRelatedLoading] = useState(true);
   const library = useLibraryItem(apiString, 'audiobook', id);
+  const recordHistory = useHistoryRecorder(apiString);
+  const listenedRef = useRef(false); // first play of this visit counts as opening it
   const { liked, saved } = library;
   const [loadError, setLoadError] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
@@ -75,14 +78,44 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const [sortBy, setSortBy] = useState('newest');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ---------- History ----------
+  const historyEntry = (extra = {}) => ({
+    type: 'audiobook',
+    item_id: id,
+    title: audiobook?.title,
+    path: `/collections/audiobooks/audiobook/${id}`,
+    image: audiobook?.cover,
+    ...extra,
+  });
+
+  const listeningProgress = () => {
+    const el = audioRef.current;
+    if (!el || !el.duration) return {};
+    return { progress: (el.currentTime / el.duration) * 100, position: Math.round(el.currentTime) };
+  };
+
+  const saveListening = (force = false) => {
+    if (!audiobook || !listenedRef.current) return;
+    recordHistory(historyEntry(listeningProgress()), { progressOnly: true, force });
+  };
+
+  const handlePlayStarted = () => {
+    setIsPlaying(true);
+    if (!listenedRef.current && audiobook) {
+      listenedRef.current = true;
+      recordHistory(historyEntry(listeningProgress()));
+    }
+  };
+
   // ---------- Player ----------
   const togglePlayPause = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
+      saveListening(true);
     } else {
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      audioRef.current.play().then(handlePlayStarted).catch(() => setIsPlaying(false));
     }
   };
 
@@ -93,7 +126,10 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
     setCurrentTime(next);
   };
 
-  const handleTimeUpdate = () => setCurrentTime(audioRef.current.currentTime);
+  const handleTimeUpdate = () => {
+    setCurrentTime(audioRef.current.currentTime);
+    saveListening(); // throttled to every 15 seconds
+  };
   const handleLoadedMetadata = () => setDuration(audioRef.current.duration);
 
   const handleSeek = (e) => {
@@ -115,6 +151,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
     setRelatedLoading(true);
     setLoadError(null);
     setAudioUrl(null);
+    listenedRef.current = false;
     setIsPlaying(false);
     setCurrentTime(0);
 
@@ -189,7 +226,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const handleListenChapter = () => {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
-    audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    audioRef.current.play().then(handlePlayStarted).catch(() => setIsPlaying(false));
   };
 
   const scrollRow = (ref, direction) => {
@@ -290,7 +327,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
         preload="metadata"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={() => { setIsPlaying(false); saveListening(true); }}
       />
 
       <PageHero

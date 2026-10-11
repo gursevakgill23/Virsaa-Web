@@ -1,6 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { initSiteLanguage } from './i18n/siteLanguage';
+
+// Punjabi / French: loads Google's translator before the app renders
+initSiteLanguage();
 
 /*
  * Browser extensions inject scripts into every page. When one of them throws

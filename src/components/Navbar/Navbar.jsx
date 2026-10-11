@@ -20,6 +20,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import SearchPalette from './SearchPalette';
 import useMembership from '../../hooks/useMembership';
+import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
+import useUnreadNotifications, { refreshUnread } from '../../hooks/useUnreadNotifications';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
@@ -51,10 +53,15 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const { isLoggedIn, userData, accessToken, logout } = useAuth();
   const membership = useMembership(apiString);
   const refreshMembership = membership.refresh;
+  const unread = useUnreadNotifications(apiString);
+  const unreadLabel = unread > 99 ? '99+' : String(unread);
 
-  // Check the plan again each time the account panel opens
+  // Check the plan and notifications again each time the account panel opens
   useEffect(() => {
-    if (showProfileSidebar) refreshMembership();
+    if (showProfileSidebar) {
+      refreshMembership();
+      refreshUnread();
+    }
   }, [showProfileSidebar, refreshMembership]);
 
   // What the plan card in the account panel says
@@ -232,7 +239,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
         onTouchEnd={handleTouchEnd}
       >
         <div className={styles.leftSection}>
-          <div className={styles.logoContainer}>
+          <div className={`${styles.logoContainer} notranslate`} translate="no">
             <img 
               src={getImagePath(logo_virsaa)} 
               alt="VIRSAA Logo" 
@@ -264,6 +271,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
           <button className={styles.searchIcon} onClick={toggleSearch} aria-label="Search (Ctrl+K)">
             <FaSearch />
           </button>
+          <LanguageSwitcher />
           <button className={styles.themeToggle} onClick={toggleTheme}>
             {isDarkMode ? <FaSun /> : <FaMoon />}
           </button>
@@ -276,9 +284,10 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
               type="button"
               className={styles.userProfile}
               onClick={toggleProfileSidebar}
-              aria-label="Open account menu"
+              aria-label={unread > 0 ? `Open account menu, ${unread} unread notifications` : 'Open account menu'}
               aria-expanded={showProfileSidebar}
             >
+              {unread > 0 && <span className={styles.avatarBadge} aria-hidden="true">{unreadLabel}</span>}
               <img 
                 src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)} 
                 alt="" 
@@ -366,6 +375,11 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
               <Link to="/notifications" className={styles.accountLink} onClick={closeProfileSidebar}>
                 <span className={styles.accountLinkIcon}><FaBell /></span>
                 <span>Notifications</span>
+                {unread > 0 && (
+                  <span className={styles.linkCount}>
+                    {unreadLabel}<span className={styles.srOnlyText}> unread</span>
+                  </span>
+                )}
                 <FaChevronRight className={styles.accountLinkArrow} aria-hidden="true" />
               </Link>
               </nav>

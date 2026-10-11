@@ -186,3 +186,29 @@ body.no-scroll {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Google website translator: hide its own bar and popups ---------- */
+body > .skiptranslate,
+iframe.skiptranslate,
+.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
+  display: none !important;
+}
+
+body {
+  top: 0 !important;
+}
+
+.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
+}
+
+font {
+  /* translated text is wrapped in <font>; keep it looking like the original */
+  background: none !important;
+  box-shadow: none !important;
+}

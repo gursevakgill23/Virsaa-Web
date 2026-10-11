@@ -5,6 +5,7 @@ import {
   FaStepBackward, FaStepForward, FaVolumeUp, FaExpand, FaBookOpen,
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
+import useHistoryRecorder from '../../hooks/useHistoryRecorder';
 import styles from './Gurbani.module.css';
 import audioFile from './assets/Nitnem.mp3';
 import videoFile from './assets/Aarti.mp4';
@@ -13,7 +14,7 @@ const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -44,7 +45,8 @@ const actionLabel = (item) => {
   return item.isPremium ? 'Unlock to watch' : 'Watch now';
 };
 
-const Gurbani = ({ isDarkMode }) => {
+const Gurbani = ({ isDarkMode, apiString }) => {
+  const recordHistory = useHistoryRecorder(apiString);
   const getImagePath = useProductionImagePath();
 
   const header_image_light = '/images/header-image.png';
@@ -139,6 +141,7 @@ const Gurbani = ({ isDarkMode }) => {
   };
 
   const playMedia = (item, type) => {
+    recordHistory({ type: type === 'video' ? 'video' : 'gurbani', item_id: `gurbani-${item.id}`, title: item.title, path: '/gurbani' });
     setCurrentMedia(item);
     setMediaType(type);
     setShowMediaModal(true);
@@ -269,7 +272,7 @@ const Gurbani = ({ isDarkMode }) => {
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} notranslate`} translate="no">
       {mediaType === 'audio' && showMediaModal && (
         <audio
           ref={mediaRef}

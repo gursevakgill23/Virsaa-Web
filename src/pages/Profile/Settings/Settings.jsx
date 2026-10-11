@@ -1,27 +1,24 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   FaMoon, FaSun, FaLanguage, FaBell, FaLock,
-  FaDatabase, FaTrash, FaPalette, FaUserShield, FaDesktop, FaKey, FaCheck,
+  FaDatabase, FaTrash, FaPalette, FaUserShield, FaDesktop, FaKey, FaCheck, FaHistory,
 } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
+import { useAuth } from '../../../context/AuthContext';
+import accountApi from '../../../api/accountApi';
+import { refreshUnread } from '../../../hooks/useUnreadNotifications';
+import { LANGUAGES, getLanguage, setLanguage as setSiteLanguage } from '../../../i18n/siteLanguage';
 import styles from './Settings.module.css';
 
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
-    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
   }
   return imagePath;
 };
-
-const LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'pa', name: 'Punjabi' },
-  { code: 'hi', name: 'Hindi' },
-  { code: 'es', name: 'Spanish' },
-];
 
 const THEMES = [
   { value: 'light', name: 'Light', icon: <FaSun /> },
@@ -37,40 +34,97 @@ const TABS = [
   { id: 'privacy', label: 'Privacy', icon: <FaUserShield /> },
 ];
 
+const NOTIFICATION_ROWS = [
+  { key: 'notify_new_content', title: 'New in the library', description: 'New ebooks, audiobooks and authors.' },
+  { key: 'notify_updates', title: 'Updates to things you liked or saved', description: 'When a book or author you follow gets new details.' },
+  { key: 'notify_learning', title: 'Learning', description: 'New lessons, quizzes and games, and badges you earn.' },
+  { key: 'notify_account', title: 'Account', description: 'Membership, password changes and other account messages.' },
+];
+
+const THEME_KEY = 'virsaa:theme-choice';
+const formatBytes = (n) => {
+  if (!n) return '0 MB';
+  const mb = n / (1024 * 1024);
+  return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+};
+
 /* One row with a title, a description and a switch */
-const SwitchRow = ({ id, title, description, checked, onChange }) => (
+const SwitchRow = ({ id, title, description, checked, onChange, disabled }) => (
   <div className={styles.settingItem}>
     <div className={styles.settingInfo}>
       <label htmlFor={id} className={styles.settingTitle}>{title}</label>
       <p id={`${id}-desc`}>{description}</p>
     </div>
     <span className={styles.switch}>
-      <input id={id} type="checkbox" role="switch" checked={checked} onChange={onChange} aria-describedby={`${id}-desc`} />
+      <input id={id} type="checkbox" role="switch" checked={checked} onChange={onChange} disabled={disabled} aria-describedby={`${id}-desc`} />
       <span className={styles.track} aria-hidden="true"><span className={styles.thumb} /></span>
     </span>
   </div>
 );
 
-const Settings = ({ isDarkMode, toggleTheme }) => {
+const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
+  const { isLoggedIn, accessToken, logout } = useAuth();
+  const navigate = useNavigate();
+  const toastTheme = isDarkMode ? 'dark' : 'light';
+  const say = (type, text) => toast[type](text, { position: 'top-center', autoClose: 3000, theme: toastTheme });
 
   const [activeTab, setActiveTab] = useState('general');
-  const [selectedTheme, setSelectedTheme] = useState(isDarkMode ? 'dark' : 'light');
-  const [language, setLanguage] = useState('en');
-  const [notifications, setNotifications] = useState({ email: true, push: false, weeklyDigest: true });
-  const [security, setSecurity] = useState({ twoFactor: false, passwordChangeRequired: false });
-  const [privacy, setPrivacy] = useState({ dataCollection: true, personalizedAds: true, visibility: 'only_me' });
-  const [cacheSize, setCacheSize] = useState('1.2 GB');
+  const [selectedTheme, setSelectedTheme] = useState(() => {
+    try { return localStorage.getItem(THEME_KEY) || (isDarkMode ? 'dark' : 'light'); } catch { return isDarkMode ? 'dark' : 'light'; }
+  });
+  const [prefs, setPrefs] = useState(null);
+  const [prefsError, setPrefsError] = useState(null);
 
-  const toastTheme = isDarkMode ? 'dark' : 'light';
+  // Security
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
+  const [pwErrors, setPwErrors] = useState({});
+  const [pwSaving, setPwSaving] = useState(false);
 
-  // App's toggleTheme() flips the theme, so only call it when the result should differ
+  // Storage
+  const [storage, setStorage] = useState(null);
+
+  // Privacy
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const loadPrefs = useCallback(async () => {
+    if (!isLoggedIn || !accessToken) return;
+    try {
+      setPrefs(await accountApi.settings(apiString, accessToken));
+      setPrefsError(null);
+    } catch {
+      setPrefsError('Your settings couldn’t be loaded right now.');
+    }
+  }, [apiString, accessToken, isLoggedIn]);
+
+  useEffect(() => { loadPrefs(); }, [loadPrefs]);
+
+  const measureStorage = useCallback(async () => {
+    try {
+      if (navigator.storage?.estimate) {
+        const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+        setStorage({ usage, quota });
+        return;
+      }
+    } catch { /* not supported */ }
+    setStorage({ usage: 0, quota: 0 });
+  }, []);
+
+  useEffect(() => { if (activeTab === 'storage') measureStorage(); }, [activeTab, measureStorage]);
+
+  // ---------- Appearance ----------
   const handleThemeChange = (value) => {
     const wantDark = value === 'system'
       ? window.matchMedia('(prefers-color-scheme: dark)').matches
       : value === 'dark';
     if (wantDark !== isDarkMode && typeof toggleTheme === 'function') toggleTheme();
     setSelectedTheme(value);
+    try { localStorage.setItem(THEME_KEY, value); } catch { /* ignore */ }
+    if (isLoggedIn) accountApi.updateSettings(apiString, accessToken, { theme: wantDark ? 'dark' : 'light' }).catch(() => {});
   };
 
   const isThemeActive = (value) => {
@@ -78,20 +132,102 @@ const Settings = ({ isDarkMode, toggleTheme }) => {
     return (value === 'dark' && isDarkMode) || (value === 'light' && !isDarkMode);
   };
 
-  const toggle = (setter, key) => () => setter((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  const clearCache = () => {
-    setCacheSize('0 MB');
-    toast.success('Cache cleared', { position: 'top-center', autoClose: 2000, theme: toastTheme });
+  // ---------- Saved switches ----------
+  const togglePref = async (key) => {
+    const next = !prefs[key];
+    setPrefs((p) => ({ ...p, [key]: next }));
+    try {
+      setPrefs(await accountApi.updateSettings(apiString, accessToken, { [key]: next }));
+      if (key.startsWith('notify_')) refreshUnread(); // muted kinds drop out of the count
+    } catch {
+      setPrefs((p) => ({ ...p, [key]: !next }));
+      say('error', 'That setting didn’t save. Try again.');
+    }
   };
 
-  const handleDeleteData = () => {
-    toast.info('Deleting account data isn’t available online yet. Contact us from the About page and we’ll do it for you.', {
-      position: 'top-center', autoClose: 5000, theme: toastTheme,
-    });
+  // ---------- Password ----------
+  const submitPassword = async (e) => {
+    e.preventDefault();
+    const errors = {};
+    if (!pw.current) errors.current = 'Enter your current password.';
+    if (pw.next.length < 8) errors.next = 'Use at least 8 characters.';
+    if (pw.next !== pw.confirm) errors.confirm = 'The passwords don’t match.';
+    setPwErrors(errors);
+    if (Object.keys(errors).length) return;
+    setPwSaving(true);
+    try {
+      await accountApi.changePassword(apiString, accessToken, pw.current, pw.next);
+      setPw({ current: '', next: '', confirm: '' });
+      say('success', 'Password changed');
+      refreshUnread();
+    } catch (err) {
+      const d = err.response?.data || {};
+      const first = (v) => (Array.isArray(v) ? v[0] : v);
+      setPwErrors({
+        current: first(d.current_password),
+        next: first(d.new_password) || (!d.current_password && !d.new_password ? 'The password couldn’t be changed. Try again.' : undefined),
+      });
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  // ---------- Storage ----------
+  const clearDeviceData = async () => {
+    try {
+      if (window.caches?.keys) {
+        const keys = await window.caches.keys();
+        await Promise.all(keys.map((k) => window.caches.delete(k)));
+      }
+      sessionStorage.clear();
+      // Only Virsaa's own saved preferences; sign-in stays
+      Object.keys(localStorage).filter((k) => k.startsWith('virsaa')).forEach((k) => localStorage.removeItem(k));
+    } catch { /* storage blocked */ }
+    say('success', 'Saved data on this device cleared');
+    measureStorage();
+  };
+
+  // ---------- Privacy ----------
+  const clearHistory = async () => {
+    setConfirmClearHistory(false);
+    try {
+      await accountApi.clearHistory(apiString, accessToken);
+      say('success', 'History cleared');
+    } catch {
+      say('error', 'History couldn’t be cleared. Try again.');
+    }
+  };
+
+  const deleteAccount = async (e) => {
+    e.preventDefault();
+    if (!deletePassword) { setDeleteError('Enter your password to confirm.'); return; }
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await accountApi.deleteAccount(apiString, accessToken, deletePassword);
+      try { await logout?.(); } catch { /* already gone */ }
+      say('info', 'Your account was deleted.');
+      navigate('/');
+    } catch (err) {
+      const d = err.response?.data || {};
+      setDeleteError((Array.isArray(d.password) ? d.password[0] : d.password) || 'The account couldn’t be deleted. Try again.');
+      setDeleting(false);
+    }
   };
 
   const tab = TABS.find((t) => t.id === activeTab);
+  const currentLanguage = getLanguage();
+
+  const needLogin = (
+    <p className={styles.emptyNote}><Link to="/login">Log in</Link> to change this setting.</p>
+  );
+
+  const prefsState = !isLoggedIn ? needLogin
+    : prefsError ? (
+      <p className={styles.errorText} role="alert">
+        {prefsError} <button type="button" className={styles.editLink} onClick={loadPrefs}>Try again</button>
+      </p>
+    ) : !prefs ? <p className={styles.hint}>Loading…</p> : null;
 
   return (
     <div className={styles.page}>
@@ -142,7 +278,6 @@ const Settings = ({ isDarkMode, toggleTheme }) => {
                         className={`${styles.themeCard} ${active ? styles.themeActive : ''}`}
                         onClick={() => handleThemeChange(theme.value)}
                       >
-                        {/* Small preview of the page in that theme */}
                         <span className={`${styles.preview} ${styles[`preview_${theme.value}`]}`} aria-hidden="true">
                           <span className={styles.previewBar} />
                           <span className={styles.previewHero} />
@@ -159,94 +294,168 @@ const Settings = ({ isDarkMode, toggleTheme }) => {
                 </div>
               </div>
 
-              <div className={styles.block}>
+              <div className={`${styles.block} notranslate`} translate="no">
                 <h3 className={styles.blockTitle}><FaLanguage aria-hidden="true" /> Language</h3>
                 <label htmlFor="language" className={styles.srOnly}>Language</label>
-                <select id="language" className={`${styles.select} ${styles.narrow}`} value={language} onChange={(e) => setLanguage(e.target.value)}>
-                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+                <select
+                  id="language"
+                  className={`${styles.select} ${styles.narrow}`}
+                  value={currentLanguage}
+                  onChange={(e) => setSiteLanguage(e.target.value)}
+                >
+                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
                 </select>
-                <p className={styles.hint}>Translations are on the way. Some pages are still English only.</p>
+                <p className={styles.hint}>The whole website switches language. Gurbani and the word games stay as written.</p>
               </div>
             </>
           )}
 
           {activeTab === 'notifications' && (
-            <div className={styles.rows}>
-              <SwitchRow id="n-email" title="Email notifications" description="Important updates about your account and saved items." checked={notifications.email} onChange={toggle(setNotifications, 'email')} />
-              <SwitchRow id="n-push" title="Push notifications" description="Instant alerts in your browser for replies and events." checked={notifications.push} onChange={toggle(setNotifications, 'push')} />
-              <SwitchRow id="n-digest" title="Weekly digest" description="One email a week with new books, lessons and events." checked={notifications.weeklyDigest} onChange={toggle(setNotifications, 'weeklyDigest')} />
-            </div>
+            prefsState || (
+              <div className={styles.rows}>
+                {NOTIFICATION_ROWS.map((row) => (
+                  <SwitchRow
+                    key={row.key}
+                    id={`n-${row.key}`}
+                    title={row.title}
+                    description={row.description}
+                    checked={Boolean(prefs[row.key])}
+                    onChange={() => togglePref(row.key)}
+                  />
+                ))}
+              </div>
+            )
           )}
 
           {activeTab === 'security' && (
-            <>
-              <div className={styles.rows}>
-                <SwitchRow id="s-2fa" title="Two-factor authentication" description="Ask for a code from your phone when you sign in." checked={security.twoFactor} onChange={toggle(setSecurity, 'twoFactor')} />
-                <SwitchRow id="s-pw" title="Regular password change" description="Remind me to change my password every 90 days." checked={security.passwordChangeRequired} onChange={toggle(setSecurity, 'passwordChangeRequired')} />
-              </div>
-              <div className={styles.settingItem}>
-                <div className={styles.settingInfo}>
-                  <span className={styles.settingTitle}>Password</span>
-                  <p>We’ll email you a code to set a new one.</p>
+            !isLoggedIn ? needLogin : (
+              <form className={styles.block} onSubmit={submitPassword} noValidate>
+                <h3 className={styles.blockTitle}><FaKey aria-hidden="true" /> Change password</h3>
+                {[
+                  { key: 'current', label: 'Current password', auto: 'current-password' },
+                  { key: 'next', label: 'New password', auto: 'new-password' },
+                  { key: 'confirm', label: 'Confirm new password', auto: 'new-password' },
+                ].map((f) => (
+                  <label key={f.key} className={styles.field} htmlFor={`pw-${f.key}`}>
+                    <span className={styles.fieldLabel}>{f.label}</span>
+                    <input
+                      id={`pw-${f.key}`}
+                      type="password"
+                      autoComplete={f.auto}
+                      value={pw[f.key]}
+                      onChange={(e) => setPw((p) => ({ ...p, [f.key]: e.target.value }))}
+                      className={`${styles.input} ${pwErrors[f.key] ? styles.inputError : ''}`}
+                      aria-invalid={Boolean(pwErrors[f.key])}
+                      aria-describedby={pwErrors[f.key] ? `pw-${f.key}-err` : undefined}
+                    />
+                    {pwErrors[f.key] && <span id={`pw-${f.key}-err`} className={styles.errorText}>{pwErrors[f.key]}</span>}
+                  </label>
+                ))}
+                <div className={styles.actions}>
+                  <button type="submit" className={styles.primaryButton} disabled={pwSaving}>
+                    {pwSaving ? 'Changing…' : 'Change password'}
+                  </button>
+                  <Link to="/forgot-password" className={styles.editLink}>Forgot your current password?</Link>
                 </div>
-                <Link to="/forgot-password" className={styles.secondaryButton}>
-                  <FaKey aria-hidden="true" /> Change password
-                </Link>
-              </div>
-            </>
+              </form>
+            )
           )}
 
           {activeTab === 'storage' && (
             <>
               <div className={styles.storage}>
                 <div className={styles.storageHead}>
-                  <span>Storage used</span>
-                  <strong>1.2 GB of 3.5 GB</strong>
+                  <span>Saved on this device</span>
+                  <strong>
+                    {storage
+                      ? storage.quota ? `${formatBytes(storage.usage)} of ${formatBytes(storage.quota)}` : 'Not available in this browser'
+                      : 'Checking…'}
+                  </strong>
                 </div>
-                <div className={styles.storageBar} role="progressbar" aria-valuenow={35} aria-valuemin={0} aria-valuemax={100} aria-label="Storage used">
-                  <div className={styles.storageFill} style={{ width: '35%' }} />
+                <div className={styles.storageBar} role="progressbar" aria-valuenow={storage?.quota ? Math.round((storage.usage / storage.quota) * 100) : 0} aria-valuemin={0} aria-valuemax={100} aria-label="Storage used">
+                  <div className={styles.storageFill} style={{ width: storage?.quota ? `${Math.max(1, Math.min(100, (storage.usage / storage.quota) * 100))}%` : '0%' }} />
                 </div>
               </div>
               <div className={styles.settingItem}>
                 <div className={styles.settingInfo}>
-                  <span className={styles.settingTitle}>Cache</span>
-                  <p>Temporary files that make pages and audio load faster. Currently {cacheSize}.</p>
+                  <span className={styles.settingTitle}>Saved data</span>
+                  <p>Cached pages and your preferences on this device. You stay signed in.</p>
                 </div>
-                <button type="button" className={styles.secondaryButton} onClick={clearCache} disabled={cacheSize === '0 MB'}>
-                  <FaTrash aria-hidden="true" /> Clear cache
+                <button type="button" className={styles.secondaryButton} onClick={clearDeviceData}>
+                  <FaTrash aria-hidden="true" /> Clear
                 </button>
               </div>
             </>
           )}
 
           {activeTab === 'privacy' && (
-            <>
-              <div className={styles.rows}>
-                <SwitchRow id="p-data" title="Usage data" description="Share anonymous usage data to help us improve Virsaa." checked={privacy.dataCollection} onChange={toggle(setPrivacy, 'dataCollection')} />
-                <SwitchRow id="p-ads" title="Personalized recommendations" description="Suggest books and lessons based on what you open." checked={privacy.personalizedAds} onChange={toggle(setPrivacy, 'personalizedAds')} />
-                <div className={styles.settingItem}>
-                  <div className={styles.settingInfo}>
-                    <label htmlFor="visibility" className={styles.settingTitle}>Who can see your activity</label>
-                    <p>Your reading history and favorites.</p>
+            prefsState || (
+              <>
+                <div className={styles.rows}>
+                  <SwitchRow
+                    id="p-history"
+                    title="Save my history"
+                    description="Keep a list of what you read, watch and listen to on the History page."
+                    checked={Boolean(prefs.save_history)}
+                    onChange={() => togglePref('save_history')}
+                  />
+                  <div className={styles.settingItem}>
+                    <div className={styles.settingInfo}>
+                      <span className={styles.settingTitle}>Clear history</span>
+                      <p>Remove everything from your History page.</p>
+                    </div>
+                    {confirmClearHistory ? (
+                      <span className={styles.actions}>
+                        <button type="button" className={styles.secondaryButton} onClick={() => setConfirmClearHistory(false)}>Keep it</button>
+                        <button type="button" className={styles.dangerButton} onClick={clearHistory}>Clear history</button>
+                      </span>
+                    ) : (
+                      <button type="button" className={styles.secondaryButton} onClick={() => setConfirmClearHistory(true)}>
+                        <FaHistory aria-hidden="true" /> Clear history
+                      </button>
+                    )}
                   </div>
-                  <select id="visibility" className={`${styles.select} ${styles.inlineSelect}`} value={privacy.visibility} onChange={(e) => setPrivacy((p) => ({ ...p, visibility: e.target.value }))}>
-                    <option value="only_me">Only me</option>
-                    <option value="friends">Friends</option>
-                    <option value="public">Everyone</option>
-                  </select>
                 </div>
-              </div>
 
-              <div className={styles.danger}>
-                <div>
-                  <h3>Delete account data</h3>
-                  <p>Remove your profile, favorites and history from Virsaa.</p>
+                <div className={styles.danger}>
+                  <div>
+                    <h3>Delete account</h3>
+                    <p>Permanently delete your account, profile, favorites, history, coins and badges. This can’t be undone.</p>
+                  </div>
+                  {!deleteOpen && (
+                    <button type="button" className={styles.dangerButton} onClick={() => setDeleteOpen(true)}>
+                      <FaTrash aria-hidden="true" /> Delete account
+                    </button>
+                  )}
                 </div>
-                <button type="button" className={styles.dangerButton} onClick={handleDeleteData}>
-                  <FaTrash aria-hidden="true" /> Delete data
-                </button>
-              </div>
-            </>
+                {deleteOpen && (
+                  <form className={styles.block} onSubmit={deleteAccount} noValidate>
+                    <label className={styles.field} htmlFor="delete-password">
+                      <span className={styles.fieldLabel}>Enter your password to confirm</span>
+                      <input
+                        id="delete-password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        className={`${styles.input} ${deleteError ? styles.inputError : ''}`}
+                        aria-invalid={Boolean(deleteError)}
+                        aria-describedby={deleteError ? 'delete-err' : undefined}
+                      />
+                      {deleteError && <span id="delete-err" className={styles.errorText}>{deleteError}</span>}
+                    </label>
+                    <div className={styles.actions}>
+                      <button type="button" className={styles.secondaryButton} onClick={() => { setDeleteOpen(false); setDeletePassword(''); setDeleteError(''); }}>
+                        Cancel
+                      </button>
+                      <button type="submit" className={styles.dangerButton} disabled={deleting}>
+                        {deleting ? 'Deleting…' : 'Delete my account'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </>
+            )
           )}
         </div>
       </div>

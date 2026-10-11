@@ -999,7 +999,7 @@ const MemoryMatch = ({ apiString }) => {
 
   // Main render
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} notranslate`} translate="no">
       {renderNavbar()}
       {renderSettingsSidebar()}
       {showCoinShop && renderCoinShopModal()}

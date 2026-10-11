@@ -1,64 +1,93 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FaTrash, FaSearch, FaTimes, FaBook, FaHeadphones, FaGraduationCap,
-  FaQuestionCircle, FaHandsHelping, FaHistory, FaCheck,
+  FaQuestionCircle, FaHandsHelping, FaHistory, FaCheck, FaPlayCircle,
 } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
+import { useAuth } from '../../../context/AuthContext';
+import accountApi from '../../../api/accountApi';
 import styles from './History.module.css';
 
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
-    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
   }
   return imagePath;
 };
 
 const TYPES = {
-  ebook: { label: 'Ebook', icon: <FaBook /> },
-  audiobook: { label: 'Audiobook', icon: <FaHeadphones /> },
-  lesson: { label: 'Lesson', icon: <FaGraduationCap /> },
-  quiz: { label: 'Quiz', icon: <FaQuestionCircle /> },
-  gurbani: { label: 'Gurbani', icon: <FaHandsHelping /> },
+  ebook: { label: 'Ebook', icon: <FaBook />, verb: 'read' },
+  audiobook: { label: 'Audiobook', icon: <FaHeadphones />, verb: 'listened' },
+  lesson: { label: 'Lesson', icon: <FaGraduationCap />, verb: 'done' },
+  quiz: { label: 'Quiz', icon: <FaQuestionCircle />, verb: 'done' },
+  gurbani: { label: 'Gurbani', icon: <FaHandsHelping />, verb: 'listened' },
+  video: { label: 'Video', icon: <FaPlayCircle />, verb: 'watched' },
 };
+const typeOf = (t) => TYPES[t] || TYPES.lesson;
 
-// Placeholder history until activity tracking exists on the backend.
-// `day` is days ago, so the groups always read Today / Yesterday / ...
-const SAMPLE = [
-  { id: 1, day: 0, time: '6:30 PM', type: 'ebook', title: 'Saka Sirhind', path: '/collections/ebooks/ebook/1' },
-  { id: 2, day: 0, time: '6:05 PM', type: 'gurbani', title: 'Japji Sahib', path: '/gurbani' },
-  { id: 3, day: 0, time: '5:40 PM', type: 'lesson', title: 'Introduction to Gurmukhi', path: '/learning-material/1' },
-  { id: 4, day: 1, time: '9:15 PM', type: 'audiobook', title: 'Punjab Di Virasat', path: '/collections/audiobooks/audiobook/2' },
-  { id: 5, day: 1, time: '8:50 PM', type: 'quiz', title: 'Sikh history quiz', path: '/learning/quizzes/5' },
-  { id: 6, day: 1, time: '7:20 PM', type: 'ebook', title: 'Heer Waris Shah', path: '/collections/ebooks/ebook/6' },
-  { id: 7, day: 2, time: '10:42 AM', type: 'lesson', title: 'Vowel signs (laga matra)', path: '/learning-material/2' },
-  { id: 8, day: 2, time: '10:20 AM', type: 'gurbani', title: 'Rehras Sahib', path: '/gurbani' },
-  { id: 9, day: 4, time: '8:05 PM', type: 'audiobook', title: 'Lok Geet Punjab De', path: '/collections/audiobooks/audiobook/3' },
-  { id: 10, day: 4, time: '7:45 PM', type: 'ebook', title: 'Sikh Itihas Bhag Pehla', path: '/collections/ebooks/ebook/4' },
-];
+const POLL_MS = 60000;
 
-const dayLabel = (daysAgo) => {
-  if (daysAgo === 0) return 'Today';
-  if (daysAgo === 1) return 'Yesterday';
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const daysAgo = (iso) => Math.round((startOfDay(new Date()) - startOfDay(new Date(iso))) / 86400000);
+const timeOf = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+const dayLabel = (daysAgoValue) => {
+  if (daysAgoValue <= 0) return 'Today';
+  if (daysAgoValue === 1) return 'Yesterday';
   const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
+  d.setDate(d.getDate() - daysAgoValue);
   return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 };
 
-const History = ({ isDarkMode }) => {
+const History = ({ isDarkMode, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
+  const { isLoggedIn, accessToken } = useAuth();
 
-  const [items, setItems] = useState(SAMPLE);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [historyOn, setHistoryOn] = useState(true);
   const [selected, setSelected] = useState(() => new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('byDate'); // 'byDate' | 'byType'
   const [confirmClear, setConfirmClear] = useState(false);
 
+  const load = useCallback(async (quiet = false) => {
+    if (!isLoggedIn || !accessToken) { setLoading(false); return; }
+    if (!quiet) setLoading(true);
+    try {
+      const data = await accountApi.history(apiString, accessToken);
+      setItems((data.results || []).map((r) => ({ ...r, type: r.content_type, day: daysAgo(r.accessed_at), time: timeOf(r.accessed_at) })));
+      setHistoryOn(data.save_history !== false);
+      setLoadError(null);
+    } catch (err) {
+      if (!quiet) setLoadError(err.response?.status === 401 ? 'Your session has ended. Log in again.' : 'Your history couldn’t be loaded right now.');
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  }, [apiString, accessToken, isLoggedIn]);
+
+  // Things opened in another tab appear when you come back here
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') load(true); }, POLL_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible') load(true); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [load]);
+
+  const failed = (before) => {
+    setItems(before);
+    toast.error('That couldn’t be removed. Try again.', { position: 'top-right', autoClose: 2500 });
+  };
+
   const visible = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return q
-      ? items.filter((i) => `${i.title} ${TYPES[i.type].label}`.toLowerCase().includes(q))
+      ? items.filter((i) => `${i.title} ${typeOf(i.type).label}`.toLowerCase().includes(q))
       : items;
   }, [items, searchQuery]);
 
@@ -71,8 +100,8 @@ const History = ({ isDarkMode }) => {
     });
     return [...map.entries()].map(([key, list]) => ({
       key,
-      title: viewMode === 'byDate' ? dayLabel(key) : `${TYPES[key].label}s`,
-      icon: viewMode === 'byType' ? TYPES[key].icon : null,
+      title: viewMode === 'byDate' ? dayLabel(key) : `${typeOf(key).label}s`,
+      icon: viewMode === 'byType' ? typeOf(key).icon : null,
       items: list,
     }));
   }, [visible, viewMode]);
@@ -92,24 +121,31 @@ const History = ({ isDarkMode }) => {
     setSelected(allVisibleSelected ? new Set() : new Set(visible.map((i) => i.id)));
   };
 
-  const deleteSelected = () => {
+  const deleteSelected = async () => {
+    const before = items;
+    const ids = [...selected];
     setItems((prev) => prev.filter((i) => !selected.has(i.id)));
     setSelected(new Set());
+    try { await accountApi.deleteHistoryMany(apiString, accessToken, ids); } catch { failed(before); }
   };
 
-  const removeItem = (id) => {
+  const removeItem = async (id) => {
+    const before = items;
     setItems((prev) => prev.filter((i) => i.id !== id));
     setSelected((prev) => {
       const next = new Set(prev);
       next.delete(id);
       return next;
     });
+    try { await accountApi.deleteHistory(apiString, accessToken, id); } catch { failed(before); }
   };
 
-  const clearAll = () => {
+  const clearAll = async () => {
+    const before = items;
     setItems([]);
     setSelected(new Set());
     setConfirmClear(false);
+    try { await accountApi.clearHistory(apiString, accessToken); } catch { failed(before); }
   };
 
   return (
@@ -186,14 +222,27 @@ const History = ({ isDarkMode }) => {
 
       {/* ---------- Timeline ---------- */}
       <section className={styles.section} aria-label="History">
-        {groups.length === 0 ? (
-          <div className={styles.emptyState}>
+        {!historyOn && (
+          <p className={styles.historyOff} role="status">
+            History is turned off, so new things you open aren’t being saved. <Link to="/account-settings">Turn it on in Settings</Link>.
+          </p>
+        )}
+        {!isLoggedIn || loading || loadError || groups.length === 0 ? (
+          <div className={styles.emptyState} role={loadError ? 'alert' : undefined}>
             <span className={styles.emptyIcon} aria-hidden="true"><FaHistory /></span>
-            <h2>{searchQuery ? 'No matches' : 'Your history is empty'}</h2>
+            <h2>
+              {!isLoggedIn ? 'Log in to see your history'
+                : loading ? 'Loading your history…'
+                  : loadError ? 'Couldn’t load your history'
+                    : searchQuery ? 'No matches' : 'Your history is empty'}
+            </h2>
             <p>
-              {searchQuery
-                ? `Nothing in your history matches “${searchQuery}”.`
-                : <>Things you open will show up here. Start with the <Link to="/collections/ebooks">library</Link>.</>}
+              {!isLoggedIn ? <><Link to="/login">Log in</Link> to keep track of what you read, watch and listen to.</>
+                : loading ? null
+                  : loadError ? <>{loadError} <button type="button" className={styles.retryButton} onClick={() => load()}>Try again</button></>
+                    : searchQuery
+                      ? `Nothing in your history matches “${searchQuery}”.`
+                      : <>Books you read, audiobooks and kirtan you listen to, and lessons you watch show up here. Start with the <Link to="/collections/ebooks">library</Link>.</>}
             </p>
           </div>
         ) : (
@@ -208,7 +257,7 @@ const History = ({ isDarkMode }) => {
                 <ul className={styles.list}>
                   {group.items.map((item) => {
                     const isSelected = selected.has(item.id);
-                    const type = TYPES[item.type];
+                    const type = typeOf(item.type);
                     return (
                       <li key={item.id} className={`${styles.item} ${isSelected ? styles.itemSelected : ''}`}>
                         <label className={styles.check}>
@@ -223,7 +272,18 @@ const History = ({ isDarkMode }) => {
                             {type.label}
                             <span aria-hidden="true" className={styles.dot} />
                             {viewMode === 'byType' ? `${dayLabel(item.day)}, ${item.time}` : item.time}
+                            {item.progress > 0 && (
+                              <>
+                                <span aria-hidden="true" className={styles.dot} />
+                                {item.progress >= 100 ? 'Finished' : `${item.progress}% ${type.verb}`}
+                              </>
+                            )}
                           </span>
+                          {item.progress > 0 && item.progress < 100 && (
+                            <span className={styles.progress} role="progressbar" aria-valuenow={item.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${item.title} progress`}>
+                              <span className={styles.progressFill} style={{ width: `${item.progress}%` }} />
+                            </span>
+                          )}
                         </div>
                         <button type="button" className={styles.removeButton} onClick={() => removeItem(item.id)} aria-label={`Remove ${item.title} from history`}>
                           <FaTimes />

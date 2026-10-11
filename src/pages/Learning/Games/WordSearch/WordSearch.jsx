@@ -1628,7 +1628,7 @@ const WordSearchGamePlay = ({ apiString }) => {
 
   // Main render method for the game
   return (
-    <div className={styles.wordSearchContainer}>
+    <div className={`${styles.wordSearchContainer} notranslate`} translate="no">
       {renderGameNavbar()}
       <div className={styles.mainContent}>
         {gameState === 'select' && renderMapSelection()}

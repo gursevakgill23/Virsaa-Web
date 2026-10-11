@@ -39,7 +39,6 @@ const TABS = [
 ];
 
 const TYPE_LABELS = { ebook: 'Ebook', audiobook: 'Audiobook', author: 'Author' };
-// const TAB_TYPE = { ebooks: 'ebook', audiobooks: 'audiobook', authors: 'author' };
 
 const EMPTY = { ebooks: [], audiobooks: [], authors: [], saved: [], downloads: [] };
 

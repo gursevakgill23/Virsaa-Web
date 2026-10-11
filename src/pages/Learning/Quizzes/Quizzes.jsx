@@ -9,13 +9,14 @@ import PageHero from '../../../components/PageHero/PageHero';
 import styles from './Quizzes.module.css';
 import { useAuth } from '../../../context/AuthContext';
 import learningApi from '../../../api/learningApi';
+import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 
 // Utility function to handle public/static images
 const getProductionImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
+      return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
@@ -87,6 +88,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
   const { isLoggedIn, isPremium, accessToken, API_STRING } = useAuth();
   const apiUrl = (apiString || API_STRING || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
+  const recordHistory = useHistoryRecorder(apiUrl);
   const headerImage = getProductionImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
   const consoleRef = useRef(null);
 
@@ -164,6 +166,18 @@ const Quizzes = ({ isDarkMode, apiString }) => {
 
     fetchData();
   }, [id, isLoggedIn, isPremium, accessToken, apiUrl]);
+
+  // Opening a quiz adds it to History
+  useEffect(() => {
+    if (!quiz || String(quiz.id) !== String(id)) return;
+    recordHistory({
+      type: 'quiz',
+      item_id: quiz.id,
+      title: quiz.title,
+      path: `/learning/quizzes/${quiz.id}`,
+      image: quiz.image_url || quiz.image || '',
+    });
+  }, [quiz, id, recordHistory]);
 
   // Countdown
   useEffect(() => {

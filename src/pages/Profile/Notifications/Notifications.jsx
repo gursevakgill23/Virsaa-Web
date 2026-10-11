@@ -1,81 +1,164 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
-  FaTrash, FaEnvelopeOpen, FaEnvelope, FaBell, FaBook, FaCalendarAlt,
-  FaGraduationCap, FaComments, FaCrown, FaCheckDouble,
+  FaTrash, FaEnvelopeOpen, FaEnvelope, FaBell, FaBook,
+  FaGraduationCap, FaCrown, FaCheckDouble, FaSyncAlt,
 } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
+import { useAuth } from '../../../context/AuthContext';
+import accountApi from '../../../api/accountApi';
+import { setUnread } from '../../../hooks/useUnreadNotifications';
 import styles from './Notifications.module.css';
 
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
-    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
   }
   return imagePath;
 };
 
 const KINDS = {
   content: { label: 'New in the library', icon: <FaBook /> },
-  event: { label: 'Event', icon: <FaCalendarAlt /> },
+  update: { label: 'Updated', icon: <FaSyncAlt /> },
   learning: { label: 'Learning', icon: <FaGraduationCap /> },
-  reply: { label: 'Discussion', icon: <FaComments /> },
   account: { label: 'Account', icon: <FaCrown /> },
 };
 
-// Placeholder notifications until the notifications API exists.
-// `day` is days ago so the groups always read Today / Yesterday / ...
-const SAMPLE = [
-  { id: 1, day: 0, time: '6:30 PM', kind: 'reply', read: false, title: 'New reply to your question', description: 'An admin replied to “Is there a worksheet for the vowel signs?” in Introduction to Gurmukhi.', path: '/learning-material/1' },
-  { id: 2, day: 0, time: '4:10 PM', kind: 'content', read: false, title: 'New ebook: Saka Sirhind', description: 'A retelling of the martyrdom of the younger Sahibzade, now in the library.', path: '/collections/ebooks/ebook/1' },
-  { id: 3, day: 1, time: '7:45 PM', kind: 'event', read: false, title: 'Gurpurab kirtan this Sunday', description: 'An evening of kirtan was added to Events. Open the panel to see the details.', path: '/home' },
-  { id: 4, day: 1, time: '11:20 AM', kind: 'learning', read: true, title: 'You scored 9/10 on Sikh history quiz', description: 'One more perfect score earns the Quiz Master badge.', path: '/learning/quizzes/5' },
-  { id: 5, day: 3, time: '9:00 AM', kind: 'account', read: true, title: 'Your free trial ends in 3 days', description: 'Choose a plan to keep ad-free reading and unlimited downloads.', path: '/premium' },
-  { id: 6, day: 3, time: '8:15 AM', kind: 'content', read: false, title: 'New audiobook: Lok Geet Punjab De', description: 'Folk songs of Punjab with their stories, narrated in Punjabi.', path: '/collections/audiobooks/audiobook/3' },
-  { id: 7, day: 6, time: '6:00 PM', kind: 'learning', read: true, title: 'New lesson: Vowel signs (laga matra)', description: 'The next lesson in the Gurmukhi series is ready.', path: '/learning-material/2' },
-];
+const POLL_MS = 30000;
 
-const dayLabel = (daysAgo) => {
-  if (daysAgo === 0) return 'Today';
-  if (daysAgo === 1) return 'Yesterday';
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const daysAgo = (iso) => Math.round((startOfDay(new Date()) - startOfDay(new Date(iso))) / 86400000);
+
+const dayLabel = (n) => {
+  if (n <= 0) return 'Today';
+  if (n === 1) return 'Yesterday';
   const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
+  d.setDate(d.getDate() - n);
   return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 };
 
-const Notifications = ({ isDarkMode }) => {
+const timeOf = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+const Notifications = ({ isDarkMode, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
+  const { isLoggedIn, accessToken } = useAuth();
 
-  const [notifications, setNotifications] = useState(SAMPLE);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const applyCount = (count) => {
+    setUnreadCount(count);
+    setUnread(count); // navbar badge and account tabs
+  };
+
+  const load = useCallback(async (quiet = false) => {
+    if (!isLoggedIn || !accessToken) { setLoading(false); return; }
+    if (!quiet) setLoading(true);
+    try {
+      const data = await accountApi.notifications(apiString, accessToken);
+      setNotifications(data.results || []);
+      applyCount(data.unread_count || 0);
+      setLoadError(null);
+    } catch (err) {
+      if (!quiet) setLoadError(err.response?.status === 401 ? 'Your session has ended. Log in again.' : 'Notifications couldn’t be loaded right now.');
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  }, [apiString, accessToken, isLoggedIn]);
+
+  // New notifications appear while the page is open
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') load(true); }, POLL_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible') load(true); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [load]);
 
   const groups = useMemo(() => {
-    const list = filter === 'unread' ? notifications.filter((n) => !n.read) : notifications;
+    const list = filter === 'unread' ? notifications.filter((n) => !n.is_read) : notifications;
     const map = new Map();
     list.forEach((n) => {
-      if (!map.has(n.day)) map.set(n.day, []);
-      map.get(n.day).push(n);
+      const day = daysAgo(n.created_at);
+      if (!map.has(day)) map.set(day, []);
+      map.get(day).push(n);
     });
     return [...map.entries()].map(([day, items]) => ({ day, items }));
   }, [notifications, filter]);
 
-  const setRead = (id, read) => setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read } : n)));
-  const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  const deleteNotification = (id) => setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const setRead = async (id, read) => {
+    const before = notifications;
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: read } : n)));
+    try {
+      const data = await accountApi.markRead(apiString, accessToken, id, read);
+      applyCount(data.unread_count);
+    } catch {
+      setNotifications(before);
+      toast.error('That didn’t save. Try again.', { position: 'top-right', autoClose: 2500 });
+    }
+  };
+
+  const markAllRead = async () => {
+    const before = notifications;
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    try {
+      await accountApi.markAllRead(apiString, accessToken);
+      applyCount(0);
+    } catch {
+      setNotifications(before);
+      toast.error('That didn’t save. Try again.', { position: 'top-right', autoClose: 2500 });
+    }
+  };
+
+  const deleteNotification = async (id) => {
+    const before = notifications;
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    try {
+      const data = await accountApi.deleteNotification(apiString, accessToken, id);
+      applyCount(data.unread_count);
+    } catch {
+      setNotifications(before);
+      toast.error('That couldn’t be deleted. Try again.', { position: 'top-right', autoClose: 2500 });
+    }
+  };
+
+  const openNotification = (n) => { if (!n.is_read) setRead(n.id, true); };
+
+  const hero = (
+    <PageHero
+      compact
+      image={headerImage}
+      title="Notifications"
+      subtitle={unreadCount > 0 ? `You have ${unreadCount} unread ${unreadCount === 1 ? 'notification' : 'notifications'}.` : 'You’re all caught up.'}
+      crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'Notifications' }]}
+    >
+      <AccountTabs badge={{ '/notifications': unreadCount }} />
+    </PageHero>
+  );
+
+  if (!isLoggedIn) {
+    return (
+      <div className={styles.page}>
+        {hero}
+        <section className={styles.section}>
+          <div className={styles.emptyState}>
+            <span className={styles.emptyIcon} aria-hidden="true"><FaBell /></span>
+            <h2>Log in to see your notifications</h2>
+            <p><Link to="/login">Log in</Link> to hear about new books, lessons and your account.</p>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
-      <PageHero
-        compact
-        image={headerImage}
-        title="Notifications"
-        subtitle={unreadCount > 0 ? `You have ${unreadCount} unread ${unreadCount === 1 ? 'notification' : 'notifications'}.` : 'You’re all caught up.'}
-        crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'Notifications' }]}
-      >
-        <AccountTabs badge={{ '/notifications': unreadCount }} />
-      </PageHero>
+      {hero}
 
       <div className={styles.toolbarWrap}>
         <div className={styles.toolbar}>
@@ -93,15 +176,26 @@ const Notifications = ({ isDarkMode }) => {
         </div>
       </div>
 
-      <section className={styles.section} aria-label="Notifications">
-        {groups.length === 0 ? (
+      <section className={styles.section} aria-label="Notifications" aria-busy={loading}>
+        {loading ? (
+          <div className={styles.emptyState} role="status">
+            <span className={styles.emptyIcon} aria-hidden="true"><FaBell /></span>
+            <h2>Loading notifications…</h2>
+          </div>
+        ) : loadError ? (
+          <div className={styles.emptyState} role="alert">
+            <span className={styles.emptyIcon} aria-hidden="true"><FaBell /></span>
+            <h2>Couldn’t load notifications</h2>
+            <p>{loadError} <button type="button" className={styles.linkButton} onClick={() => load()}>Try again</button></p>
+          </div>
+        ) : groups.length === 0 ? (
           <div className={styles.emptyState}>
             <span className={styles.emptyIcon} aria-hidden="true"><FaBell /></span>
             <h2>{filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}</h2>
             <p>
               {filter === 'unread'
                 ? <>You’ve read everything. <button type="button" className={styles.linkButton} onClick={() => setFilter('all')}>Show all</button></>
-                : 'Replies, new books and events will show up here.'}
+                : 'New books, lessons, badges and account updates will show up here.'}
             </p>
           </div>
         ) : (
@@ -111,28 +205,30 @@ const Notifications = ({ isDarkMode }) => {
                 <h2 className={styles.groupTitle}>{dayLabel(group.day)}</h2>
                 <ul className={styles.list}>
                   {group.items.map((n) => {
-                    const kind = KINDS[n.kind];
+                    const kind = KINDS[n.kind] || KINDS.content;
                     return (
-                      <li key={n.id} className={`${styles.item} ${n.read ? styles.read : styles.unread}`}>
+                      <li key={n.id} className={`${styles.item} ${n.is_read ? styles.read : styles.unread}`}>
                         <span className={`${styles.kindIcon} ${styles[n.kind] || ''}`} aria-hidden="true">{kind.icon}</span>
                         <div className={styles.body}>
                           <div className={styles.topLine}>
                             <span className={styles.kindLabel}>{kind.label}</span>
-                            <span className={styles.time}>{n.time}</span>
-                            {!n.read && <span className={styles.unreadDot}><span className={styles.srOnly}>Unread</span></span>}
+                            <span className={styles.time}>{timeOf(n.created_at)}</span>
+                            {!n.is_read && <span className={styles.unreadDot}><span className={styles.srOnly}>Unread</span></span>}
                           </div>
-                          <Link to={n.path} className={styles.title} onClick={() => setRead(n.id, true)}>{n.title}</Link>
-                          <p className={styles.description}>{n.description}</p>
+                          {n.link
+                            ? <Link to={n.link} className={styles.title} onClick={() => openNotification(n)}>{n.title}</Link>
+                            : <span className={styles.title}>{n.title}</span>}
+                          {n.message && <p className={styles.description}>{n.message}</p>}
                         </div>
                         <div className={styles.actions}>
                           <button
                             type="button"
                             className={styles.iconButton}
-                            onClick={() => setRead(n.id, !n.read)}
-                            aria-label={n.read ? `Mark “${n.title}” as unread` : `Mark “${n.title}” as read`}
-                            title={n.read ? 'Mark as unread' : 'Mark as read'}
+                            onClick={() => setRead(n.id, !n.is_read)}
+                            aria-label={n.is_read ? `Mark “${n.title}” as unread` : `Mark “${n.title}” as read`}
+                            title={n.is_read ? 'Mark as unread' : 'Mark as read'}
                           >
-                            {n.read ? <FaEnvelope /> : <FaEnvelopeOpen />}
+                            {n.is_read ? <FaEnvelope /> : <FaEnvelopeOpen />}
                           </button>
                           <button
                             type="button"

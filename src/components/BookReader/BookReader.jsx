@@ -48,8 +48,9 @@ const rightOf = (s, n) => (2 * s + 1 <= n ? 2 * s + 1 : null);
  *  - linkError: message to show if the link couldn't be fetched
  *  - onRetry(): fetch the link again
  *  - onClose()
+ *  - onProgress(page, numPages): optional, called when the page changes (for History)
  */
-const BookReader = ({ url, title, linkError, onRetry, onClose }) => {
+const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => {
   const rootRef = useRef(null);
   const stageRef = useRef(null);
   const pdfRef = useRef(null);
@@ -98,6 +99,15 @@ const BookReader = ({ url, title, linkError, onRetry, onClose }) => {
   const maxIndex = spread ? Math.floor(numPages / 2) : numPages;
   const minIndex = spread ? 0 : 1;
   const current = clamp(index, minIndex, Math.max(minIndex, maxIndex));
+
+  // Tell the page which page the reader is on (latest callback kept in a ref)
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
+  useEffect(() => {
+    if (status !== 'ready' || !numPages || !onProgressRef.current) return;
+    const page = spread ? Math.min(numPages, Math.max(1, current * 2 + 1)) : current;
+    onProgressRef.current(page, numPages);
+  }, [status, current, spread, numPages]);
 
   /* ---------- Open the PDF ---------- */
   useEffect(() => {
