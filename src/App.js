@@ -7,7 +7,7 @@ import Navbar from './components/Navbar/Navbar';
 import Sidebar from './components/Sidebar/Sidebar';
 import Home from './pages/HomePage/Home';
 import Collections from './pages/Collections/Collections';
-import Loader from './components/Loader';
+import Loader from './components/VirsaaLoader/Loader';
 import { CssBaseline } from '@mui/material';
 import Footer from './components/Footer/Footer';
 import './App.css';
@@ -29,41 +29,21 @@ import About from './pages/About/About';
 import Quizzes from './pages/Learning/Quizzes/Quizzes';
 import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
 import AuthorDetail from './pages/Collections/AuthorDetail/AuthorDetail';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import AudiobookDetail from './pages/Collections/AudiobookDetail/AudiobookDetail';
 import { WordSearchGamePlay } from './pages/Learning/Games/WordSearch/WordSearch';
 import MemoryMatch from './pages/Learning/Games/MemoryMatch/MemoryMatch';
-import MyProfile from './pages/Profile/MyProfile/MyProfile';
+import ProfileRoute from './pages/Profile/ProfileRoute';
 import MyFavorites from './pages/Profile/MyFavorites/MyFavorites';
 import Settings from './pages/Profile/Settings/Settings';
 import History from './pages/Profile/History/History';
 import Notifications from './pages/Profile/Notifications/Notifications';
-import CompleteProfile from './pages/Profile/CompleteProfile/CompleteProfile';
 import LearningMaterial from './pages/Learning/LearningMaterial/LearningMaterial';
 
 // Define your API base URL
 const API_STRING = process.env.REACT_APP_API_URL;
-// Component to handle profile completion check
-const ProfileRoute = ({ isDarkMode, apiString }) => {
-  const { userData } = useAuth();
-
-  // Check if profile is complete
-  const isProfileComplete = userData && (
-    userData.first_name &&
-    userData.last_name &&
-    userData.profile_photo &&
-    userData.about_me &&
-    userData.preferred_content?.length > 0 &&
-    userData.dob &&
-    userData.gender !== 'prefer_not_to_say'
-  );
-
-  return isProfileComplete ? (
-    <MyProfile isDarkMode={isDarkMode} apiString={apiString} />
-  ) : (
-    <CompleteProfile isDarkMode={isDarkMode} apiString={apiString} />
-  );
-};
+// /my-profile shows CompleteProfile until every required detail is filled in,
+// then MyProfile (see pages/Profile/ProfileRoute.jsx).
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);

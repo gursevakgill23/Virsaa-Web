@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import styles from './MemoryMatch.module.css';
@@ -46,6 +46,32 @@ const useProductionImagePath = () => {
     }
     return imagePath;
   };
+};
+
+/*
+ * Game progress (coins, XP, welcome bonus, game name/avatar) is kept in its own
+ * browser storage key. It used to be saved by calling the auth `login()` with the
+ * wrong arguments, which crashed the page and could overwrite the login session.
+ */
+const GAME_PROFILE_KEY = 'virsaa_game_profile';
+const GAME_FIELDS = ['coins', 'xp', 'welcomeBonusGiven', 'name', 'avatar'];
+const loadGameProfile = () => {
+  try {
+    return JSON.parse(localStorage.getItem(GAME_PROFILE_KEY)) || {};
+  } catch {
+    return {};
+  }
+};
+const pickGameFields = (obj = {}) => GAME_FIELDS.reduce((acc, key) => {
+  if (obj[key] !== undefined) acc[key] = obj[key];
+  return acc;
+}, {});
+const writeGameProfile = (fields) => {
+  try {
+    localStorage.setItem(GAME_PROFILE_KEY, JSON.stringify({ ...loadGameProfile(), ...fields }));
+  } catch {
+    /* storage unavailable (private mode): progress just isn't kept */
+  }
 };
 
 // Initialize sound effects
@@ -128,7 +154,15 @@ const gameModes = [
 const MemoryMatch = () => {
   const getImagePath = useProductionImagePath();
 
-  const { isLoggedIn, userData, login, logout } = useAuth();
+  const { isLoggedIn, userData: authUser, logout } = useAuth();
+  // Game progress merged over the signed-in user (see GAME_PROFILE_KEY above)
+  const [gameProfile, setGameProfile] = useState(loadGameProfile);
+  const userData = useMemo(() => (authUser ? { ...authUser, ...gameProfile } : null), [authUser, gameProfile]);
+  const saveGameUser = useCallback((updated) => {
+    const fields = pickGameFields(updated);
+    setGameProfile((prev) => ({ ...prev, ...fields }));
+    writeGameProfile(fields);
+  }, []);
   const navigate = useNavigate();
 
   // State management
@@ -270,9 +304,8 @@ const MemoryMatch = () => {
 
     if (isLoggedIn) {
       const updatedUser = { ...userData, coins: coins + earned, xp: xp + (completed ? 50 : 10) };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      login(userData.token, updatedUser);
-      setUserStats(prev => ({
+      saveGameUser(updatedUser);
+      setUserStats(prev => (prev && {
         ...prev,
         totalMatches: prev.totalMatches + 1,
         wins: completed ? prev.wins + 1 : prev.wins,
@@ -286,7 +319,7 @@ const MemoryMatch = () => {
     setGameState('select');
     setShowMemorizeScreen(false);
     setCountdown(null);
-  }, [isLoggedIn, userData, login, coins, xp, timeLeft]);
+  }, [isLoggedIn, userData, saveGameUser, coins, xp, timeLeft]);
 
   // Handle countdown and game start
   useEffect(() => {
@@ -400,8 +433,7 @@ const MemoryMatch = () => {
   const handleProfileUpdate = () => {
     if (isLoggedIn) {
       const updatedUser = { ...userData, name: newName, avatar: newAvatar };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      login(userData.token, updatedUser);
+      saveGameUser(updatedUser);
       setEditingProfile(false);
     }
   };
@@ -422,8 +454,7 @@ const MemoryMatch = () => {
       const newCoins = coins + amount;
       setCoins(newCoins);
       const updatedUser = { ...userData, coins: newCoins };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      login(userData.token, updatedUser);
+      saveGameUser(updatedUser);
       setShowCoinShop(false);
     } else {
       navigate('/login');

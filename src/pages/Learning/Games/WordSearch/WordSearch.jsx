@@ -4,7 +4,7 @@
  * Features a dedicated game navbar, map selection, multilingual support (Punjabi/English),
  * timer-based gameplay, achievements, top scorers, hints, coin system, and user profile management.
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import styles from './WordSearch.module.css';
@@ -37,6 +37,32 @@ const useProductionImagePath = () => {
     }
     return imagePath;
   };
+};
+
+/*
+ * Game progress (coins, XP, welcome bonus, game name/avatar) is kept in its own
+ * browser storage key. It used to be saved by calling the auth `login()` with the
+ * wrong arguments, which crashed the page and could overwrite the login session.
+ */
+const GAME_PROFILE_KEY = 'virsaa_game_profile';
+const GAME_FIELDS = ['coins', 'xp', 'welcomeBonusGiven', 'name', 'avatar'];
+const loadGameProfile = () => {
+  try {
+    return JSON.parse(localStorage.getItem(GAME_PROFILE_KEY)) || {};
+  } catch {
+    return {};
+  }
+};
+const pickGameFields = (obj = {}) => GAME_FIELDS.reduce((acc, key) => {
+  if (obj[key] !== undefined) acc[key] = obj[key];
+  return acc;
+}, {});
+const writeGameProfile = (fields) => {
+  try {
+    localStorage.setItem(GAME_PROFILE_KEY, JSON.stringify({ ...loadGameProfile(), ...fields }));
+  } catch {
+    /* storage unavailable (private mode): progress just isn't kept */
+  }
 };
 
 // Initialize sound effects for the game
@@ -141,126 +167,126 @@ const virsaaPlayables = [
     name: 'Punjabi Puzzle',
     description: 'Solve puzzles in Punjabi',
     image: playable1,
-    link: '/games/punjabi-puzzle'
+    link: '/learning/games/shabd-khoj'
   },
   {
     id: 2,
     name: 'Gurmukhi Match',
     description: 'Match Gurmukhi characters',
     image: playable1,
-    link: '/games/gurmukhi-match'
+    link: '/learning/games/memory-match'
   },
   {
     id: 3,
     name: 'Shabad Quiz',
     description: 'Test your knowledge of Shabads',
     image: playable1,
-    link: '/games/shabad-quiz'
+    link: '/learning'
   },
   {
     id: 4,
     name: 'Sikh History Trivia',
     description: 'Learn Sikh history through trivia',
     image: playable1,
-    link: '/games/sikh-history'
+    link: '/learning'
   },
   {
     id: 5,
     name: 'Shabd Khoj',
     description: 'Learn Sikh history through trivia',
     image: playable1,
-    link: '/games/sikh-history'
+    link: '/learning'
   },
   {
     id: 6,
     name: 'Gurmukhi Match',
     description: 'Match Gurmukhi characters',
     image: playable1,
-    link: '/games/gurmukhi-match'
+    link: '/learning/games/memory-match'
   },
   {
     id: 7,
     name: 'Shabad Quiz',
     description: 'Test your knowledge of Shabads',
     image: playable1,
-    link: '/games/shabad-quiz'
+    link: '/learning'
   },
   {
     id: 8,
     name: 'Sikh History Trivia',
     description: 'Learn Sikh history through trivia',
     image: playable1,
-    link: '/games/sikh-history'
+    link: '/learning'
   },
   {
     id: 9,
     name: 'Shabd Khoj',
     description: 'Learn Sikh history through trivia',
     image: playable1,
-    link: '/games/sikh-history'
+    link: '/learning'
   },
   {
     id: 10,
     name: 'Punjabi Puzzle',
     description: 'Solve puzzles in Punjabi',
     image: playable1,
-    link: '/games/punjabi-puzzle'
+    link: '/learning/games/shabd-khoj'
   },
   {
     id: 11,
     name: 'Gurmukhi Match',
     description: 'Match Gurmukhi characters',
     image: playable1,
-    link: '/games/gurmukhi-match'
+    link: '/learning/games/memory-match'
   },
   {
     id: 12,
     name: 'Shabad Quiz',
     description: 'Test your knowledge of Shabads',
     image: playable1,
-    link: '/games/shabad-quiz'
+    link: '/learning'
   },
   {
     id: 13,
     name: 'Sikh History Trivia',
     description: 'Learn Sikh history through trivia',
     image: playable1,
-    link: '/games/sikh-history'
+    link: '/learning'
   },
   {
     id: 14,
     name: 'Shabd Khoj',
     description: 'Learn Sikh history through trivia',
     image: playable1,
-    link: '/games/sikh-history'
+    link: '/learning'
   },
   {
     id: 15,
     name: 'Gurmukhi Match',
     description: 'Match Gurmukhi characters',
     image: playable1,
-    link: '/games/gurmukhi-match'
+    link: '/learning/games/memory-match'
   },
   {
     id: 16,
     name: 'Shabad Quiz',
     description: 'Test your knowledge of Shabads',
     image: playable1,
-    link: '/games/shabad-quiz'
+    link: '/learning'
   },
   {
     id: 17,
     name: 'Sikh History Trivia',
     description: 'Learn Sikh history through trivia',
     image: playable1,
-    link: '/games/sikh-history'
+    link: '/learning'
   },
   {
     id: 18,
     name: 'Shabd Khoj',
     description: 'Learn Sikh history through trivia',
     image: playable1,
-    link: '/games/sikh-history'
+    link: '/learning'
   },
 ];
 
@@ -281,7 +307,7 @@ const WordSearch = () => {
     if (hasOpenedGame) return;
 
     sessionStorage.setItem('wordSearchTabOpened', 'true');
-    const gameUrl = '/learning/games/word-search';
+    const gameUrl = '/learning/games/shabd-khoj';
     const newWindow = window.open(gameUrl, '_blank');
     if (newWindow) {
       newWindow.focus();
@@ -300,7 +326,15 @@ const WordSearch = () => {
 const WordSearchGamePlay = () => {
   const getImagePath = useProductionImagePath();
 
-  const { isLoggedIn, userData, login, logout } = useAuth();
+  const { isLoggedIn, userData: authUser, logout } = useAuth();
+  // Game progress merged over the signed-in user (see GAME_PROFILE_KEY above)
+  const [gameProfile, setGameProfile] = useState(loadGameProfile);
+  const userData = useMemo(() => (authUser ? { ...authUser, ...gameProfile } : null), [authUser, gameProfile]);
+  const saveGameUser = useCallback((updated) => {
+    const fields = pickGameFields(updated);
+    setGameProfile((prev) => ({ ...prev, ...fields }));
+    writeGameProfile(fields);
+  }, []);
   const navigate = useNavigate();
 
   // State management for the game
@@ -365,14 +399,13 @@ const WordSearchGamePlay = () => {
 
       if (isLoggedIn) {
         const updatedUser = { ...userData, coins: newCoins, welcomeBonusGiven: true };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        login(userData.token, updatedUser);
+        saveGameUser(updatedUser);
       }
 
       if (settings.soundEnabled) sounds.coin.play();
       setTimeout(() => setShowWelcomeBonus(false), 5000);
     }
-  }, [isLoggedIn, userData, login, settings.soundEnabled]);
+  }, [isLoggedIn, userData, saveGameUser, settings.soundEnabled]);
 
   // Effect to load top scorers, achievements, user stats, and payment methods
   useEffect(() => {
@@ -591,7 +624,7 @@ const WordSearchGamePlay = () => {
         }
 
         if (isLoggedIn && userStats) {
-          setUserStats(prev => ({
+          setUserStats(prev => (prev && {
             ...prev,
             totalMatches: prev.totalMatches + (foundWords.length + 1 === wordsToFind.length ? 1 : 0),
             wins: prev.wins + (foundWords.length + 1 === wordsToFind.length ? 1 : 0),
@@ -619,10 +652,9 @@ const WordSearchGamePlay = () => {
 
         if (isLoggedIn) {
           const updatedUser = { ...userData, coins: newCoins };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          login(userData.token, updatedUser);
+          saveGameUser(updatedUser);
 
-          setUserStats(prev => ({
+          setUserStats(prev => (prev && {
             ...prev,
             totalCoinsWon: prev.totalCoinsWon + coinsEarned,
           }));
@@ -639,7 +671,7 @@ const WordSearchGamePlay = () => {
       setGameState('completed');
 
       if (isLoggedIn && userStats) {
-        setUserStats(prev => ({
+        setUserStats(prev => (prev && {
           ...prev,
           totalMatches: prev.totalMatches + 1,
           losses: prev.losses + 1,
@@ -688,8 +720,7 @@ const WordSearchGamePlay = () => {
 
       if (isLoggedIn) {
         const updatedUser = { ...userData, coins: newCoins };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        login(userData.token, updatedUser);
+        saveGameUser(updatedUser);
       }
     }
 
@@ -718,10 +749,9 @@ const WordSearchGamePlay = () => {
 
     if (isLoggedIn) {
       const updatedUser = { ...userData, coins: newCoins };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      login(userData.token, updatedUser);
+      saveGameUser(updatedUser);
 
-      setUserStats(prev => ({
+      setUserStats(prev => (prev && {
         ...prev,
         totalCoinsLostOnHints: prev.totalCoinsLostOnHints + 10,
       }));
@@ -774,8 +804,7 @@ const WordSearchGamePlay = () => {
         name: newName,
         avatar: newAvatar,
       };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      login(userData.token, updatedUser);
+      saveGameUser(updatedUser);
       setEditingProfile(false);
       setShowProfileDropdown(false);
     }

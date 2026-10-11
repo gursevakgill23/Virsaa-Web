@@ -1,0 +1,291 @@
+/* =========================================================================
+   Splash loader: a glass Gurdwara doorway in space.
+   The gold outline draws itself while the app starts, then the doorway
+   moves toward the viewer and the splash fades out.
+   ========================================================================= */
+
+.overlay {
+  --gold: #c9a24a;
+  --gold-soft: #fff3d1;
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% 110%, #3f0212 0%, transparent 60%),
+    radial-gradient(90% 70% at 50% 40%, #2a0612 0%, #14040a 70%);
+  color: #fff;
+  perspective: 900px;
+  animation: overlayIn 0.35s ease both;
+}
+
+/* ---------- Depth layers ---------- */
+.aura {
+  position: absolute;
+  width: min(120vw, 900px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(140, 18, 50, 0.55) 0%, rgba(101, 4, 29, 0.2) 35%, transparent 65%);
+  filter: blur(10px);
+  animation: breathe 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 243, 209, 0.9), rgba(201, 162, 74, 0.25) 45%, transparent 70%);
+}
+
+.orbFar {
+  width: 10px;
+  height: 10px;
+  top: 22%;
+  left: 18%;
+  opacity: 0.45;
+  filter: blur(1px);
+  animation: drift 7s ease-in-out infinite;
+}
+
+.orbMid {
+  width: 18px;
+  height: 18px;
+  bottom: 26%;
+  right: 20%;
+  opacity: 0.6;
+  filter: blur(1.5px);
+  animation: drift 5.5s ease-in-out -2s infinite reverse;
+}
+
+.orbNear {
+  width: 46px;
+  height: 46px;
+  top: 16%;
+  right: 12%;
+  opacity: 0.35;
+  filter: blur(6px);
+  animation: drift 6.5s ease-in-out -1s infinite;
+}
+
+/* ---------- Scene ---------- */
+.scene {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.doorway {
+  position: relative;
+  width: 200px;
+  height: 260px;
+  transform-style: preserve-3d;
+  animation: rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both, float 4s ease-in-out 0.7s infinite;
+}
+
+.glow {
+  position: absolute;
+  inset: 18% 10% 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 40%, rgba(255, 220, 160, 0.45), rgba(201, 162, 74, 0.12) 45%, transparent 70%);
+  filter: blur(22px);
+  transform: translateZ(-40px);
+  animation: glowUp 1.55s ease-out both;
+}
+
+.glass {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  clip-path: path('M14 252 V118 C14 64 58 40 100 10 C142 40 186 64 186 118 V252 Z');
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04) 45%, rgba(255, 255, 255, 0.08)),
+    rgba(101, 4, 29, 0.28);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+/* A sheen that sweeps across the glass once */
+.glass::after {
+  content: '';
+  position: absolute;
+  inset: -20% -60%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.22) 50%, transparent 60%);
+  transform: translateX(-60%);
+  animation: sheen 1.6s ease-in-out 0.35s both;
+}
+
+.logo {
+  position: relative;
+  z-index: 1;
+  width: 104px;
+  height: auto;
+  max-height: 96px;
+  object-fit: contain;
+  margin-top: 26px;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.45));
+  transform: translateZ(30px);
+  user-select: none;
+  animation: logoIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+
+.outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.track,
+.trace {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.track {
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.trace {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 220, 150, 0.85));
+  animation-name: drawArch;
+  animation-timing-function: cubic-bezier(0.55, 0.1, 0.35, 1);
+  animation-fill-mode: forwards;
+}
+
+.floor {
+  width: 220px;
+  height: 26px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(201, 162, 74, 0.35), rgba(140, 18, 50, 0.15) 50%, transparent 72%);
+  filter: blur(6px);
+  animation: float-shadow 4s ease-in-out 0.7s infinite;
+}
+
+.wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 18px;
+  animation: textIn 0.7s ease 0.45s both;
+}
+
+.name {
+  font-family: var(--font-display, 'Fraunces', Georgia, serif);
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+.gurmukhi {
+  font-family: var(--font-body, 'Mukta Mahee', sans-serif);
+  font-size: 1rem;
+  color: var(--gold-soft);
+  opacity: 0.8;
+}
+
+/* ---------- Exit: step through the doorway ---------- */
+.exiting {
+  animation: overlayOut 0.45s ease forwards;
+}
+
+.exiting .scene {
+  transition: none;
+  animation: through 0.45s cubic-bezier(0.6, 0, 0.8, 0.4) forwards;
+}
+
+.exiting .trace {
+  stroke-width: 4;
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlayOut { to { opacity: 0; visibility: hidden; } }
+
+@keyframes drawArch { to { stroke-dashoffset: 0; } }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px) translateZ(-120px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes float-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 1; }
+  50% { transform: scaleX(0.86); opacity: 0.7; }
+}
+
+@keyframes logoIn {
+  from { opacity: 0; transform: translateZ(30px) scale(0.85); }
+  to { opacity: 1; transform: translateZ(30px) scale(1); }
+}
+
+@keyframes glowUp {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sheen { to { transform: translateX(60%); } }
+
+@keyframes textIn {
+  from { opacity: 0; transform: translateY(8px); letter-spacing: 0.2em; }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(12px, -18px); }
+}
+
+@keyframes through {
+  to { transform: translateZ(520px) scale(1.15); opacity: 0; }
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 420px) {
+  .name { font-size: 1.7rem; }
+}
+
+/* ---------- Reduced motion: no drift, no fly-through, just a calm fade ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .aura,
+  .orb,
+  .doorway,
+  .floor,
+  .glass::after,
+  .logo,
+  .wordmark,
+  .glow {
+    animation: none !important;
+  }
+
+  .scene { transform: none !important; }
+  .exiting .scene { animation: none; }
+}

@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <script>
+      // Development only: hide errors thrown by browser extensions so the
+      // error overlay doesn't treat them as Virsaa errors.
+      (function () {
+        if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+        var EXT = /(chrome|moz|safari(-web)?)-extension:\/\//;
+        function fromExt(e) {
+          var err = e && (e.error || e.reason);
+          return EXT.test((e && e.filename) || '') ||
+                EXT.test((err && err.stack) || '');
+        }
+        window.addEventListener('error', function (e) {
+          if (fromExt(e)) { e.stopImmediatePropagation(); e.preventDefault(); }
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          if (fromExt(e)) { e.stopImmediatePropagation(); e.preventDefault(); }
+        }, true);
+    })();
+  </script>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1">

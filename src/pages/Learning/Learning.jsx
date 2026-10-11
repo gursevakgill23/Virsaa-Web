@@ -22,6 +22,55 @@ const getProductionImagePath = (imagePath) => {
 };
 
 // API images come back as full URLs; anything else uses the default image
+// First paragraph of a description, used on cards (the full text shows on the lesson page)
+const summary = (text = '') => String(text).split(/\n\s*\n/)[0].trim();
+
+// The two games that exist in the app (see the routes in App.js)
+const GAME_ROUTES = {
+  wordSearch: '/learning/games/shabd-khoj',
+  memoryMatch: '/learning/games/memory-match',
+};
+
+// Shown in the Games section even when the database has no game rows yet
+const BUILT_IN_GAMES = [
+  {
+    id: 'game-word-search',
+    title: 'Word Search (Shabad Khoj)',
+    description: 'Find hidden Punjabi and English words on themed maps before the timer runs out.',
+    image: '/images/Learning/playables.jpg',
+    category: 'Games',
+    link: GAME_ROUTES.wordSearch,
+  },
+  {
+    id: 'game-memory-match',
+    title: 'Memory Match (Virsaa Vich Yaad)',
+    description: 'Memorise Punjabi festivals and Sikh symbols, then match each picture with its name.',
+    image: '/images/games/lohri.jpg',
+    category: 'Games',
+    link: GAME_ROUTES.memoryMatch,
+  },
+];
+
+// Work out which game page a database item opens.
+// Uses the item's link when it points at a game route (full URL or path),
+// otherwise recognises the game from its title.
+const gameRoute = (item) => {
+  const known = Object.values(GAME_ROUTES);
+  let path = item.link || '';
+  try {
+    if (path && !path.startsWith('/')) path = new URL(path).pathname;
+  } catch {
+    path = '';
+  }
+  path = path.replace(/\/$/, '');
+  if (known.includes(path)) return path;
+
+  const title = `${item.title || ''}`.toLowerCase();
+  if (/memory|match|yaad/.test(title)) return GAME_ROUTES.memoryMatch;
+  if (/word|search|shabad|shabd|khoj/.test(title)) return GAME_ROUTES.wordSearch;
+  return GAME_ROUTES.wordSearch;
+};
+
 const imageUrl = (path) => (typeof path === 'string' && (path.startsWith('http') || path.startsWith('/')) ? path : DEFAULT_IMAGE_PATH);
 
 const handleImgError = (e) => {
@@ -79,7 +128,7 @@ const Learning = ({ isDarkMode, apiString }) => {
           type,
           image: item.image || DEFAULT_IMAGE_PATH,
           title: item.title,
-          description: item.description || '',
+          description: summary(item.description),
           category: item.category || 'Uncategorized',
           link,
           is_restricted: item.is_restricted,
@@ -88,7 +137,12 @@ const Learning = ({ isDarkMode, apiString }) => {
 
         const learning = (data.learning || []).map((i) => map(i, 'learning', `/learning-material/${i.id}`));
         const quiz = (data.quiz || []).map((i) => map(i, 'quiz', `/learning/quizzes/${i.id}`));
-        const game = (data.game || []).map((i) => map(i, 'game', i.link || `/learning/games/${i.id}`));
+        const fromDb = (data.game || []).map((i) => map(i, 'game', gameRoute(i)));
+        // Add any built-in game the database doesn't have yet, so both games always show
+        const missing = BUILT_IN_GAMES
+          .filter((g) => !fromDb.some((d) => d.link === g.link))
+          .map((g) => ({ ...g, type: 'game', is_restricted: false, is_premium: false }));
+        const game = [...fromDb, ...missing];
 
         setAllCards([...learning, ...quiz, ...game]);
         setGames(game);
@@ -96,8 +150,9 @@ const Learning = ({ isDarkMode, apiString }) => {
       } catch (err) {
         console.error('Error fetching learning items:', err.response?.status || err.message);
         setError('Learning items couldn’t be loaded. Check your connection and refresh the page.');
-        setAllCards([]);
-        setGames([]);
+        const builtIns = BUILT_IN_GAMES.map((g) => ({ ...g, type: 'game', is_restricted: false, is_premium: false }));
+        setAllCards(builtIns);
+        setGames(builtIns);
         setQuizzes([]);
       } finally {
         setIsLoading(false);

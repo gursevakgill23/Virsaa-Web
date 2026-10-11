@@ -4,7 +4,7 @@ import {
   FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight,
   FaStar, FaRegStar, FaPenFancy, FaBook, FaAward, FaQuoteLeft,
 } from 'react-icons/fa';
-import Loader from '../../../components/Loader';
+import Loader from '../../../components/VirsaaLoader/Loader';
 import PageHero from '../../../components/PageHero/PageHero';
 import styles from './AuthorDetail.module.css';
 

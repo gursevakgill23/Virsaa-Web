@@ -27,8 +27,13 @@ const prettify = (value = '') => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
-const CompleteProfile = ({ isDarkMode, apiString }) => {
-  const { userData, accessToken, updateUserData } = useAuth();
+// "prefer_not_to_say" is the backend default, so it means "not chosen yet"
+const initialGender = (value) => (value && value !== 'prefer_not_to_say' ? value : '');
+
+const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
+  const { userData: authUser, accessToken, updateUserData } = useAuth();
+  // Prefer the fresh profile from ProfileRoute; fall back to what login stored
+  const userData = profile || authUser;
   const navigate = useNavigate();
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
   const toastTheme = isDarkMode ? 'dark' : 'light';
@@ -40,7 +45,7 @@ const CompleteProfile = ({ isDarkMode, apiString }) => {
     about_me: userData?.about_me || '',
     preferred_content: userData?.preferred_content || [],
     dob: userData?.dob || '',
-    gender: userData?.gender || '',
+    gender: initialGender(userData?.gender),
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,7 +134,11 @@ const CompleteProfile = ({ isDarkMode, apiString }) => {
       });
       updateUserData(response.data);
       toast.success('Profile saved', { position: 'top-center', autoClose: 2000, theme: toastTheme });
-      setTimeout(() => navigate('/my-profile'), 1200);
+      if (onCompleted) {
+        setTimeout(() => onCompleted(response.data), 900); // ProfileRoute switches to MyProfile
+      } else {
+        setTimeout(() => navigate('/my-profile'), 1200);
+      }
     } catch (error) {
       let message = 'Your profile couldn’t be saved. Try again.';
       if (error.response?.status === 401) {
@@ -266,7 +275,6 @@ const CompleteProfile = ({ isDarkMode, apiString }) => {
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
               </select>
               {errors.gender && <p className={styles.errorText}>{errors.gender}</p>}
             </div>

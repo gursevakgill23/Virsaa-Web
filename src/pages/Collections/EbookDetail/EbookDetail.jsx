@@ -2,15 +2,15 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar,
-  FaSort, FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaTimes, FaChevronDown,
+  FaSort, FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown,
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import styles from './EbookDetail.module.css';
 import PageHero from '../../../components/PageHero/PageHero';
-import Loader from '../../../components/Loader';
+import Loader from '../../../components/VirsaaLoader/Loader';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import axios from 'axios';
-import { PDFViewer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import BookReader from '../../../components/BookReader/BookReader';
 
 const DEFAULT_IMAGE_PATH = '/images/Collections/book-image.jpg';
 
@@ -23,17 +23,6 @@ const shuffleArray = (array) => {
   }
   return shuffled;
 };
-
-// Styles for the generated fallback PDF
-const pdfStyles = StyleSheet.create({
-  page: { backgroundColor: '#FFF', padding: 20, flexDirection: 'column', fontSize: 12, fontFamily: 'Helvetica' },
-  coverPage: { backgroundColor: 'white', padding: 40, flexDirection: 'column', justifyContent: 'center', alignItems: 'center' },
-  coverTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#65041d' },
-  coverAuthor: { fontSize: 16, marginBottom: 10, color: '#666' },
-  chapterTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' },
-  content: { lineHeight: 1.5, color: '#444' },
-  pageNumber: { position: 'absolute', bottom: 10, right: 20, fontSize: 10, color: '#666' },
-});
 
 // Public/static images
 const getProductionImagePath = (imagePath) => {
@@ -49,31 +38,6 @@ const handleImgError = (e) => {
   e.currentTarget.dataset.fallback = '1';
   e.currentTarget.src = DEFAULT_IMAGE_PATH;
 };
-
-// Generated PDF shown when the real file can't be opened
-const MyDocument = ({ ebook }) => (
-  <Document>
-    <Page size="A4" style={pdfStyles.coverPage}>
-      <View>
-        <Text style={pdfStyles.coverTitle}>{ebook?.title || 'Untitled Ebook'}</Text>
-        <Text style={pdfStyles.coverAuthor}>{ebook?.authorName || 'Unknown Author'}</Text>
-      </View>
-    </Page>
-    {ebook?.chapters?.map((chapter, index) => (
-      <Page key={chapter.id} size="A4" style={pdfStyles.page}>
-        <View>
-          <Text style={pdfStyles.chapterTitle}>
-            Chapter {index + 1}: {chapter.title}
-          </Text>
-          <Text style={pdfStyles.content}>
-            The full text of this chapter couldn’t be loaded. Close this window and try “Read now” again.
-          </Text>
-        </View>
-        <Text style={pdfStyles.pageNumber}>Page {index + 2}</Text>
-      </Page>
-    ))}
-  </Document>
-);
 
 const Stars = ({ value }) => (
   <span className={styles.stars} aria-label={`${value} out of 5`}>
@@ -191,34 +155,35 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     return () => { cancelled = true; };
   }, [id, apiUrl]);
 
-  // PDFs are private on S3; read_pdf returns a temporary link
-  const handleReadNow = async () => {
+  // PDFs are private on S3; read_pdf returns a temporary link.
+  // The reader opens straight away (full screen, from the click) and shows
+  // "Opening the book…" until the link and the file arrive.
+  const fetchPdfLink = async () => {
     setPdfLoading(true);
     setPdfError(null);
     setPdfUrl(null);
     try {
       const response = await axios.get(`${apiUrl}/collections/ebooks/${id}/read_pdf/`);
-      if (response.data?.pdf_url) {
-        setPdfUrl(response.data.pdf_url);
-      } else {
-        throw new Error('No PDF link returned');
-      }
+      if (!response.data?.pdf_url) throw new Error('No PDF link returned');
+      setPdfUrl(response.data.pdf_url);
     } catch (error) {
       console.error('Error fetching PDF link:', error.response?.status || error.message);
-      setPdfError('The book file couldn’t be opened right now. Showing a preview instead.');
+      setPdfError(error.response?.status === 404 ? 'This book has no file yet.' : 'The book couldn’t be opened right now.');
     } finally {
-      setShowPdfModal(true);
       setPdfLoading(false);
     }
   };
 
-  // Close the reader with Escape
-  useEffect(() => {
-    if (!showPdfModal) return undefined;
-    const onKey = (e) => e.key === 'Escape' && setShowPdfModal(false);
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [showPdfModal]);
+  const handleReadNow = () => {
+    // Must run inside the click, or the browser refuses full screen
+    if (document.fullscreenEnabled && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
+    setShowPdfModal(true);
+    fetchPdfLink(); // links expire after an hour, so get a fresh one each time
+  };
+
+  const closeReader = () => setShowPdfModal(false);
 
   const handleLike = () => {
     setLiked(!liked);
@@ -599,32 +564,13 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
 
       {/* ---------- Reader ---------- */}
       {showPdfModal && (
-        <div className={styles.modalOverlay} onMouseDown={() => setShowPdfModal(false)} role="presentation">
-          <div
-            className={styles.modal}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Reading ${ebook.title}`}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className={styles.modalHead}>
-              <h2 className={styles.modalTitle}>{ebook.title}</h2>
-              <button type="button" onClick={() => setShowPdfModal(false)} className={styles.iconButton} aria-label="Close reader">
-                <FaTimes />
-              </button>
-            </div>
-            {pdfError && <p className={styles.pdfError}>{pdfError}</p>}
-            <div className={styles.modalBody}>
-              {pdfUrl ? (
-                <iframe src={pdfUrl} title={`${ebook.title} PDF`} />
-              ) : (
-                <PDFViewer width="100%" height="100%" showToolbar>
-                  <MyDocument ebook={ebook} />
-                </PDFViewer>
-              )}
-            </div>
-          </div>
-        </div>
+        <BookReader
+          url={pdfUrl}
+          title={ebook.title}
+          linkError={pdfError}
+          onRetry={fetchPdfLink}
+          onClose={closeReader}
+        />
       )}
     </div>
   );

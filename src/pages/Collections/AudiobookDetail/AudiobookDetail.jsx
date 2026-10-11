@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fa';
 import styles from './AudiobookDetail.module.css';
 import PageHero from '../../../components/PageHero/PageHero';
-import Loader from '../../../components/Loader';
+import Loader from '../../../components/VirsaaLoader/Loader';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
