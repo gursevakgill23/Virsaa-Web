@@ -454,7 +454,7 @@
   align-items: flex-start;
   gap: 6px;
   padding: 22px 18px 20px;
-  border-radius: 999px 999px 24px 24px;
+  border-radius: 50% 50% 24px 24px / 38% 38% 24px 24px;
   color: #fff;
   overflow: hidden;
   box-shadow: var(--shadow-soft);

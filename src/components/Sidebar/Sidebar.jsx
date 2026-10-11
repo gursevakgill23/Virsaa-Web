@@ -145,6 +145,11 @@ const Sidebar = ({ open, closeSidebar }) => {
     setErrors({});
   };
 
+  // Highlights the tab for the page you're on
+  const isTabActive = (tab) => (tab.path
+    ? location.pathname === tab.path || (tab.id === 'home' && location.pathname === '/')
+    : tab.subItems.some((sub) => location.pathname.startsWith(sub.path)));
+
   const handleMainTabClick = (tab) => {
     if (!tab.subItems) closeSidebar();
     setActiveMenu(tab.subItems ? tab.id : null);
@@ -424,17 +429,29 @@ const Sidebar = ({ open, closeSidebar }) => {
         </div>
       </aside>
 
-      {/* Tablet tab bar (768–991px). Phones use the floating navbar instead. */}
+      {/* Section tab bar for phones and tablets (below 992px) */}
       <nav className={styles.tabNavigation} aria-label="Sections">
         {!activeMenu ? (
           mainTabs.map((tab) => (
             tab.path ? (
-              <Link key={tab.id} to={tab.path} className={styles.tabItem} onClick={() => handleMainTabClick(tab)}>
+              <Link
+                key={tab.id}
+                to={tab.path}
+                className={`${styles.tabItem} ${isTabActive(tab) ? styles.tabActive : ''}`}
+                aria-current={isTabActive(tab) ? 'page' : undefined}
+                onClick={() => handleMainTabClick(tab)}
+              >
                 <div className={styles.tabIcon}>{tab.icon}</div>
                 <div className={styles.tabLabel}>{tab.label}</div>
               </Link>
             ) : (
-              <button key={tab.id} type="button" className={styles.tabItem} onClick={() => handleMainTabClick(tab)}>
+              <button
+                key={tab.id}
+                type="button"
+                className={`${styles.tabItem} ${isTabActive(tab) ? styles.tabActive : ''}`}
+                aria-expanded={activeMenu === tab.id}
+                onClick={() => handleMainTabClick(tab)}
+              >
                 <div className={styles.tabIcon}>{tab.icon}</div>
                 <div className={styles.tabLabel}>{tab.label}</div>
               </button>
@@ -447,7 +464,12 @@ const Sidebar = ({ open, closeSidebar }) => {
               <div className={styles.tabLabel}>Back</div>
             </button>
             {mainTabs.find((tab) => tab.id === activeMenu)?.subItems?.map((item) => (
-              <Link key={item.id} to={item.path} className={styles.tabItem} onClick={closeSidebar}>
+              <Link
+                key={item.id}
+                to={item.path}
+                className={`${styles.tabItem} ${location.pathname.startsWith(item.path) ? styles.tabActive : ''}`}
+                onClick={closeSidebar}
+              >
                 <div className={styles.tabIcon}>{item.icon}</div>
                 <div className={styles.tabLabel}>{item.label}</div>
               </Link>

@@ -1018,7 +1018,7 @@
 .portrait {
   position: relative;
   aspect-ratio: 3 / 4;
-  border-radius: 999px 999px 24px 24px;
+  border-radius: 50% 50% 24px 24px / 38% 38% 24px 24px;
   overflow: hidden;
   background: var(--skeleton-bg-color);
   border: 4px solid var(--glass-border);

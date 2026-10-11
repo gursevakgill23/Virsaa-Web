@@ -1,720 +1,357 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation } from 'swiper/modules';
-import { 
-  FiSearch, 
-  FiX, 
-  FiChevronRight,
-  FiGrid, 
-  FiList,
-  FiMoreVertical,
-  FiBook,
-  FiHeadphones,
-  FiUser,
-  FiClock
+import {
+  FiSearch, FiX, FiChevronLeft, FiChevronRight, FiGrid, FiList,
+  FiBook, FiHeadphones, FiUser, FiClock, FiHeart, FiTrash2,
 } from 'react-icons/fi';
+import PageHero from '../../../components/PageHero/PageHero';
+import AccountTabs from '../AccountTabs/AccountTabs';
 import styles from './MyFavorites.module.css';
-import 'swiper/css';
-import 'swiper/css/navigation';
 
-// Hook for image path handling
-const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
-          ? imagePath
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      }
-      return imagePath; // Handle imported images
-    }
-    return imagePath; // Return as-is in development
-  };
+const getImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
+    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+  }
+  return imagePath;
 };
+
+const bookImage = '/images/book-image.jpg';
+const authorImage = '/images/author-image.jpg';
+
+// Placeholder favourites until the favourites API exists
+const makeEbooks = () => Array.from({ length: 10 }, (_, i) => ({
+  id: `ebook-${i + 1}`,
+  title: `Sacred Wisdom Vol. ${i + 1}`,
+  author: `Author ${String.fromCharCode(65 + i)}`,
+  image: bookImage,
+  progress: (i * 23 + 12) % 100,
+  rating: (4.5 + ((i * 7) % 5) / 10).toFixed(1),
+}));
+
+const makeAudiobooks = () => Array.from({ length: 10 }, (_, i) => ({
+  id: `audiobook-${i + 1}`,
+  title: `Divine Listenings Vol. ${i + 1}`,
+  author: `Narrator ${String.fromCharCode(65 + i)}`,
+  image: bookImage,
+  duration: `${(i % 3) + 1}h ${(i * 17) % 60}m`,
+  rating: (4.5 + ((i * 3) % 5) / 10).toFixed(1),
+}));
+
+const makeAuthors = () => Array.from({ length: 10 }, (_, i) => ({
+  id: `author-${i + 1}`,
+  name: `Scholar ${String.fromCharCode(65 + i)} Singh`,
+  image: authorImage,
+  books: 5 + ((i * 7) % 20),
+  followers: `${10 + ((i * 11) % 50)}k`,
+}));
+
+const makeSaved = () => Array.from({ length: 8 }, (_, i) => ({
+  id: `saved-${i + 1}`,
+  title: `Spiritual Journey ${i + 1}`,
+  type: ['Ebook', 'Audiobook', 'Article'][i % 3],
+  image: i % 2 === 0 ? bookImage : authorImage,
+  added: `${(i * 4) + 1} days ago`,
+}));
+
+const TABS = [
+  { id: 'ebooks', label: 'Ebooks', icon: <FiBook />, path: '/collections/ebooks' },
+  { id: 'audiobooks', label: 'Audiobooks', icon: <FiHeadphones />, path: '/collections/audiobooks' },
+  { id: 'authors', label: 'Authors', icon: <FiUser />, path: '/collections/authors' },
+];
+
+const matches = (item, q) => {
+  if (!q) return true;
+  const text = `${item.title || ''} ${item.name || ''} ${item.author || ''} ${item.type || ''}`.toLowerCase();
+  return text.includes(q.toLowerCase());
+};
+
+/* Horizontally scrolling row with previous / next buttons */
+const ScrollRow = ({ label, children }) => {
+  const rowRef = useRef(null);
+  const scroll = (dir) => {
+    const el = rowRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
+  return (
+    <div className={styles.rowWrap}>
+      <button type="button" className={`${styles.rowButton} ${styles.rowPrev}`} onClick={() => scroll(-1)} aria-label={`Scroll ${label} left`}>
+        <FiChevronLeft />
+      </button>
+      <div className={styles.row} ref={rowRef}>{children}</div>
+      <button type="button" className={`${styles.rowButton} ${styles.rowNext}`} onClick={() => scroll(1)} aria-label={`Scroll ${label} right`}>
+        <FiChevronRight />
+      </button>
+    </div>
+  );
+};
+
+const Stars = ({ rating }) => (
+  <span className={styles.rating}>
+    <span className={styles.stars} style={{ '--rating': rating }} aria-hidden="true" />
+    <span className={styles.ratingValue}>{rating}</span>
+    <span className={styles.srOnly}>out of 5</span>
+  </span>
+);
+
+const RemoveButton = ({ label, onClick, variant = 'card' }) => (
+  <button
+    type="button"
+    className={variant === 'card' ? styles.removeButton : styles.removeInline}
+    onClick={onClick}
+    aria-label={`Remove ${label}`}
+    title="Remove"
+  >
+    {variant === 'card' ? <FiHeart /> : <FiTrash2 />}
+  </button>
+);
 
 const MyFavorites = ({ isDarkMode }) => {
-  const getImagePath = useProductionImagePath();
-
-  // Image paths (ensure these exist in /public/images/)
-  const header_image_light = '/images/header-image.png';
-  const header_image_dark = '/images/header-image-dark.png';
-  const bookImage = '/images/book-image.jpg';
-  const authorImage = '/images/author-image.jpg';
+  const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [viewMode, setViewMode] = useState('grid');
   const [activeTab, setActiveTab] = useState('ebooks');
+  const [lists, setLists] = useState(() => ({
+    ebooks: makeEbooks(),
+    audiobooks: makeAudiobooks(),
+    authors: makeAuthors(),
+    saved: makeSaved(),
+  }));
+  const [lastRemoved, setLastRemoved] = useState(null); // { key, item, index }
 
-  // State for each section's data
-  const [favoriteEbooks, setFavoriteEbooks] = useState(
-    Array(10).fill().map((_, i) => ({
-      id: `ebook-${i+1}`,
-      title: `Sacred Wisdom Vol. ${i+1}`,
-      author: `Author ${String.fromCharCode(65+i)}`,
-      image: bookImage,
-      progress: Math.floor(Math.random() * 100),
-      rating: (Math.random() * 0.5 + 4.5).toFixed(1)
-    }))
+  const remove = (key, id) => {
+    const index = lists[key].findIndex((x) => x.id === id);
+    if (index === -1) return;
+    setLastRemoved({ key, item: lists[key][index], index });
+    setLists((prev) => ({ ...prev, [key]: prev[key].filter((x) => x.id !== id) }));
+  };
+
+  const undo = () => {
+    if (!lastRemoved) return;
+    const { key, item, index } = lastRemoved;
+    setLists((prev) => {
+      const next = [...prev[key]];
+      next.splice(index, 0, item);
+      return { ...prev, [key]: next };
+    });
+    setLastRemoved(null);
+  };
+
+  const filtered = useMemo(() => ({
+    ebooks: lists.ebooks.filter((x) => matches(x, searchQuery)),
+    audiobooks: lists.audiobooks.filter((x) => matches(x, searchQuery)),
+    authors: lists.authors.filter((x) => matches(x, searchQuery)),
+    saved: lists.saved.filter((x) => matches(x, searchQuery)),
+  }), [lists, searchQuery]);
+
+  const current = filtered[activeTab];
+  const tab = TABS.find((t) => t.id === activeTab);
+
+  const empty = (what, path) => (
+    <p className={styles.emptyNote}>
+      {searchQuery
+        ? `Nothing in ${what} matches “${searchQuery}”.`
+        : <>No {what} yet. Tap the heart on anything in <Link to={path}>Collections</Link> to save it here.</>}
+    </p>
   );
 
-  const [favoriteAudiobooks, setFavoriteAudiobooks] = useState(
-    Array(10).fill().map((_, i) => ({
-      id: `audiobook-${i+1}`,
-      title: `Divine Listenings Vol. ${i+1}`,
-      author: `Narrator ${String.fromCharCode(65+i)}`,
-      image: bookImage,
-      duration: `${Math.floor(Math.random() * 3) + 1}h ${Math.floor(Math.random() * 60)}m`,
-      rating: (Math.random() * 0.5 + 4.5).toFixed(1)
-    }))
-  );
-
-  const [favoriteAuthors, setFavoriteAuthors] = useState(
-    Array(10).fill().map((_, i) => ({
-      id: `author-${i+1}`,
-      name: `Scholar ${String.fromCharCode(65+i)} Singh`,
-      image: authorImage,
-      books: Math.floor(Math.random() * 20) + 5,
-      followers: `${Math.floor(Math.random() * 50) + 10}k`
-    }))
-  );
-
-  const [savedForLater, setSavedForLater] = useState(
-    Array(10).fill().map((_, i) => ({
-      id: `saved-${i+1}`,
-      title: `Spiritual Journey ${i+1}`,
-      type: ['Ebook', 'Audiobook', 'Article'][Math.floor(Math.random() * 3)],
-      image: i % 2 === 0 ? bookImage : authorImage,
-      added: `${Math.floor(Math.random() * 30) + 1} days ago`
-    }))
-  );
-
-  // State for menu visibility
-  const [openMenuId, setOpenMenuId] = useState(null);
-
-  const toggleMenu = (id) => {
-    setOpenMenuId(openMenuId === id ? null : id);
+  /* ---------- Section renderers ---------- */
+  const renderGrid = () => {
+    if (current.length === 0) return empty(tab.label.toLowerCase(), tab.path);
+    return (
+      <ScrollRow label={tab.label}>
+        {current.map((item) => {
+          if (activeTab === 'authors') {
+            return (
+              <article key={item.id} className={styles.authorCard}>
+                <div className={styles.authorFrame}>
+                  <img src={getImagePath(item.image)} alt="" loading="lazy" />
+                  <RemoveButton label={`${item.name} from favorites`} onClick={() => remove('authors', item.id)} />
+                </div>
+                <h3 className={styles.cardTitle}>{item.name}</h3>
+                <p className={styles.cardMeta}>{item.books} books, {item.followers} followers</p>
+              </article>
+            );
+          }
+          const isEbook = activeTab === 'ebooks';
+          return (
+            <article key={item.id} className={isEbook ? styles.bookCard : styles.audioCard}>
+              <div className={isEbook ? styles.bookCover : styles.audioCover}>
+                <img src={getImagePath(item.image)} alt="" loading="lazy" />
+                {!isEbook && <span className={styles.audioBadge} aria-hidden="true"><FiHeadphones /></span>}
+                <RemoveButton label={`${item.title} from favorites`} onClick={() => remove(activeTab, item.id)} />
+              </div>
+              <h3 className={styles.cardTitle}>{item.title}</h3>
+              <p className={styles.cardMeta}>{item.author}</p>
+              <div className={styles.cardFoot}>
+                <Stars rating={item.rating} />
+                {isEbook
+                  ? <span className={styles.cardMeta}>{item.progress}% read</span>
+                  : <span className={styles.cardMeta}><FiClock aria-hidden="true" /> {item.duration}</span>}
+              </div>
+              {isEbook && (
+                <div className={styles.progress} role="progressbar" aria-valuenow={item.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${item.title} reading progress`}>
+                  <div className={styles.progressFill} style={{ width: `${item.progress}%` }} />
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </ScrollRow>
+    );
   };
 
-  // Remove handlers
-  const removeEbook = (id) => {
-    setFavoriteEbooks(favoriteEbooks.filter(ebook => ebook.id !== id));
-    setOpenMenuId(null);
-  };
-
-  const removeAudiobook = (id) => {
-    setFavoriteAudiobooks(favoriteAudiobooks.filter(audiobook => audiobook.id !== id));
-    setOpenMenuId(null);
-  };
-
-  const removeAuthor = (id) => {
-    setFavoriteAuthors(favoriteAuthors.filter(author => author.id !== id));
-    setOpenMenuId(null);
-  };
-
-  const removeSavedItem = (id) => {
-    setSavedForLater(savedForLater.filter(item => item.id !== id));
-    setOpenMenuId(null);
-  };
-
-  const tabs = [
-    { id: 'ebooks', label: 'Ebooks', icon: <FiBook /> },
-    { id: 'audiobooks', label: 'Audiobooks', icon: <FiHeadphones /> },
-    { id: 'authors', label: 'Authors', icon: <FiUser /> }
-  ];
-
-  return (
-    <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Favorites Header"
-          className={styles.headerImage}
-          onError={() => console.error('Failed to load header image')}
-        />
-        <div className={styles.headerText}>
-          <h1>MY FAVORITES</h1>
-          <p>Your personalized collection of sacred content</p>
+  const renderList = () => {
+    if (current.length === 0) return empty(tab.label.toLowerCase(), tab.path);
+    const cols = {
+      ebooks: ['Title', 'Author', 'Progress', 'Rating'],
+      audiobooks: ['Title', 'Narrator', 'Duration', 'Rating'],
+      authors: ['Name', 'Books', 'Followers', ''],
+    }[activeTab];
+    return (
+      <div className={styles.table} role="table" aria-label={`Favorite ${tab.label.toLowerCase()}`}>
+        <div className={`${styles.tr} ${styles.thead}`} role="row">
+          {cols.map((c, i) => <span key={i} role="columnheader">{c}</span>)}
+          <span role="columnheader"><span className={styles.srOnly}>Actions</span></span>
         </div>
-      </div>
-
-      {/* Breadcrumb */}
-      <div className={styles.breadcrumb}>
-        <Link to="/"><span>Home</span></Link> / 
-        <Link to="/collections"><span>Collections</span></Link> /
-        <span>Favorites</span>
-      </div>
-
-      {/* Search and View Controls */}
-      <div className={styles.controls}>
-        <div className={styles.searchContainer}>
-          <FiSearch className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder="Search your favorites..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={styles.searchInput}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className={styles.clearSearch}>
-              <FiX />
-            </button>
-          )}
-        </div>
-        
-        <div className={styles.viewToggle}>
-          <button 
-            className={`${styles.viewButton} ${viewMode === 'grid' ? styles.active : ''}`}
-            onClick={() => setViewMode('grid')}
-          >
-            <FiGrid /> Grid
-          </button>
-          <button 
-            className={`${styles.viewButton} ${viewMode === 'list' ? styles.active : ''}`}
-            onClick={() => setViewMode('list')}
-          >
-            <FiList /> List
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className={styles.tabNavigation}>
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
+        {current.map((item) => (
+          <div key={item.id} className={styles.tr} role="row">
+            <span role="cell" className={styles.tdMain}>
+              <img src={getImagePath(item.image)} alt="" className={activeTab === 'authors' ? styles.thumbRound : styles.thumb} loading="lazy" />
+              <span>{item.title || item.name}</span>
+            </span>
+            {activeTab === 'authors' ? (
+              <>
+                <span role="cell">{item.books} books</span>
+                <span role="cell">{item.followers}</span>
+                <span role="cell" />
+              </>
+            ) : (
+              <>
+                <span role="cell">{item.author}</span>
+                <span role="cell">
+                  {activeTab === 'ebooks' ? (
+                    <span className={styles.inlineProgress}>
+                      <span className={styles.progress}><span className={styles.progressFill} style={{ width: `${item.progress}%` }} /></span>
+                      {item.progress}%
+                    </span>
+                  ) : item.duration}
+                </span>
+                <span role="cell"><Stars rating={item.rating} /></span>
+              </>
+            )}
+            <span role="cell" className={styles.tdAction}>
+              <RemoveButton variant="inline" label={`${item.title || item.name} from favorites`} onClick={() => remove(activeTab, item.id)} />
+            </span>
+          </div>
         ))}
       </div>
+    );
+  };
 
-      {/* Content Sections */}
-      <div className={styles.content}>
-        {/* Favorite Ebooks Section */}
-        {activeTab === 'ebooks' && (
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2><FiBook /> Favorite Ebooks</h2>
-              <Link to="/collections/ebooks" className={styles.viewAllLink}>
-                View all <FiChevronRight />
-              </Link>
-            </div>
-            
-            {viewMode === 'grid' ? (
-              <div className={styles.swiperContainer}>
-                <Swiper
-                  modules={[Navigation]}
-                  spaceBetween={30}
-                  slidesPerView="auto"
-                  navigation={{
-                    prevEl: `.${styles.ebooksPrev}`,
-                    nextEl: `.${styles.ebooksNext}`
-                  }}
-                  className={styles.swiper}
-                >
-                  {favoriteEbooks.map(ebook => (
-                    <SwiperSlide key={ebook.id} className={styles.slide}>
-                      <EbookCard 
-                        item={ebook} 
-                        onRemove={() => removeEbook(ebook.id)}
-                        isMenuOpen={openMenuId === ebook.id}
-                        toggleMenu={() => toggleMenu(ebook.id)}
-                      />
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-                <button className={`${styles.navButton} ${styles.ebooksPrev}`}>
-                  &lt;
-                </button>
-                <button className={`${styles.navButton} ${styles.ebooksNext}`}>
-                  &gt;
-                </button>
-              </div>
-            ) : (
-              <div className={styles.listContainer}>
-                <div className={styles.listHeader}>
-                  <div className={styles.listHeaderItem}>Name</div>
-                  <div className={styles.listHeaderItem}>Author</div>
-                  <div className={styles.listHeaderItem}>Progress</div>
-                  <div className={styles.listHeaderItem}>Rating</div>
-                  <div className={styles.listHeaderItem}>Actions</div>
-                </div>
-                <div className={styles.listBody}>
-                  {favoriteEbooks.map(ebook => (
-                    <EbookListItem 
-                      key={ebook.id} 
-                      item={ebook}
-                      onRemove={() => removeEbook(ebook.id)}
-                      isMenuOpen={openMenuId === ebook.id}
-                      toggleMenu={() => toggleMenu(ebook.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+  return (
+    <div className={styles.page}>
+      <PageHero
+        compact
+        image={headerImage}
+        title="My favorites"
+        subtitle="Everything you’ve saved, in one place."
+        crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'Favorites' }]}
+      >
+        <AccountTabs />
+      </PageHero>
 
-        {/* Favorite Audiobooks Section */}
-        {activeTab === 'audiobooks' && (
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2><FiHeadphones /> Favorite Audiobooks</h2>
-              <Link to="/collections/audiobooks" className={styles.viewAllLink}>
-                View all <FiChevronRight />
-              </Link>
-            </div>
-            
-            {viewMode === 'grid' ? (
-              <div className={styles.swiperContainer}>
-                <Swiper
-                  modules={[Navigation]}
-                  spaceBetween={30}
-                  slidesPerView="auto"
-                  navigation={{
-                    prevEl: `.${styles.audiobooksPrev}`,
-                    nextEl: `.${styles.audiobooksNext}`
-                  }}
-                  className={styles.swiper}
-                >
-                  {favoriteAudiobooks.map(audiobook => (
-                    <SwiperSlide key={audiobook.id} className={styles.slide}>
-                      <AudiobookCard 
-                        item={audiobook}
-                        onRemove={() => removeAudiobook(audiobook.id)}
-                        isMenuOpen={openMenuId === audiobook.id}
-                        toggleMenu={() => toggleMenu(audiobook.id)}
-                      />
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-                <button className={`${styles.navButton} ${styles.audiobooksPrev}`}>
-                  &lt;
-                </button>
-                <button className={`${styles.navButton} ${styles.audiobooksNext}`}>
-                  &gt;
-                </button>
-              </div>
-            ) : (
-              <div className={styles.listContainer}>
-                <div className={styles.listHeader}>
-                  <div className={styles.listHeaderItem}>Name</div>
-                  <div className={styles.listHeaderItem}>Narrator</div>
-                  <div className={styles.listHeaderItem}>Duration</div>
-                  <div className={styles.listHeaderItem}>Rating</div>
-                  <div className={styles.listHeaderItem}>Actions</div>
-                </div>
-                <div className={styles.listBody}>
-                  {favoriteAudiobooks.map(audiobook => (
-                    <AudiobookListItem 
-                      key={audiobook.id} 
-                      item={audiobook}
-                      onRemove={() => removeAudiobook(audiobook.id)}
-                      isMenuOpen={openMenuId === audiobook.id}
-                      toggleMenu={() => toggleMenu(audiobook.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Favorite Authors Section */}
-        {activeTab === 'authors' && (
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2><FiUser /> Favorite Authors</h2>
-              <Link to="/collections/authors" className={styles.viewAllLink}>
-                View all <FiChevronRight />
-              </Link>
-            </div>
-            
-            {viewMode === 'grid' ? (
-              <div className={styles.swiperContainer}>
-                <Swiper
-                  modules={[Navigation]}
-                  spaceBetween={30}
-                  slidesPerView="auto"
-                  navigation={{
-                    prevEl: `.${styles.authorsPrev}`,
-                    nextEl: `.${styles.authorsNext}`
-                  }}
-                  className={styles.swiper}
-                >
-                  {favoriteAuthors.map(author => (
-                    <SwiperSlide key={author.id} className={styles.slide}>
-                      <AuthorCard 
-                        item={author}
-                        onRemove={() => removeAuthor(author.id)}
-                        isMenuOpen={openMenuId === author.id}
-                        toggleMenu={() => toggleMenu(author.id)}
-                      />
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-                <button className={`${styles.navButton} ${styles.authorsPrev}`}>
-                  &lt;
-                </button>
-                <button className={`${styles.navButton} ${styles.authorsNext}`}>
-                  &gt;
-                </button>
-              </div>
-            ) : (
-              <div className={styles.listContainer}>
-                <div className={styles.listHeader}>
-                  <div className={styles.listHeaderItem}>Name</div>
-                  <div className={styles.listHeaderItem}>Books</div>
-                  <div className={styles.listHeaderItem}>Followers</div>
-                  <div className={styles.listHeaderItem}></div>
-                  <div className={styles.listHeaderItem}>Actions</div>
-                </div>
-                <div className={styles.listBody}>
-                  {favoriteAuthors.map(author => (
-                    <AuthorListItem 
-                      key={author.id} 
-                      item={author}
-                      onRemove={() => removeAuthor(author.id)}
-                      isMenuOpen={openMenuId === author.id}
-                      toggleMenu={() => toggleMenu(author.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Saved for Later Section */}
-      <div className={styles.content}>
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2><FiClock /> Saved for Later</h2>
-            <Link to="/collections/saved" className={styles.viewAllLink}>
-              View all <FiChevronRight />
-            </Link>
-          </div>
-          
-          {viewMode === 'grid' ? (
-            <div className={styles.swiperContainer}>
-              <Swiper
-                modules={[Navigation]}
-                spaceBetween={30}
-                slidesPerView="auto"
-                navigation={{
-                  prevEl: `.${styles.savedPrev}`,
-                  nextEl: `.${styles.savedNext}`
-                }}
-                className={styles.swiper}
+      {/* ---------- Toolbar ---------- */}
+      <div className={styles.toolbarWrap}>
+        <div className={styles.toolbar}>
+          <div className={styles.segmented} role="tablist" aria-label="Favorite type">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === t.id}
+                className={`${styles.segment} ${activeTab === t.id ? styles.segmentOn : ''}`}
+                onClick={() => setActiveTab(t.id)}
               >
-                {savedForLater.map(item => (
-                  <SwiperSlide key={item.id} className={styles.slide}>
-                    <SavedCard 
-                      item={item}
-                      onRemove={() => removeSavedItem(item.id)}
-                      isMenuOpen={openMenuId === item.id}
-                      toggleMenu={() => toggleMenu(item.id)}
-                    />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-              <button className={`${styles.navButton} ${styles.savedPrev}`}>
-                &lt;
+                <span aria-hidden="true">{t.icon}</span> {t.label}
+                <span className={styles.count}>{lists[t.id].length}</span>
               </button>
-              <button className={`${styles.navButton} ${styles.savedNext}`}>
-                &gt;
-              </button>
-            </div>
-          ) : (
-            <div className={styles.listContainer}>
-              <div className={styles.listHeader}>
-                <div className={styles.listHeaderItem}>Name</div>
-                <div className={styles.listHeaderItem}>Type</div>
-                <div className={styles.listHeaderItem}>Added</div>
-                <div className={styles.listHeaderItem}></div>
-                <div className={styles.listHeaderItem}>Actions</div>
-              </div>
-              <div className={styles.listBody}>
-                {savedForLater.map(item => (
-                  <SavedListItem 
-                    key={item.id} 
-                    item={item}
-                    onRemove={() => removeSavedItem(item.id)}
-                    isMenuOpen={openMenuId === item.id}
-                    toggleMenu={() => toggleMenu(item.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Card Components
-const EbookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => {
-  const getImagePath = useProductionImagePath();
-
-  return (
-    <div className={styles.card}>
-      <div className={styles.cardImageContainer}>
-        <img 
-          src={getImagePath(item.image)} 
-          alt={item.title} 
-          className={styles.cardImage} 
-          onError={() => console.error(`Failed to load image: ${item.image}`)}
-        />
-        <div className={styles.cardBadge}>Ebook</div>
-        <div className={styles.cardMenuContainer}>
-          <button className={styles.cardMenu} onClick={toggleMenu}>
-            <FiMoreVertical />
-          </button>
-          {isMenuOpen && (
-            <div className={styles.menuDropdown}>
-              <button onClick={onRemove}>Remove from Favorites</button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className={styles.cardContent}>
-        <h3 className={styles.cardTitle}>{item.title}</h3>
-        <p className={styles.cardAuthor}>{item.author}</p>
-        <div className={styles.cardMeta}>
-          <div className={styles.rating}>
-            <span className={styles.ratingValue}>{item.rating}</span>
-            <div className={styles.stars} style={{ '--rating': item.rating }} />
+            ))}
           </div>
-          <div className={styles.progressBar}>
-            <div 
-              className={styles.progressFill} 
-              style={{ width: `${item.progress}%` }}
+
+          <div className={styles.search}>
+            <FiSearch className={styles.searchIcon} aria-hidden="true" />
+            <label htmlFor="fav-search" className={styles.srOnly}>Search your favorites</label>
+            <input
+              id="fav-search"
+              type="search"
+              placeholder="Search your favorites"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={styles.searchInput}
             />
-            <span className={styles.progressText}>{item.progress}%</span>
+            {searchQuery && (
+              <button type="button" onClick={() => setSearchQuery('')} className={styles.clearSearch} aria-label="Clear search">
+                <FiX />
+              </button>
+            )}
+          </div>
+
+          <div className={styles.viewToggle} role="group" aria-label="View">
+            <button type="button" aria-pressed={viewMode === 'grid'} className={`${styles.viewButton} ${viewMode === 'grid' ? styles.viewOn : ''}`} onClick={() => setViewMode('grid')}>
+              <FiGrid aria-hidden="true" /> <span>Grid</span>
+            </button>
+            <button type="button" aria-pressed={viewMode === 'list'} className={`${styles.viewButton} ${viewMode === 'list' ? styles.viewOn : ''}`} onClick={() => setViewMode('list')}>
+              <FiList aria-hidden="true" /> <span>List</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {lastRemoved && (
+        <div className={styles.undoWrap}>
+          <p className={styles.undo} role="status">
+            Removed “{lastRemoved.item.title || lastRemoved.item.name}”.
+            <button type="button" onClick={undo}>Undo</button>
+            <button type="button" className={styles.undoClose} onClick={() => setLastRemoved(null)} aria-label="Dismiss"><FiX /></button>
+          </p>
+        </div>
+      )}
+
+      {/* ---------- Favorites ---------- */}
+      <section className={styles.section} aria-labelledby="fav-title">
+        <div className={styles.rowHead}>
+          <h2 id="fav-title" className={styles.sectionTitle}>Favorite {tab.label.toLowerCase()}</h2>
+          <Link to={tab.path} className={styles.textLink}>Browse {tab.label.toLowerCase()}</Link>
+        </div>
+        {viewMode === 'grid' ? renderGrid() : renderList()}
+      </section>
+
+      {/* ---------- Saved for later ---------- */}
+      <section className={styles.section} aria-labelledby="saved-title">
+        <div className={styles.rowHead}>
+          <h2 id="saved-title" className={styles.sectionTitle}><FiClock aria-hidden="true" className={styles.titleIcon} /> Saved for later</h2>
+        </div>
+        {filtered.saved.length === 0 ? (
+          <p className={styles.emptyNote}>{searchQuery ? `Nothing saved matches “${searchQuery}”.` : 'Nothing saved for later.'}</p>
+        ) : (
+          <ul className={styles.savedList}>
+            {filtered.saved.map((item) => (
+              <li key={item.id} className={styles.savedItem}>
+                <img src={getImagePath(item.image)} alt="" loading="lazy" className={styles.savedThumb} />
+                <div className={styles.savedBody}>
+                  <h3>{item.title}</h3>
+                  <p><span className={styles.typeTag}>{item.type}</span> <span className={styles.savedWhen}>Saved {item.added}</span></p>
+                </div>
+                <RemoveButton variant="inline" label={`${item.title} from saved`} onClick={() => remove('saved', item.id)} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };
-
-const AudiobookCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => {
-  const getImagePath = useProductionImagePath();
-
-  return (
-    <div className={styles.card}>
-      <div className={styles.cardImageContainer}>
-        <img 
-          src={getImagePath(item.image)} 
-          alt={item.title} 
-          className={styles.cardImage} 
-          onError={() => console.error(`Failed to load image: ${item.image}`)}
-        />
-        <div className={styles.cardBadge}>Audiobook</div>
-        <div className={styles.cardMenuContainer}>
-          <button className={styles.cardMenu} onClick={toggleMenu}>
-            <FiMoreVertical />
-          </button>
-          {isMenuOpen && (
-            <div className={styles.menuDropdown}>
-              <button onClick={onRemove}>Remove from Favorites</button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className={styles.cardContent}>
-        <h3 className={styles.cardTitle}>{item.title}</h3>
-        <p className={styles.cardAuthor}>{item.author}</p>
-        <div className={styles.cardMeta}>
-          <div className={styles.rating}>
-            <span className={styles.ratingValue}>{item.rating}</span>
-            <div className={styles.stars} style={{ '--rating': item.rating }} />
-          </div>
-          <div className={styles.duration}>{item.duration}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const AuthorCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => {
-  const getImagePath = useProductionImagePath();
-
-  return (
-    <div className={styles.authorCard}>
-      <div className={styles.authorImageContainer}>
-        <img 
-          src={getImagePath(item.image)} 
-          alt={item.name} 
-          className={styles.authorImage} 
-          onError={() => console.error(`Failed to load image: ${item.image}`)}
-        />
-        <div className={styles.cardMenuContainer}>
-          <button className={styles.cardMenu} onClick={toggleMenu}>
-            <FiMoreVertical />
-          </button>
-          {isMenuOpen && (
-            <div className={styles.menuDropdown}>
-              <button onClick={onRemove}>Remove from Favorites</button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className={styles.authorContent}>
-        <h3 className={styles.authorName}>{item.name}</h3>
-        <div className={styles.authorMeta}>
-          <span>{item.books} books</span>
-          <span>{item.followers} followers</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const SavedCard = ({ item, onRemove, isMenuOpen, toggleMenu }) => {
-  const getImagePath = useProductionImagePath();
-
-  return (
-    <div className={styles.card}>
-      <div className={styles.cardImageContainer}>
-        <img 
-          src={getImagePath(item.image)} 
-          alt={item.title} 
-          className={styles.cardImage} 
-          onError={() => console.error(`Failed to load image: ${item.image}`)}
-        />
-        <div className={styles.cardBadge}>{item.type}</div>
-        <div className={styles.cardMenuContainer}>
-          <button className={styles.cardMenu} onClick={toggleMenu}>
-            <FiMoreVertical />
-          </button>
-          {isMenuOpen && (
-            <div className={styles.menuDropdown}>
-              <button onClick={onRemove}>Remove from Saved</button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className={styles.cardContent}>
-        <h3 className={styles.cardTitle}>{item.title}</h3>
-        <div className={styles.savedMeta}>
-          <span className={styles.savedType}>{item.type}</span>
-          <span className={styles.savedDate}>{item.added}</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// List Item Components
-const EbookListItem = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
-  <div className={styles.listRow}>
-    <div className={styles.listRowItem}>{item.title}</div>
-    <div className={styles.listRowItem}>{item.author}</div>
-    <div className={styles.listRowItem}>
-      <div className={styles.progressBar}>
-        <div 
-          className={styles.progressFill} 
-          style={{ width: `${item.progress}%` }}
-        />
-        <span className={styles.progressText}>{item.progress}%</span>
-      </div>
-    </div>
-    <div className={styles.listRowItem}>
-      <div className={styles.rating}>
-        <span className={styles.ratingValue}>{item.rating}</span>
-        <div className={styles.stars} style={{ '--rating': item.rating }} />
-      </div>
-    </div>
-    <div className={styles.listRowItem}>
-      <div className={styles.listMenuContainer}>
-        <button className={styles.listMenu} onClick={toggleMenu}>
-          <FiMoreVertical />
-        </button>
-        {isMenuOpen && (
-          <div className={styles.menuDropdown}>
-            <button onClick={onRemove}>Remove from Favorites</button>
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-);
-
-const AudiobookListItem = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
-  <div className={styles.listRow}>
-    <div className={styles.listRowItem}>{item.title}</div>
-    <div className={styles.listRowItem}>{item.author}</div>
-    <div className={styles.listRowItem}>{item.duration}</div>
-    <div className={styles.listRowItem}>
-      <div className={styles.rating}>
-        <span className={styles.ratingValue}>{item.rating}</span>
-        <div className={styles.stars} style={{ '--rating': item.rating }} />
-      </div>
-    </div>
-    <div className={styles.listRowItem}>
-      <div className={styles.listMenuContainer}>
-        <button className={styles.listMenu} onClick={toggleMenu}>
-          <FiMoreVertical />
-        </button>
-        {isMenuOpen && (
-          <div className={styles.menuDropdown}>
-            <button onClick={onRemove}>Remove from Favorites</button>
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-);
-
-const AuthorListItem = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
-  <div className={styles.listRow}>
-    <div className={styles.listRowItem}>{item.name}</div>
-    <div className={styles.listRowItem}>{item.books} books</div>
-    <div className={styles.listRowItem}>{item.followers} followers</div>
-    <div className={styles.listRowItem}></div>
-    <div className={styles.listRowItem}>
-      <div className={styles.listMenuContainer}>
-        <button className={styles.listMenu} onClick={toggleMenu}>
-          <FiMoreVertical />
-        </button>
-        {isMenuOpen && (
-          <div className={styles.menuDropdown}>
-            <button onClick={onRemove}>Remove from Favorites</button>
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-);
-
-const SavedListItem = ({ item, onRemove, isMenuOpen, toggleMenu }) => (
-  <div className={styles.listRow}>
-    <div className={styles.listRowItem}>{item.title}</div>
-    <div className={styles.listRowItem}>{item.type}</div>
-    <div className={styles.listRowItem}>{item.added}</div>
-    <div className={styles.listRowItem}></div>
-    <div className={styles.listRowItem}>
-      <div className={styles.listMenuContainer}>
-        <button className={styles.listMenu} onClick={toggleMenu}>
-          <FiMoreVertical />
-        </button>
-        {isMenuOpen && (
-          <div className={styles.menuDropdown}>
-            <button onClick={onRemove}>Remove from Saved</button>
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-);
 
 export default MyFavorites;

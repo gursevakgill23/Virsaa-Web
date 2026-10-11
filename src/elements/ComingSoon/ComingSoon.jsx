@@ -1,81 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import styles from './ComingSoon.module.css'; // Import CSS Module
+import styles from './ComingSoon.module.css';
 
-const useProductionImagePath = () => {
-  
-  return (imagePath) => {
-    // Only modify in production
-    if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
-      if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
-      }
-    }
-    return imagePath;
-  };
+const getImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
+    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+  }
+  return imagePath;
 };
 
+const CONTENT = [
+  { text: 'Content coming soon', image: '/images/comingsoon1.jpeg' },
+  { text: 'New features arriving', image: '/images/comingsoon2.jpg' },
+  { text: 'Stay tuned for updates', image: '/images/comingsoon3.png' },
+  { text: 'Exciting news ahead', image: '/images/comingsoon4.jpg' },
+];
 
-const ComingSoon = ({ isDarkMode }) => {
-  const getImagePath = useProductionImagePath();
-    const comingsoon1 = '/images/comingsoon1.jpeg';
-    const comingsoon2 = '/images/comingsoon2.jpg';
-    const comingsoon3 = '/images/comingsoon3.png';
-    const comingsoon4 = '/images/comingsoon4.jpg';
-  // Data for text and images
-  const contentArray = [
-    { text: 'Content Coming Soon', image: comingsoon1 },
-    { text: 'New Features Arriving', image: comingsoon2 },
-    { text: 'Stay Tuned for Updates', image: comingsoon3 },
-    { text: 'Exciting News Ahead', image: comingsoon4 },
-  ];
+const INTERVAL = 5000;
 
-  // State for currently active index
+const ComingSoon = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
 
-  // Change active index every 5 seconds
+  // Move to the next item every 5 seconds, unless the visitor is hovering or focused inside
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((prevIndex) => (prevIndex + 1) % contentArray.length);
-    }, 5000);
+    if (paused) return undefined;
+    const timer = setTimeout(() => setActiveIndex((i) => (i + 1) % CONTENT.length), INTERVAL);
+    return () => clearTimeout(timer);
+  }, [activeIndex, paused]);
 
-    return () => clearInterval(interval);
-  }, [contentArray.length]);
+  const active = CONTENT[activeIndex];
 
   return (
-    <div className={styles.comingSoonContainer}>
-      <h1 className={styles.comingSoonHeading}>Stay Tuned For Latest Updates</h1>
-      <div className={styles.comingSoonSection}>
-        {/* Left Side - Text List */}
+    <section
+      className={styles.comingSoonContainer}
+      aria-labelledby="coming-soon-title"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+    >
+      <div className={styles.panel}>
         <div className={styles.leftSide}>
-          <div className={styles.textList}>
-            {contentArray.map((item, index) => (
-              <div
-                key={index}
-                className={`${styles.textItem} ${index === activeIndex ? styles.active : ''}`}
-              >
-                {item.text}
-              </div>
-            ))}
-          </div>
+          <h2 id="coming-soon-title" className={styles.comingSoonHeading}>Stay tuned for the latest updates</h2>
+          <ol className={styles.textList}>
+            {CONTENT.map((item, index) => {
+              const isActive = index === activeIndex;
+              return (
+                <li key={item.text}>
+                  <button
+                    type="button"
+                    className={`${styles.textItem} ${isActive ? styles.active : ''}`}
+                    aria-current={isActive ? 'true' : undefined}
+                    onClick={() => setActiveIndex(index)}
+                  >
+                    <span className={styles.itemText}>{item.text}</span>
+                    {/* Fills while this item is showing */}
+                    <span className={styles.meter} aria-hidden="true">
+                      {isActive && (
+                        <span
+                          key={`${activeIndex}-${paused}`}
+                          className={styles.meterFill}
+                          style={{ animationDuration: `${INTERVAL}ms`, animationPlayState: paused ? 'paused' : 'running' }}
+                        />
+                      )}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
         </div>
 
-        {/* Right Side - Image */}
         <div className={styles.rightSide}>
-          <img
-            src={getImagePath(contentArray[activeIndex].image)}
-            alt="Coming Soon"
-            className={styles.horizontalImage}
-          />
+          <div className={styles.frame}>
+            <img
+              key={active.image}
+              src={getImagePath(active.image)}
+              alt={active.text}
+              className={styles.horizontalImage}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

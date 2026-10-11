@@ -1,345 +1,242 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  FaTrash, FaSearch, FaTimes, FaBook, FaHeadphones, FaGraduationCap,
+  FaQuestionCircle, FaHandsHelping, FaHistory, FaCheck,
+} from 'react-icons/fa';
+import PageHero from '../../../components/PageHero/PageHero';
+import AccountTabs from '../AccountTabs/AccountTabs';
 import styles from './History.module.css';
-import { FaTrash, FaCheckSquare, FaSquare, FaEllipsisV, FaSearch, FaList, FaNetworkWired } from 'react-icons/fa';
 
-const useProductionImagePath = () => {
-  
-  return (imagePath) => {
-    // Only modify in production
-    if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
-      if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
-      }
-    }
-    return imagePath;
-  };
+const getImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
+    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+  }
+  return imagePath;
 };
+
+const TYPES = {
+  ebook: { label: 'Ebook', icon: <FaBook /> },
+  audiobook: { label: 'Audiobook', icon: <FaHeadphones /> },
+  lesson: { label: 'Lesson', icon: <FaGraduationCap /> },
+  quiz: { label: 'Quiz', icon: <FaQuestionCircle /> },
+  gurbani: { label: 'Gurbani', icon: <FaHandsHelping /> },
+};
+
+// Placeholder history until activity tracking exists on the backend.
+// `day` is days ago, so the groups always read Today / Yesterday / ...
+const SAMPLE = [
+  { id: 1, day: 0, time: '6:30 PM', type: 'ebook', title: 'Saka Sirhind', path: '/collections/ebooks/ebook/1' },
+  { id: 2, day: 0, time: '6:05 PM', type: 'gurbani', title: 'Japji Sahib', path: '/gurbani' },
+  { id: 3, day: 0, time: '5:40 PM', type: 'lesson', title: 'Introduction to Gurmukhi', path: '/learning-material/1' },
+  { id: 4, day: 1, time: '9:15 PM', type: 'audiobook', title: 'Punjab Di Virasat', path: '/collections/audiobooks/audiobook/2' },
+  { id: 5, day: 1, time: '8:50 PM', type: 'quiz', title: 'Sikh history quiz', path: '/learning/quizzes/5' },
+  { id: 6, day: 1, time: '7:20 PM', type: 'ebook', title: 'Heer Waris Shah', path: '/collections/ebooks/ebook/6' },
+  { id: 7, day: 2, time: '10:42 AM', type: 'lesson', title: 'Vowel signs (laga matra)', path: '/learning-material/2' },
+  { id: 8, day: 2, time: '10:20 AM', type: 'gurbani', title: 'Rehras Sahib', path: '/gurbani' },
+  { id: 9, day: 4, time: '8:05 PM', type: 'audiobook', title: 'Lok Geet Punjab De', path: '/collections/audiobooks/audiobook/3' },
+  { id: 10, day: 4, time: '7:45 PM', type: 'ebook', title: 'Sikh Itihas Bhag Pehla', path: '/collections/ebooks/ebook/4' },
+];
+
+const dayLabel = (daysAgo) => {
+  if (daysAgo === 0) return 'Today';
+  if (daysAgo === 1) return 'Yesterday';
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+};
+
 const History = ({ isDarkMode }) => {
-  const getImagePath = useProductionImagePath();
-  const header_image_light = '/images/header-image.png';
-  const header_image_dark = '/images/header-image-dark.png';
+  const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
 
-  const [userData] = useState({
-    username: 'Jaspreet Singh',
-    image: 'https://randomuser.me/api/portraits/men/32.jpg',
-    bio: 'Spiritual seeker and Gurbani enthusiast',
-    membership: 'Gold Member'
-  });
-
-  const [historyItems, setHistoryItems] = useState([
-    {
-      date: 'TODAY - SATURDAY, April 26, 2025',
-      items: [
-        { time: '6:30PM', icon: 'grok', title: 'Grok', url: 'grok.com', selected: false },
-        { time: '6:27PM', icon: 'youtube', title: '[3052] Mann Mast Malang Episode 29 Teaser - 26th April 2025 - HAR PAL GEO', url: 'youtube.com', selected: false },
-        { time: '6:27PM', icon: 'youtube', title: '[3052] Mann Mast Malang Ep28 [Eng Sub] Presented by Diamond Paints - Ujooba Beauty Cream & Nestle Lactogro...', url: 'youtube.com', selected: false },
-        { time: '6:25PM', icon: 'deepseek', title: 'DeepSeek - Into the Unknown', url: 'chat.deepseek.com', selected: false },
-        { time: '6:20PM', icon: 'virsaa', title: 'Virsaa Web', url: 'localhost:3000', selected: false },
-      ]
-    },
-    {
-      date: 'YESTERDAY - FRIDAY, April 25, 2025',
-      items: [
-        { time: '5:50PM', icon: 'youtube', title: '[3052] Mann Mast Malang Ep28 [Eng Sub] Presented by Diamond Paints - Ujooba Beauty Cream & Nestle Lactogro...', url: 'youtube.com', selected: false },
-        { time: '5:50PM', icon: 'youtube', title: '[3052] Youtube', url: 'youtube.com', selected: false },
-        { time: '5:49PM', icon: 'youtube', title: '[3052] Youtube', url: 'youtube.com', selected: false },
-        { time: '5:45PM', icon: 'google', title: 'Search for meditation techniques', url: 'google.com', selected: false },
-        { time: '5:40PM', icon: 'virsaa', title: 'Virsaa Web', url: 'localhost:3000', selected: false },
-      ]
-    },
-    {
-      date: 'THURSDAY, April 24, 2025',
-      items: [
-        { time: '10:42AM', icon: 'google', title: 'What are credit card hacks?', url: 'exceptingpealsstipulate.com', selected: false },
-        { time: '10:42AM', icon: 'stocksify', title: 'What are credit card hacks?', url: 'stocksify.com', selected: false },
-        { time: '10:40AM', icon: 'newsmagics', title: 'https://newsmagics.com/money-expense-market-dividend', url: 'newsmagics.com', selected: false },
-        { time: '10:38AM', icon: 'watchape', title: 'WatchApe', url: 'watchape.biz', selected: false },
-      ]
-    },
-    {
-      date: 'WEDNESDAY, April 23, 2025',
-      items: [
-        { time: '10:24AM', icon: 'virsaa', title: 'Virsaa Web', url: 'localhost:3000', selected: false },
-        { time: '10:23AM', icon: 'stocksify', title: 'Farmers will get ₹ 2000 today under Kisan Samman Nidhi Yojana', url: 'stocksify.com', selected: false },
-        { time: '10:20AM', icon: 'cashprice', title: 'Investigating the role of financial flexibility in strategic investment decisions during economic downturns', url: 'cashprice.com', selected: false },
-        { time: '10:15AM', icon: 'besutichallah', title: 'https://besutichallah.top/kcDRfUdGVC0Zi/1415625/?scontetx=r_kDiA6kA1bEFcNdq2tRNAg8wCHsUY2aGCrygYAR...', url: 'besutichallah.top', selected: false },
-      ]
-    }
-  ]);
-
-  const [selectAll, setSelectAll] = useState(false);
-  const [showMenu, setShowMenu] = useState(null);
+  const [items, setItems] = useState(SAMPLE);
+  const [selected, setSelected] = useState(() => new Set());
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('byDate'); // 'byDate' or 'byGroup'
+  const [viewMode, setViewMode] = useState('byDate'); // 'byDate' | 'byType'
+  const [confirmClear, setConfirmClear] = useState(false);
 
-  const toggleSelectAll = () => {
-    const newSelectAll = !selectAll;
-    setSelectAll(newSelectAll);
-    setHistoryItems(historyItems.map(group => ({
-      ...group,
-      items: group.items.map(item => ({ ...item, selected: newSelectAll }))
-    })));
+  const visible = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return q
+      ? items.filter((i) => `${i.title} ${TYPES[i.type].label}`.toLowerCase().includes(q))
+      : items;
+  }, [items, searchQuery]);
+
+  const groups = useMemo(() => {
+    const map = new Map();
+    visible.forEach((item) => {
+      const key = viewMode === 'byDate' ? item.day : item.type;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+    });
+    return [...map.entries()].map(([key, list]) => ({
+      key,
+      title: viewMode === 'byDate' ? dayLabel(key) : `${TYPES[key].label}s`,
+      icon: viewMode === 'byType' ? TYPES[key].icon : null,
+      items: list,
+    }));
+  }, [visible, viewMode]);
+
+  const selectedCount = selected.size;
+  const allVisibleSelected = visible.length > 0 && visible.every((i) => selected.has(i.id));
+
+  const toggleItem = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
-  const toggleItemSelection = (dateIndex, itemIndex) => {
-    const newHistoryItems = [...historyItems];
-    newHistoryItems[dateIndex].items[itemIndex].selected = !newHistoryItems[dateIndex].items[itemIndex].selected;
-    setHistoryItems(newHistoryItems);
-
-    const allSelected = newHistoryItems.every(group =>
-      group.items.every(item => item.selected)
-    );
-    setSelectAll(allSelected);
+  const toggleAll = () => {
+    setSelected(allVisibleSelected ? new Set() : new Set(visible.map((i) => i.id)));
   };
 
   const deleteSelected = () => {
-    const newHistoryItems = historyItems.map(group => ({
-      ...group,
-      items: group.items.filter(item => !item.selected)
-    })).filter(group => group.items.length > 0);
-    setHistoryItems(newHistoryItems);
-    setSelectAll(false);
+    setItems((prev) => prev.filter((i) => !selected.has(i.id)));
+    setSelected(new Set());
   };
 
-  const removeItem = (dateIndex, itemIndex) => {
-    const newHistoryItems = [...historyItems];
-    newHistoryItems[dateIndex].items.splice(itemIndex, 1);
-    setHistoryItems(newHistoryItems.filter(group => group.items.length > 0));
-    setShowMenu(null);
-  };
-
-  const toggleMenu = (dateIndex, itemIndex) => {
-    setShowMenu(showMenu === `${dateIndex}-${itemIndex}` ? null : `${dateIndex}-${itemIndex}`);
-  };
-
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const selectedCount = historyItems.reduce((count, group) =>
-    count + group.items.filter(item => item.selected).length, 0);
-
-  // Filter history items based on search query
-  const filteredHistoryItems = historyItems.map(group => ({
-    ...group,
-    items: group.items.filter(item =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.url.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter(group => group.items.length > 0);
-
-  // Group history items by domain for "By Group" view
-  const groupedHistoryItems = () => {
-    const grouped = {};
-    historyItems.forEach(group => {
-      group.items.forEach(item => {
-        if (
-          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.url.toLowerCase().includes(searchQuery.toLowerCase())
-        ) {
-          const domain = item.url;
-          if (!grouped[domain]) {
-            grouped[domain] = [];
-          }
-          grouped[domain].push({ ...item, date: group.date });
-        }
-      });
+  const removeItem = (id) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
     });
-
-    return Object.keys(grouped).map(domain => ({
-      domain,
-      items: grouped[domain]
-    }));
   };
 
-  const displayedItems = viewMode === 'byDate' ? filteredHistoryItems : groupedHistoryItems();
+  const clearAll = () => {
+    setItems([]);
+    setSelected(new Set());
+    setConfirmClear(false);
+  };
 
   return (
-    <div className={styles.container}>
-      {/* Header - Matches Gurbani page */}
-      <div className={styles.header}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="History Header"
-          className={styles.headerImage}
-        />
-        <div className={styles.headerText}>
-          <h1>HISTORY</h1>
-          <p>Review your browsing activity</p>
-        </div>
-      </div>
+    <div className={styles.page}>
+      <PageHero
+        compact
+        image={headerImage}
+        title="History"
+        subtitle="What you’ve read, listened to and learned recently."
+        crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'History' }]}
+      >
+        <AccountTabs />
+      </PageHero>
 
-      {/* Main Content */}
-      <div className={styles.mainContent}>
-        {/* User Profile Section */}
-        <div className={styles.profileSection}>
-          <img src={getImagePath(userData.image)} alt="User" className={styles.profileImage} />
-          <h2 className={styles.username}>{userData.username}</h2>
-          <span className={styles.membership}>{userData.membership}</span>
-          <p className={styles.bio}>{userData.bio}</p>
-        </div>
-
-        {/* History Section */}
-        <div className={styles.historySection}>
-          {/* Breadcrumb - Matches standard */}
-          <div className={styles.breadcrumb}>
-            <Link to="/"><span>Home</span></Link> / 
-            <Link to="/account"><span> My Account</span></Link> / 
-            <span>History</span>
-          </div>
-
-          {/* Search Bar or Selection Controls */}
-          {selectedCount === 0 ? (
-            <div className={styles.searchBar}>
-              <FaSearch className={styles.searchIcon} />
+      {/* ---------- Toolbar ---------- */}
+      <div className={styles.toolbarWrap}>
+        {selectedCount === 0 ? (
+          <div className={styles.toolbar}>
+            <div className={styles.search}>
+              <FaSearch className={styles.searchIcon} aria-hidden="true" />
+              <label htmlFor="history-search" className={styles.srOnly}>Search history</label>
               <input
-                type="text"
+                id="history-search"
+                type="search"
                 placeholder="Search history"
                 value={searchQuery}
-                onChange={handleSearch}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className={styles.searchInput}
               />
-            </div>
-          ) : (
-            <div className={styles.controls}>
-              <div className={styles.selectAll}>
-                <button onClick={toggleSelectAll} className={styles.selectAllButton}>
-                  {selectAll ? <FaCheckSquare /> : <FaSquare />}
+              {searchQuery && (
+                <button type="button" className={styles.clearSearch} onClick={() => setSearchQuery('')} aria-label="Clear search">
+                  <FaTimes />
                 </button>
-                <span>{selectedCount} selected</span>
-              </div>
-              <button onClick={deleteSelected} className={styles.deleteButton}>
-                <FaTrash /> Delete
+              )}
+            </div>
+            <div className={styles.segmented} role="group" aria-label="Group history">
+              <button type="button" aria-pressed={viewMode === 'byDate'} className={`${styles.segment} ${viewMode === 'byDate' ? styles.segmentOn : ''}`} onClick={() => setViewMode('byDate')}>
+                By date
+              </button>
+              <button type="button" aria-pressed={viewMode === 'byType'} className={`${styles.segment} ${viewMode === 'byType' ? styles.segmentOn : ''}`} onClick={() => setViewMode('byType')}>
+                By type
               </button>
             </div>
-          )}
-
-          {/* Filter Buttons */}
-          <div className={styles.filterButtons}>
-            <button
-              className={`${styles.filterButton} ${viewMode === 'byDate' ? styles.activeFilter : ''}`}
-              onClick={() => setViewMode('byDate')}
-            >
-              <FaList className={styles.filterIcon} />
-              By date
-            </button>
-            <button
-              className={`${styles.filterButton} ${viewMode === 'byGroup' ? styles.activeFilter : ''}`}
-              onClick={() => setViewMode('byGroup')}
-            >
-              <FaNetworkWired className={styles.filterIcon} />
-              By group
-            </button>
-          </div>
-
-          {/* History List */}
-          <div className={styles.historyList}>
-            {viewMode === 'byDate' ? (
-              displayedItems.map((group, dateIndex) => (
-                <div key={dateIndex} className={styles.dateGroup}>
-                  <h3 className={styles.dateHeader}>{group.date}</h3>
-                  {group.items.map((item, itemIndex) => (
-                    <div
-                      key={itemIndex}
-                      className={`${styles.historyItem} ${showMenu === `${dateIndex}-${itemIndex}` ? styles.activeMenu : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={item.selected}
-                        onChange={() => toggleItemSelection(dateIndex, itemIndex)}
-                        className={styles.checkbox}
-                      />
-                      <span className={styles.time}>{item.time}</span>
-                      <div className={`${styles.icon} ${styles[item.icon]}`}></div>
-                      <div className={styles.itemDetails}>
-                        <a href={`https://${item.url}`} target="_blank" rel="noopener noreferrer">
-                          {item.title}
-                        </a>
-                        <span className={styles.url}>{item.url}</span>
-                      </div>
-                      <div className={styles.menuContainer}>
-                        <button
-                          className={styles.menuButton}
-                          onClick={() => toggleMenu(dateIndex, itemIndex)}
-                        >
-                          <FaEllipsisV />
-                        </button>
-                        {showMenu === `${dateIndex}-${itemIndex}` && (
-                          <div className={styles.menu}>
-                            <button
-                              className={styles.menuItem}
-                              onClick={() => removeItem(dateIndex, itemIndex)}
-                            >
-                              Remove from watch history
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))
-            ) : (
-              displayedItems.map((group, groupIndex) => (
-                <div key={groupIndex} className={styles.dateGroup}>
-                  <h3 className={styles.dateHeader}>{group.domain}</h3>
-                  {group.items.map((item, itemIndex) => {
-                    // Find the original dateIndex for this item to use in toggle functions
-                    const dateIndex = historyItems.findIndex(d => d.date === item.date);
-                    return (
-                      <div
-                        key={itemIndex}
-                        className={`${styles.historyItem} ${showMenu === `${groupIndex}-${itemIndex}` ? styles.activeMenu : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={item.selected}
-                          onChange={() => toggleItemSelection(dateIndex, historyItems[dateIndex].items.findIndex(i => i === item))}
-                          className={styles.checkbox}
-                        />
-                        <span className={styles.time}>{item.time}</span>
-                        <div className={`${styles.icon} ${styles[item.icon]}`}></div>
-                        <div className={styles.itemDetails}>
-                          <a href={`https://${item.url}`} target="_blank" rel="noopener noreferrer">
-                            {item.title}
-                          </a>
-                          <span className={styles.url}>{item.url}</span>
-                        </div>
-                        <div className={styles.menuContainer}>
-                          <button
-                            className={styles.menuButton}
-                            onClick={() => toggleMenu(groupIndex, itemIndex)}
-                          >
-                            <FaEllipsisV />
-                          </button>
-                          {showMenu === `${groupIndex}-${itemIndex}` && (
-                            <div className={styles.menu}>
-                              <button
-                                className={styles.menuItem}
-                                onClick={() => removeItem(dateIndex, historyItems[dateIndex].items.findIndex(i => i === item))}
-                              >
-                                Remove from watch history
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))
+            {items.length > 0 && (
+              <button type="button" className={styles.clearAll} onClick={() => setConfirmClear(true)}>
+                <FaTrash aria-hidden="true" /> Clear all
+              </button>
             )}
           </div>
-        </div>
+        ) : (
+          <div className={`${styles.toolbar} ${styles.selectionBar}`}>
+            <button type="button" className={styles.selectAll} onClick={toggleAll} aria-pressed={allVisibleSelected}>
+              <span className={`${styles.box} ${allVisibleSelected ? styles.boxOn : ''}`} aria-hidden="true">{allVisibleSelected && <FaCheck />}</span>
+              {allVisibleSelected ? 'Unselect all' : 'Select all'}
+            </button>
+            <span className={styles.selectedCount}>{selectedCount} selected</span>
+            <button type="button" className={styles.ghostButton} onClick={() => setSelected(new Set())}>Cancel</button>
+            <button type="button" className={styles.dangerButton} onClick={deleteSelected}>
+              <FaTrash aria-hidden="true" /> Delete
+            </button>
+          </div>
+        )}
+
+        {confirmClear && (
+          <div className={styles.confirm} role="alertdialog" aria-labelledby="clear-title">
+            <p id="clear-title">Clear your whole history? This can’t be undone.</p>
+            <div>
+              <button type="button" className={styles.ghostButton} onClick={() => setConfirmClear(false)}>Keep it</button>
+              <button type="button" className={styles.dangerButton} onClick={clearAll}>Clear history</button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ---------- Timeline ---------- */}
+      <section className={styles.section} aria-label="History">
+        {groups.length === 0 ? (
+          <div className={styles.emptyState}>
+            <span className={styles.emptyIcon} aria-hidden="true"><FaHistory /></span>
+            <h2>{searchQuery ? 'No matches' : 'Your history is empty'}</h2>
+            <p>
+              {searchQuery
+                ? `Nothing in your history matches “${searchQuery}”.`
+                : <>Things you open will show up here. Start with the <Link to="/collections/ebooks">library</Link>.</>}
+            </p>
+          </div>
+        ) : (
+          <div className={styles.timeline}>
+            {groups.map((group) => (
+              <div key={group.key} className={styles.group}>
+                <h2 className={styles.groupTitle}>
+                  {group.icon && <span className={styles.groupIcon} aria-hidden="true">{group.icon}</span>}
+                  {group.title}
+                  <span className={styles.groupCount}>{group.items.length}</span>
+                </h2>
+                <ul className={styles.list}>
+                  {group.items.map((item) => {
+                    const isSelected = selected.has(item.id);
+                    const type = TYPES[item.type];
+                    return (
+                      <li key={item.id} className={`${styles.item} ${isSelected ? styles.itemSelected : ''}`}>
+                        <label className={styles.check}>
+                          <input type="checkbox" checked={isSelected} onChange={() => toggleItem(item.id)} />
+                          <span className={`${styles.box} ${isSelected ? styles.boxOn : ''}`} aria-hidden="true">{isSelected && <FaCheck />}</span>
+                          <span className={styles.srOnly}>Select {item.title}</span>
+                        </label>
+                        <span className={`${styles.typeIcon} ${styles[item.type] || ''}`} aria-hidden="true">{type.icon}</span>
+                        <div className={styles.itemBody}>
+                          <Link to={item.path} className={styles.itemTitle}>{item.title}</Link>
+                          <span className={styles.itemMeta}>
+                            {type.label}
+                            <span aria-hidden="true" className={styles.dot} />
+                            {viewMode === 'byType' ? `${dayLabel(item.day)}, ${item.time}` : item.time}
+                          </span>
+                        </div>
+                        <button type="button" className={styles.removeButton} onClick={() => removeItem(item.id)} aria-label={`Remove ${item.title} from history`}>
+                          <FaTimes />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

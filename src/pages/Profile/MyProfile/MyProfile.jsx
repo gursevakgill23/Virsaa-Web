@@ -1,106 +1,95 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { 
-  FaCrown, FaAward, FaBook, FaClock, 
+import {
+  FaCrown, FaAward, FaBook, FaClock,
   FaCloud, FaEdit, FaSave, FaTimes, FaVenusMars,
-  FaCalendarAlt, FaHeart, FaPen 
+  FaCalendarAlt, FaHeart, FaPen, FaUser,
 } from 'react-icons/fa';
+import PageHero from '../../../components/PageHero/PageHero';
+import AccountTabs from '../AccountTabs/AccountTabs';
 import styles from './MyProfile.module.css';
 import { useAuth } from '../../../context/AuthContext';
 
-const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/') 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath;
-      }
+const getImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (typeof imagePath === 'string') {
+      return imagePath.startsWith('/')
+        ? imagePath
+        : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
-    return imagePath;
-  };
+    return imagePath.default || imagePath;
+  }
+  return imagePath;
 };
 
-// Static achievements data as a fallback
-const staticAchievements = [
-  {
-    name: "First Steps",
-    icon: <FaBook />,
-    progress: 100,
-    description: "Completed your first session",
-  },
-  {
-    name: "Spiritual Seeker",
-    icon: <FaAward />,
-    progress: 50,
-    description: "Reached 50% progress in spiritual learning",
-  },
-  {
-    name: "Daily Devotee",
-    icon: <FaClock />,
-    progress: 25,
-    description: "Maintained a 3-day streak",
-  },
-];
+const PLACEHOLDER_PHOTO = '/images/Login/user-placeholder.jpg';
+const CONTENT_OPTIONS = ['fiction', 'sikh_history', 'punjabi_culture', 'spirituality', 'non_fiction', 'poetry', 'audiobook', 'ebook'];
+const GENDER_LABELS = { male: 'Male', female: 'Female', other: 'Other', prefer_not_to_say: 'Prefer not to say' };
+
+// "sikh_history" -> "Sikh history"
+const prettify = (value = '') => {
+  const text = String(value).replace(/_/g, ' ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+const formatDob = (iso) => {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+// Map icon names sent by the backend to icons
+const ICONS = { FaBook: <FaBook />, FaClock: <FaClock />, FaAward: <FaAward /> };
+const mapIcon = (name) => ICONS[name] || <FaAward />;
 
 const MyProfile = ({ isDarkMode, apiString }) => {
   const { accessToken, logout } = useAuth();
   const navigate = useNavigate();
-  const header_image_light = '../../../images/header-image.png';
-  const header_image_dark = '../../../images/header-image-dark.png';
-  const getImagePath = useProductionImagePath();
+  // Kept in refs so the profile fetch only re-runs when the token or API address changes
+  const logoutRef = useRef(logout);
+  const navigateRef = useRef(navigate);
+  logoutRef.current = logout;
+  navigateRef.current = navigate;
+  const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
 
-  // State for user data, initialized with API response
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [editSection, setEditSection] = useState(null);
   const [editData, setEditData] = useState({
-    first_name: '',
-    last_name: '',
-    bio: '',
-    dob: '',
-    gender: '',
-    preferredContent: []
+    first_name: '', last_name: '', bio: '', dob: '', gender: '', preferredContent: [],
   });
-  const [error, setError] = useState(null);
+  const [saveError, setSaveError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch user profile on mount
   useEffect(() => {
+    if (!accessToken) {
+      navigateRef.current('/login');
+      return;
+    }
+
     const fetchProfile = async () => {
+      setIsLoading(true);
+      setLoadError(null);
       try {
         const response = await fetch(`${apiString}/api/auth/profile/`, {
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         });
 
         if (response.status === 401) {
-          logout();
-          navigate('/login');
+          logoutRef.current();
+          navigateRef.current('/login');
           return;
         }
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch profile');
-        }
+        if (!response.ok) throw new Error('Your profile couldn’t be loaded.');
 
         const data = await response.json();
-        // Check if achievements are provided by the backend; if not, use static data
-        const achievements = data.achievements && data.achievements.length > 0 
-          ? data.achievements.map(achievement => ({
-              ...achievement,
-              icon: mapIcon(achievement.icon),
-            }))
-          : staticAchievements;
-
         setUserData({
-          first_name: data.first_name,
-          last_name: data.last_name,
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
           joinDate: data.joined_date,
           status: data.membership_level,
           bio: data.about_me || '',
@@ -108,45 +97,18 @@ const MyProfile = ({ isDarkMode, apiString }) => {
           gender: data.gender || '',
           preferredContent: data.preferred_content || [],
           profile_photo: data.profile_photo,
-          stats: {
-            sessions: 0,
-            completed: 0,
-            streak: 0,
-            storage: 0,
-          },
-          achievements: achievements,
-        });
-        setEditData({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          bio: data.about_me || '',
-          dob: data.dob || '',
-          gender: data.gender || '',
-          preferredContent: data.preferred_content || [],
+          stats: { sessions: 0, completed: 0, streak: 0, storage: 0 },
+          achievements: (data.achievements || []).map((a) => ({ ...a, icon: mapIcon(a.icon) })),
         });
       } catch (err) {
-        setError(err.message);
+        setLoadError(err.message || 'Your profile couldn’t be loaded.');
       } finally {
-        setTimeout(() => setIsLoading(false), 1200);
+        setIsLoading(false);
       }
     };
 
-    if (accessToken) {
-      fetchProfile();
-    } else {
-      navigate('/login');
-    }
-  }, [accessToken, navigate, logout, apiString]);
-
-  // Map icon strings to React components (used if backend provides achievements)
-  const mapIcon = (iconName) => {
-    const iconMap = {
-      FaBook: <FaBook />,
-      FaClock: <FaClock />,
-      FaAward: <FaAward />,
-    };
-    return iconMap[iconName] || <FaAward />;
-  };
+    fetchProfile();
+  }, [accessToken, apiString]);
 
   const startEditing = (section) => {
     setEditSection(section);
@@ -158,15 +120,17 @@ const MyProfile = ({ isDarkMode, apiString }) => {
       gender: userData.gender,
       preferredContent: [...userData.preferredContent],
     });
-    setError(null);
+    setSaveError(null);
   };
 
   const cancelEditing = () => {
     setEditSection(null);
-    setError(null);
+    setSaveError(null);
   };
 
   const saveChanges = async () => {
+    setIsSaving(true);
+    setSaveError(null);
     try {
       const formData = new FormData();
       formData.append('first_name', editData.first_name);
@@ -178,9 +142,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
 
       const response = await fetch(`${apiString}/api/auth/complete-profile/`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       });
 
@@ -189,14 +151,12 @@ const MyProfile = ({ isDarkMode, apiString }) => {
         navigate('/login');
         return;
       }
-
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update profile');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Your changes couldn’t be saved. Try again.');
       }
 
-      // Removed unused 'result' variable
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
         first_name: editData.first_name,
         last_name: editData.last_name,
@@ -205,382 +165,283 @@ const MyProfile = ({ isDarkMode, apiString }) => {
         gender: editData.gender,
         preferredContent: [...editData.preferredContent],
       }));
-      toast.success('Changes Saved Successfully!', {
-        position: 'top-center',
-        autoClose: 2000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
+      toast.success('Changes saved', { position: 'top-center', autoClose: 2000, theme: isDarkMode ? 'dark' : 'light' });
       setEditSection(null);
     } catch (err) {
-      setError(err.message);
+      setSaveError(err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setEditData(prev => ({ ...prev, [name]: value }));
+    setEditData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleContentToggle = (content) => {
-    setEditData(prev => {
-      const newContent = prev.preferredContent.includes(content)
-        ? prev.preferredContent.filter(item => item !== content)
-        : [...prev.preferredContent, content];
-      return { ...prev, preferredContent: newContent };
-    });
+    setEditData((prev) => ({
+      ...prev,
+      preferredContent: prev.preferredContent.includes(content)
+        ? prev.preferredContent.filter((item) => item !== content)
+        : [...prev.preferredContent, content],
+    }));
   };
 
-  const contentOptions = ['fiction', 'sikh_history', 'punjabi_culture', 'spirituality', 'non_fiction', 'poetry', 'audiobook', 'ebook'];
-
-  if (!userData) {
-    return <div>Loading...</div>;
-  }
-
-  return (
-    <div className={styles.container}>
-      {/* Toast Notifications */}
-      {error && (
-        <div className={styles.errorToast}>
-          {error}
-        </div>
-      )}
-
-      {/* Header */}
-      <div className={styles.header}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Account Header"
-          className={styles.headerImage}
-        />
-        <div className={styles.headerText}>
-          <h1>YOUR PROFILE</h1>
-          <p>Manage your spiritual journey</p>
-        </div>
+  const editActions = (
+    <>
+      {saveError && <p className={styles.errorText} role="alert">{saveError}</p>}
+      <div className={styles.actions}>
+        <button type="button" className={styles.secondaryButton} onClick={cancelEditing}>
+          <FaTimes aria-hidden="true" /> Cancel
+        </button>
+        <button type="button" className={styles.primaryButton} onClick={saveChanges} disabled={isSaving}>
+          {isSaving ? <span className={styles.spinner} aria-label="Saving" /> : <><FaSave aria-hidden="true" /> Save</>}
+        </button>
       </div>
-
-      {/* Breadcrumb */}
-      <div className={styles.breadcrumb}>
-        <Link to="/"><span>Home</span></Link> / 
-        <Link to="/account"><span> My Account</span></Link>
-      </div>
-
-      {/* Profile Section */}
-      <div className={styles.profileSection}>
-        {isLoading ? (
-          <div className={styles.avatarSkeleton}></div>
-        ) : (
-          <div className={styles.avatarWrapper}>
-            <img 
-              src={userData.profile_photo || getImagePath("https://randomuser.me/api/portraits/men/32.jpg")} 
-              alt="User" 
-              className={styles.avatar}
-            />
-            {editSection !== 'profile' && (
-              <button 
-                className={styles.editButton} 
-                onClick={() => startEditing('profile')}
-              >
-                <FaEdit />
-              </button>
-            )}
-          </div>
-        )}
-        
-        <div className={styles.profileInfo}>
-          {isLoading ? (
-            <>
-              <div className={styles.skeletonName}></div>
-              <div className={styles.skeletonStatus}></div>
-            </>
-          ) : editSection === 'profile' ? (
-            <>
-              <input
-                type="text"
-                name="first_name"
-                value={editData.first_name}
-                onChange={handleInputChange}
-                className={styles.editInput}
-              />
-              <input
-                type="text"
-                name="last_name"
-                value={editData.last_name}
-                onChange={handleInputChange}
-                className={styles.editInput}
-              />
-              <div className={styles.membershipBadge}>
-                <FaCrown /> {userData.status}
-              </div>
-              <div className={styles.editControls}>
-                <button className={styles.cancelButton} onClick={cancelEditing}>
-                  <FaTimes /> Cancel
-                </button>
-                <button className={styles.saveButton} onClick={saveChanges}>
-                  <FaSave /> Save
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2>{`${userData.first_name} ${userData.last_name}`}</h2>
-              <div className={styles.membershipBadge}>
-                <FaCrown /> {userData.status}
-              </div>
-              <p>{userData.joinDate}</p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Bio Section */}
-      <div className={styles.bioSection}>
-        <div className={styles.sectionHeader}>
-          <h3 className={styles.sectionTitle}>
-            <FaPen /> About Me
-          </h3>
-          {editSection !== 'bio' && (
-            <button 
-              className={styles.sectionEditButton}
-              onClick={() => startEditing('bio')}
-            >
-              <FaEdit /> Edit
-            </button>
-          )}
-        </div>
-        
-        {isLoading ? (
-          <div className={styles.skeletonBio}></div>
-        ) : editSection === 'bio' ? (
-          <>
-            <textarea
-              name="bio"
-              value={editData.bio}
-              onChange={handleInputChange}
-              className={styles.editTextarea}
-              rows="3"
-            />
-            <div className={styles.editControls}>
-              <button className={styles.cancelButton} onClick={cancelEditing}>
-                <FaTimes /> Cancel
-              </button>
-              <button className={styles.saveButton} onClick={saveChanges}>
-                <FaSave /> Save
-              </button>
-            </div>
-          </>
-        ) : (
-          <p>{userData.bio || "No bio provided"}</p>
-        )}
-      </div>
-
-      {/* Personal Details Section */}
-      <div className={styles.detailsSection}>
-        <div className={styles.sectionHeader}>
-          <h3 className={styles.sectionTitle}>Personal Details</h3>
-          {editSection !== 'details' && (
-            <button 
-              className={styles.sectionEditButton}
-              onClick={() => startEditing('details')}
-            >
-              <FaEdit /> Edit
-            </button>
-          )}
-        </div>
-        
-        {isLoading ? (
-          <>
-            <div className={styles.skeletonDetail}></div>
-            <div className={styles.skeletonDetail}></div>
-          </>
-        ) : editSection === 'details' ? (
-          <>
-            <div className={styles.detailRow}>
-              <span className={styles.detailIcon}><FaCalendarAlt /></span>
-              <input
-                type="date"
-                name="dob"
-                value={editData.dob}
-                onChange={handleInputChange}
-                className={styles.editInput}
-              />
-            </div>
-            
-            <div className={styles.detailRow}>
-              <span className={styles.detailIcon}><FaVenusMars /></span>
-              <select
-                name="gender"
-                value={editData.gender}
-                onChange={handleInputChange}
-                className={styles.editSelect}
-              >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
-              </select>
-            </div>
-            
-            <div className={styles.editControls}>
-              <button className={styles.cancelButton} onClick={cancelEditing}>
-                <FaTimes /> Cancel
-              </button>
-              <button className={styles.saveButton} onClick={saveChanges}>
-                <FaSave /> Save
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.detailRow}>
-              <span className={styles.detailIcon}><FaCalendarAlt /></span>
-              <span>Date of Birth: {userData.dob || "Not specified"}</span>
-            </div>
-            
-            <div className={styles.detailRow}>
-              <span className={styles.detailIcon}><FaVenusMars /></span>
-              <span>Gender: {userData.gender || "Not specified"}</span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Preferred Content Section */}
-      <div className={styles.contentSection}>
-        <div className={styles.sectionHeader}>
-          <h3 className={styles.sectionTitle}>
-            <FaHeart /> Preferred Content
-          </h3>
-          {editSection !== 'content' && (
-            <button 
-              className={styles.sectionEditButton}
-              onClick={() => startEditing('content')}
-            >
-              <FaEdit /> Edit
-            </button>
-          )}
-        </div>
-        
-        {isLoading ? (
-          <div className={styles.skeletonContent}></div>
-        ) : editSection === 'content' ? (
-          <>
-            <div className={styles.contentGrid}>
-              {contentOptions.map(content => (
-                <button
-                  key={content}
-                  className={`${styles.contentButton} ${
-                    editData.preferredContent.includes(content) ? styles.selected : ''
-                  }`}
-                  onClick={() => handleContentToggle(content)}
-                >
-                  {content}
-                </button>
-              ))}
-            </div>
-            <div className={styles.editControls}>
-              <button className={styles.cancelButton} onClick={cancelEditing}>
-                <FaTimes /> Cancel
-              </button>
-              <button className={styles.saveButton} onClick={saveChanges}>
-                <FaSave /> Save
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className={styles.contentTags}>
-            {userData.preferredContent.length > 0 ? (
-              userData.preferredContent.map(content => (
-                <span key={content} className={styles.contentTag}>{content}</span>
-              ))
-            ) : (
-              <p>No preferences selected</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Stats Overview (Placeholder) */}
-      <div className={styles.statsSection}>
-        <h3 className={styles.sectionTitle}>Your Spiritual Journey</h3>
-        <div className={styles.statsGrid}>
-          <StatBox 
-            icon={<FaClock />}
-            title="Total Sessions"
-            value={userData.stats.sessions}
-            loading={isLoading}
-          />
-          <StatBox 
-            icon={<FaBook />}
-            title="Completed"
-            value={userData.stats.completed}
-            loading={isLoading}
-          />
-          <StatBox 
-            icon={<FaAward />}
-            title="Day Streak"
-            value={userData.stats.streak}
-            loading={isLoading}
-          />
-          <StatBox 
-            icon={<FaCloud />}
-            title="Storage"
-            value={userData.stats.storage}
-            loading={isLoading}
-          />
-        </div>
-      </div>
-
-      {/* Achievements Section */}
-      <div className={styles.achievementsSection}>
-        <h3 className={styles.sectionTitle}>Your Achievements</h3>
-        {isLoading ? (
-          <div className={styles.achievementsSkeleton}>
-            {[1, 2, 3].map(i => (
-              <div key={i} className={styles.skeletonAchievement}></div>
-            ))}
-          </div>
-        ) : (
-          <div className={styles.achievementsGrid}>
-            {userData.achievements.map((item, index) => (
-              <div key={index} className={styles.achievementCard}>
-                <div className={styles.achievementIcon}>{item.icon}</div>
-                <h4>{item.name}</h4>
-                <p>{item.description}</p>
-                <div className={styles.progressBar}>
-                  <div 
-                    className={styles.progressFill} 
-                    style={{ width: `${item.progress}%` }}
-                  ></div>
-                </div>
-                <span>{item.progress}%</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    </>
   );
-};
 
-// Reusable Stat Box Component
-const StatBox = ({ icon, title, value, loading }) => {
-  if (loading) {
+  const hero = (
+    <PageHero
+      compact
+      image={headerImage}
+      title="Your profile"
+      subtitle="Manage your details and follow your journey through Virsaa."
+      crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile' }]}
+    >
+      <AccountTabs />
+    </PageHero>
+  );
+
+  if (isLoading) {
     return (
-      <div className={styles.statBox}>
-        <div className={styles.skeletonStatIcon}></div>
-        <div className={styles.skeletonStatTitle}></div>
-        <div className={styles.skeletonStatValue}></div>
+      <div className={styles.page}>
+        {hero}
+        <section className={styles.section} aria-busy="true" aria-label="Loading profile">
+          <div className={`${styles.identity} ${styles.panel}`}>
+            <div className={`${styles.skeleton} ${styles.skeletonAvatar}`} />
+            <div className={styles.identityText}>
+              <div className={`${styles.skeleton} ${styles.skeletonLine}`} style={{ width: '50%', height: 30 }} />
+              <div className={`${styles.skeleton} ${styles.skeletonLine}`} style={{ width: '30%' }} />
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 
+  if (loadError || !userData) {
+    return (
+      <div className={styles.page}>
+        {hero}
+        <div className={styles.stateBox}>
+          <h2>{loadError || 'Profile not found'}</h2>
+          <p>Check your connection and try again.</p>
+          <button type="button" className={styles.primaryButton} onClick={() => window.location.reload()}>Try again</button>
+        </div>
+      </div>
+    );
+  }
+
+  const fullName = `${userData.first_name} ${userData.last_name}`.trim() || 'Your name';
+
   return (
-    <div className={styles.statBox}>
-      <div className={styles.statIcon}>{icon}</div>
-      <h4>{title}</h4>
-      <p>{value}</p>
+    <div className={styles.page}>
+      {hero}
+
+      {/* ---------- Identity ---------- */}
+      <section className={styles.section}>
+        <div className={`${styles.identity} ${styles.panel}`}>
+          <div className={styles.avatarFrame}>
+            <img src={userData.profile_photo || getImagePath(PLACEHOLDER_PHOTO)} alt="" className={styles.avatar} />
+          </div>
+
+          <div className={styles.identityText}>
+            {editSection === 'profile' ? (
+              <div className={styles.nameEdit}>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}><FaUser aria-hidden="true" /> First name</span>
+                  <input type="text" name="first_name" value={editData.first_name} onChange={handleInputChange} className={styles.input} />
+                </label>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}><FaUser aria-hidden="true" /> Last name</span>
+                  <input type="text" name="last_name" value={editData.last_name} onChange={handleInputChange} className={styles.input} />
+                </label>
+              </div>
+            ) : (
+              <h2 className={styles.name}>{fullName}</h2>
+            )}
+
+            <div className={styles.identityMeta}>
+              {userData.status && (
+                <span className={styles.membershipBadge}><FaCrown aria-hidden="true" /> {prettify(userData.status)}</span>
+              )}
+              {userData.joinDate && <span className={styles.joined}>Joined {userData.joinDate}</span>}
+            </div>
+
+            {editSection === 'profile' && editActions}
+          </div>
+
+          {editSection !== 'profile' && (
+            <button type="button" className={styles.editLink} onClick={() => startEditing('profile')}>
+              <FaEdit aria-hidden="true" /> Edit name
+            </button>
+          )}
+        </div>
+      </section>
+
+      {/* ---------- About / details / preferences ---------- */}
+      <section className={`${styles.section} ${styles.grid}`}>
+        <div className={styles.panel}>
+          <div className={styles.panelHead}>
+            <h3 className={styles.panelTitle}><FaPen aria-hidden="true" /> About me</h3>
+            {editSection !== 'bio' && (
+              <button type="button" className={styles.editLink} onClick={() => startEditing('bio')}>
+                <FaEdit aria-hidden="true" /> Edit
+              </button>
+            )}
+          </div>
+          {editSection === 'bio' ? (
+            <>
+              <label className={styles.srOnly} htmlFor="bio">About me</label>
+              <textarea id="bio" name="bio" value={editData.bio} onChange={handleInputChange} className={styles.textarea} rows="4" maxLength={500} />
+              <p className={styles.hint}>{editData.bio.length}/500 characters</p>
+              {editActions}
+            </>
+          ) : (
+            <p className={styles.bio}>{userData.bio || 'Add a few lines about yourself so others know what you’re exploring.'}</p>
+          )}
+        </div>
+
+        <div className={styles.panel}>
+          <div className={styles.panelHead}>
+            <h3 className={styles.panelTitle}><FaUser aria-hidden="true" /> Personal details</h3>
+            {editSection !== 'details' && (
+              <button type="button" className={styles.editLink} onClick={() => startEditing('details')}>
+                <FaEdit aria-hidden="true" /> Edit
+              </button>
+            )}
+          </div>
+          {editSection === 'details' ? (
+            <div className={styles.detailForm}>
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}><FaCalendarAlt aria-hidden="true" /> Date of birth</span>
+                <input type="date" name="dob" value={editData.dob} onChange={handleInputChange} className={styles.input} />
+              </label>
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}><FaVenusMars aria-hidden="true" /> Gender</span>
+                <select name="gender" value={editData.gender} onChange={handleInputChange} className={styles.select}>
+                  <option value="">Select…</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                  <option value="prefer_not_to_say">Prefer not to say</option>
+                </select>
+              </label>
+              {editActions}
+            </div>
+          ) : (
+            <dl className={styles.details}>
+              <div>
+                <dt><FaCalendarAlt aria-hidden="true" /> Date of birth</dt>
+                <dd>{formatDob(userData.dob) || 'Not added'}</dd>
+              </div>
+              <div>
+                <dt><FaVenusMars aria-hidden="true" /> Gender</dt>
+                <dd>{GENDER_LABELS[userData.gender] || 'Not added'}</dd>
+              </div>
+            </dl>
+          )}
+        </div>
+
+        <div className={`${styles.panel} ${styles.contentPanel}`}>
+          <div className={styles.panelHead}>
+            <h3 className={styles.panelTitle}><FaHeart aria-hidden="true" /> Preferred content</h3>
+            {editSection !== 'content' && (
+              <button type="button" className={styles.editLink} onClick={() => startEditing('content')}>
+                <FaEdit aria-hidden="true" /> Edit
+              </button>
+            )}
+          </div>
+          {editSection === 'content' ? (
+            <>
+              <div className={styles.chips} role="group" aria-label="Preferred content">
+                {CONTENT_OPTIONS.map((content) => {
+                  const on = editData.preferredContent.includes(content);
+                  return (
+                    <button
+                      key={content}
+                      type="button"
+                      className={`${styles.chip} ${on ? styles.chipOn : ''}`}
+                      aria-pressed={on}
+                      onClick={() => handleContentToggle(content)}
+                    >
+                      {prettify(content)}
+                    </button>
+                  );
+                })}
+              </div>
+              {editActions}
+            </>
+          ) : userData.preferredContent.length > 0 ? (
+            <div className={styles.chips}>
+              {userData.preferredContent.map((content) => (
+                <span key={content} className={styles.tag}>{prettify(content)}</span>
+              ))}
+            </div>
+          ) : (
+            <p className={styles.bio}>Pick what you like to read and listen to, and we’ll show it first.</p>
+          )}
+        </div>
+      </section>
+
+      {/* ---------- Journey ---------- */}
+      <section className={styles.section} aria-labelledby="journey-title">
+        <h2 id="journey-title" className={styles.sectionTitle}>Your journey</h2>
+        <p className={styles.lede}>Your reading and listening activity on Virsaa.</p>
+        <div className={styles.stats}>
+          <StatBox icon={<FaClock />} title="Sessions" value={userData.stats.sessions} />
+          <StatBox icon={<FaBook />} title="Completed" value={userData.stats.completed} />
+          <StatBox icon={<FaAward />} title="Day streak" value={userData.stats.streak} />
+          <StatBox icon={<FaCloud />} title="Storage" value={userData.stats.storage} />
+        </div>
+      </section>
+
+      <section className={styles.section} aria-labelledby="achievements-title">
+        <h2 id="achievements-title" className={styles.sectionTitle}>Achievements</h2>
+        {userData.achievements.length > 0 ? (
+          <ul className={styles.achievements}>
+            {userData.achievements.map((item, index) => (
+              <li key={`${item.name}-${index}`} className={`${styles.achievement} ${item.progress >= 100 ? styles.achievementDone : ''}`}>
+                <span className={styles.achievementIcon} aria-hidden="true">{item.icon}</span>
+                <div className={styles.achievementBody}>
+                  <h4>{item.name}</h4>
+                  <p>{item.description}</p>
+                  <div className={styles.progress} role="progressbar" aria-valuenow={item.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${item.name} progress`}>
+                    <div className={styles.progressFill} style={{ width: `${Math.min(100, item.progress)}%` }} />
+                  </div>
+                  <span className={styles.progressText}>{item.progress}%</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.emptyNote}>
+            No achievements yet. Read an <Link to="/collections/ebooks">ebook</Link> or finish a <Link to="/learning">lesson</Link> to earn your first one.
+          </p>
+        )}
+      </section>
     </div>
   );
 };
+
+const StatBox = ({ icon, title, value }) => (
+  <div className={styles.stat}>
+    <span className={styles.statIcon} aria-hidden="true">{icon}</span>
+    <span className={styles.statValue}>{value}</span>
+    <span className={styles.statLabel}>{title}</span>
+  </div>
+);
 
 export default MyProfile;

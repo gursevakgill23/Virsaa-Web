@@ -1,34 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaCamera, FaUser, FaPen, FaCalendarAlt, FaVenusMars, FaHeart } from 'react-icons/fa';
+import { FaCamera, FaUser, FaPen, FaCalendarAlt, FaVenusMars, FaHeart, FaCheck } from 'react-icons/fa';
 import axios from 'axios';
+import PageHero from '../../../components/PageHero/PageHero';
 import { useAuth } from '../../../context/AuthContext';
 import styles from './CompleteProfile.module.css';
 
-const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
-          ? imagePath
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath;
-      }
+const getImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (typeof imagePath === 'string') {
+      return imagePath.startsWith('/')
+        ? imagePath
+        : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
-    return imagePath;
-  };
+    return imagePath.default || imagePath;
+  }
+  return imagePath;
+};
+
+const PLACEHOLDER_PHOTO = '/images/Login/user-placeholder.jpg';
+const CONTENT_OPTIONS = ['fiction', 'sikh_history', 'punjabi_culture', 'spirituality', 'non_fiction', 'poetry', 'audiobook', 'ebook'];
+
+const prettify = (value = '') => {
+  const text = String(value).replace(/_/g, ' ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
 const CompleteProfile = ({ isDarkMode, apiString }) => {
   const { userData, accessToken, updateUserData } = useAuth();
   const navigate = useNavigate();
-  const getImagePath = useProductionImagePath();
-
-  const header_image_light = '../../../images/header-image.png';
-  const header_image_dark = '../../../images/header-image-dark.png';
-  const placeholder_user_image = '../../../images/placeholder-user.png';
+  const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
+  const toastTheme = isDarkMode ? 'dark' : 'light';
 
   const [formData, setFormData] = useState({
     first_name: userData?.first_name || '',
@@ -37,332 +40,245 @@ const CompleteProfile = ({ isDarkMode, apiString }) => {
     about_me: userData?.about_me || '',
     preferred_content: userData?.preferred_content || [],
     dob: userData?.dob || '',
-    gender: userData?.gender || 'prefer_not_to_say',
+    gender: userData?.gender || '',
   });
-
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState(userData?.profile_photo || null);
 
-  const contentOptions = [
-    'fiction', 'sikh_history', 'punjabi_culture', 'spirituality',
-    'non_fiction', 'poetry', 'audiobook', 'ebook'
-  ];
-
-  // Debug accessToken and redirect if missing
+  // Signed-out visitors can't complete a profile
   useEffect(() => {
-    console.log('Access Token:', accessToken);
     if (!accessToken) {
-      toast.error('Please log in to complete your profile', {
-        position: 'top-center',
-        autoClose: 3000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
+      toast.error('Sign in to complete your profile', { position: 'top-center', autoClose: 3000, theme: toastTheme });
       navigate('/login');
     }
-  }, [accessToken, navigate, isDarkMode]);
+  }, [accessToken, navigate, toastTheme]);
+
+  // Free the temporary preview URL when it changes
+  useEffect(() => () => {
+    if (previewPhoto && previewPhoto.startsWith('blob:')) URL.revokeObjectURL(previewPhoto);
+  }, [previewPhoto]);
+
+  const clearError = (key) => {
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: '' }));
+  };
 
   const handleChange = (e) => {
     const { id, value, type, files } = e.target;
     if (type === 'file') {
       const file = files[0];
-      setFormData((prev) => ({ ...prev, profile_photo: file }));
-      setPreviewPhoto(file ? URL.createObjectURL(file) : userData?.profile_photo);
+      if (file && !file.type.startsWith('image/')) {
+        setErrors((prev) => ({ ...prev, profile_photo: 'Choose a JPG, PNG or WebP image.' }));
+        return;
+      }
+      setFormData((prev) => ({ ...prev, profile_photo: file || null }));
+      setPreviewPhoto(file ? URL.createObjectURL(file) : userData?.profile_photo || null);
     } else {
       setFormData((prev) => ({ ...prev, [id]: value }));
     }
-    if (errors[id]) {
-      setErrors((prev) => ({ ...prev, [id]: '' }));
-    }
+    clearError(id);
   };
 
   const handleContentToggle = (content) => {
-    setFormData((prev) => {
-      const newContent = prev.preferred_content.includes(content)
+    setFormData((prev) => ({
+      ...prev,
+      preferred_content: prev.preferred_content.includes(content)
         ? prev.preferred_content.filter((item) => item !== content)
-        : [...prev.preferred_content, content];
-      return { ...prev, preferred_content: newContent };
-    });
-    if (errors.preferred_content) {
-      setErrors((prev) => ({ ...prev, preferred_content: '' }));
-    }
+        : [...prev.preferred_content, content],
+    }));
+    clearError('preferred_content');
   };
 
   const validateForm = () => {
-    const newErrors = {};
-    if (!formData.first_name.trim()) newErrors.first_name = 'First name is required';
-    if (!formData.last_name.trim()) newErrors.last_name = 'Last name is required';
-    if (!formData.profile_photo && !userData?.profile_photo) newErrors.profile_photo = 'Profile photo is required';
-    if (!formData.about_me.trim()) newErrors.about_me = 'About me is required';
-    if (formData.preferred_content.length === 0) newErrors.preferred_content = 'Select at least one preference';
-    if (!formData.dob) newErrors.dob = 'Date of birth is required';
-    if (formData.gender === 'prefer_not_to_say') newErrors.gender = 'Please select a gender';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const next = {};
+    if (!formData.first_name.trim()) next.first_name = 'Add your first name.';
+    if (!formData.last_name.trim()) next.last_name = 'Add your last name.';
+    if (!formData.profile_photo && !userData?.profile_photo) next.profile_photo = 'Add a profile photo.';
+    if (!formData.about_me.trim()) next.about_me = 'Write a line or two about yourself.';
+    if (formData.preferred_content.length === 0) next.preferred_content = 'Pick at least one.';
+    if (!formData.dob) next.dob = 'Add your date of birth.';
+    if (!formData.gender) next.gender = 'Choose an option.';
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      toast.error('Please fill in all required fields', {
-        position: 'top-center',
-        autoClose: 3000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
+      toast.error('Some details are missing. Check the highlighted fields.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
       return;
     }
-
     if (!accessToken) {
-      toast.error('Authentication required. Redirecting to login...', {
-        position: 'top-center',
-        autoClose: 3000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
       navigate('/login');
       return;
     }
 
     setIsSubmitting(true);
-    const formDataToSend = new FormData();
-    formDataToSend.append('first_name', formData.first_name);
-    formDataToSend.append('last_name', formData.last_name);
-    if (formData.profile_photo) {
-      formDataToSend.append('profile_photo', formData.profile_photo);
-    }
-    formDataToSend.append('about_me', formData.about_me);
-    formDataToSend.append('preferred_content', JSON.stringify(formData.preferred_content));
-    formDataToSend.append('dob', formData.dob);
-    formDataToSend.append('gender', formData.gender);
+    const body = new FormData();
+    body.append('first_name', formData.first_name);
+    body.append('last_name', formData.last_name);
+    if (formData.profile_photo) body.append('profile_photo', formData.profile_photo);
+    body.append('about_me', formData.about_me);
+    body.append('preferred_content', JSON.stringify(formData.preferred_content));
+    body.append('dob', formData.dob);
+    body.append('gender', formData.gender);
 
     try {
-      const response = await axios.put(
-        `${apiString}/api/auth/complete-profile/`,
-        formDataToSend,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-
+      const response = await axios.put(`${apiString}/api/auth/complete-profile/`, body, {
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'multipart/form-data' },
+      });
       updateUserData(response.data);
-      toast.success('Profile updated successfully!', {
-        position: 'top-center',
-        autoClose: 2000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
-
-      setTimeout(() => navigate('/my-profile'), 2000);
+      toast.success('Profile saved', { position: 'top-center', autoClose: 2000, theme: toastTheme });
+      setTimeout(() => navigate('/my-profile'), 1200);
     } catch (error) {
-      let errorMessage = 'Failed to update profile';
+      let message = 'Your profile couldn’t be saved. Try again.';
       if (error.response?.status === 401) {
-        errorMessage = 'Session expired. Please log in again.';
-        toast.error(errorMessage, {
-          position: 'top-center',
-          autoClose: 3000,
-          theme: isDarkMode ? 'dark' : 'light',
-        });
+        toast.error('Your session expired. Sign in again.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
         navigate('/login');
-      } else if (error.response?.data) {
-        if (typeof error.response.data === 'object') {
-          const errorFields = Object.entries(error.response.data)
-            .map(([key, value]) => `${key.replace('_', ' ')}: ${value}`)
-            .join('; ');
-          errorMessage = errorFields || errorMessage;
-        } else {
-          errorMessage = error.response.data.detail || errorMessage;
-        }
-      } else if (error.request) {
-        errorMessage = 'No response from server. Please check your connection.';
+        return;
       }
-
-      toast.error(errorMessage, {
-        position: 'top-center',
-        autoClose: 5000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
+      if (error.response?.data && typeof error.response.data === 'object') {
+        const fieldErrors = Object.entries(error.response.data)
+          .map(([key, value]) => `${prettify(key)}: ${value}`)
+          .join('; ');
+        message = fieldErrors || message;
+      } else if (error.request && !error.response) {
+        message = 'The server didn’t respond. Check your connection.';
+      }
+      toast.error(message, { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const displayName = `${formData.first_name} ${formData.last_name}`.trim();
+  const required = ['first_name', 'last_name', 'about_me', 'dob', 'gender'];
+  const doneCount = required.filter((k) => String(formData[k]).trim()).length
+    + (formData.preferred_content.length ? 1 : 0)
+    + (previewPhoto ? 1 : 0);
+  const totalCount = required.length + 2;
+
   return (
-    <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Profile Header"
-          className={styles.headerImage}
-        />
-        <div className={styles.headerText}>
-          <h1>YOUR PROFILE</h1>
-          <p>Manage your spiritual journey</p>
-        </div>
-      </div>
+    <div className={styles.page}>
+      <PageHero
+        compact
+        image={headerImage}
+        title="Complete your profile"
+        subtitle="A few details so Virsaa can show you what you love first."
+        crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'Complete profile' }]}
+      />
 
-      {/* Breadcrumb */}
-      <div className={styles.breadcrumb}>
-        <Link to="/"><span>Home</span></Link> /
-        <Link to="/account"><span>My Account</span></Link> /
-        <span>Complete Profile</span>
-      </div>
-
-      {/* Profile Section */}
-      <div className={styles.profileSection}>
-        <div className={styles.avatarWrapper}>
-          <img
-            src={previewPhoto || getImagePath(placeholder_user_image)}
-            alt="User"
-            className={styles.avatar}
-          />
-          <label htmlFor="profile_photo" className={styles.editButton}>
-            <FaCamera />
-            <input
-              type="file"
-              id="profile_photo"
-              accept="image/*"
-              onChange={handleChange}
-              className={styles.fileInput}
-            />
-          </label>
-        </div>
-        <div className={styles.profileInfo}>
-          <h2>{userData?.first_name && userData?.last_name
-            ? `${formData.first_name || userData.first_name} ${formData.last_name || userData.last_name}`
-            : 'Complete Your Profile'}</h2>
-          <p>Please fill in all details to personalize your experience.</p>
-        </div>
-      </div>
-
-      {/* Form Section */}
-      <div className={styles.formSection}>
-        <h3 className={styles.sectionTitle}>Profile Details</h3>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          {/* First Name */}
-          <div className={styles.inputGroup}>
-            <label htmlFor="first_name" className={styles.label}>
-              <FaUser /> First Name
+      <form className={`${styles.section} ${styles.layout}`} onSubmit={handleSubmit} noValidate>
+        {/* ---------- Photo + progress ---------- */}
+        <aside className={`${styles.panel} ${styles.photoCard}`}>
+          <div className={`${styles.avatarFrame} ${errors.profile_photo ? styles.avatarError : ''}`}>
+            <img src={previewPhoto || getImagePath(PLACEHOLDER_PHOTO)} alt="" className={styles.avatar} />
+            <label htmlFor="profile_photo" className={styles.cameraButton}>
+              <FaCamera aria-hidden="true" />
+              <span className={styles.srOnly}>Choose profile photo</span>
+              <input type="file" id="profile_photo" accept="image/*" onChange={handleChange} className={styles.fileInput} />
             </label>
-            <input
-              type="text"
-              id="first_name"
-              className={`${styles.input} ${errors.first_name ? styles.errorInput : ''}`}
-              value={formData.first_name}
-              onChange={handleChange}
-              placeholder="Enter your first name"
-            />
-            {errors.first_name && <div className={styles.error}>{errors.first_name}</div>}
           </div>
+          <h2 className={styles.previewName}>{displayName || 'Your name'}</h2>
+          {errors.profile_photo
+            ? <p className={styles.errorText}>{errors.profile_photo}</p>
+            : <p className={styles.hint}>Tap the camera to add a photo.</p>}
 
-          {/* Last Name */}
-          <div className={styles.inputGroup}>
-            <label htmlFor="last_name" className={styles.label}>
-              <FaUser /> Last Name
-            </label>
-            <input
-              type="text"
-              id="last_name"
-              className={`${styles.input} ${errors.last_name ? styles.errorInput : ''}`}
-              value={formData.last_name}
-              onChange={handleChange}
-              placeholder="Enter your last name"
-            />
-            {errors.last_name && <div className={styles.error}>{errors.last_name}</div>}
-          </div>
-
-          {/* About Me */}
-          <div className={styles.inputGroup}>
-            <label htmlFor="about_me" className={styles.label}>
-              <FaPen /> About Me
-            </label>
-            <textarea
-              id="about_me"
-              className={`${styles.textarea} ${errors.about_me ? styles.errorInput : ''}`}
-              value={formData.about_me}
-              onChange={handleChange}
-              placeholder="Tell us about yourself (max 500 characters)"
-              maxLength={500}
-              rows="4"
-            />
-            {errors.about_me && <div className={styles.error}>{errors.about_me}</div>}
-          </div>
-
-          {/* Preferred Content */}
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>
-              <FaHeart /> Preferred Content
-            </label>
-            <div className={styles.contentGrid}>
-              {contentOptions.map((content) => (
-                <button
-                  key={content}
-                  type="button"
-                  className={`${styles.contentButton} ${
-                    formData.preferred_content.includes(content) ? styles.selected : ''
-                  }`}
-                  onClick={() => handleContentToggle(content)}
-                >
-                  {content.replace('_', ' ').toUpperCase()}
-                </button>
-              ))}
+          <div className={styles.progressBlock}>
+            <div className={styles.progressHead}>
+              <span>Profile progress</span>
+              <span>{doneCount}/{totalCount}</span>
             </div>
-            {errors.preferred_content && (
-              <div className={styles.error}>{errors.preferred_content}</div>
-            )}
+            <div className={styles.progress} role="progressbar" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={totalCount} aria-label="Profile progress">
+              <div className={styles.progressFill} style={{ width: `${(doneCount / totalCount) * 100}%` }} />
+            </div>
+          </div>
+        </aside>
+
+        {/* ---------- Details ---------- */}
+        <div className={`${styles.panel} ${styles.formPanel}`}>
+          <h2 className={styles.panelTitle}>Your details</h2>
+
+          <div className={styles.row}>
+            <div className={styles.field}>
+              <label htmlFor="first_name" className={styles.fieldLabel}><FaUser aria-hidden="true" /> First name</label>
+              <input type="text" id="first_name" autoComplete="given-name"
+                className={`${styles.input} ${errors.first_name ? styles.inputError : ''}`}
+                value={formData.first_name} onChange={handleChange} placeholder="e.g. Harpreet" />
+              {errors.first_name && <p className={styles.errorText}>{errors.first_name}</p>}
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="last_name" className={styles.fieldLabel}><FaUser aria-hidden="true" /> Last name</label>
+              <input type="text" id="last_name" autoComplete="family-name"
+                className={`${styles.input} ${errors.last_name ? styles.inputError : ''}`}
+                value={formData.last_name} onChange={handleChange} placeholder="e.g. Kaur" />
+              {errors.last_name && <p className={styles.errorText}>{errors.last_name}</p>}
+            </div>
           </div>
 
-          {/* Date of Birth */}
-          <div className={styles.inputGroup}>
-            <label htmlFor="dob" className={styles.label}>
-              <FaCalendarAlt /> Date of Birth
-            </label>
-            <input
-              type="date"
-              id="dob"
-              className={`${styles.input} ${errors.dob ? styles.errorInput : ''}`}
-              value={formData.dob}
-              onChange={handleChange}
-              placeholder="Select your date of birth"
-            />
-            {errors.dob && <div className={styles.error}>{errors.dob}</div>}
+          <div className={styles.field}>
+            <label htmlFor="about_me" className={styles.fieldLabel}><FaPen aria-hidden="true" /> About me</label>
+            <textarea id="about_me" rows="4" maxLength={500}
+              className={`${styles.textarea} ${errors.about_me ? styles.inputError : ''}`}
+              value={formData.about_me} onChange={handleChange}
+              placeholder="What brings you to Virsaa? What do you like to read or learn?" />
+            <div className={styles.fieldFoot}>
+              {errors.about_me ? <p className={styles.errorText}>{errors.about_me}</p> : <span />}
+              <span className={styles.hint}>{formData.about_me.length}/500</span>
+            </div>
           </div>
 
-          {/* Gender */}
-          <div className={styles.inputGroup}>
-            <label htmlFor="gender" className={styles.label}>
-              <FaVenusMars /> Gender
-            </label>
-            <select
-              id="gender"
-              className={`${styles.select} ${errors.gender ? styles.errorInput : ''}`}
-              value={formData.gender}
-              onChange={handleChange}
-            >
-              <option value="prefer_not_to_say">Prefer not to say</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
-            {errors.gender && <div className={styles.error}>{errors.gender}</div>}
+          <fieldset className={styles.fieldset}>
+            <legend className={styles.fieldLabel}><FaHeart aria-hidden="true" /> What do you enjoy?</legend>
+            <div className={styles.chips}>
+              {CONTENT_OPTIONS.map((content) => {
+                const on = formData.preferred_content.includes(content);
+                return (
+                  <button
+                    key={content}
+                    type="button"
+                    className={`${styles.chip} ${on ? styles.chipOn : ''}`}
+                    aria-pressed={on}
+                    onClick={() => handleContentToggle(content)}
+                  >
+                    {on && <FaCheck aria-hidden="true" />} {prettify(content)}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.preferred_content && <p className={styles.errorText}>{errors.preferred_content}</p>}
+          </fieldset>
+
+          <div className={styles.row}>
+            <div className={styles.field}>
+              <label htmlFor="dob" className={styles.fieldLabel}><FaCalendarAlt aria-hidden="true" /> Date of birth</label>
+              <input type="date" id="dob" autoComplete="bday"
+                className={`${styles.input} ${errors.dob ? styles.inputError : ''}`}
+                value={formData.dob} onChange={handleChange} />
+              {errors.dob && <p className={styles.errorText}>{errors.dob}</p>}
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="gender" className={styles.fieldLabel}><FaVenusMars aria-hidden="true" /> Gender</label>
+              <select id="gender"
+                className={`${styles.select} ${errors.gender ? styles.inputError : ''}`}
+                value={formData.gender} onChange={handleChange}>
+                <option value="">Select…</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+              {errors.gender && <p className={styles.errorText}>{errors.gender}</p>}
+            </div>
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className={styles.submitButton}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <span className={styles.spinner}></span>
-            ) : (
-              'Save Profile'
-            )}
-          </button>
-        </form>
-      </div>
+          <div className={styles.actions}>
+            <button type="submit" className={styles.primaryButton} disabled={isSubmitting}>
+              {isSubmitting ? <><span className={styles.spinner} aria-hidden="true" /> Saving…</> : 'Save profile'}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 };

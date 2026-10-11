@@ -1,263 +1,158 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  FaTrash, FaEnvelopeOpen, FaEnvelope, FaBell, FaBook, FaCalendarAlt,
+  FaGraduationCap, FaComments, FaCrown, FaCheckDouble,
+} from 'react-icons/fa';
+import PageHero from '../../../components/PageHero/PageHero';
+import AccountTabs from '../AccountTabs/AccountTabs';
 import styles from './Notifications.module.css';
-import { FaTrash, FaEnvelopeOpen, FaBell } from 'react-icons/fa';
 
-const useProductionImagePath = () => {
-  
-  return (imagePath) => {
-    // Only modify in production
-    if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
-      if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
-      }
-    }
-    return imagePath;
-  };
+const getImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
+    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+  }
+  return imagePath;
 };
+
+const KINDS = {
+  content: { label: 'New in the library', icon: <FaBook /> },
+  event: { label: 'Event', icon: <FaCalendarAlt /> },
+  learning: { label: 'Learning', icon: <FaGraduationCap /> },
+  reply: { label: 'Discussion', icon: <FaComments /> },
+  account: { label: 'Account', icon: <FaCrown /> },
+};
+
+// Placeholder notifications until the notifications API exists.
+// `day` is days ago so the groups always read Today / Yesterday / ...
+const SAMPLE = [
+  { id: 1, day: 0, time: '6:30 PM', kind: 'reply', read: false, title: 'New reply to your question', description: 'An admin replied to “Is there a worksheet for the vowel signs?” in Introduction to Gurmukhi.', path: '/learning-material/1' },
+  { id: 2, day: 0, time: '4:10 PM', kind: 'content', read: false, title: 'New ebook: Saka Sirhind', description: 'A retelling of the martyrdom of the younger Sahibzade, now in the library.', path: '/collections/ebooks/ebook/1' },
+  { id: 3, day: 1, time: '7:45 PM', kind: 'event', read: false, title: 'Gurpurab kirtan this Sunday', description: 'An evening of kirtan was added to Events. Open the panel to see the details.', path: '/home' },
+  { id: 4, day: 1, time: '11:20 AM', kind: 'learning', read: true, title: 'You scored 9/10 on Sikh history quiz', description: 'One more perfect score earns the Quiz Master badge.', path: '/learning/quizzes/5' },
+  { id: 5, day: 3, time: '9:00 AM', kind: 'account', read: true, title: 'Your free trial ends in 3 days', description: 'Choose a plan to keep ad-free reading and unlimited downloads.', path: '/premium' },
+  { id: 6, day: 3, time: '8:15 AM', kind: 'content', read: false, title: 'New audiobook: Lok Geet Punjab De', description: 'Folk songs of Punjab with their stories, narrated in Punjabi.', path: '/collections/audiobooks/audiobook/3' },
+  { id: 7, day: 6, time: '6:00 PM', kind: 'learning', read: true, title: 'New lesson: Vowel signs (laga matra)', description: 'The next lesson in the Gurmukhi series is ready.', path: '/learning-material/2' },
+];
+
+const dayLabel = (daysAgo) => {
+  if (daysAgo === 0) return 'Today';
+  if (daysAgo === 1) return 'Yesterday';
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+};
+
 const Notifications = ({ isDarkMode }) => {
-  const getImagePath = useProductionImagePath();
-  const header_image_light = '../../../images/header-image.png';
-  const header_image_dark = '../../../images/header-image-dark.png';
+  const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
 
-  const [userData] = useState({
-    username: 'Jaspreet Singh',
-    image: 'https://randomuser.me/api/portraits/men/32.jpg',
-    bio: 'Spiritual seeker and Gurbani enthusiast',
-    membership: 'Gold Member'
-  });
+  const [notifications, setNotifications] = useState(SAMPLE);
+  const [filter, setFilter] = useState('all'); // 'all' | 'unread'
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      time: '6:30PM',
-      icon: 'message',
-      title: 'New message from Virsaa Web',
-      description: 'You have a new message regarding your recent activity on Virsaa Web. Check it out now!',
-      url: 'localhost:3000',
-      read: false,
-      date: 'TODAY - SATURDAY, April 26, 2025'
-    },
-    {
-      id: 2,
-      time: '6:27PM',
-      icon: 'update',
-      title: 'YouTube Update',
-      description: 'Mann Mast Malang Episode 29 Teaser is now available! Watch it on YouTube.',
-      url: 'youtube.com',
-      read: false,
-      date: 'TODAY - SATURDAY, April 26, 2025'
-    },
-    {
-      id: 3,
-      time: '5:50PM',
-      icon: 'alert',
-      title: 'Stocksify Alert',
-      description: 'Farmers will get ₹ 2000 today under Kisan Samman Nidhi Yojana. Read more on Stocksify.',
-      url: 'stocksify.com',
-      read: true,
-      date: 'YESTERDAY - FRIDAY, April 25, 2025'
-    },
-    {
-      id: 4,
-      time: '5:45PM',
-      icon: 'update',
-      title: 'Google Update',
-      description: 'New meditation techniques have been added to your search results. Explore them on Google.',
-      url: 'google.com',
-      read: false,
-      date: 'YESTERDAY - FRIDAY, April 25, 2025'
-    },
-    {
-      id: 5,
-      time: '10:42AM',
-      icon: 'message',
-      title: 'Google Notification',
-      description: 'Your search for "credit card hacks" has new results. Check them out on Google.',
-      url: 'google.com',
-      read: false,
-      date: 'THURSDAY, April 24, 2025'
-    },
-    {
-      id: 6,
-      time: '10:40AM',
-      icon: 'alert',
-      title: 'NewsMagics Alert',
-      description: 'New article on money, expense, and market dividends is available. Read more on NewsMagics.',
-      url: 'newsmagics.com',
-      read: true,
-      date: 'THURSDAY, April 24, 2025'
-    },
-    {
-      id: 7,
-      time: '10:38AM',
-      icon: 'update',
-      title: 'WatchApe Update',
-      description: 'A new feature has been added to WatchApe. Check it out now!',
-      url: 'watchape.biz',
-      read: false,
-      date: 'THURSDAY, April 24, 2025'
-    },
-    {
-      id: 8,
-      time: '10:24AM',
-      icon: 'message',
-      title: 'Virsaa Web Reminder',
-      description: 'Don’t forget to check your recent activity on Virsaa Web. You have pending actions!',
-      url: 'localhost:3000',
-      read: false,
-      date: 'WEDNESDAY, April 23, 2025'
-    },
-    {
-      id: 9,
-      time: '10:23AM',
-      icon: 'alert',
-      title: 'Stocksify News',
-      description: 'A new financial update is available on Stocksify. Read about the latest market trends.',
-      url: 'stocksify.com',
-      read: true,
-      date: 'WEDNESDAY, April 23, 2025'
-    },
-    {
-      id: 10,
-      time: '10:20AM',
-      icon: 'update',
-      title: 'CashPrice Update',
-      description: 'New insights on financial flexibility during economic downturns are available on CashPrice.',
-      url: 'cashprice.com',
-      read: false,
-      date: 'WEDNESDAY, April 23, 2025'
-    },
-    {
-      id: 11,
-      time: '9:15AM',
-      icon: 'message',
-      title: 'DeepSeek Notification',
-      description: 'Your query "Into the Unknown" has new responses on DeepSeek. Check them out!',
-      url: 'chat.deepseek.com',
-      read: false,
-      date: 'TUESDAY, April 22, 2025'
-    },
-    {
-      id: 12,
-      time: '8:30AM',
-      icon: 'alert',
-      title: 'Grok Alert',
-      description: 'Grok has a new update for you. Visit grok.com to learn more!',
-      url: 'grok.com',
-      read: true,
-      date: 'TUESDAY, April 22, 2025'
-    }
-  ]);
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(notif =>
-      notif.id === id ? { ...notif, read: true } : notif
-    ));
-  };
+  const groups = useMemo(() => {
+    const list = filter === 'unread' ? notifications.filter((n) => !n.read) : notifications;
+    const map = new Map();
+    list.forEach((n) => {
+      if (!map.has(n.day)) map.set(n.day, []);
+      map.get(n.day).push(n);
+    });
+    return [...map.entries()].map(([day, items]) => ({ day, items }));
+  }, [notifications, filter]);
 
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter(notif => notif.id !== id));
-  };
+  const setRead = (id, read) => setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read } : n)));
+  const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const deleteNotification = (id) => setNotifications((prev) => prev.filter((n) => n.id !== id));
 
   return (
-    <div className={styles.container}>
-      {/* Header - Matches Gurbani page */}
-      <div className={styles.header}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Notifications Header"
-          className={styles.headerImage}
-        />
-        <div className={styles.headerText}>
-          <h1>NOTIFICATIONS</h1>
-          <p>Stay updated with your latest alerts</p>
+    <div className={styles.page}>
+      <PageHero
+        compact
+        image={headerImage}
+        title="Notifications"
+        subtitle={unreadCount > 0 ? `You have ${unreadCount} unread ${unreadCount === 1 ? 'notification' : 'notifications'}.` : 'You’re all caught up.'}
+        crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'Notifications' }]}
+      >
+        <AccountTabs badge={{ '/notifications': unreadCount }} />
+      </PageHero>
+
+      <div className={styles.toolbarWrap}>
+        <div className={styles.toolbar}>
+          <div className={styles.segmented} role="group" aria-label="Show">
+            <button type="button" aria-pressed={filter === 'all'} className={`${styles.segment} ${filter === 'all' ? styles.segmentOn : ''}`} onClick={() => setFilter('all')}>
+              All <span className={styles.count}>{notifications.length}</span>
+            </button>
+            <button type="button" aria-pressed={filter === 'unread'} className={`${styles.segment} ${filter === 'unread' ? styles.segmentOn : ''}`} onClick={() => setFilter('unread')}>
+              Unread <span className={styles.count}>{unreadCount}</span>
+            </button>
+          </div>
+          <button type="button" className={styles.ghostButton} onClick={markAllRead} disabled={unreadCount === 0}>
+            <FaCheckDouble aria-hidden="true" /> Mark all as read
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className={styles.mainContent}>
-        {/* User Profile Section */}
-        <div className={styles.profileSection}>
-          <img src={getImagePath(userData.image)} alt="User" className={styles.profileImage} />
-          <h2 className={styles.username}>{userData.username}</h2>
-          <span className={styles.membership}>{userData.membership}</span>
-          <p className={styles.bio}>{userData.bio}</p>
-        </div>
-
-        {/* Notifications Section */}
-        <div className={styles.notificationsSection}>
-          {/* Breadcrumb - Matches standard */}
-          <div className={styles.breadcrumb}>
-            <Link to="/"><span>Home</span></Link> / 
-            <Link to="/account"><span> My Account</span></Link> / 
-            <span>Notifications</span>
+      <section className={styles.section} aria-label="Notifications">
+        {groups.length === 0 ? (
+          <div className={styles.emptyState}>
+            <span className={styles.emptyIcon} aria-hidden="true"><FaBell /></span>
+            <h2>{filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}</h2>
+            <p>
+              {filter === 'unread'
+                ? <>You’ve read everything. <button type="button" className={styles.linkButton} onClick={() => setFilter('all')}>Show all</button></>
+                : 'Replies, new books and events will show up here.'}
+            </p>
           </div>
-
-          {/* Notifications List */}
-          <div className={styles.notificationsList}>
-            {notifications.length === 0 ? (
-              <div className={styles.emptyState}>
-                <FaBell className={styles.emptyIcon} />
-                <p>No notifications yet.</p>
+        ) : (
+          <div className={styles.groups}>
+            {groups.map((group) => (
+              <div key={group.day}>
+                <h2 className={styles.groupTitle}>{dayLabel(group.day)}</h2>
+                <ul className={styles.list}>
+                  {group.items.map((n) => {
+                    const kind = KINDS[n.kind];
+                    return (
+                      <li key={n.id} className={`${styles.item} ${n.read ? styles.read : styles.unread}`}>
+                        <span className={`${styles.kindIcon} ${styles[n.kind] || ''}`} aria-hidden="true">{kind.icon}</span>
+                        <div className={styles.body}>
+                          <div className={styles.topLine}>
+                            <span className={styles.kindLabel}>{kind.label}</span>
+                            <span className={styles.time}>{n.time}</span>
+                            {!n.read && <span className={styles.unreadDot}><span className={styles.srOnly}>Unread</span></span>}
+                          </div>
+                          <Link to={n.path} className={styles.title} onClick={() => setRead(n.id, true)}>{n.title}</Link>
+                          <p className={styles.description}>{n.description}</p>
+                        </div>
+                        <div className={styles.actions}>
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            onClick={() => setRead(n.id, !n.read)}
+                            aria-label={n.read ? `Mark “${n.title}” as unread` : `Mark “${n.title}” as read`}
+                            title={n.read ? 'Mark as unread' : 'Mark as read'}
+                          >
+                            {n.read ? <FaEnvelope /> : <FaEnvelopeOpen />}
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.iconButton} ${styles.deleteIcon}`}
+                            onClick={() => deleteNotification(n.id)}
+                            aria-label={`Delete “${n.title}”`}
+                            title="Delete"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            ) : (
-              notifications.reduce((acc, notif, index) => {
-                const showDateHeader = index === 0 || notif.date !== notifications[index - 1].date;
-                return [
-                  ...acc,
-                  showDateHeader && (
-                    <h3 key={`date-${notif.date}`} className={styles.dateHeader}>
-                      {notif.date}
-                    </h3>
-                  ),
-                  <div
-                    key={notif.id}
-                    className={`${styles.notificationItem} ${notif.read ? styles.read : ''}`}
-                  >
-                    <div className={styles.notificationHeader}>
-                      <span className={styles.time}>{notif.time}</span>
-                      <div className={`${styles.icon} ${styles[notif.icon]}`}></div>
-                      <div className={styles.notificationDetails}>
-                        <a href={`https://${notif.url}`} target="_blank" rel="noopener noreferrer">
-                          {notif.title}
-                        </a>
-                        <p className={styles.description}>{notif.description}</p>
-                        <span className={styles.url}>{notif.url}</span>
-                      </div>
-                    </div>
-                    <div className={styles.actions}>
-                      {!notif.read && (
-                        <button
-                          className={styles.actionButton}
-                          onClick={() => markAsRead(notif.id)}
-                          title="Mark as read"
-                        >
-                          <FaEnvelopeOpen />
-                        </button>
-                      )}
-                      <button
-                        className={styles.actionButton}
-                        onClick={() => deleteNotification(notif.id)}
-                        title="Delete"
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </div>
-                ];
-              }, [])
-            )}
+            ))}
           </div>
-        </div>
-      </div>
+        )}
+      </section>
     </div>
   );
 };

@@ -15,6 +15,7 @@ import {
   FaHistory,
   FaSignOutAlt,
   FaBell,
+  FaChevronRight,
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import SearchPalette from './SearchPalette';
@@ -34,9 +35,10 @@ const useProductionImagePath = () => {
   };
 };
 
+const userImage = '/images/Login/user-placeholder.jpg';
+
 const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const logo_virsaa = '/images/logo.png';
-  const userImage = '/images/Login/user-placeholder.jpg';
   const getImagePath = useProductionImagePath();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -46,10 +48,14 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const navbarRef = useRef(null);
   const navigate = useNavigate();
   const { isLoggedIn, userData, accessToken, logout } = useAuth();
+  // Latest values for the profile fetch, so it only re-runs when the panel opens
+  const latest = useRef({});
+  latest.current = { logout, navigate, isDarkMode, userData };
 
   // Fetch profile data when the profile sidebar is opened
   useEffect(() => {
     if (showProfileSidebar && accessToken) {
+      const { logout: doLogout, navigate: go, isDarkMode: dark, userData: user } = latest.current;
       const fetchProfile = async () => {
         try {
           const response = await fetch(`${apiString}/api/auth/profile/`, {
@@ -61,12 +67,12 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
           });
 
           if (response.status === 401) {
-            await logout();
-            navigate('/login');
+            await doLogout();
+            go('/login');
             toast.error('Session expired. Please log in again.', {
               position: 'top-center',
               autoClose: 3000,
-              theme: isDarkMode ? 'dark' : 'light',
+              theme: dark ? 'dark' : 'light',
             });
             return;
           }
@@ -80,27 +86,27 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
             first_name: data.first_name || '',
             last_name: data.last_name || '',
             profile_photo: data.profile_photo || userImage,
-            email: data.email || userData?.email || '',
+            email: data.email || user?.email || '',
           });
         } catch (error) {
           console.error('Error fetching profile data:', error);
           toast.error('Failed to load profile data.', {
             position: 'top-center',
             autoClose: 3000,
-            theme: isDarkMode ? 'dark' : 'light',
+            theme: dark ? 'dark' : 'light',
           });
           setProfileData({
-            first_name: userData?.first_name || '',
-            last_name: userData?.last_name || '',
-            profile_photo: userData?.profile_photo || userImage,
-            email: userData?.email || '',
+            first_name: user?.first_name || '',
+            last_name: user?.last_name || '',
+            profile_photo: user?.profile_photo || userImage,
+            email: user?.email || '',
           });
         }
       };
 
       fetchProfile();
     }
-  }, [showProfileSidebar, accessToken, logout, navigate, isDarkMode, userData, apiString]);
+  }, [showProfileSidebar, accessToken, apiString]);
 
   const handleDropdown = () => {
     setShowDropdown(!showDropdown);
@@ -131,9 +137,20 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
     setShowProfileSidebar(!showProfileSidebar);
   };
 
+  const closeProfileSidebar = () => setShowProfileSidebar(false);
+
+  // Close the account panel with Escape, like the events sidebar
+  useEffect(() => {
+    if (!showProfileSidebar) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setShowProfileSidebar(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showProfileSidebar]);
+
   const handleLogout = async () => {
     try {
-      console.log('Initiating logout from navbar');
       await logout();
       toast.success('Logged out successfully!', {
         position: 'top-center',
@@ -233,13 +250,19 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
           </button>
           
           {isLoggedIn ? (
-            <div className={styles.userProfile} onClick={toggleProfileSidebar}>
+            <button
+              type="button"
+              className={styles.userProfile}
+              onClick={toggleProfileSidebar}
+              aria-label="Open account menu"
+              aria-expanded={showProfileSidebar}
+            >
               <img 
                 src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)} 
-                alt="User" 
+                alt="" 
                 className={styles.userImage}
               />
-            </div>
+            </button>
           ) : (
             <>
               <button onClick={() => navigate('/login')} className={styles.loginButton}>
@@ -255,70 +278,87 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
 
       {showSearch && <SearchPalette onClose={closeSearch} apiString={apiString} />}
 
-      {showProfileSidebar && (
-        <div className={styles.profileSidebar}>
-          <div className={styles.sidebarHeader}>
-            <button className={styles.closeSidebar} onClick={toggleProfileSidebar}>
-              <FaTimes />
-            </button>
-          </div>
-          
-          <div className={styles.userInfo}>
-            <img 
-              src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)} 
-              alt="User" 
-              className={styles.sidebarUserImage}
-            />
-            <h3>
-              {profileData?.first_name && profileData?.last_name 
-                ? `${profileData.first_name} ${profileData.last_name}`
-                : userData?.first_name && userData?.last_name 
-                  ? `${userData.first_name} ${userData.last_name}`
-                  : userData?.username || 'User'}
-            </h3>
-            <p>{profileData?.email || userData?.email || ''}</p>
-          </div>
-          
-          <div className={styles.sidebarMenu}>
-            <Link to="/my-profile" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
-              <span>My Profile</span>
-              <FaUser className={styles.sidebarMenuIcon} />
-            </Link>
-            
-            <Link to="/account-settings" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
-              <span>Account Settings</span>
-              <FaUserCog className={styles.sidebarMenuIcon} />
-            </Link>
-            
-            <Link to="/my-favorites" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
-              <span>My Favorites</span>
-              <FaHeart className={styles.sidebarMenuIcon} />
-            </Link>
-            
-            <Link to="/history" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
-              <span>History</span>
-              <FaHistory className={styles.sidebarMenuIcon} />
-            </Link>
+      {/* Account panel: floating glass that slides in from the right, mirroring the events sidebar */}
+      {isLoggedIn && (
+        <>
+          <div
+            className={`${styles.accountBackdrop} ${showProfileSidebar ? styles.accountBackdropVisible : ''}`}
+            onClick={closeProfileSidebar}
+            aria-hidden="true"
+          />
+          <aside
+            className={`${styles.accountPanel} ${showProfileSidebar ? styles.accountPanelOpen : ''}`}
+            aria-hidden={!showProfileSidebar}
+            aria-label="Account"
+          >
+            <header className={styles.accountHeader}>
+              <p className={styles.accountGreeting}>Your account</p>
+              <button type="button" className={styles.accountClose} onClick={closeProfileSidebar} aria-label="Close account menu">
+                <FaTimes />
+              </button>
+            </header>
 
-            <Link to="/notifications" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
-              <span>Notifications</span>
-              <FaBell className={styles.sidebarMenuIcon} />
-            </Link>
-            
-            <Link to="/premium" className={styles.menuItem} onClick={() => setShowProfileSidebar(false)}>
-              <span>Get Premium</span>
-              <FaCrown className={styles.sidebarMenuIcon} />
-            </Link>
-            
-            <button 
-              onClick={handleLogout} 
-              className={`${styles.menuItem} ${styles.logoutButton}`}
-            >
-              <span>Logout</span>
-              <FaSignOutAlt className={styles.sidebarMenuIcon} />
-            </button>
-          </div>
-        </div>
+            <div className={styles.accountBody}>
+              <section className={styles.accountCard}>
+                <img
+                  src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)}
+                  alt=""
+                  className={styles.accountAvatar}
+                />
+                <div className={styles.accountWho}>
+                  <h3>
+                    {profileData?.first_name && profileData?.last_name
+                      ? `${profileData.first_name} ${profileData.last_name}`
+                      : userData?.first_name && userData?.last_name
+                        ? `${userData.first_name} ${userData.last_name}`
+                        : userData?.username || 'Your account'}
+                  </h3>
+                  {(profileData?.email || userData?.email) && <p>{profileData?.email || userData?.email}</p>}
+                </div>
+              </section>
+
+              <nav className={styles.accountLinks} aria-label="Account pages">
+              <Link to="/my-profile" className={styles.accountLink} onClick={closeProfileSidebar}>
+                <span className={styles.accountLinkIcon}><FaUser /></span>
+                <span>My Profile</span>
+                <FaChevronRight className={styles.accountLinkArrow} aria-hidden="true" />
+              </Link>
+              <Link to="/account-settings" className={styles.accountLink} onClick={closeProfileSidebar}>
+                <span className={styles.accountLinkIcon}><FaUserCog /></span>
+                <span>Account Settings</span>
+                <FaChevronRight className={styles.accountLinkArrow} aria-hidden="true" />
+              </Link>
+              <Link to="/my-favorites" className={styles.accountLink} onClick={closeProfileSidebar}>
+                <span className={styles.accountLinkIcon}><FaHeart /></span>
+                <span>My Favorites</span>
+                <FaChevronRight className={styles.accountLinkArrow} aria-hidden="true" />
+              </Link>
+              <Link to="/history" className={styles.accountLink} onClick={closeProfileSidebar}>
+                <span className={styles.accountLinkIcon}><FaHistory /></span>
+                <span>History</span>
+                <FaChevronRight className={styles.accountLinkArrow} aria-hidden="true" />
+              </Link>
+              <Link to="/notifications" className={styles.accountLink} onClick={closeProfileSidebar}>
+                <span className={styles.accountLinkIcon}><FaBell /></span>
+                <span>Notifications</span>
+                <FaChevronRight className={styles.accountLinkArrow} aria-hidden="true" />
+              </Link>
+              </nav>
+
+              <Link to="/premium" className={styles.premiumCard} onClick={closeProfileSidebar}>
+                <span className={styles.premiumIcon} aria-hidden="true"><FaCrown /></span>
+                <span>
+                  <strong>Get Premium</strong>
+                  <small>Every ebook, audiobook and lesson, ad-free</small>
+                </span>
+              </Link>
+
+              <button type="button" onClick={handleLogout} className={styles.accountLogout}>
+                <FaSignOutAlt aria-hidden="true" /> Log out
+              </button>
+            </div>
+          </aside>
+        </>
       )}
     </>
   );

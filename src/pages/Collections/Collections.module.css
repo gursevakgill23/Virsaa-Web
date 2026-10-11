@@ -359,7 +359,7 @@
 .authorFrame {
   display: block;
   aspect-ratio: 3 / 4;
-  border-radius: 999px 999px 22px 22px;
+  border-radius: 50% 50% 22px 22px / 38% 38% 22px 22px;
   overflow: hidden;
   margin-bottom: 10px;
   background: var(--skeleton-bg-color);

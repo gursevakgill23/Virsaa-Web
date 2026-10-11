@@ -1,359 +1,252 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FaMoon, FaSun, FaLanguage, FaBell, FaLock, 
-  FaDatabase, FaTrash, FaPalette, FaUserShield,
-  FaChevronDown, FaChevronUp
+import { toast } from 'react-toastify';
+import {
+  FaMoon, FaSun, FaLanguage, FaBell, FaLock,
+  FaDatabase, FaTrash, FaPalette, FaUserShield, FaDesktop, FaKey, FaCheck,
 } from 'react-icons/fa';
+import PageHero from '../../../components/PageHero/PageHero';
+import AccountTabs from '../AccountTabs/AccountTabs';
 import styles from './Settings.module.css';
 
-const useProductionImagePath = () => {
-  
-  return (imagePath) => {
-    // Only modify in production
-    if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
-      if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
-      }
-    }
-    return imagePath;
-  };
+const getImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
+    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+  }
+  return imagePath;
 };
+
+const LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'pa', name: 'Punjabi' },
+  { code: 'hi', name: 'Hindi' },
+  { code: 'es', name: 'Spanish' },
+];
+
+const THEMES = [
+  { value: 'light', name: 'Light', icon: <FaSun /> },
+  { value: 'dark', name: 'Dark', icon: <FaMoon /> },
+  { value: 'system', name: 'Match device', icon: <FaDesktop /> },
+];
+
+const TABS = [
+  { id: 'general', label: 'Appearance', icon: <FaPalette /> },
+  { id: 'notifications', label: 'Notifications', icon: <FaBell /> },
+  { id: 'security', label: 'Security', icon: <FaLock /> },
+  { id: 'storage', label: 'Storage', icon: <FaDatabase /> },
+  { id: 'privacy', label: 'Privacy', icon: <FaUserShield /> },
+];
+
+/* One row with a title, a description and a switch */
+const SwitchRow = ({ id, title, description, checked, onChange }) => (
+  <div className={styles.settingItem}>
+    <div className={styles.settingInfo}>
+      <label htmlFor={id} className={styles.settingTitle}>{title}</label>
+      <p id={`${id}-desc`}>{description}</p>
+    </div>
+    <span className={styles.switch}>
+      <input id={id} type="checkbox" role="switch" checked={checked} onChange={onChange} aria-describedby={`${id}-desc`} />
+      <span className={styles.track} aria-hidden="true"><span className={styles.thumb} /></span>
+    </span>
+  </div>
+);
+
 const Settings = ({ isDarkMode, toggleTheme }) => {
-  const getImagePath = useProductionImagePath();
-  const header_image_light = '../../../images/header-image.png';
-  const header_image_dark = '../../../images/header-image-dark.png';
+  const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
 
   const [activeTab, setActiveTab] = useState('general');
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: false,
-    weeklyDigest: true
-  });
-  const [security, setSecurity] = useState({
-    twoFactor: false,
-    passwordChangeRequired: false
-  });
-  const [storage, setStorage] = useState({
-    cacheSize: '1.2 GB',
-    downloadLocation: '/user/downloads'
-  });
   const [selectedTheme, setSelectedTheme] = useState(isDarkMode ? 'dark' : 'light');
+  const [language, setLanguage] = useState('en');
+  const [notifications, setNotifications] = useState({ email: true, push: false, weeklyDigest: true });
+  const [security, setSecurity] = useState({ twoFactor: false, passwordChangeRequired: false });
+  const [privacy, setPrivacy] = useState({ dataCollection: true, personalizedAds: true, visibility: 'only_me' });
+  const [cacheSize, setCacheSize] = useState('1.2 GB');
 
-  const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'pa', name: 'Punjabi' },
-    { code: 'hi', name: 'Hindi' },
-    { code: 'es', name: 'Spanish' }
-  ];
+  const toastTheme = isDarkMode ? 'dark' : 'light';
 
-  const themes = [
-    { name: 'Light', icon: <FaSun />, value: 'light' },
-    { name: 'Dark', icon: <FaMoon />, value: 'dark' },
-    { name: 'System', icon: <FaPalette />, value: 'system' }
-  ];
-
-  const tabs = [
-    { id: 'general', label: 'General', icon: <FaPalette /> },
-    { id: 'notifications', label: 'Notifications', icon: <FaBell /> },
-    { id: 'security', label: 'Security', icon: <FaLock /> },
-    { id: 'storage', label: 'Storage', icon: <FaDatabase /> },
-    { id: 'privacy', label: 'Privacy', icon: <FaUserShield /> }
-  ];
-
-  const handleNotificationToggle = (type) => {
-    setNotifications(prev => ({ ...prev, [type]: !prev[type] }));
+  // App's toggleTheme() flips the theme, so only call it when the result should differ
+  const handleThemeChange = (value) => {
+    const wantDark = value === 'system'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : value === 'dark';
+    if (wantDark !== isDarkMode && typeof toggleTheme === 'function') toggleTheme();
+    setSelectedTheme(value);
   };
 
-  const handleSecurityToggle = (type) => {
-    setSecurity(prev => ({ ...prev, [type]: !prev[type] }));
+  const isThemeActive = (value) => {
+    if (selectedTheme === 'system') return value === 'system';
+    return (value === 'dark' && isDarkMode) || (value === 'light' && !isDarkMode);
   };
+
+  const toggle = (setter, key) => () => setter((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const clearCache = () => {
-    setStorage(prev => ({ ...prev, cacheSize: '0 MB' }));
-    // Actual cache clearing would happen here
+    setCacheSize('0 MB');
+    toast.success('Cache cleared', { position: 'top-center', autoClose: 2000, theme: toastTheme });
   };
 
-  const handleThemeChange = (themeValue) => {
-    if (themeValue === 'system') {
-      // Detect system preference
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      toggleTheme(systemDark);
-      setSelectedTheme('system');
-    } else {
-      toggleTheme(themeValue === 'dark');
-      setSelectedTheme(themeValue);
-    }
+  const handleDeleteData = () => {
+    toast.info('Deleting account data isn’t available online yet. Contact us from the About page and we’ll do it for you.', {
+      position: 'top-center', autoClose: 5000, theme: toastTheme,
+    });
   };
 
-  // Determine if a theme is currently active
-  const isThemeActive = (themeValue) => {
-    if (themeValue === 'system') {
-      return selectedTheme === 'system';
-    }
-    return (themeValue === 'dark' && isDarkMode) || (themeValue === 'light' && !isDarkMode);
-  };
+  const tab = TABS.find((t) => t.id === activeTab);
 
   return (
-    <div className={styles.container}>
-      {/* Header - Matches Gurbani page */}
-      <div className={styles.header}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Settings Header"
-          className={styles.headerImage}
-        />
-        <div className={styles.headerText}>
-          <h1>SETTINGS</h1>
-          <p>Customize your experience</p>
-        </div>
-      </div>
+    <div className={styles.page}>
+      <PageHero
+        compact
+        image={headerImage}
+        title="Settings"
+        subtitle="Make Virsaa look and behave the way you like."
+        crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'Settings' }]}
+      >
+        <AccountTabs />
+      </PageHero>
 
-      {/* Breadcrumb - Matches standard */}
-      <div className={styles.breadcrumb}>
-        <Link to="/"><span>Home</span></Link> / 
-        <Link to="/settings"><span> Settings</span></Link>
-      </div>
+      <div className={`${styles.section} ${styles.layout}`}>
+        {/* ---------- Section nav ---------- */}
+        <nav className={styles.nav} aria-label="Settings sections">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`${styles.navItem} ${activeTab === t.id ? styles.navActive : ''}`}
+              aria-current={activeTab === t.id ? 'true' : undefined}
+              onClick={() => setActiveTab(t.id)}
+            >
+              <span className={styles.navIcon} aria-hidden="true">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
-      <div className={styles.settingsContainer}>
-        {/* Settings Sidebar */}
-        <div className={styles.sidebar}>
-          {/* Mobile dropdown toggle */}
-          <div 
-            className={styles.mobileMenuToggle}
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-          >
-            <div className={styles.mobileMenuTitle}>
-              {tabs.find(tab => tab.id === activeTab)?.label}
-              {showMobileMenu ? <FaChevronUp /> : <FaChevronDown />}
-            </div>
-          </div>
-          
-          {/* Desktop tabs and mobile dropdown content */}
-          <div className={`${styles.sidebarContent} ${showMobileMenu ? styles.showMobileMenu : ''}`}>
-            {tabs.map(tab => (
-              <div 
-                key={tab.id}
-                className={`${styles.sidebarItem} ${activeTab === tab.id ? styles.active : ''}`}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setShowMobileMenu(false);
-                }}
-              >
-                {tab.icon} {tab.label}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Settings Content */}
+        {/* ---------- Content ---------- */}
         <div className={styles.content}>
+          <h2 className={styles.contentTitle}>{tab.label}</h2>
+
           {activeTab === 'general' && (
-            <div className={styles.tabContent}>
-              <h2><FaPalette /> Appearance</h2>
-              <div className={styles.themeOptions}>
-                {themes.map(theme => (
-                  <div 
-                    key={theme.value}
-                    className={`${styles.themeOption} ${isThemeActive(theme.value) ? styles.selected : ''}`}
-                    onClick={() => handleThemeChange(theme.value)}
-                  >
-                    <div className={styles.themeIcon}>{theme.icon}</div>
-                    <span>{theme.name}</span>
-                    {isThemeActive(theme.value) && (
-                      <div className={styles.selectedIndicator}>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            <>
+              <div className={styles.block}>
+                <h3 className={styles.blockTitle}><FaPalette aria-hidden="true" /> Theme</h3>
+                <div className={styles.themes} role="radiogroup" aria-label="Theme">
+                  {THEMES.map((theme) => {
+                    const active = isThemeActive(theme.value);
+                    return (
+                      <button
+                        key={theme.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        className={`${styles.themeCard} ${active ? styles.themeActive : ''}`}
+                        onClick={() => handleThemeChange(theme.value)}
+                      >
+                        {/* Small preview of the page in that theme */}
+                        <span className={`${styles.preview} ${styles[`preview_${theme.value}`]}`} aria-hidden="true">
+                          <span className={styles.previewBar} />
+                          <span className={styles.previewHero} />
+                          <span className={styles.previewLine} />
+                          <span className={`${styles.previewLine} ${styles.previewShort}`} />
+                        </span>
+                        <span className={styles.themeName}>
+                          <span aria-hidden="true">{theme.icon}</span> {theme.name}
+                          {active && <span className={styles.themeCheck} aria-hidden="true"><FaCheck /></span>}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <h2><FaLanguage /> Language</h2>
-              <div className={styles.languageSelect}>
-                <select className={styles.selectInput}>
-                  {languages.map(lang => (
-                    <option key={lang.code} value={lang.code}>{lang.name}</option>
-                  ))}
+              <div className={styles.block}>
+                <h3 className={styles.blockTitle}><FaLanguage aria-hidden="true" /> Language</h3>
+                <label htmlFor="language" className={styles.srOnly}>Language</label>
+                <select id="language" className={`${styles.select} ${styles.narrow}`} value={language} onChange={(e) => setLanguage(e.target.value)}>
+                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
                 </select>
+                <p className={styles.hint}>Translations are on the way. Some pages are still English only.</p>
               </div>
-            </div>
+            </>
           )}
 
           {activeTab === 'notifications' && (
-            <div className={styles.tabContent}>
-              <h2><FaBell /> Notification Preferences</h2>
-              <div className={styles.settingItem}>
-                <div className={styles.settingInfo}>
-                  <h3>Email Notifications</h3>
-                  <p>Receive important updates via email</p>
-                </div>
-                <label className={styles.toggleSwitch}>
-                  <input 
-                    type="checkbox" 
-                    checked={notifications.email} 
-                    onChange={() => handleNotificationToggle('email')} 
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
-
-              <div className={styles.settingItem}>
-                <div className={styles.settingInfo}>
-                  <h3>Push Notifications</h3>
-                  <p>Get instant alerts on your device</p>
-                </div>
-                <label className={styles.toggleSwitch}>
-                  <input 
-                    type="checkbox" 
-                    checked={notifications.push} 
-                    onChange={() => handleNotificationToggle('push')} 
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
-
-              <div className={styles.settingItem}>
-                <div className={styles.settingInfo}>
-                  <h3>Weekly Digest</h3>
-                  <p>Summary of your weekly activity</p>
-                </div>
-                <label className={styles.toggleSwitch}>
-                  <input 
-                    type="checkbox" 
-                    checked={notifications.weeklyDigest} 
-                    onChange={() => handleNotificationToggle('weeklyDigest')} 
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
+            <div className={styles.rows}>
+              <SwitchRow id="n-email" title="Email notifications" description="Important updates about your account and saved items." checked={notifications.email} onChange={toggle(setNotifications, 'email')} />
+              <SwitchRow id="n-push" title="Push notifications" description="Instant alerts in your browser for replies and events." checked={notifications.push} onChange={toggle(setNotifications, 'push')} />
+              <SwitchRow id="n-digest" title="Weekly digest" description="One email a week with new books, lessons and events." checked={notifications.weeklyDigest} onChange={toggle(setNotifications, 'weeklyDigest')} />
             </div>
           )}
 
           {activeTab === 'security' && (
-            <div className={styles.tabContent}>
-              <h2><FaLock /> Security Settings</h2>
+            <>
+              <div className={styles.rows}>
+                <SwitchRow id="s-2fa" title="Two-factor authentication" description="Ask for a code from your phone when you sign in." checked={security.twoFactor} onChange={toggle(setSecurity, 'twoFactor')} />
+                <SwitchRow id="s-pw" title="Regular password change" description="Remind me to change my password every 90 days." checked={security.passwordChangeRequired} onChange={toggle(setSecurity, 'passwordChangeRequired')} />
+              </div>
               <div className={styles.settingItem}>
                 <div className={styles.settingInfo}>
-                  <h3>Two-Factor Authentication</h3>
-                  <p>Add an extra layer of security to your account</p>
+                  <span className={styles.settingTitle}>Password</span>
+                  <p>We’ll email you a code to set a new one.</p>
                 </div>
-                <label className={styles.toggleSwitch}>
-                  <input 
-                    type="checkbox" 
-                    checked={security.twoFactor} 
-                    onChange={() => handleSecurityToggle('twoFactor')} 
-                  />
-                  <span className={styles.slider}></span>
-                </label>
+                <Link to="/forgot-password" className={styles.secondaryButton}>
+                  <FaKey aria-hidden="true" /> Change password
+                </Link>
               </div>
-
-              <div className={styles.settingItem}>
-                <div className={styles.settingInfo}>
-                  <h3>Require Password Change</h3>
-                  <p>Force password change every 90 days</p>
-                </div>
-                <label className={styles.toggleSwitch}>
-                  <input 
-                    type="checkbox" 
-                    checked={security.passwordChangeRequired} 
-                    onChange={() => handleSecurityToggle('passwordChangeRequired')} 
-                  />
-                  <span className={styles.slider}></span>
-                </label>
-              </div>
-              <button className={styles.actionButton}>
-                <span>Change Password</span>
-                <span className={styles.passwordAction}>***********</span>
-              </button>
-            </div>
+            </>
           )}
 
           {activeTab === 'storage' && (
-            <div className={styles.tabContent}>
-              <h2><FaDatabase /> Storage Management</h2>
-              <div className={styles.storageInfo}>
-                <div className={styles.storageBar}>
-                  <div 
-                    className={styles.storageFill}
-                    style={{ width: '35%' }}
-                  ></div>
+            <>
+              <div className={styles.storage}>
+                <div className={styles.storageHead}>
+                  <span>Storage used</span>
+                  <strong>1.2 GB of 3.5 GB</strong>
                 </div>
-                <p>1.2 GB of 3.5 GB used</p>
+                <div className={styles.storageBar} role="progressbar" aria-valuenow={35} aria-valuemin={0} aria-valuemax={100} aria-label="Storage used">
+                  <div className={styles.storageFill} style={{ width: '35%' }} />
+                </div>
               </div>
-
               <div className={styles.settingItem}>
                 <div className={styles.settingInfo}>
-                  <h3>Cache Size</h3>
-                  <p>Temporary files to improve performance</p>
+                  <span className={styles.settingTitle}>Cache</span>
+                  <p>Temporary files that make pages and audio load faster. Currently {cacheSize}.</p>
                 </div>
-                <span>{storage.cacheSize}</span>
-              </div>
-
-              <div className={styles.settingItem}>
-                <div className={styles.settingInfo}>
-                  <h3>Download Location</h3>
-                  <p>Where your downloaded files are saved</p>
-                </div>
-                <span>{storage.downloadLocation}</span>
-              </div>
-
-              <div className={styles.storageActions}>
-                <button 
-                  className={styles.actionButton}
-                  onClick={clearCache}
-                >
-                  <FaTrash /> Clear Cache
-                </button>
-                <button className={styles.secondaryButton}>
-                  Change Download Location
+                <button type="button" className={styles.secondaryButton} onClick={clearCache} disabled={cacheSize === '0 MB'}>
+                  <FaTrash aria-hidden="true" /> Clear cache
                 </button>
               </div>
-            </div>
+            </>
           )}
 
           {activeTab === 'privacy' && (
-            <div className={styles.tabContent}>
-              <h2><FaUserShield /> Privacy Settings</h2>
-              <div className={styles.privacyOption}>
-                <h3>Data Collection</h3>
-                <p>Help us improve by sharing anonymous usage data</p>
-                <label className={styles.toggleSwitch}>
-                  <input type="checkbox" defaultChecked />
-                  <span className={styles.slider}></span>
-                </label>
+            <>
+              <div className={styles.rows}>
+                <SwitchRow id="p-data" title="Usage data" description="Share anonymous usage data to help us improve Virsaa." checked={privacy.dataCollection} onChange={toggle(setPrivacy, 'dataCollection')} />
+                <SwitchRow id="p-ads" title="Personalized recommendations" description="Suggest books and lessons based on what you open." checked={privacy.personalizedAds} onChange={toggle(setPrivacy, 'personalizedAds')} />
+                <div className={styles.settingItem}>
+                  <div className={styles.settingInfo}>
+                    <label htmlFor="visibility" className={styles.settingTitle}>Who can see your activity</label>
+                    <p>Your reading history and favorites.</p>
+                  </div>
+                  <select id="visibility" className={`${styles.select} ${styles.inlineSelect}`} value={privacy.visibility} onChange={(e) => setPrivacy((p) => ({ ...p, visibility: e.target.value }))}>
+                    <option value="only_me">Only me</option>
+                    <option value="friends">Friends</option>
+                    <option value="public">Everyone</option>
+                  </select>
+                </div>
               </div>
 
-              <div className={styles.privacyOption}>
-                <h3>Personalized Ads</h3>
-                <p>See relevant content based on your activity</p>
-                <label className={styles.toggleSwitch}>
-                  <input type="checkbox" defaultChecked />
-                  <span className={styles.slider}></span>
-                </label>
+              <div className={styles.danger}>
+                <div>
+                  <h3>Delete account data</h3>
+                  <p>Remove your profile, favorites and history from Virsaa.</p>
+                </div>
+                <button type="button" className={styles.dangerButton} onClick={handleDeleteData}>
+                  <FaTrash aria-hidden="true" /> Delete data
+                </button>
               </div>
-
-              <div className={styles.privacyOption}>
-                <h3>Activity Visibility</h3>
-                <p>Who can see your reading history and favorites</p>
-                <select className={styles.selectInput}>
-                  <option>Only Me</option>
-                  <option>Friends</option>
-                  <option>Public</option>
-                </select>
-              </div>
-
-              <button className={styles.dangerButton}>
-                Delete Account Data
-              </button>
-            </div>
+            </>
           )}
         </div>
       </div>

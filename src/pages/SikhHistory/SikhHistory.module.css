@@ -142,7 +142,7 @@
   display: block;
   width: 100%;
   aspect-ratio: 3 / 4;
-  border-radius: 999px 999px 18px 18px;
+  border-radius: 50% 50% 18px 18px / 38% 38% 18px 18px;
   overflow: hidden;
   background: var(--skeleton-bg-color);
   border: 3px solid var(--card-bg-color);
@@ -261,7 +261,7 @@
   width: 78px;
   aspect-ratio: 3 / 4;
   flex-shrink: 0;
-  border-radius: 999px 999px 14px 14px;
+  border-radius: 50% 50% 14px 14px / 38% 38% 14px 14px;
   overflow: hidden;
   background: var(--skeleton-bg-color);
 }
