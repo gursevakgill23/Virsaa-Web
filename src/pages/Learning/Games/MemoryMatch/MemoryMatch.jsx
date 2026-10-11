@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import styles from './MemoryMatch.module.css';
 import { Howl } from 'howler';
-import { FaCoins, FaUser, FaSignInAlt, FaEdit, FaCreditCard, FaSignOutAlt, FaCog, FaPlay, FaList, FaClock, FaExchangeAlt, FaStar, FaTachometerAlt } from 'react-icons/fa';
+import { FaCoins, FaUser, FaSignInAlt, FaEdit, FaCreditCard, FaSignOutAlt, FaCog, FaPlay, FaList, FaClock, FaExchangeAlt, FaStar, FaTachometerAlt, FaAward, FaBrain, FaBolt } from 'react-icons/fa';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
@@ -92,9 +92,9 @@ const fetchUserAchievements = async (userId) => {
   await new Promise(resolve => setTimeout(resolve, 800));
   if (!userId) return [];
   return [
-    { id: 1, name: 'Vaisakhi Master', description: 'Match 50 festival cards', earned: true, icon: '🏵️' },
-    { id: 2, name: 'Memory Guru', description: 'Complete 100 matches', earned: false, icon: '🧠', progress: '20/100' },
-    { id: 3, name: 'Speed Sikh', description: 'Finish Time Attack in 30s', earned: false, icon: '⚡' },
+    { id: 1, name: 'Vaisakhi Master', description: 'Match 50 festival cards', earned: true, icon: <FaAward /> },
+    { id: 2, name: 'Memory Guru', description: 'Complete 100 matches', earned: false, icon: <FaBrain />, progress: '20/100' },
+    { id: 3, name: 'Speed Sikh', description: 'Finish Time Attack in 30s', earned: false, icon: <FaBolt /> },
   ];
 };
 
@@ -460,14 +460,14 @@ const MemoryMatch = () => {
                 <div style={{ width: `${((userStats?.xp || 0) / (userStats?.maxXp || 1000)) * 100}%` }}></div>
               </div>
             </div>
-            <button onClick={() => setShowSettings(true)} className={styles.settingsButton}>
+            <button onClick={() => setShowSettings(true)} className={styles.settingsButton} aria-label="Settings">
               <FaCog />
             </button>
             {showProfileDropdown && (
               <div className={styles.profileDropdown} ref={profileDropdownRef}>
                 <div className={styles.profileHeader}>
                   <h3>{language === 'punjabi' ? 'ਪ੍ਰੋਫਾਈਲ' : 'Game Profile'}</h3>
-                  <button onClick={() => setShowProfileDropdown(false)} className={styles.closeButton}>×</button>
+                  <button onClick={() => setShowProfileDropdown(false)} className={styles.closeButton} aria-label="Close">×</button>
                 </div>
                 <div className={styles.profileContent}>
                   {editingProfile ? (
@@ -508,7 +508,7 @@ const MemoryMatch = () => {
                       </div>
                     </div>
                   )}
-                  <button className={styles.actionButton}onClick={() => setShowCoinShop(true)}>
+                  <button className={styles.actionButton} onClick={() => setShowCoinShop(true)}>
                     <FaCreditCard /> {language === 'punjabi' ? 'ਸਿੱਕੇ ਖਰੀਦੋ' : 'Buy Coins'}
                   </button>
                   <button className={styles.actionButton} onClick={logout}>
@@ -523,7 +523,7 @@ const MemoryMatch = () => {
             <button onClick={() => navigate('/login')} className={styles.loginButton}>
               <FaSignInAlt /> {language === 'punjabi' ? 'ਲੌਗਇਨ' : 'Login'}
             </button>
-            <button onClick={() => setShowSettings(true)} className={styles.settingsButton}>
+            <button onClick={() => setShowSettings(true)} className={styles.settingsButton} aria-label="Settings">
               <FaCog />
             </button>
           </>
@@ -540,7 +540,7 @@ const MemoryMatch = () => {
       <div className={`${styles.settingsSidebar} ${showSettings ? styles.sidebarOpen : ''}`}>
         <div className={styles.sidebarHeader}>
           <h2>{language === 'punjabi' ? 'ਸੈਟਿੰਗਾਂ' : 'Settings'}</h2>
-          <button onClick={() => setShowSettings(false)} className={styles.closeButton}>×</button>
+          <button onClick={() => setShowSettings(false)} className={styles.closeButton} aria-label="Close">×</button>
         </div>
         <div className={styles.settingsContent}>
           <label>
@@ -610,14 +610,16 @@ const MemoryMatch = () => {
           <h3>{language === 'punjabi' ? 'ਮੋਡ' : 'Mode'}</h3>
           <div className={styles.modeOptions}>
             {gameModes.map(mode => (
-              <div
+              <button
+                type="button"
                 key={mode.id}
                 className={`${styles.modeCard} ${selectedMode.id === mode.id ? styles.selected : ''}`}
+                aria-pressed={selectedMode.id === mode.id}
                 onClick={() => setSelectedMode(mode)}
               >
                 <h4>{mode.name}</h4>
                 <p>{mode.description}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -625,15 +627,17 @@ const MemoryMatch = () => {
           <h3>{language === 'punjabi' ? 'ਮੁਸ਼ਕਲਤਾ' : 'Difficulty'}</h3>
           <div className={styles.difficultyOptions}>
             {difficultyLevels.map(diff => (
-              <div
+              <button
+                type="button"
                 key={diff.id}
                 className={`${styles.difficultyCard} ${selectedDifficulty.id === diff.id ? styles.selected : ''}`}
+                aria-pressed={selectedDifficulty.id === diff.id}
                 onClick={() => setSelectedDifficulty(diff)}
               >
                 <h4>{diff.name}</h4>
                 <p>{language === 'punjabi' ? `ਕਾਰਡ: ${diff.cardCount}` : `Cards: ${diff.cardCount}`}</p>
                 <p>{language === 'punjabi' ? `ਸਮਾਂ: ${diff.timeLimit} ਸਕਿੰਟ` : `Time: ${diff.timeLimit} sec`}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -685,7 +689,8 @@ const MemoryMatch = () => {
               key={card.id}
               className={`${styles.card} ${card.isFlipped ? styles.flipped : ''} ${card.isMatched ? styles.matched : ''}`}
               onClick={() => handleCardClick(card)}
-              onTouchStart={() => handleCardClick(card)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(card); } }}
+              tabIndex={0}
               role="button"
               aria-label={card.type === 'image' ? `${card.text} image` : `${card.text} text`}
             >
@@ -727,7 +732,8 @@ const MemoryMatch = () => {
               key={card.id}
               className={`${styles.card} ${card.isFlipped ? styles.flipped : ''} ${card.isMatched ? styles.matched : ''}`}
               onClick={() => handleCardClick(card)}
-              onTouchStart={() => handleCardClick(card)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(card); } }}
+              tabIndex={0}
               role="button"
               aria-label={card.type === 'image' ? `${card.text} image` : `${card.text} text`}
             >
@@ -779,7 +785,7 @@ const MemoryMatch = () => {
           ) : (
             userAchievements.map(ach => (
               <div key={ach.id} className={`${styles.achievement} ${ach.earned ? styles.earned : ''}`}>
-                <span>{ach.icon}</span>
+                <span className={styles.achievementIcon} aria-hidden="true">{ach.icon}</span>
                 <div>
                   <h4>{ach.name}</h4>
                   <p>{ach.description}</p>

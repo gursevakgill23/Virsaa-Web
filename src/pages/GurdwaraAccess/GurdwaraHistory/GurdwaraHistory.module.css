@@ -1,118 +1,175 @@
-/* General Styles */
+/* ---------- Page base (shared by content pages) ---------- */
 .page {
-  font-family: 'Arial', sans-serif;
-  background-color: var(--section-bg-color);
+  background: var(--background-color);
   color: var(--text-color);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
+/* App.css sets p/h1-h3 to serif globally; use the body face here */
+.page p,
+.page h4,
+.page li,
+.page dd,
+.page dt {
+  font-family: var(--font-body);
+}
+
+.section {
+  max-width: 1240px;
   margin: 0 auto;
-  padding-bottom: 2rem;
+  padding: clamp(48px, 7vw, 80px) clamp(16px, 4vw, 32px) 0;
 }
 
-/* Header Section */
-.header {
-  position: relative;
-  text-align: left;
-  margin-bottom: 2rem;
-  background-size: cover;
-  background-position: center;
-  height: 400px;
-  overflow: hidden;
+.section:last-child {
+  padding-bottom: clamp(56px, 8vw, 96px);
 }
 
-.headerImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.headerText {
-  position: absolute;
-  left: 5%;
-  top: 35%;
-  padding: 2rem;
+.sectionTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
   color: var(--headline-color);
+  margin: 0 0 10px;
 }
 
-.headerText h1 {
-  font-size: 2.5rem;
-  margin: 0;
-  text-transform: uppercase;
+.lede {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--secondary-text-color);
+  max-width: 60ch;
+  margin: 0 0 28px;
 }
 
-.headerText p {
-  font-size: 1.2rem;
-  margin: 10px 0 0;
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 
-/* Breadcrumb Section */
-.breadcrumb {
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-family: var(--font-body);
   font-size: 1rem;
-  color: var(--secondary-text-color);
-  margin: 2rem;
-  background: var(--section-bg-color);
-  padding: 10px;
-  border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.breadcrumb a {
-  color: var(--secondary-text-color);
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-.breadcrumb a:hover {
-  color: var(--text-color);
+  font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.breadcrumb span {
-  margin: 0 5px;
-  color: var(--secondary-text-color);
+.primaryButton {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: var(--button-border);
+  box-shadow: 0 14px 26px -14px rgba(101, 4, 29, 0.7);
 }
 
-/* Main Content */
-.mainContainer {
-  margin-bottom: 3rem;
-  padding: 2rem;
-
+.primaryButton:hover:not(:disabled) {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
 }
 
-/* Gurdwara Info Section */
-.gurdwaraInfo {
-  text-align: center;
-  margin-bottom: 2rem;
-  padding: 2rem;
-  background: var(--card-bg-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.secondaryButton {
+  background: transparent;
+  color: var(--primary-color);
+  border: 2px solid rgba(var(--primary-rgb), 0.35);
 }
 
-.gurdwaraInfo h2 {
-  margin-top: 0;
-  color: var(--button-bg-color);
-  font-size: 2rem;
+.secondaryButton:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.08);
 }
 
-/* Image Gallery */
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================================================
+   Gurdwara history
+   ========================================================================= */
+.galleryLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
 .mainImageContainer {
-  margin-bottom: 2rem;
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: var(--shadow-deep);
+  background: var(--skeleton-bg-color);
 }
 
 .mainImage {
   width: 100%;
-  max-height: 500px;
+  height: 100%;
   object-fit: cover;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: block;
 }
 
+.navArrow {
+  position: absolute;
+  top: 42%;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  background: rgba(40, 6, 16, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+}
+
+.navPrev {
+  left: 14px;
+}
+
+.navNext {
+  right: 14px;
+}
+
+/* Thumbnails float on the photo in a glass strip */
 .thumbnailGallery {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 28px);
   display: flex;
-  gap: 10px;
-  margin-bottom: 2rem;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 20px;
   overflow-x: auto;
-  padding-bottom: 10px;
   scrollbar-width: none;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
 }
 
 .thumbnailGallery::-webkit-scrollbar {
@@ -120,15 +177,17 @@
 }
 
 .thumbnail {
-  width: 100px;
-  height: 100px;
   flex-shrink: 0;
-  border-radius: 4px;
+  width: 64px;
+  height: 48px;
+  padding: 0;
+  border-radius: 12px;
   overflow: hidden;
-  cursor: pointer;
-  opacity: 0.7;
-  transition: all 0.3s ease;
   border: 2px solid transparent;
+  opacity: 0.7;
+  cursor: pointer;
+  background: none;
+  transition: opacity 0.2s ease, border-color 0.2s ease;
 }
 
 .thumbnail:hover {
@@ -137,176 +196,189 @@
 
 .thumbnail.active {
   opacity: 1;
-  border-color: var(--button-bg-color);
+  border-color: #fff;
 }
 
 .thumbnailImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-/* History Timeline */
-.historyTimeline {
-  margin-bottom: 3rem;
+.infoCard {
+  position: sticky;
+  top: 84px;
+  padding: clamp(22px, 3vw, 32px);
+  border-radius: 28px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--shadow-deep);
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
 }
 
-.historyTimeline h3 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: var(--button-bg-color);
-  font-size: 1.5rem;
+.infoTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem);
+  line-height: 1.15;
+  color: var(--headline-color);
+  margin: 0 0 18px;
 }
 
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 20px;
+}
+
+.fact {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(var(--primary-rgb), 0.06);
+  border: 1px solid rgba(var(--primary-rgb), 0.12);
+}
+
+.fact dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 2px;
+}
+
+.fact dd {
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Timeline: chronological, so a line with dots (no numbers needed) */
 .timeline {
   position: relative;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding-left: 30px;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 36px;
+  max-width: 860px;
 }
 
 .timeline::before {
   content: '';
   position: absolute;
-  left: 15px;
-  top: 0;
-  bottom: 0;
+  top: 8px;
+  bottom: 8px;
+  left: 11px;
   width: 2px;
-  background-color: var(--button-bg-color);
+  background: linear-gradient(var(--primary-color), rgba(var(--primary-rgb), 0.12));
 }
 
 .timelineItem {
   position: relative;
-  margin-bottom: 2rem;
+  margin-bottom: 14px;
 }
 
 .timelineDot {
   position: absolute;
-  left: -22px;
-  top: 45px;
+  left: -32px;
+  top: 22px;
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background-color: var(--button-bg-color);
-  border: 3px solid var(--section-bg-color);
+  background: var(--maroon);
+  box-shadow: 0 0 0 5px var(--background-color), 0 0 0 6px rgba(var(--primary-rgb), 0.3);
 }
 
 .timelineContent {
-  padding: 1.5rem;
-  background: var(--section-bg-color);
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
 }
 
-/* Notable Figures */
-.notableFigures {
-  margin-top: 3rem;
+.timelineContent p {
+  margin: 0;
+  line-height: 1.6;
 }
 
-.notableFigures h3 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: var(--button-bg-color);
-  font-size: 1.5rem;
-}
-
+/* Notable figures */
 .figuresGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
 
 .figureCard {
-  padding: 1.5rem;
-  background: var(--section-bg-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 26px 22px;
+  border-radius: 26px;
   text-align: center;
-  transition: transform 0.3s ease;
-}
-
-.figureCard:hover {
-  transform: translateY(-5px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
 }
 
 .figureImage {
-  width: 120px;
+  display: grid;
+  place-items: center;
+  width: 96px;
   height: 120px;
-  margin: 0 auto 1rem;
-  border-radius: 50%;
-  object-fit: cover;
-  background-color: var(--skeleton-bg-color);
+  margin: 0 auto 14px;
+  border-radius: 999px 999px 18px 18px;
+  font-size: 2rem;
+  color: rgba(var(--primary-rgb), 0.5);
+  background: rgba(var(--primary-rgb), 0.08);
+  border: 3px solid var(--glass-border);
+  box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.2);
 }
 
-.figureCard h4 {
-  margin: 0 0 1rem;
-  color: var(--button-bg-color);
-  font-size: 1.2rem;
+.figureCard h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--headline-color);
+  margin: 0 0 6px;
 }
 
-/* Responsive Design */
-@media (max-width: 992px) {
-  .headerText h1 {
-    font-size: 2rem;
-  }
-  
-  .headerText p {
-    font-size: 1rem;
-  }
-  
-  .figuresGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.figureCard p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
 }
 
-@media (max-width: 768px) {
-  .header {
-    height: 300px;
+@media (max-width: 991.98px) {
+  .galleryLayout {
+    grid-template-columns: 1fr;
   }
-  .headerText{
-    top: 25%;
+
+  .infoCard {
+    position: static;
   }
-  
-  .headerText h1 {
-    font-size: 1.8rem;
-  }
-  
-  .timeline {
-    padding-left: 20px;
-  }
-  
-  .timelineDot {
-    left: -25px;
-  }
-  
+
   .figuresGrid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 576px) {
-  .header {
-    height: 250px;
+@media (max-width: 767.98px) {
+  .mainImageContainer {
+    aspect-ratio: 4 / 3;
+    border-radius: 24px;
   }
-  .headerText{
-    top: 15%;
+
+  .navArrow {
+    top: 36%;
+    width: 38px;
+    height: 38px;
   }
-  
-  .headerText h1 {
-    font-size: 1.5rem;
-  }
-  
-  .headerText p {
-    font-size: 0.9rem;
-  }
-  
-  .timeline::before {
-    left: 10px;
-  }
-  
-  .timelineDot {
-    left: -16px;
-    width: 12px;
-    height: 12px;
+
+  .thumbnail {
+    width: 52px;
+    height: 40px;
   }
 }

@@ -1,21 +1,20 @@
-import React, { useState, useEffect, Fragment } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar, FaSort } from 'react-icons/fa';
-import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { Link } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import {
+  FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar,
+  FaSort, FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaTimes, FaChevronDown,
+} from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import styles from './EbookDetail.module.css';
+import PageHero from '../../../components/PageHero/PageHero';
 import Loader from '../../../components/Loader';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import axios from 'axios';
 import { PDFViewer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-// S3 base URL with regional endpoint
-const S3_BASE_URL = 'https://virsaa-media-2025.s3.us-east-1.amazonaws.com';
-const DEFAULT_IMAGE_PATH = '../../images/Collections/book-image.jpg';
+const DEFAULT_IMAGE_PATH = '/images/Collections/book-image.jpg';
 
-// Utility function to shuffle an array (Fisher-Yates shuffle)
+// Fisher-Yates shuffle
 const shuffleArray = (array) => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -25,149 +24,86 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
-// PDF styles
+// Styles for the generated fallback PDF
 const pdfStyles = StyleSheet.create({
-  page: {
-    backgroundColor: '#FFF',
-    padding: 20,
-    flexDirection: 'column',
-    fontSize: 12,
-    fontFamily: 'Helvetica',
-  },
-  coverPage: {
-    backgroundColor: 'white',
-    padding: 40,
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  coverTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-    color: '#333',
-  },
-  coverAuthor: {
-    fontSize: 16,
-    marginBottom: 10,
-    color: '#666',
-  },
-  chapterTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  content: {
-    lineHeight: 1.5,
-    color: '#444',
-  },
-  pageNumber: {
-    position: 'absolute',
-    bottom: 10,
-    right: 20,
-    fontSize: 10,
-    color: '#666',
-  },
+  page: { backgroundColor: '#FFF', padding: 20, flexDirection: 'column', fontSize: 12, fontFamily: 'Helvetica' },
+  coverPage: { backgroundColor: 'white', padding: 40, flexDirection: 'column', justifyContent: 'center', alignItems: 'center' },
+  coverTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#65041d' },
+  coverAuthor: { fontSize: 16, marginBottom: 10, color: '#666' },
+  chapterTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' },
+  content: { lineHeight: 1.5, color: '#444' },
+  pageNumber: { position: 'absolute', bottom: 10, right: 20, fontSize: 10, color: '#666' },
 });
 
-// Utility function to handle S3-based image and PDF paths
-const useProductionImagePath = () => {
-  return (filePath, context = 'unknown', getStaticImagePath, isPdf = false) => {
-    if (!filePath || filePath === '') {
-      console.log(`File path is null, undefined, or empty for ${context}, using default: ${DEFAULT_IMAGE_PATH}`);
-      return getStaticImagePath(DEFAULT_IMAGE_PATH);
-    }
-
-    if (typeof filePath === 'string' && filePath.startsWith('https://')) {
-      console.log(`Full URL detected for ${context}: ${filePath}`);
-      return filePath;
-    }
-
-    if (typeof filePath === 'string') {
-      // For PDFs, preserve the exact path (including '+' for spaces) without encoding
-      if (isPdf) {
-        console.log(`PDF path for ${context}: ${filePath}`);
-        return `${S3_BASE_URL}/${filePath}`;
-      }
-      // For images, encode the path to handle spaces and special characters
-      const encodedPath = encodeURI(filePath);
-      console.log(`Encoded image path for ${context}: ${encodedPath}`);
-      return `${S3_BASE_URL}/${encodedPath}`;
-    }
-
-    console.log(`Invalid file path for ${context}, using default: ${DEFAULT_IMAGE_PATH}`, filePath);
-    return getStaticImagePath(DEFAULT_IMAGE_PATH);
-  };
-};
-
-// Utility function to handle public/static images
+// Public/static images
 const getProductionImagePath = (imagePath) => {
-  if (!imagePath) {
-    console.log(`getProductionImagePath: Image path is null/undefined, using default: ${DEFAULT_IMAGE_PATH}`);
-    return `/images/Collections/book-image.jpg`;
+  if (!imagePath || typeof imagePath !== 'string') return DEFAULT_IMAGE_PATH;
+  if (process.env.NODE_ENV === 'production' && !imagePath.startsWith('/') && !imagePath.startsWith('http')) {
+    return `/images/Collections/${imagePath.split('/').pop()}`;
   }
-
-  if (typeof imagePath === 'string') {
-    if (process.env.NODE_ENV === 'production') {
-      const normalizedPath = imagePath.startsWith('/')
-        ? imagePath
-        : `/images/Collections/${imagePath.split('/').pop()}`;
-      console.log(`getProductionImagePath (production): Returning ${normalizedPath}`);
-      return normalizedPath;
-    }
-    console.log(`getProductionImagePath (development): Returning ${imagePath}`);
-    return imagePath;
-  }
-
-  console.log(`getProductionImagePath: Invalid image path, using default: ${DEFAULT_IMAGE_PATH}`);
-  return `/images/Collections/book-image.jpg`;
+  return imagePath;
 };
 
-// PDF Document Component
+const handleImgError = (e) => {
+  if (e.currentTarget.dataset.fallback) return;
+  e.currentTarget.dataset.fallback = '1';
+  e.currentTarget.src = DEFAULT_IMAGE_PATH;
+};
+
+// Generated PDF shown when the real file can't be opened
 const MyDocument = ({ ebook }) => (
   <Document>
     <Page size="A4" style={pdfStyles.coverPage}>
       <View>
         <Text style={pdfStyles.coverTitle}>{ebook?.title || 'Untitled Ebook'}</Text>
-        <Text style={pdfStyles.coverAuthor}>{ebook?.author || 'Unknown Author'}</Text>
+        <Text style={pdfStyles.coverAuthor}>{ebook?.authorName || 'Unknown Author'}</Text>
       </View>
     </Page>
     {ebook?.chapters?.map((chapter, index) => (
       <Page key={chapter.id} size="A4" style={pdfStyles.page}>
         <View>
           <Text style={pdfStyles.chapterTitle}>
-            Chapter {chapter.id}: {chapter.title}
+            Chapter {index + 1}: {chapter.title}
           </Text>
           <Text style={pdfStyles.content}>
-            This is a placeholder for the content of {chapter.title}. Actual content would be fetched from the backend or provided in the PDF file.
+            The full text of this chapter couldn’t be loaded. Close this window and try “Read now” again.
           </Text>
         </View>
         <Text style={pdfStyles.pageNumber}>Page {index + 2}</Text>
       </Page>
     ))}
-    {Array.from({ length: (ebook?.pages || 0) - (ebook?.chapters?.length || 0) - 1 }, (_, index) => (
-      <Page key={`extra-${index}`} size="A4" style={pdfStyles.page}>
-        <View>
-          <Text style={pdfStyles.content}>
-            Page {ebook?.chapters?.length + index + 2} content. This is a placeholder for additional pages.
-          </Text>
-        </View>
-        <Text style={pdfStyles.pageNumber}>Page {ebook?.chapters?.length + index + 2}</Text>
-      </Page>
-    ))}
   </Document>
+);
+
+const Stars = ({ value }) => (
+  <span className={styles.stars} aria-label={`${value} out of 5`}>
+    {[1, 2, 3, 4, 5].map((i) =>
+      i <= Math.round(value) ? <FaStar key={i} className={styles.starOn} /> : <FaRegStar key={i} className={styles.starOff} />
+    )}
+  </span>
+);
+
+const RelatedSkeleton = () => (
+  <div className={styles.relatedCard} aria-hidden="true">
+    <span className={`${styles.relatedThumb} ${styles.skeleton}`} />
+    <span className={styles.relatedInfo}>
+      <span className={`${styles.skeleton} ${styles.skeletonLine}`} />
+      <span className={`${styles.skeleton} ${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+    </span>
+  </div>
 );
 
 const EbookDetail = ({ isDarkMode, apiString }) => {
   const { isLoggedIn, accessToken, userData } = useAuth();
-  const getS3ImagePath = useProductionImagePath();
-  const getStaticImagePath = getProductionImagePath;
   const { id } = useParams();
   const navigate = useNavigate();
+  const relatedRef = useRef(null);
+  const recommendedRef = useRef(null);
+
   const [ebook, setEbook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [related, setRelated] = useState([]);
+  const [recommended, setRecommended] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(true);
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -178,168 +114,144 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState(null);
 
-  // Image paths
-  const header_image_dark = getStaticImagePath("/images/header-image-dark.png");
-  const header_image_light = getStaticImagePath("/images/header-image.png");
-  const default_book_image = getStaticImagePath(DEFAULT_IMAGE_PATH);
-
-  // Review form state
-  const [reviewForm, setReviewForm] = useState({
-    rating: 0,
-    review: '',
-  });
+  const [reviewForm, setReviewForm] = useState({ rating: 0, review: '' });
   const [reviews, setReviews] = useState([]);
   const [visibleReviews, setVisibleReviews] = useState(5);
   const [sortBy, setSortBy] = useState('newest');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
+  const headerImage = getProductionImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
+
+  // Ebook, its author and reviews. These endpoints are public, so no token is sent
+  // (an expired token would make them fail with 401).
   useEffect(() => {
+    let cancelled = false;
     const fetchEbook = async () => {
       setIsLoading(true);
+      setRelatedLoading(true);
+      setExpandedChapter(null);
+      setShowFullDescription(false);
       try {
-        const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
-        console.log(`Fetching ebook with ID: ${id}`);
-        const ebookResponse = await axios.get(`${apiUrl}/collections/ebooks/${id}/`);
-        if (!ebookResponse.data) {
-          throw new Error('Failed to fetch ebook details');
+        const { data } = await axios.get(`${apiUrl}/collections/ebooks/${id}/`);
+        if (cancelled) return;
+
+        let authorName = 'Unknown author';
+        if (data.author) {
+          try {
+            const authorRes = await axios.get(`${apiUrl}/collections/authors/${data.author}/`);
+            authorName = authorRes.data?.name || authorName;
+          } catch {
+            // keep the fallback name
+          }
         }
-        const ebookData = ebookResponse.data;
-        console.log('Ebook data:', ebookData);
-        const authorName = ebookData.author ? `Author ${ebookData.author}` : 'Unknown Author';
+        if (cancelled) return;
+
         setEbook({
-          ...ebookData,
-          cover: ebookData.cover_image,
-          author: authorName,
-          reviews: Array.isArray(ebookData.reviews) ? ebookData.reviews.length : 0,
-          chapters: ebookData.chapters || [],
-          pdf_file: ebookData.pdf_file,
+          ...data,
+          authorId: data.author,
+          authorName,
+          cover: data.detail_image || data.cover_image,
+          chapters: Array.isArray(data.chapters) ? [...data.chapters].sort((a, b) => a.order - b.order) : [],
         });
-
-        const reviewsResponse = await axios.get(`${apiUrl}/collections/ebooks/${id}/reviews/`);
-        console.log('Reviews data:', reviewsResponse.data);
-        if (reviewsResponse.data) {
-          setReviews(reviewsResponse.data.map(review => ({
-            id: review.id || Date.now() + Math.random(),
-            name: review.user || 'Anonymous',
-            date: new Date(review.date).toLocaleDateString(),
-            rating: review.rating || 0,
-            review: review.review || 'No review text',
-            helpful: review.helpful || 0,
-          })));
-        }
-
-        setTimeout(async () => {
-          console.log(`Fetching related books for author: ${authorName}`);
-          let relatedResponse = await axios.get(`${apiUrl}/collections/ebooks/?author__name=${encodeURIComponent(authorName)}`);
-          console.log('Related books response:', relatedResponse.data);
-          let relatedData = relatedResponse.data;
-
-          // Fallback to all ebooks if no related books found
-          if (!relatedData || relatedData.length === 0) {
-            console.log('No related books found, fetching all ebooks');
-            relatedResponse = await axios.get(`${apiUrl}/collections/ebooks/`);
-            relatedData = relatedResponse.data;
-            console.log('All ebooks response:', relatedData);
-          }
-
-          if (relatedData) {
-            const filteredData = relatedData.filter(item => item.id !== parseInt(id));
-            console.log('Filtered related books (excluding current ebook):', filteredData);
-            const shuffledRelated = shuffleArray(
-              filteredData.map(item => ({
-                id: item.id,
-                title: item.title,
-                author: item.author ? `Author ${item.author}` : 'Unknown Author',
-                cover: item.cover_image,
-              }))
-            ).slice(0, 5);
-            console.log('Shuffled and limited related books:', shuffledRelated);
-            setEbook(prev => ({
-              ...prev,
-              related: shuffledRelated,
-            }));
-          } else {
-            console.log('No related books available');
-            setEbook(prev => ({ ...prev, related: [] }));
-          }
-          setRelatedLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error fetching ebook data:', error);
-        setEbook(prev => ({ ...prev, related: [] }));
-        setRelatedLoading(false);
-      } finally {
         setIsLoading(false);
+
+        const reviewsRes = await axios.get(`${apiUrl}/collections/ebooks/${id}/reviews/`).catch(() => ({ data: [] }));
+        if (cancelled) return;
+        setReviews((reviewsRes.data || []).map((review) => ({
+          id: review.id,
+          name: review.user || 'Anonymous',
+          date: review.date ? new Date(review.date).toLocaleDateString() : '',
+          rating: review.rating || 0,
+          review: review.review || '',
+          helpful: review.helpful || 0,
+        })));
+
+        // Related: same author first, then other books
+        const allRes = await axios.get(`${apiUrl}/collections/ebooks/`).catch(() => ({ data: [] }));
+        if (cancelled) return;
+        const others = (allRes.data || []).filter((item) => item.id !== Number(id));
+        const sameAuthor = others.filter((item) => data.author && item.author === data.author);
+        const rest = shuffleArray(others.filter((item) => !sameAuthor.includes(item)));
+        const toCard = (item) => ({ id: item.id, title: item.title, cover: item.cover_image });
+        const relatedList = [...sameAuthor, ...rest].slice(0, 5);
+        setRelated(relatedList.map(toCard));
+        setRecommended(rest.filter((item) => !relatedList.includes(item)).slice(0, 5).map(toCard));
+      } catch (error) {
+        console.error('Error fetching ebook:', error.response?.status || error.message);
+        if (!cancelled) {
+          setEbook(null);
+          setIsLoading(false);
+        }
+      } finally {
+        if (!cancelled) setRelatedLoading(false);
       }
     };
     fetchEbook();
-  }, [id, apiString]);
+    return () => { cancelled = true; };
+  }, [id, apiUrl]);
 
+  // PDFs are private on S3; read_pdf returns a temporary link
   const handleReadNow = async () => {
     setPdfLoading(true);
     setPdfError(null);
+    setPdfUrl(null);
     try {
-      const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
-      if (isLoggedIn && accessToken) {
-        const response = await axios.get(`${apiUrl}/collections/ebooks/${id}/read_pdf/`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (response.data && response.data.pdf_url) {
-          console.log(`Received PDF URL from backend: ${response.data.pdf_url}`);
-          setPdfUrl(response.data.pdf_url);
-        } else {
-          console.log(`Falling back to ebook.pdf_file: ${ebook.pdf_file}`);
-          setPdfUrl(getS3ImagePath(ebook.pdf_file, `ebook PDF: ${ebook.title}`, getStaticImagePath, true));
-        }
+      const response = await axios.get(`${apiUrl}/collections/ebooks/${id}/read_pdf/`);
+      if (response.data?.pdf_url) {
+        setPdfUrl(response.data.pdf_url);
       } else {
-        console.log(`No authentication, using ebook.pdf_file: ${ebook.pdf_file}`);
-        setPdfUrl(getS3ImagePath(ebook.pdf_file, `ebook PDF: ${ebook.title}`, getStaticImagePath, true));
+        throw new Error('No PDF link returned');
       }
-      setShowPdfModal(true);
     } catch (error) {
-      console.error('Error fetching PDF URL:', error);
-      setPdfError(error.message || 'Failed to load PDF. Falling back to generated PDF.');
-      setShowPdfModal(true);
+      console.error('Error fetching PDF link:', error.response?.status || error.message);
+      setPdfError('The book file couldn’t be opened right now. Showing a preview instead.');
     } finally {
+      setShowPdfModal(true);
       setPdfLoading(false);
     }
   };
 
+  // Close the reader with Escape
+  useEffect(() => {
+    if (!showPdfModal) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setShowPdfModal(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showPdfModal]);
+
   const handleLike = () => {
     setLiked(!liked);
-    toast.success(liked ? 'Ebook unliked!' : 'Ebook liked!', {
-      position: 'top-right',
-      autoClose: 3000,
-    });
+    toast.success(liked ? 'Removed from liked books' : 'Added to liked books', { position: 'top-right', autoClose: 2500 });
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: ebook.title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link copied', { position: 'top-right', autoClose: 2000 });
+      }
+    } catch {
+      // share sheet dismissed
+    }
   };
 
   const toggleChapter = (chapterId) => {
     setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
   };
 
-  const handleReadChapter = (chapterId) => {
-    toast.info(`Reading Chapter ${chapterId}`, {
-      position: 'top-right',
-      autoClose: 3000,
-    });
+  const handleReadChapter = () => {
+    handleReadNow();
   };
 
-  const scrollRelated = (direction, sectionId) => {
-    console.log('scrollRelated called with:', direction, sectionId);
-    const container = document.querySelector(`.${styles.relatedScrollContainer}[data-section="${sectionId}"]`) || 
-                     document.querySelector(`.related-scroll-container[data-section="${sectionId}"]`);
-    console.log('Container found:', container);
-    if (container) {
-      const scrollAmount = direction === 'left' ? -300 : 300;
-      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    } else {
-      console.error('Scroll container not found for section:', sectionId);
-    }
+  const scrollRow = (ref, direction) => {
+    ref.current?.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
   };
 
-  const handleRatingChange = (rating) => {
-    setReviewForm({ ...reviewForm, rating });
-  };
+  const handleRatingChange = (rating) => setReviewForm({ ...reviewForm, rating });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -349,29 +261,16 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (!isLoggedIn) {
-      toast.warn('Please log in to submit a review.', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      toast.warn('Sign in to write a review.', { position: 'top-right', autoClose: 3000 });
       navigate('/login');
       return;
     }
     setIsSubmitting(true);
     try {
-      const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
       const response = await axios.post(
         `${apiUrl}/collections/reviews/`,
-        {
-          ebook_id: id,
-          rating: reviewForm.rating,
-          review: reviewForm.review,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        }
+        { ebook_id: id, rating: reviewForm.rating, review: reviewForm.review },
+        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
       );
       const userFullName = userData?.first_name && userData?.last_name
         ? `${userData.first_name} ${userData.last_name}`
@@ -388,49 +287,28 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
         ...reviews,
       ]);
       setReviewForm({ rating: 0, review: '' });
-      toast.success('Review submitted successfully!', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      toast.success('Review posted. Thank you!', { position: 'top-right', autoClose: 3000 });
     } catch (error) {
-      console.error('Error submitting review:', error.response?.data || error);
-      toast.error('Failed to submit review. Please try again.', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      console.error('Error submitting review:', error.response?.status || error.message);
+      toast.error('Your review couldn’t be posted. Try again.', { position: 'top-right', autoClose: 3000 });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const loadMoreReviews = () => {
-    setVisibleReviews(prev => prev + 5);
-  };
-
   const toggleHelpful = (reviewId) => {
-    setReviews(reviews.map(review =>
-      review.id === reviewId
-        ? { ...review, helpful: review.helpful + 1 }
-        : review
-    ));
+    setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, helpful: r.helpful + 1 } : r)));
   };
 
-  const sortedReviews = [...reviews].sort((a, b) => {
-    if (sortBy === 'newest') {
-      return b.id - a.id;
-    }
-    return b.helpful - a.helpful;
-  });
-
+  const sortedReviews = useMemo(
+    () => [...reviews].sort((a, b) => (sortBy === 'newest' ? b.id - a.id : b.helpful - a.helpful)),
+    [reviews, sortBy]
+  );
   const displayedReviews = sortedReviews.slice(0, visibleReviews);
-
-  const truncatedDescription = ebook?.description
-    ? ebook.description.split(' ').slice(0, 7).join(' ') + (ebook.description.split(' ').length > 7 ? '...' : '')
-    : '';
 
   if (isLoading) {
     return (
-      <div className={styles.ebookDetailContainer}>
+      <div className={styles.page}>
         <Loader />
       </div>
     );
@@ -438,436 +316,309 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
 
   if (!ebook) {
     return (
-      <div className={styles.ebookDetailContainer}>
-        Ebook not found
+      <div className={styles.page}>
+        <div className={`${styles.stateBox} ${styles.glass}`}>
+          <h2>This book couldn’t be found</h2>
+          <p>It may have been removed, or the link is wrong.</p>
+          <Link to="/collections/ebooks" className={styles.primaryButton}>Browse all ebooks</Link>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className={styles.ebookDetailContainer}>
-      <ToastContainer />
-      <div className={styles.headerImageSection}>
-        <img
-          src={getStaticImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Header"
-          className={styles.headerImage}
-          onError={(e) => console.error('Header image failed to load:', e)}
-        />
-        <div className={styles.headerText}>
-          <h1>{ebook.title.toUpperCase()}</h1>
-          <p>{truncatedDescription}</p>
+  const description = ebook.description || '';
+  const isLong = description.length > 420;
+  const shownDescription = showFullDescription || !isLong ? description : `${description.slice(0, 420).trim()}…`;
+  const shortDescription = description.split(' ').slice(0, 12).join(' ') + (description.split(' ').length > 12 ? '…' : '');
+
+  const renderRelated = (items, ref, label) => (
+    <section className={`${styles.asideBlock} ${styles.glass}`}>
+      <div className={styles.asideHead}>
+        <h3 className={styles.asideTitle}>{label}</h3>
+        <div className={styles.scrollButtons}>
+          <button type="button" onClick={() => scrollRow(ref, 'left')} className={styles.scrollButton} aria-label={`Scroll ${label} left`}>
+            <FaChevronLeft />
+          </button>
+          <button type="button" onClick={() => scrollRow(ref, 'right')} className={styles.scrollButton} aria-label={`Scroll ${label} right`}>
+            <FaChevronRight />
+          </button>
         </div>
       </div>
+      <div className={styles.relatedList} ref={ref}>
+        {relatedLoading && Array.from({ length: 4 }).map((_, i) => <RelatedSkeleton key={i} />)}
+        {!relatedLoading && items.length === 0 && <p className={styles.relatedMeta}>No other books to show yet.</p>}
+        {!relatedLoading && items.map((book) => (
+          <Link key={book.id} to={`/collections/ebooks/ebook/${book.id}`} className={styles.relatedCard}>
+            <img src={book.cover || DEFAULT_IMAGE_PATH} alt="" className={styles.relatedThumb} loading="lazy" onError={handleImgError} />
+            <span className={styles.relatedInfo}>
+              <span className={styles.relatedTitle}>{book.title}</span>
+              <span className={styles.relatedMeta}>Ebook</span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
 
-      <nav className={styles.breadcrumb}>
-        <Link to="/">Home</Link> /{" "}
-        <Link to="/collections">Collections</Link> /{" "}
-        <Link to="/collections/ebooks">Ebooks</Link> /{" "}
-        <span>{ebook.title}</span>
-      </nav>
+  return (
+    <div className={styles.page}>
+      <PageHero
+        compact
+        image={headerImage}
+        title={ebook.title}
+        subtitle={shortDescription}
+        crumbs={[
+          { label: 'Home', to: '/' },
+          { label: 'Collections', to: '/collections' },
+          { label: 'Ebooks', to: '/collections/ebooks' },
+          { label: ebook.title },
+        ]}
+      />
 
-      <div className={styles.mainContentContainer}>
-        <div className={styles.leftColumn}>
-          <section className={styles.heroSection}>
-            <div className={styles.coverContainer}>
-              <img
-                src={getS3ImagePath(ebook.cover, `ebook cover: ${ebook.title}`, getStaticImagePath) || default_book_image}
-                alt={ebook.title}
-                className={styles.ebookCover}
-                onError={(e) => console.error(`Ebook cover failed to load: ${ebook.title}, path: ${getS3ImagePath(ebook.cover, `ebook cover: ${ebook.title}`, getStaticImagePath)}`, e)}
-              />
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          {/* ---------- Book card ---------- */}
+          <section className={styles.productCard} aria-label="Book details">
+            <div className={styles.coverStage}>
+              <div className={styles.cover}>
+                <img src={ebook.cover || DEFAULT_IMAGE_PATH} alt={`Cover of ${ebook.title}`} className={styles.coverImg} onError={handleImgError} />
+              </div>
             </div>
 
-            <div className={styles.detailsContainer}>
-              <div className={styles.metaHeader}>
-                <span className={styles.genre}>{ebook.genre || 'Unknown Genre'}</span>
-                <div className={styles.rating}>
-                  ⭐ {ebook.rating || 0} <span className={styles.reviews}>({ebook.reviews} reviews)</span>
+            <div className={styles.info}>
+              <div className={styles.chipRow}>
+                <span className={styles.chip}><FaBookOpen aria-hidden="true" /> Ebook</span>
+                <span className={styles.ratingRow}>
+                  <Stars value={ebook.rating || 0} />
+                  {(ebook.rating || 0).toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                </span>
+              </div>
+
+              <h2 className={styles.title}>{ebook.title}</h2>
+              <p className={styles.byline}>
+                by{' '}
+                {ebook.authorId ? (
+                  <Link to={`/collections/authors/author/${ebook.authorId}`} className={styles.bylineLink}>{ebook.authorName}</Link>
+                ) : ebook.authorName}
+              </p>
+
+              <div className={styles.metaRow}>
+                {ebook.pages > 0 && <span className={styles.metaPill}><FaBookOpen aria-hidden="true" /> {ebook.pages} pages</span>}
+                <span className={styles.metaPill}><FaFilePdf aria-hidden="true" /> PDF</span>
+                {ebook.chapters.length > 0 && <span className={styles.metaPill}>{ebook.chapters.length} chapters</span>}
+              </div>
+
+              {description && (
+                <div className={styles.description}>
+                  <p className={styles.descText}>{shownDescription}</p>
+                  {isLong && (
+                    <button type="button" className={styles.moreButton} onClick={() => setShowFullDescription(!showFullDescription)}>
+                      {showFullDescription ? 'Show less' : 'Read full description'}
+                    </button>
+                  )}
                 </div>
-              </div>
+              )}
 
-              <h1 className={styles.title}>{ebook.title}</h1>
-              <h2 className={styles.author}>By {ebook.author}</h2>
-
-              <div className={styles.metaFooter}>
-                <span>{ebook.pages} pages</span>
-                <span>•</span>
-                <span>PDF/EPUB</span>
-              </div>
-
-              <div className={styles.descriptionContainer}>
-                <h3 className={styles.sectionTitle}>Description</h3>
-                <div className={styles.descriptionText}>
-                  {showFullDescription ? ebook.description : `${ebook.description.split('\n')[0]}\n\n${ebook.description.split('\n')[1] || ''}`}
-                  <button
-                    className={styles.showMoreButton}
-                    onClick={() => setShowFullDescription(!showFullDescription)}
-                    aria-label={showFullDescription ? "Show less description" : "Show more description"}
-                  >
-                    {showFullDescription ? 'Show Less' : 'Show More'}
-                  </button>
-                </div>
-              </div>
-
-              <div className={styles.actionButtons}>
-                <button
-                  className={styles.primaryButton}
-                  onClick={handleReadNow}
-                  disabled={pdfLoading}
-                  aria-label="Read ebook now"
-                >
-                  {pdfLoading ? 'Loading...' : 'Read Now'}
+              <div className={styles.actions}>
+                <button type="button" className={styles.primaryButton} onClick={handleReadNow} disabled={pdfLoading}>
+                  <FaBookOpen aria-hidden="true" /> {pdfLoading ? 'Opening…' : 'Read now'}
                 </button>
                 <button
-                  className={styles.secondaryButton}
+                  type="button"
+                  className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
                   onClick={handleLike}
-                  aria-label={liked ? "Unlike ebook" : "Like ebook"}
+                  aria-pressed={liked}
+                  aria-label={liked ? 'Unlike this book' : 'Like this book'}
                 >
-                  {liked ? 'Unlike PDF' : 'Like PDF'}
+                  {liked ? <FaHeart /> : <FaRegHeart />}
                 </button>
                 <button
-                  className={styles.iconButton}
+                  type="button"
+                  className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
                   onClick={() => setSaved(!saved)}
-                  aria-label={saved ? "Unsave ebook" : "Save ebook for later"}
+                  aria-pressed={saved}
+                  aria-label={saved ? 'Remove from saved' : 'Save for later'}
                 >
-                  {saved ? <FaBookmark color="var(--icon-color)" /> : <FaRegBookmark />}
+                  {saved ? <FaBookmark /> : <FaRegBookmark />}
                 </button>
-                <button
-                  className={styles.iconButton}
-                  aria-label="Share ebook"
-                >
+                <button type="button" className={styles.iconButton} onClick={handleShare} aria-label="Share this book">
                   <FaShareAlt />
                 </button>
               </div>
             </div>
           </section>
 
-          <section className={styles.chaptersSection}>
-            <h3 className={styles.sectionTitle}>Chapters</h3>
-            <div className={styles.chaptersList}>
-              {ebook.chapters.map((chapter) => (
-                <Fragment key={chapter.id}>
-                  <div className={styles.chapterItem}>
-                    <div
-                      className={styles.chapterHeader}
-                      onClick={() => toggleChapter(chapter.id)}
-                      role="button"
-                      tabIndex={0}
-                      aria-expanded={expandedChapter === chapter.id}
-                      aria-label={`Toggle chapter ${chapter.title}`}
-                    >
-                      <span className={styles.chapterNumber}>Chapter {chapter.id}</span>
-                      <h4 className={styles.chapterTitle}>{chapter.title}</h4>
-                      <span className={styles.chapterPage}>Order {chapter.order}</span>
-                      {expandedChapter === chapter.id ? <IoIosArrowUp /> : <IoIosArrowDown />}
-                    </div>
-                    {expandedChapter === chapter.id && (
-                      <div className={styles.chapterContent}>
-                        <p className={styles.chapterSummary}>
-                          This chapter details {chapter.title.toLowerCase()}.
-                        </p>
-                        <button
-                          className={styles.readChapterButton}
-                          onClick={() => handleReadChapter(chapter.id)}
-                          aria-label={`Read chapter ${chapter.title}`}
-                        >
-                          Read This Chapter
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </Fragment>
-              ))}
+          {/* ---------- Chapters ---------- */}
+          <section className={styles.section} aria-labelledby="chapters-title">
+            <div className={styles.sectionHead}>
+              <div>
+                <h3 id="chapters-title" className={styles.sectionTitle}>Chapters</h3>
+                {ebook.chapters.length > 0 && <p className={styles.sectionNote}>{ebook.chapters.length} chapters in this book</p>}
+              </div>
             </div>
+            {ebook.chapters.length === 0 ? (
+              <p className={styles.emptyNote}>Chapter list isn’t available for this book. Open it with “Read now”.</p>
+            ) : (
+              <ol className={styles.chapterList}>
+                {ebook.chapters.map((chapter, index) => {
+                  const open = expandedChapter === chapter.id;
+                  return (
+                    <li key={chapter.id} className={`${styles.chapter} ${styles.glass} ${open ? styles.chapterOpen : ''}`}>
+                      <button
+                        type="button"
+                        className={styles.chapterHead}
+                        onClick={() => toggleChapter(chapter.id)}
+                        aria-expanded={open}
+                      >
+                        <span className={styles.chapterIndex}>{index + 1}</span>
+                        <span className={styles.chapterName}>{chapter.title}</span>
+                        <span className={styles.chapterMeta}>Chapter {index + 1}</span>
+                        <FaChevronDown className={styles.chapterChevron} aria-hidden="true" />
+                      </button>
+                      {open && (
+                        <div className={styles.chapterBody}>
+                          <p className={styles.chapterText}>Open the book to start reading “{chapter.title}”.</p>
+                          <button type="button" className={styles.smallButton} onClick={() => handleReadChapter(chapter.id)}>
+                            <FaBookOpen aria-hidden="true" /> Read this chapter
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
           </section>
 
-          <section className={styles.reviewsSection}>
-            <h3 className={styles.sectionTitle}>Ratings & Reviews</h3>
+          {/* ---------- Reviews ---------- */}
+          <section className={styles.section} aria-labelledby="reviews-title">
+            <div className={styles.sectionHead}>
+              <h3 id="reviews-title" className={styles.sectionTitle}>Ratings and reviews</h3>
+            </div>
 
-            <div className={styles.reviewFormContainer}>
-              <h4>Write a Review</h4>
+            <div className={`${styles.reviewForm} ${styles.glass}`}>
+              <h4 className={styles.formTitle}>Write a review</h4>
               {!isLoggedIn ? (
-                <p>
-                  Please <Link to="/login">log in</Link> to submit a review.
+                <p className={styles.loginPrompt}>
+                  <Link to="/login">Sign in</Link> to rate this book and share what you thought.
                 </p>
               ) : (
-                <form onSubmit={handleSubmitReview} aria-label="Submit a review">
-                  <div className={styles.formGroup}>
-                    <label>Rating</label>
-                    <div className={styles.ratingInput}>
+                <form onSubmit={handleSubmitReview}>
+                  <div className={styles.field}>
+                    <span className={styles.label} id="rating-label">Your rating</span>
+                    <div className={styles.starPicker} role="group" aria-labelledby="rating-label">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           type="button"
                           onClick={() => handleRatingChange(star)}
                           className={styles.starButton}
-                          aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
+                          aria-label={`${star} star${star !== 1 ? 's' : ''}`}
+                          aria-pressed={star <= reviewForm.rating}
                         >
-                          {star <= reviewForm.rating ? (
-                            <FaStar className={styles.starFilled} />
-                          ) : (
-                            <FaRegStar className={styles.starEmpty} />
-                          )}
+                          {star <= reviewForm.rating ? <FaStar className={styles.starOn} /> : <FaRegStar className={styles.starOff} />}
                         </button>
                       ))}
-                      <span className={styles.ratingText}>
-                        {reviewForm.rating > 0 ? `${reviewForm.rating} star${reviewForm.rating !== 1 ? 's' : ''}` : 'Select rating'}
+                      <span className={styles.ratingHint}>
+                        {reviewForm.rating > 0 ? `${reviewForm.rating} of 5` : 'Tap a star'}
                       </span>
                     </div>
                   </div>
-
-                  <div className={styles.formGroup}>
-                    <label htmlFor="review">Your Review</label>
+                  <div className={styles.field}>
+                    <label htmlFor="review" className={styles.label}>Your review</label>
                     <textarea
                       id="review"
                       name="review"
+                      className={styles.textarea}
                       value={reviewForm.review}
                       onChange={handleInputChange}
-                      rows="4"
+                      placeholder="What did you enjoy? Who would you recommend it to?"
                       required
-                      aria-required="true"
                     />
                   </div>
-
-                  <button
-                    type="submit"
-                    className={styles.submitReviewButton}
-                    disabled={isSubmitting || reviewForm.rating === 0}
-                    aria-label="Submit review"
-                  >
-                    {isSubmitting ? 'Submitting...' : 'Submit Review'}
-                  </button>
+                  <div className={styles.formActions}>
+                    <button type="submit" className={styles.primaryButton} disabled={isSubmitting || reviewForm.rating === 0}>
+                      {isSubmitting ? 'Posting…' : 'Post review'}
+                    </button>
+                  </div>
                 </form>
               )}
             </div>
 
-            <div className={styles.reviewsListContainer}>
-              <div className={styles.reviewsHeader}>
-                <h4>{reviews.length} Reviews</h4>
-                <div className={styles.sortDropdown}>
-                  <FaSort className={styles.sortIcon} />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className={styles.sortSelect}
-                    aria-label="Sort reviews"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="top">Top Comments</option>
+            <div className={styles.reviewsHeader}>
+              <p className={styles.reviewsCount}>{reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}</p>
+              {reviews.length > 1 && (
+                <label className={styles.sortWrap}>
+                  <FaSort aria-hidden="true" />
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles.sortSelect} aria-label="Sort reviews">
+                    <option value="newest">Newest first</option>
+                    <option value="top">Most helpful</option>
                   </select>
-                </div>
-              </div>
+                </label>
+              )}
+            </div>
 
-              <div className={styles.reviewsList}>
+            {reviews.length === 0 ? (
+              <p className={styles.emptyNote}>No reviews yet. Be the first to share what you thought.</p>
+            ) : (
+              <ul className={styles.reviewList}>
                 {displayedReviews.map((review) => (
-                  <div key={review.id} className={styles.reviewItem}>
-                    <div className={styles.reviewHeader}>
-                      <div className={styles.reviewerInfo}>
-                        <div className={styles.reviewerInitial}>{review.name.charAt(0)}</div>
+                  <li key={review.id} className={`${styles.review} ${styles.glass}`}>
+                    <div className={styles.reviewTop}>
+                      <div className={styles.reviewer}>
+                        <span className={styles.avatar} aria-hidden="true">{review.name.charAt(0).toUpperCase()}</span>
                         <div>
-                          <div className={styles.reviewerName}>{review.name}</div>
+                          <div className={styles.reviewName}>{review.name}</div>
                           <div className={styles.reviewDate}>{review.date}</div>
                         </div>
                       </div>
-                      <div className={styles.reviewRating}>
-                        {[...Array(5)].map((_, i) => (
-                          <Fragment key={i}>
-                            {i < review.rating ? (
-                              <FaStar className={styles.starFilled} aria-label="Filled star" />
-                            ) : (
-                              <FaRegStar className={styles.starEmpty} aria-label="Empty star" />
-                            )}
-                          </Fragment>
-                        ))}
-                      </div>
+                      <Stars value={review.rating} />
                     </div>
-                    <div className={styles.reviewContent}>
-                      {review.review}
-                    </div>
-                    <div className={styles.reviewActions}>
-                      <button
-                        className={styles.helpfulButton}
-                        onClick={() => toggleHelpful(review.id)}
-                        aria-label={`Mark review by ${review.name} as helpful`}
-                      >
-                        Helpful ({review.helpful})
-                      </button>
-                    </div>
-                  </div>
+                    <p className={styles.reviewBody}>{review.review}</p>
+                    <button type="button" className={styles.helpful} onClick={() => toggleHelpful(review.id)}>
+                      Helpful ({review.helpful})
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
+            )}
 
-              {visibleReviews < reviews.length && (
-                <button
-                  className={styles.loadMoreButton}
-                  onClick={loadMoreReviews}
-                  aria-label="Load more reviews"
-                >
-                  Show More Reviews
-                </button>
-              )}
-            </div>
+            {visibleReviews < reviews.length && (
+              <button type="button" className={`${styles.secondaryButton} ${styles.loadMore}`} onClick={() => setVisibleReviews((v) => v + 5)}>
+                Show more reviews
+              </button>
+            )}
           </section>
         </div>
 
-        <div className={styles.rightColumn}>
-          <section className={styles.relatedSection}>
-            <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Related Books</h3>
-              <div className={styles.scrollButtons}>
-                <button
-                  onClick={() => scrollRelated('left', 'related')}
-                  className={styles.scrollButton}
-                  aria-label="Scroll left through related books"
-                >
-                  <FaChevronLeft />
-                </button>
-                <button
-                  onClick={() => scrollRelated('right', 'related')}
-                  className={styles.scrollButton}
-                  aria-label="Scroll right through related books"
-                >
-                  <FaChevronRight />
-                </button>
-              </div>
-            </div>
-            <div
-              className={`${styles.relatedScrollContainer} related-scroll-container`}
-              data-section="related"
-            >
-              <div className={styles.relatedGrid}>
-                {relatedLoading ? (
-                  Array(5).fill().map((_, index) => (
-                    <RelatedCardSkeleton key={`related-skeleton-${index}`} />
-                  ))
-                ) : ebook.related.length === 0 ? (
-                  <p>No related books available.</p>
-                ) : (
-                  ebook.related.map((book) => (
-                    <div
-                      key={book.id}
-                      className={styles.relatedCard}
-                      onClick={() => navigate(`/collections/ebooks/ebook/${book.id}`)}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`View details for ${book.title}`}
-                    >
-                      <div className={styles.relatedImageContainer}>
-                        <img
-                          src={getS3ImagePath(book.cover, `related book: ${book.title}`, getStaticImagePath) || default_book_image}
-                          alt={book.title}
-                          className={styles.relatedCover}
-                          onError={(e) => console.error(`Related book cover failed to load: ${book.title}, path: ${getS3ImagePath(book.cover, `related book: ${book.title}`, getStaticImagePath)}`, e)}
-                        />
-                      </div>
-                      <div className={styles.relatedInfo}>
-                        <h4 className={styles.relatedTitle}>{book.title}</h4>
-                        <p className={styles.relatedAuthor}>{book.author}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.recommendedSection}>
-            <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Because you liked {ebook.title}</h3>
-              <div className={styles.scrollButtons}>
-                <button
-                  onClick={() => scrollRelated('left', 'recommended')}
-                  className={styles.scrollButton}
-                  aria-label="Scroll left through recommended books"
-                >
-                  <FaChevronLeft />
-                </button>
-                <button
-                  onClick={() => scrollRelated('right', 'recommended')}
-                  className={styles.scrollButton}
-                  aria-label="Scroll right through recommended books"
-                >
-                  <FaChevronRight />
-                </button>
-              </div>
-            </div>
-            <div
-              className={`${styles.relatedScrollContainer} related-scroll-container`}
-              data-section="recommended"
-            >
-              <div className={styles.relatedGrid}>
-                {relatedLoading ? (
-                  Array(5).fill().map((_, index) => (
-                    <RelatedCardSkeleton key={`recommended-skeleton-${index}`} />
-                  ))
-                ) : ebook.related.length === 0 ? (
-                  <p>No recommended books available.</p>
-                ) : (
-                  [...ebook.related].reverse().map((book) => (
-                    <div
-                      key={book.id}
-                      className={styles.relatedCard}
-                      onClick={() => navigate(`/collections/ebooks/ebook/${book.id}`)}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`View details for ${book.title}`}
-                    >
-                      <div className={styles.relatedImageContainer}>
-                        <img
-                          src={getS3ImagePath(book.cover, `recommended book: ${book.title}`, getStaticImagePath) || default_book_image}
-                          alt={book.title}
-                          className={styles.relatedCover}
-                          onError={(e) => console.error(`Recommended book cover failed to load: ${book.title}, path: ${getS3ImagePath(book.cover, `recommended book: ${book.title}`, getStaticImagePath)}`, e)}
-                        />
-                      </div>
-                      <div className={styles.relatedInfo}>
-                        <h4 className={styles.relatedTitle}>{book.title}</h4>
-                        <p className={styles.relatedAuthor}>{book.author}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
+        <aside className={styles.aside}>
+          {renderRelated(related, relatedRef, 'Related books')}
+          {renderRelated(recommended, recommendedRef, 'You might also like')}
+        </aside>
       </div>
 
+      {/* ---------- Reader ---------- */}
       {showPdfModal && (
-        <div className={styles.pdfModal}>
-          <div className={styles.pdfModalContent}>
-            <div className={styles.pdfModalHeader}>
-              <h2>{ebook.title}</h2>
-              <button
-                onClick={() => setShowPdfModal(false)}
-                className={styles.closeModalButton}
-                aria-label="Close PDF modal"
-              >
-                Close
+        <div className={styles.modalOverlay} onMouseDown={() => setShowPdfModal(false)} role="presentation">
+          <div
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Reading ${ebook.title}`}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHead}>
+              <h2 className={styles.modalTitle}>{ebook.title}</h2>
+              <button type="button" onClick={() => setShowPdfModal(false)} className={styles.iconButton} aria-label="Close reader">
+                <FaTimes />
               </button>
             </div>
-            <div className={styles.pdfModalBody}>
-              {pdfError && !pdfUrl ? (
-                <div>
-                  <p className={styles.pdfError}>{pdfError}</p>
-                  <PDFViewer width="100%" height="100%" showToolbar={true}>
-                    <MyDocument ebook={ebook} />
-                  </PDFViewer>
-                </div>
-              ) : pdfLoading ? (
-                <Loader />
-              ) : pdfUrl ? (
-                <iframe
-                  src={pdfUrl}
-                  width="100%"
-                  height="100%"
-                  title="Ebook PDF"
-                  style={{ border: 'none' }}
-                  onError={(e) => console.error('Failed to load PDF iframe:', e)}
-                />
+            {pdfError && <p className={styles.pdfError}>{pdfError}</p>}
+            <div className={styles.modalBody}>
+              {pdfUrl ? (
+                <iframe src={pdfUrl} title={`${ebook.title} PDF`} />
               ) : (
-                <PDFViewer width="100%" height="100%" showToolbar="true">
+                <PDFViewer width="100%" height="100%" showToolbar>
                   <MyDocument ebook={ebook} />
                 </PDFViewer>
               )}
@@ -878,15 +629,5 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     </div>
   );
 };
-
-const RelatedCardSkeleton = () => (
-  <div className={styles.relatedCard}>
-    <div className={styles.skeletonRelatedImageContainer}></div>
-    <div className={styles.relatedInfo}>
-      <div className={styles.skeletonRelatedTitle}></div>
-      <div className={styles.skeletonRelatedAuthor}></div>
-    </div>
-  </div>
-);
 
 export default EbookDetail;

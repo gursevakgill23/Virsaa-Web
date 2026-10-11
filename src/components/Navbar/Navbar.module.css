@@ -3,31 +3,30 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 20px; /* Reduced padding to decrease height */
+  padding: 8px 20px;
   position: sticky;
   top: 0;
   width: 100%;
   z-index: 100;
-  background-color: var(--section-bg-color, #ffffff) !important; /* Permanent background with fallback */
+  background-color: var(--section-bg-color, #ffffff) !important;
 }
 
 /* Ensure no parent interference */
 body, html {
   margin: 0;
   padding: 0;
-  background: none !important; /* Prevent body background interference */
+  background: none !important;
 }
 
-/* Debug parent elements */
 .navbar-container {
-  background: transparent !important; /* Ensure wrapper div is transparent */
+  background: transparent !important;
 }
 
 .logoContainer {
   display: flex;
   align-items: center;
-  height: 40px; /* Reduced height */
-  width: 50px; /* Reduced width */
+  height: 40px;
+  width: 50px;
 }
 
 .logoImage {
@@ -56,7 +55,7 @@ body, html {
 }
 
 .navLinks a:hover {
-  color: blue;
+  color: var(--primary-color);
 }
 
 .dropdown {
@@ -68,12 +67,13 @@ body, html {
   top: 100%;
   left: 0;
   background-color: var(--section-bg-color, #ffffff);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 10px;
-  border-radius: 4px;
+  border-radius: 10px;
   min-width: 150px;
 }
 
@@ -81,11 +81,12 @@ body, html {
   color: var(--text-color);
   text-decoration: none;
   padding: 5px 10px;
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
 .dropdownContent a:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(var(--primary-rgb), 0.08);
+  color: var(--primary-color);
 }
 
 .navRight {
@@ -101,7 +102,7 @@ body, html {
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
-  color: var(--text-color);
+  color: var(--icon-color);
   padding: 8px;
   border-radius: 50%;
   transition: all 0.3s ease;
@@ -110,7 +111,7 @@ body, html {
 .searchIcon:hover,
 .menuIcon:hover,
 .themeToggle:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(var(--primary-rgb), 0.1);
 }
 
 .noScroll {
@@ -125,7 +126,7 @@ body, html {
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.3s ease;
-  border: 1px solid var(--text-color);
+  border: 1px solid var(--primary-color);
 }
 
 .userProfile:hover {
@@ -150,12 +151,12 @@ body, html {
   z-index: 1100;
   transform: translateX(0);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+  box-shadow: -8px 0 32px rgba(var(--primary-rgb), 0.18);
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(10px);
   background-color: rgba(var(--sidebar-bg-rgb), 0.85);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid var(--border-color);
 }
 
 .sidebarHeader {
@@ -179,7 +180,7 @@ body, html {
 }
 
 .closeSidebar:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--primary-rgb), 0.1);
   transform: rotate(90deg);
 }
 
@@ -197,8 +198,8 @@ body, html {
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid var(--primary-color);
+  box-shadow: var(--shadow-soft);
   transition: all 0.3s ease;
 }
 
@@ -211,6 +212,7 @@ body, html {
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: 0.5px;
+  color: var(--headline-color);
 }
 
 .userInfo p {
@@ -241,6 +243,7 @@ body, html {
 
 .menuItem:hover {
   background: var(--sidebar-hover);
+  color: var(--primary-color);
   padding-left: 28px;
 }
 
@@ -251,7 +254,7 @@ body, html {
   right: 24px;
   bottom: 0;
   height: 1px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--border-color);
 }
 
 .menuItem:last-child::after {
@@ -284,7 +287,7 @@ body, html {
 }
 
 .logoutButton:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--sidebar-hover);
   padding-left: 28px;
 }
 
@@ -292,128 +295,12 @@ body, html {
   outline: none;
 }
 
-/* Search Section */
-.searchSection {
-  width: 100%;
-  background-color: white;
-  padding: 50px 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  position: absolute;
-  top: 60;
-  left: 0;
-  bottom: 0;
-  z-index: 1000;
-}
-
-.searchForm {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.searchInput {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  outline: none;
-}
-
-.searchButton {
-  padding: 8px;
-  background-color: var(--button-bg-color);
-  color: var(--button-text-color);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.searchButton:hover {
-  background-color: var(--button-hover-bg-color);
-  color: var(--button-hover-text-color);
-  border: 1px solid var(--button-hover-text-color);
-}
-
-.closeButton {
-  position: absolute;
-  right: 0;
-  transform: translateY(-50%);
-  background: none;
-  padding: 5px;
-  top: 4%;
-  border: none;
-  font-size: 1.5rem;
-  font-family: serif;
-  color: #555;
-  cursor: pointer;
-}
-
-.closeButton:hover {
-  color: #333;
-}
-
-/* Results List */
-.resultsList {
-  overflow-y: auto;
-  scrollbar-width: none;
-  max-height: calc(100vh - 150px);
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.resultsList::-webkit-scrollbar {
-  display: none;
-}
-
-.resultItem {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 15px;
-  border-bottom: 1px solid #eee;
-  transition: all 0.3s ease;
-}
-
-.resultItem:hover {
-  background-color: #f9f9f9;
-}
-
-.resultItem:last-child {
-  border-bottom: none;
-}
-
-.resultImage {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.resultContent {
-  flex: 1;
-}
-
-.resultContent h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #333;
-}
-
-.resultContent p {
-  margin: 5px 0 0;
-  font-size: 0.9rem;
-  color: #666;
-}
-
 /* Buttons */
 .loginButton {
   background-color: var(--button-bg-color);
   border-radius: 5px;
   color: var(--button-text-color);
-  border: 1px solid var(--button-text-color);
+  border: 1px solid var(--button-bg-color);
   padding: 5px 10px;
   font-size: 0.9rem;
   cursor: pointer;
@@ -443,14 +330,14 @@ body, html {
 .getPremiumButton:hover {
   background-color: var(--button-bg-color);
   color: var(--button-text-color);
-  border: 1px solid var(--button-text-color);
+  border: 1px solid var(--button-bg-color);
   transform: translateY(-2px);
 }
 
 /* Media Queries */
 @media (max-width: 1200px) {
   .navbar {
-    padding: 8px 3%; /* Adjusted padding */
+    padding: 8px 3%;
   }
 }
 
@@ -462,111 +349,130 @@ body, html {
 
 @media (max-width: 768px) {
   .navbar {
-    padding: 6px 15px; /* Further reduced padding */
+    padding: 6px 15px;
   }
-  
+
   .logoContainer {
-    height: 35px; /* Adjusted for smaller screens */
+    height: 35px;
     width: 40px;
     min-width: 40px;
   }
-  
+
   .navRight {
     gap: 8px;
   }
-  
+
   .searchIcon,
   .menuIcon,
   .themeToggle {
     font-size: 1rem;
     padding: 6px;
   }
-  
+
   .loginButton, .getPremiumButton {
     padding: 6px 12px;
     font-size: 0.8rem;
   }
-  
+
   .userProfile {
     width: 30px;
     height: 30px;
   }
-  
+
   .profileSidebar {
     width: 280px;
   }
-  
-  .searchSection {
-    padding: 50px 15px;
+}
+
+/* =========================================================================
+   Phones (< 768px): floating glass tab bar at the bottom, like iOS.
+   Rounded, inset from the screen edges, and not attached to the bottom.
+   ========================================================================= */
+@media (max-width: 767.98px) {
+  .navbar {
+    position: fixed;
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    width: auto;
+    min-height: 64px;
+    padding: 10px 16px;
+    border-radius: 30px;
+    z-index: 1000;
+    background: var(--glass-bg) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-highlight), 0 0 0 1px var(--glass-edge), var(--shadow-deep);
   }
-  
-  .searchForm {
-    flex-direction: column;
-    gap: 15px;
+
+  .logoContainer {
+    height: 34px;
+    width: 40px;
   }
-  
-  .searchButton {
-    width: 100%;
+
+  .searchIcon,
+  .menuIcon,
+  .themeToggle {
+    font-size: 1.15rem;
+    padding: 9px;
+  }
+
+  .userProfile {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+  }
+
+  .loginButton, .getPremiumButton {
+    border-radius: 999px;
   }
 }
 
 @media (max-width: 576px) {
   .navbar {
-    padding: 6px 10px;
+    padding: 8px 12px;
   }
-  
+
   .logoContainer {
-    height: 30px; /* Further reduced */
+    height: 30px;
     width: 35px;
   }
-  
+
   .searchIcon,
   .menuIcon,
   .themeToggle {
-    padding: 5px;
+    padding: 7px;
   }
-  
+
   .loginButton, .getPremiumButton {
     padding: 5px 10px;
     white-space: nowrap;
-  }
-  
-  .searchInput {
-    padding: 10px 15px;
-  }
-  
-  .resultItem {
-    flex-direction: column;
-    text-align: center;
-    gap: 10px;
-  }
-  
-  .resultImage {
-    width: 100%;
-    height: auto;
-    max-height: 150px;
   }
 }
 
 @media (max-width: 480px) {
   .navbar {
-    padding: 5px 8px; /* Minimal padding for smallest screens */
+    left: 10px;
+    right: 10px;
+    padding: 8px 10px;
   }
-  
+
   .logoContainer {
-    height: 25px; /* Minimal logo size */
-    width: 30px;
+    height: 28px;
+    width: 32px;
   }
-  
+
   .loginButton, .getPremiumButton {
-    padding: 4px 8px;
-    font-size: 0.65rem;
+    padding: 5px 9px;
+    font-size: 0.7rem;
   }
-  
+
   .navRight {
-    gap: 3px;
+    gap: 4px;
   }
-  
+
   .profileSidebar {
     width: 100%;
   }

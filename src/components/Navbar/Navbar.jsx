@@ -17,6 +17,7 @@ import {
   FaBell,
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
+import SearchPalette from './SearchPalette';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
@@ -35,7 +36,6 @@ const useProductionImagePath = () => {
 
 const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const logo_virsaa = '/images/logo.png';
-  const result_image = '/images/search_result.jpeg';
   const userImage = '/images/Login/user-placeholder.jpg';
   const getImagePath = useProductionImagePath();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -113,6 +113,19 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const closeSearch = () => {
     setShowSearch(false);
   };
+
+  // Ctrl/Cmd + K or "/" opens search from anywhere
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable;
+      if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const toggleProfileSidebar = () => {
     setShowProfileSidebar(!showProfileSidebar);
@@ -209,7 +222,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
         </div>
 
         <div className={styles.navRight}>
-          <button className={styles.searchIcon} onClick={toggleSearch}>
+          <button className={styles.searchIcon} onClick={toggleSearch} aria-label="Search (Ctrl+K)">
             <FaSearch />
           </button>
           <button className={styles.themeToggle} onClick={toggleTheme}>
@@ -240,35 +253,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
         </div>
       </nav>
 
-      {showSearch && (
-        <div className={styles.searchSection}>
-          <form className={styles.searchForm}>
-            <input
-              type="text"
-              placeholder="What are you looking for ?"
-              className={styles.searchInput}
-            />
-            <button type="submit" className={styles.searchButton}>
-              Submit
-            </button>
-            <button type="button" className={styles.closeButton} onClick={closeSearch}>
-              <FaTimes />
-            </button>
-          </form>
-
-          <div className={styles.resultsList}>
-            {[...Array(8)].map((_, index) => (
-              <div key={index} className={styles.resultItem}>
-                <img src={getImagePath(result_image)} alt="Result" className={styles.resultImage} />
-                <div className={styles.resultContent}>
-                  <h3>Result Title {index + 1}</h3>
-                  <p>This is a description for Result {index + 1}.</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {showSearch && <SearchPalette onClose={closeSearch} apiString={apiString} />}
 
       {showProfileSidebar && (
         <div className={styles.profileSidebar}>

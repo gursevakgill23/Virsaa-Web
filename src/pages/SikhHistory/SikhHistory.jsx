@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import styles from './SikhHistory.module.css';
+import { FaBookOpen } from 'react-icons/fa';
+import PageHero from '../../components/PageHero/PageHero';
 import ComingSoon from '../../elements/ComingSoon/ComingSoon';
+import styles from './SikhHistory.module.css';
 
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
@@ -10,25 +12,18 @@ const sikh_history = '/images/sikhHistory/sikh_history1.jpg';
 const book_image = '/images/book-image.jpg';
 const inspiring_image = '/images/sikhHistory/inspiring.jpg';
 
-const useProductionImagePath = () => {
-  
-  return (imagePath) => {
-    // Only modify in production
-    if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
-      if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
-      }
+const getImagePath = (imagePath) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (typeof imagePath === 'string') {
+      return imagePath.startsWith('/')
+        ? imagePath
+        : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
-    return imagePath;
-  };
+    return imagePath.default || imagePath;
+  }
+  return imagePath;
 };
+
 const scrollableImages = [
   { id: 1, src: filter_image, text: 'Guru Nanak Dev Ji' },
   { id: 2, src: filter_image, text: 'Foundation of Sikhism' },
@@ -77,175 +72,111 @@ const recommendedItems = [
 ];
 
 const SikhHistory = ({ isDarkMode }) => {
-  const getImagePath = useProductionImagePath();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const cardsPerPage = 12;
-  const imageRefs = useRef([]);
+  const headerImage = getImagePath(isDarkMode ? header_image_dark : header_image_light);
+  const [activeTopic, setActiveTopic] = useState(null);
 
-  useEffect(() => {
-    const loadingTimer = setTimeout(() => {
-      setIsLoading(false);
-    }, 3000);
+  // Topics are static for now; clicking one highlights the matching timeline entry when there is one
+  const matchesTopic = (title) => activeTopic && title.toLowerCase() === activeTopic.toLowerCase();
 
-    return () => clearTimeout(loadingTimer);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoading) {
-      imageRefs.current.forEach((image, index) => {
-        setTimeout(() => {
-          if (image) {
-            image.style.opacity = 1;
-            image.style.transform = 'scale(1)';
-          }
-        }, index * 200);
-      });
+  const handleTopic = (text) => {
+    const next = activeTopic === text ? null : text;
+    setActiveTopic(next);
+    if (next) {
+      const match = sikhHistoryData.find((c) => c.title.toLowerCase() === next.toLowerCase());
+      if (match) document.getElementById(`era-${match.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [isLoading]);
-
-  const indexOfLastCard = currentPage * cardsPerPage;
-  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentCards = sikhHistoryData.slice(indexOfFirstCard, indexOfLastCard);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Sikh History Header"
-          className={styles.headerImage}
-        />
-        <h1 className={styles.headerTitle}>SIKH HISTORY</h1>
-        <p className={styles.headerText}>Explore Sikh history: timeless teachings, inspiring legacy, and profound wisdom for all.</p>
-      </div>
+    <div className={styles.page}>
+      <PageHero
+        image={headerImage}
+        title="Sikh History"
+        subtitle="Explore Sikh history: timeless teachings, inspiring legacy, and profound wisdom for all."
+        crumbs={[{ label: 'Home', to: '/' }, { label: 'Sikh History' }]}
+      />
 
-      <div className={styles.breadcrumb}>
-        <Link to={'/'}><span>Home</span></Link> / 
-        <Link to={'/sikh-history'}><span> Sikh History</span></Link>
-      </div>
-
-      <div className={styles.scrollableSection}>
-        {isLoading ? (
-          Array(16).fill().map((_, index) => (
-            <div key={`scroll-skeleton-${index}`} className={styles.scrollableItem}>
-              <div className={styles.scrollableImageSkeleton}>
-              </div>
-              <div className={styles.scrollableTextSkeleton}></div>
-            </div>
-          ))
-        ) : (
-          scrollableImages.map((item) => (
-            <div key={item.id} className={styles.scrollableItem}>
-              <img src={getImagePath(item.src)} alt={item.text} className={styles.scrollableImage} />
-              <p className={styles.scrollableText}>{item.text}</p>
-            </div>
-          ))
-        )}
-      </div>
-
-      <section className={styles.sikhHistorysection}>
-        <div className={styles.sikhHistoryHeading}>
-          <h1>Explore Sikh History : Roots Of Sikhism</h1>
-        </div>
-        <div className={styles.cardGrid}>
-          {isLoading ? (
-            Array(cardsPerPage).fill().map((_, index) => (
-              <div key={`history-skeleton-${index}`} className={styles.card}>
-                <div className={styles.cardImageContainer}>
-                  <div className={styles.cardImageSkeleton}>
-                  </div>
-                  <div className={styles.cardBodySkeleton}>
-                    <div className={styles.skeletonTitle}></div>
-                    <div className={styles.skeletonDescription}></div>
-                    <div className={styles.skeletonDate}></div>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            currentCards.map((card, index) => (
-              <div key={card.id} className={styles.card}>
-                <div className={styles.cardImageContainer}>
-                  <img 
-                    ref={(el) => (imageRefs.current[index] = el)}
-                    src={getImagePath(card.image)} 
-                    alt={card.title} 
-                    className={styles.cardImage} 
-                  />
-                  <div className={styles.cardBody}>
-                    <h3 className={styles.cardTitle}>{card.title}</h3>
-                    <p className={styles.cardDescription}>{card.description}</p>
-                    <p className={styles.cardDate}>{card.date}</p>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+      {/* ---------- Topics strip ---------- */}
+      <section className={styles.topicsSection} aria-label="Topics">
+        <div className={styles.topics}>
+          {scrollableImages.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`${styles.topic} ${activeTopic === item.text ? styles.topicOn : ''}`}
+              aria-pressed={activeTopic === item.text}
+              onClick={() => handleTopic(item.text)}
+            >
+              <span className={styles.topicFrame}>
+                <img src={getImagePath(item.src)} alt="" loading="lazy" />
+              </span>
+              <span className={styles.topicText}>{item.text}</span>
+            </button>
+          ))}
         </div>
       </section>
 
-      <div className={styles.pagination}>
-        {Array.from({ length: Math.ceil(sikhHistoryData.length / cardsPerPage) }, (_, i) => (
-          <button
-            key={i + 1}
-            onClick={() => paginate(i + 1)}
-            className={currentPage === i + 1 ? styles.activePage : styles.pageButton}
-          >
-            {i + 1}
-          </button>
-        ))}
-      </div>
+      {/* ---------- Timeline ---------- */}
+      <section className={styles.section} aria-labelledby="roots-title">
+        <h2 id="roots-title" className={styles.sectionTitle}>Roots of Sikhism</h2>
+        <p className={styles.lede}>The ten Gurus, the Guru Granth Sahib and the Khalsa, with their dates.</p>
 
-      <div className={styles.inspiringSection}>
-        {isLoading ? (
-          <div className={styles.inspiringImageContainerSkeleton}>
-          </div>
-        ) : (
-          <div className={styles.inspiringImageContainer}>
-            <img src={getImagePath(inspiring_image)} alt="Most Inspiring in Sikhism" className={styles.inspiringImage} />
-          </div>
-        )}
-        <div className={styles.inspiringContent}>
-          {isLoading ? (
-            <>
-              <div className={styles.skeletonHeading}></div>
-              <div className={styles.skeletonParagraph}></div>
-              <div className={styles.skeletonButton}></div>
-            </>
-          ) : (
-            <>
-              <h3>Most Inspiring in Sikhism</h3>
-              <p>Discover the most inspiring stories, quotes, and lessons from the Sikh religion.</p>
-              <button className={styles.readNowButton}>Read Now</button>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className={styles.recommendedSection}>
-        <h2 className={styles.sectionTitle}>Recommended For You</h2>
-        <div className={styles.recommendedGrid}>
-          {isLoading ? (
-            Array(10).fill().map((_, index) => (
-              <div key={`recommended-skeleton-${index}`} className={styles.recommendedCard}>
-                <div className={styles.recommendedImageSkeleton}>
+        <ol className={styles.timeline}>
+          {sikhHistoryData.map((card) => (
+            <li
+              key={card.id}
+              id={`era-${card.id}`}
+              className={`${styles.era} ${matchesTopic(card.title) ? styles.eraOn : ''}`}
+            >
+              <span className={styles.node} aria-hidden="true" />
+              <article className={styles.eraCard}>
+                <div className={styles.eraFrame}>
+                  <img src={getImagePath(card.image)} alt="" loading="lazy" />
                 </div>
-                <div className={styles.recommendedTitleSkeleton}></div>
-              </div>
-            ))
-          ) : (
-            recommendedItems.map((item) => (
-              <div key={item.id} className={styles.recommendedCard}>
-                <img src={getImagePath(item.image)} alt={item.title} className={styles.recommendedImage} />
-                <h3 className={styles.recommendedTitle}>{item.title}</h3>
-              </div>
-            ))
-          )}
+                <div className={styles.eraBody}>
+                  <p className={styles.eraDate}>{card.date.replace(' - ', ' – ')}</p>
+                  <h3 className={styles.eraTitle}>{card.title}</h3>
+                  <p className={styles.eraText}>{card.description}</p>
+                </div>
+              </article>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* ---------- Inspiring ---------- */}
+      <section className={styles.section}>
+        <div className={styles.inspiring}>
+          <div className={styles.inspiringMedia}>
+            <img src={getImagePath(inspiring_image)} alt="" loading="lazy" />
+          </div>
+          <div className={styles.inspiringBody}>
+            <h2>Most inspiring in Sikhism</h2>
+            <p>Discover the most inspiring stories, quotes, and lessons from the Sikh religion.</p>
+            <Link to="/collections/ebooks" className={styles.primaryButton}>
+              <FaBookOpen aria-hidden="true" /> Read now
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* ---------- Recommended ---------- */}
+      <section className={styles.section} aria-labelledby="recommended-title">
+        <div className={styles.rowHead}>
+          <h2 id="recommended-title" className={styles.sectionTitle}>Recommended for you</h2>
+          <Link to="/collections/ebooks" className={styles.textLink}>See all books</Link>
+        </div>
+        <div className={styles.shelf}>
+          {recommendedItems.map((item) => (
+            <article key={item.id} className={styles.book}>
+              <div className={styles.bookCover}>
+                <img src={getImagePath(item.image)} alt="" loading="lazy" />
+              </div>
+              <h3 className={styles.bookTitle}>{item.title}</h3>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <ComingSoon isDarkMode={isDarkMode} />
     </div>

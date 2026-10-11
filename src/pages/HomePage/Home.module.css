@@ -207,8 +207,9 @@
   }
 }
 
+/* ---------- Header slider (same images and text, now fluid) ---------- */
 .header {
-  height: 700px;
+  height: clamp(460px, 86vh, 760px);
   position: relative;
   overflow: hidden;
   background-color: var(--header-bg-color);
@@ -239,32 +240,38 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
-  width: 60%;
+  width: min(760px, calc(100% - 2 * clamp(16px, 5vw, 72px)));
   position: absolute;
-  top: 20%;
-  left: 5%;
+  top: clamp(96px, 20%, 180px);
+  left: clamp(16px, 5vw, 72px);
   color: var(--text-color);
-  padding: 20px;
-  border-radius: 10px;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .headline {
   font-family: serif;
   color: var(--headline-color);
-  font-size: 4.5rem;
+  font-size: clamp(2rem, 0.9rem + 5.2vw, 4.5rem);
+  line-height: 1.02;
   font-weight: bold;
   text-transform: uppercase;
-  margin-bottom: 0;
+  margin: 0 0 clamp(10px, 1.6vw, 18px);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
 
 .description {
-  font-size: 1.2rem;
+  font-size: clamp(0.95rem, 0.85rem + 0.45vw, 1.2rem);
+  line-height: 1.55;
+  max-width: 46ch;
+  margin: 0;
 }
 
 .playButtonContainer {
   position: absolute;
-  bottom: 20px;
+  bottom: clamp(16px, 3vh, 28px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
@@ -286,15 +293,15 @@
 
 .playIconWrapper {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: clamp(68px, 9vw, 100px);
+  height: clamp(68px, 9vw, 100px);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .playIcon {
-  font-size: 3.5rem;
+  font-size: clamp(2.3rem, 3.4vw, 3.5rem);
   color: var(--icon-color);
   z-index: 1;
 }
@@ -324,36 +331,48 @@
   position: absolute;
   top: -30px;
   left: 50%;
-  width: 100%;
+  width: max-content;
+  padding: 2px 10px;
+  border-radius: 999px;
   transform: translateX(-50%);
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--section-bg-color);
   background-color: var(--icon-color);
   opacity: 0;
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.playButton:hover .playText {
+.playButton:hover .playText,
+.playButton:focus-visible .playText {
   opacity: 1;
   transform: translateX(-50%) translateY(-10px);
 }
 
 .navigationButtons {
   position: absolute;
-  top: 80%;
-  right: 20px;
-  transform: translateY(-50%);
+  bottom: clamp(20px, 6vh, 64px);
+  right: clamp(12px, 2.5vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
 }
 
 .navButton {
+  display: grid;
+  place-items: center;
+  width: clamp(38px, 3.6vw, 46px);
+  height: clamp(38px, 3.6vw, 46px);
   background-color: var(--button-bg-color);
   border-radius: 50%;
-  margin: 10px;
+  margin: 0;
   color: var(--button-text-color);
   border: none;
-  padding: 10px 9px;
-  font-size: 1.25rem;
-  transition: background-color 0.3s ease;
+  padding: 0;
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .navButton:hover {
@@ -361,516 +380,796 @@
   color: var(--button-hover-text-color);
 }
 
-/* Explore Books Section with Floating Effect */
-.exploreBooksSection {
-  margin: 0 auto;
-  text-align: center;
-  padding: 2rem;
-  background-color: var(--section-bg-color);
+/* Tablets: shorter header, text a little higher */
+@media (max-width: 991.98px) {
+  .header {
+    height: clamp(440px, 72vh, 640px);
+  }
 }
 
-.sectionTitle {
-  font-size: 2rem;
-  font-family: serif;
-  text-align: left;
-  color: var(--headline-color);
+/* Phones: the navbar sits at the bottom, so the text can start near the top */
+@media (max-width: 767.98px) {
+  .header {
+    height: min(78svh, 600px);
+    min-height: 440px;
+  }
+
+  .textOverlay {
+    top: clamp(48px, 12%, 96px);
+  }
+
+  .navigationButtons {
+    flex-direction: row;
+    bottom: 22px;
+  }
 }
 
-.booksGrid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 20px;
-  justify-content: center;
-  perspective: 1000px; /* Adds depth for 3D effect */
+@media (max-width: 379.98px) {
+  .headline {
+    font-size: 1.8rem;
+  }
 }
 
-.bookCard {
-  overflow: hidden;
-  transform-style: preserve-3d;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  animation: appear linear;
-  animation-timeline: view();
-  animation-range: entry 0;
-  height: 450px; /* Set fixed height for all book cards */
-  display: flex;
-  flex-direction: column;
-}
-
-.imageContainer {
-  width: 100%;
-  height: 400px; /* Increased image height */
-  padding: 15px;
-  border-radius: 10px;
-  overflow: hidden;
-  position: relative;
-  flex-grow: 1; /* Allow image container to take available space */
-}
-
-.bookImage {
-  width: 100%;
-  height: 100%;
-  border-radius: 10px;
-  object-fit: cover;
-  opacity: 0;
-  transform: scale(0.9);
-  transition: opacity 1s ease-in-out, transform 1s ease-in-out;
-}
-
-.bookImage:hover {
-  transform: scale(1.05); /* Reduced scale for hover to prevent overflow */
-  transition: transform 0.3s ease-in-out;
-}
-
-.bookName {
-  font-size: 1.1rem; /* Slightly larger font for book title */
-  margin: 0;
-  font-weight: 550;
-  font-family: serif;
+/* =========================================================================
+   Spatial sections (everything below the header)
+   ========================================================================= */
+.homeContainer {
+  background: var(--background-color);
   color: var(--text-color);
-  flex-shrink: 0; /* Prevent title from shrinking */
+  overflow-x: hidden;
 }
 
-.bookName:hover {
-  text-decoration: underline;
+.sectionHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
 }
 
-.writerName {
-  font-size: 0.85rem; /* Slightly larger font for writer name */
+.title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--headline-color);
+  margin: 0 0 10px;
+}
+
+.lede {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  line-height: 1.6;
   color: var(--secondary-text-color);
-  margin-bottom: 10px;
-  margin-top: 0;
-  text-align: center;
-  margin-right: 15px;
-  flex-shrink: 0; /* Prevent writer name from shrinking */
+  max-width: 56ch;
+  margin: 0;
 }
 
-.allBooksButton {
-  margin-top: 30px;
-  padding: 10px 40px;
-  font-size: 1rem;
-  color: var(--button-text-color);
-  background-color: var(--button-bg-color);
-  border: 1px solid var(--button-bg-color);
-  border-radius: 5px;
+.ghostButton,
+.solidButton {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 11px 22px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
-.allBooksButton:hover {
-  background-color: var(--button-hover-bg-color);
+.ghostButton {
+  background: var(--glass-bg);
+  color: var(--primary-color);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
+.ghostButton:hover {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+.solidButton {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: var(--button-border);
+}
+
+.solidButton:hover {
+  background: var(--button-hover-bg-color);
   color: var(--button-hover-text-color);
-  border: 1px solid var(--button-hover-text-color);
 }
 
-/* Skeleton Loading Styles with Shimmer Effect */
-.bookCardSkeleton {
-  padding: 10px;
-  overflow: hidden;
-  transform-style: preserve-3d;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  animation: appear linear;
-  animation-timeline: view();
-  animation-range: entry 0;
-  height: 450px; /* Match book card height */
+.textLink {
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.textLink:hover {
+  color: var(--link-hover-color);
+}
+
+/* ---------- Quick dock: floats over the bottom edge of the header ---------- */
+.dockWrap {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+  padding: 0 16px;
+}
+
+.dock {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 28px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--shadow-deep);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dock::-webkit-scrollbar {
+  display: none;
+}
+
+.dockItem {
   display: flex;
   flex-direction: column;
-}
-
-.skeletonImageContainer {
-  width: 100%;
-  height: 400px; /* Match increased image height */
-  position: relative;
-  margin-bottom: 10px;
-  background-color: var(--skeleton-bg-color);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.skeletonImage {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 40%;
-  height: 40%;
-  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  min-width: 86px;
+  padding: 12px 10px 10px;
+  border-radius: 20px;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.skeletonImg {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  opacity: 0.2;
+.dockItem:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+  transform: translateY(-3px);
 }
 
-/* Shimmer Effect */
-.skeletonShimmer {
+.dockIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--maroon-bright), var(--maroon));
+  color: #fff;
+  font-size: 1.1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 8px 16px -8px rgba(101, 4, 29, 0.7);
+}
+
+.dockLabel {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Book shelf: the 3D centrepiece ---------- */
+.shelfSection,
+.bentoSection,
+.authorsSection,
+.heritageSection,
+.hukamSection,
+.ctaSection {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 72px 24px 0;
+}
+
+.shelfSection {
+  padding-top: 56px;
+}
+
+.shelfStage {
+  position: relative;
+  perspective: 1400px;
+}
+
+.shelf {
+  display: flex;
+  gap: 34px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 18px 8px 34px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--primary-rgb), 0.35) transparent;
+}
+
+.bookSlot {
+  flex: 0 0 168px;
+  scroll-snap-align: start;
+  text-decoration: none;
+  color: inherit;
+}
+
+.book {
+  position: relative;
+  width: 168px;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px 10px 10px 4px;
+  transform-style: preserve-3d;
+  transform: rotateY(-22deg);
+  transform-origin: left center;
+  box-shadow: 18px 24px 32px -16px rgba(var(--primary-rgb), 0.45), var(--shadow-soft);
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.45s ease;
+  background: var(--skeleton-bg-color);
+}
+
+/* Spine */
+.book::before {
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
+  width: 16px;
+  height: 100%;
+  background: linear-gradient(90deg, var(--maroon-deep), var(--maroon));
+  transform: rotateY(90deg) translateZ(0);
+  transform-origin: left center;
+  border-radius: 3px 0 0 3px;
+}
+
+/* Page sheen + binding crease */
+.book::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0, rgba(255, 255, 255, 0.18) 5px, transparent 14px),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.22), transparent 40%);
+  pointer-events: none;
+}
+
+.bookCover {
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--skeleton-shine-color),
-    transparent
-  );
-  animation: shimmer 1.5s infinite;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+.bookSlot:hover .book,
+.bookSlot:focus-visible .book {
+  transform: rotateY(-4deg) translateY(-10px);
+  box-shadow: 8px 30px 40px -18px rgba(var(--primary-rgb), 0.55), var(--shadow-soft);
+}
+
+.bookTitle {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.3;
+  color: var(--text-color);
+  margin: 18px 0 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bookAuthor {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--secondary-text-color);
+  margin: 0;
+}
+
+.shelfBoard {
+  height: 16px;
+  margin: -26px 0 0;
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 22px 30px -18px rgba(var(--primary-rgb), 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.bookSkeleton,
+.skeletonLine {
+  background: linear-gradient(90deg, var(--skeleton-bg-color) 0%, var(--skeleton-shine-color) 50%, var(--skeleton-bg-color) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.bookSkeleton::before {
+  display: none;
+}
+
+.skeletonLine {
+  height: 12px;
+  border-radius: 6px;
+  margin-top: 18px;
+  width: 90%;
+}
+
+.skeletonLineShort {
+  width: 55%;
+  margin-top: 8px;
 }
 
 @keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
 }
 
-.skeletonText {
-  width: 80%;
-  height: 20px;
-  background-color: var(--skeleton-bg-color);
+.emptyShelf {
+  font-family: var(--font-body);
+  color: var(--secondary-text-color);
+  padding: 40px 0;
+}
+
+/* ---------- Hukamnama panel ---------- */
+.hukamPanel {
   position: relative;
-  margin: 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 40px 44px;
+  border-radius: 32px;
   overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(80% 120% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 60%),
+    linear-gradient(135deg, var(--maroon-bright), var(--maroon) 55%, var(--maroon-deep));
+  box-shadow: var(--shadow-deep);
 }
 
-.skeletonText::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--skeleton-shine-color),
-    transparent
-  );
-  animation: shimmer 2s infinite;
+.hukamPanel .title {
+  color: #fff;
 }
 
-.skeletonTextSmall {
-  width: 60%;
-  height: 16px;
-  background-color: var(--skeleton-bg-color);
+.hukamGurmukhi {
+  font-family: var(--font-body);
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.7rem);
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+
+.hukamRef {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.hukamActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.hukamActions .solidButton {
+  background: #fff;
+  color: var(--maroon);
+  border-color: #fff;
+}
+
+.hukamActions .solidButton:hover {
+  background: transparent;
+  color: #fff;
+}
+
+.hukamActions .textLink {
+  color: #fff;
+}
+
+/* ---------- Bento: listen, learn and play ---------- */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 220px;
+  gap: 18px;
+}
+
+.bentoTile {
   position: relative;
+  border-radius: 28px;
   overflow: hidden;
-  margin: 0 auto;
-  margin-bottom: 10px;
+  text-decoration: none;
+  color: #fff;
+  box-shadow: var(--shadow-soft);
+  isolation: isolate;
 }
 
-.skeletonImageContainer::after {
-  content: '';
+.bentoLarge {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.bentoWide {
+  grid-column: span 2;
+}
+
+.bentoImage {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--skeleton-shine-color),
-    transparent
-  );
-  animation: shimmer 2s infinite;
-}
-
-.skeletonTextSmall::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--skeleton-shine-color),
-    transparent
-  );
-  animation: shimmer 2s infinite;
-}
-
-/* Heritage Section */
-.heritageSection {
-  padding: 2rem;
- background-color: var(--section-bg-color);
-}
-
-.heritageHeading {
-  font-size: 2rem;
-  font-family: serif;
-  text-align: left;
-  color: var(--headline-color);
-}
-
-.heritageContainer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
-  margin: 2rem auto;
-  align-items: stretch;
-}
-
-.heritageImage {
-  flex: 1 1 30%;
-  display: flex;
-  align-items: stretch;
-  height: 350px;
-  animation: appear linear;
-  animation-timeline: view();
-  animation-range: entry 0;
-}
-
-.heritageImage img {
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: -1;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.heritageContent {
-  flex: 1 1 55%;
+.bentoTile:hover .bentoImage {
+  transform: scale(1.05);
+}
+
+.bentoGlass {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(40, 6, 16, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+.bentoGlass h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin: 0 0 4px;
+  color: #fff;
+}
+
+.bentoGlass p {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.bentoLarge .bentoGlass h3 {
+  font-size: 1.6rem;
+}
+
+/* ---------- Authors ---------- */
+.authorRow {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 6px 4px 20px;
+  scrollbar-width: none;
+}
+
+.authorRow::-webkit-scrollbar {
+  display: none;
+}
+
+.authorCard {
+  flex: 0 0 180px;
+  scroll-snap-align: start;
+  text-align: center;
+  padding: 24px 16px 20px;
+  border-radius: 26px;
+  text-decoration: none;
+  color: var(--text-color);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 0.25s ease;
+}
+
+.authorCard:hover {
+  transform: translateY(-4px);
+}
+
+.authorImage {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--background-color);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.35), var(--shadow-soft);
+  margin-bottom: 14px;
+}
+
+.authorCard h3 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 0 0 4px;
+}
+
+.authorCard p {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+  margin: 0;
+}
+
+/* ---------- Heritage: glass panes layered over the photo ---------- */
+.heritageSection .title {
+  max-width: 18ch;
+  margin-bottom: 30px;
+}
+
+.heritageStage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  align-items: center;
+}
+
+.heritagePhoto {
+  grid-column: 1 / 2;
+  grid-row: 1;
+  border-radius: 32px;
+  overflow: hidden;
+  aspect-ratio: 4 / 3.4;
+  box-shadow: var(--shadow-deep);
+}
+
+.heritagePhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.heritageStack {
+  grid-column: 1 / 3;
+  grid-row: 1;
+  justify-self: end;
+  width: min(520px, 52%);
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  animation: appear linear;
-  animation-timeline: view();
-  animation-range: entry 0;
+  gap: 16px;
 }
 
-.heritageItem {
+.heritagePane {
   display: flex;
-  align-items: flex-start;
-  gap: 1.5rem;
+  gap: 16px;
+  padding: 22px 24px;
+  border-radius: 24px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--shadow-deep);
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+}
+
+.heritagePane:nth-child(2) {
+  margin-right: 36px;
 }
 
 .heritageIcon {
-  font-size: 2.5rem;
-  margin-top: 0.5rem;
-  color: var(--icon-color);
-}
-
-.heritageText h3 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--text-color);
-}
-
-.heritageText p {
-  font-size: 1rem;
-  color: var(--secondary-text-color);
-  line-height: 1.6;
-}
-
-@keyframes appear {
-  from {
-    opacity: 0;
-    scale: 0.5;
-  }
-  to {
-    opacity: 1;
-    scale: 1;
-  }
-}
-
-/* Listen, Learn, and Play Section */
-.section {
-  padding: 2rem;
-  background-color: var(--section-bg-color);
-  text-align: center;
-}
-
-.cardContainer {
+  flex-shrink: 0;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 2rem;
-  margin: 2rem auto;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(var(--primary-rgb), 0.12);
+  color: var(--primary-color);
+  font-size: 1.2rem;
 }
 
-.card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 20px;
-  height: 300px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.heritagePane h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--headline-color);
+  margin: 0 0 6px;
 }
 
-.cardImage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 300px;
-}
-
-.cardImage img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
-}
-
-.cardOverlay {
-  position: absolute;
-  bottom: -100%;
-  left: 0;
-  right: 0;
-  background: var(--card-overlay-bg);
-  padding: 1rem;
-  transition: bottom 0.3s ease;
-  border-radius: 0 0 10px 10px;
-}
-
-.card:hover .cardOverlay {
-  bottom: 0;
-}
-
-.cardOverlay h3 {
-  font-size: 1rem;
-  text-transform: uppercase;
+.heritagePane p {
+  font-family: var(--font-body);
+  font-size: 0.96rem;
+  line-height: 1.55;
   color: var(--text-color);
-  margin-bottom: 0.5rem;
+  margin: 0;
 }
 
-.cardOverlay p {
-  font-size: 0.75rem;
-  color: var(--secondary-text-color);
-  line-height: 1.6;
+/* ---------- Call to action row ---------- */
+.ctaSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding-bottom: 96px;
 }
 
-/* Responsive Design */
-@media (max-width: 1400px) {
-  .cardContainer {
-    grid-template-columns: repeat(5, 1fr);
-  }
+.ctaPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 36px;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: transform 0.25s ease;
 }
 
-@media (max-width: 1200px) {
-  .booksGrid, .cardContainer {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .sectionTitle, .heritageHeading {
-    font-size: 2rem;
-  }
-
-  .heritageContainer {
-    gap: 20px;
-  }
-  .heritageImage {
-    height: 450px;
-  }
+.ctaPanel:hover {
+  transform: translateY(-4px);
 }
 
-@media (max-width: 992px) {
-  .booksGrid, .cardContainer {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .sectionTitle, .heritageHeading {
-    font-size: 1.75rem;
-  }
+.ctaPanel h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.55rem;
+  margin: 8px 0 0;
 }
 
-@media (max-width: 768px) {
-  .header {
-    height: 400px;
-  }
-  .booksGrid, .cardContainer {
+.ctaPanel p {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  margin: 0 0 10px;
+  max-width: 40ch;
+}
+
+.ctaIcon {
+  font-size: 1.6rem;
+}
+
+.ctaAction {
+  font-family: var(--font-body);
+  font-weight: 700;
+  margin-top: auto;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.ctaLight {
+  color: var(--text-color);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.ctaLight h3,
+.ctaLight .ctaIcon,
+.ctaLight .ctaAction {
+  color: var(--primary-color);
+}
+
+.ctaDark {
+  color: #fff;
+  background: linear-gradient(140deg, var(--maroon-bright), var(--maroon) 60%, var(--maroon-deep));
+  box-shadow: var(--shadow-deep);
+}
+
+.ctaDark h3 {
+  color: #fff;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 991.98px) {
+  .bento {
     grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 200px;
   }
 
-  .headline {
-    font-size: 2.5rem;
+  .heritageStage {
+    grid-template-columns: 1fr;
   }
 
-  .description {
-    font-size: 1rem;
+  .heritagePhoto {
+    grid-column: 1;
+    aspect-ratio: 16 / 10;
   }
 
-  .exploreBooksSection {
-    padding: 40px 40px;
+  .heritageStack {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: stretch;
+    width: auto;
+    margin: -60px 16px 0;
   }
-  .heritageContainer {
+
+  .heritagePane:nth-child(2) {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .shelfSection,
+  .bentoSection,
+  .authorsSection,
+  .heritageSection,
+  .hukamSection,
+  .ctaSection {
+    padding: 56px 16px 0;
+  }
+
+  .ctaSection {
+    grid-template-columns: 1fr;
+    padding-bottom: 48px;
+  }
+
+  .sectionHead {
     flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .dockWrap {
+    margin-top: 24px;
+    justify-content: flex-start;
+  }
+
+  .dockItem {
+    min-width: 72px;
+  }
+
+  .bookSlot {
+    flex-basis: 138px;
+  }
+
+  .book {
+    width: 138px;
+  }
+
+  .shelf {
+    gap: 26px;
+  }
+
+  .bento {
+    grid-template-columns: 1fr;
+    grid-auto-rows: 220px;
+  }
+
+  .bentoLarge,
+  .bentoWide {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+
+  .hukamPanel {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 30px 24px;
+  }
+
+  .hukamActions {
+    align-items: flex-start;
+  }
+
+  .heritageStack {
+    margin: -40px 8px 0;
+  }
+
+  .ctaPanel {
+    padding: 28px 24px;
   }
 }
 
-@media (max-width: 576px) {
-  .booksGrid, .cardContainer {
-    grid-template-columns: repeat(1, 1fr);
+/* Keep the Hukamnama toast above the floating bottom navbar on phones */
+@media (max-width: 767.98px) {
+  .hukamnamaToast {
+    bottom: calc(100px + env(safe-area-inset-bottom));
   }
-  .headline {
-    font-size: 2rem;
-  }
-}
-
-/* Light Theme - White/Gray */
-:root {
-  --background-color: #ffffff;
-  --header-bg-color: #f8f8f8;
-  --section-bg-color: #f8f8f8;
-  --text-color: #333333;
-  --headline-color: #000000;
-  --icon-color: #666666;
-  --primary-color: #000000; /* Black as primary color */
-  
-  /* Button colors - Invert on hover */
-  --button-bg-color: #000000; /* Black bg */
-  --button-text-color: #ffffff; /* White text */
-  --button-hover-bg-color: #ffffff; /* White bg on hover */
-  --button-hover-text-color: #000000; /* Black text on hover */
-  --button-border: 2px solid #000000; /* Added border for clean inversion */
-  
-  /* Rest of the light theme */
-  --card-bg-color: #ffffff;
-  --input-border-color: #dddddd;
-  --card-overlay-bg: rgba(255, 255, 255, 0.95);
-  --border-color: #eeeeee;
-  --table-header-bg: #f0f0f0;
-  --secondary-text-color: #777777;
-  --skeleton-bg-color: #f0f0f0;
-  --skeleton-shine-color: rgba(255, 255, 255, 0.5);
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #444444;
-  --sidebar-hover: #f0f0f0;
-  --sidebar-bg-rgb: 255, 255, 255;
-}
-
-/* Dark Theme - Black/Gray */
-[data-theme='dark'] {
-  --background-color: #121212;
-  --header-bg-color: #1a1a1a;
-  --section-bg-color: #121212;
-  --text-color: #e0e0e0;
-  --headline-color: #ffffff;
-  --icon-color: #aaaaaa;
-  --primary-color: #ffffff; /* White as primary color */
-  
-  /* Button colors - Invert on hover */
-  --button-bg-color: #ffffff; /* White bg */
-  --button-text-color: #000000; /* Black text */
-  --button-hover-bg-color: #000000; /* Black bg on hover */
-  --button-hover-text-color: #ffffff; /* White text on hover */
-  --button-border: 2px solid #ffffff; /* Added border for clean inversion */
-  
-  /* Rest of the dark theme */
-  --card-bg-color: #1e1e1e;
-  --card-overlay-bg: rgba(30, 30, 30, 0.95);
-  --border-color: #333333;
-  --table-header-bg: #2a2a2a;
-  --secondary-text-color: #b0b0b0;
-  --skeleton-bg-color: #2a2a2a;
-  --skeleton-shine-color: rgba(100, 100, 100, 0.3);
-  --sidebar-bg: #121212;
-  --sidebar-text: #d0d0d0;
-  --sidebar-hover: #2a2a2a;
-  --sidebar-bg-rgb: 18, 18, 18;
 }

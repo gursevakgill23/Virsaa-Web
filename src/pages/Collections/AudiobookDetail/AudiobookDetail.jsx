@@ -1,32 +1,49 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar, FaSort, FaPlay, FaPause } from 'react-icons/fa';
-import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import {
+  FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight,
+  FaStar, FaRegStar, FaSort, FaPlay, FaPause, FaHeadphones, FaClock, FaLock, FaChevronDown,
+  FaDownload, FaUndoAlt, FaRedoAlt,
+} from 'react-icons/fa';
 import styles from './AudiobookDetail.module.css';
-import Loader from '../../../components/Loader'
+import PageHero from '../../../components/PageHero/PageHero';
+import Loader from '../../../components/Loader';
 
-
-// Utility function to handle production image paths
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/') 
-          ? imagePath 
+        return imagePath.startsWith('/')
+          ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath;
       }
+      return imagePath.default || imagePath;
     }
     return imagePath;
   };
 };
 
+const Stars = ({ value }) => (
+  <span className={styles.stars} aria-label={`${value} out of 5`}>
+    {[1, 2, 3, 4, 5].map((i) =>
+      i <= Math.round(value) ? <FaStar key={i} className={styles.starOn} /> : <FaRegStar key={i} className={styles.starOff} />
+    )}
+  </span>
+);
+
+const RelatedSkeleton = () => (
+  <div className={styles.relatedCard} aria-hidden="true">
+    <span className={`${styles.relatedThumb} ${styles.relatedThumbSquare} ${styles.skeleton}`} />
+    <span className={styles.relatedInfo}>
+      <span className={`${styles.skeleton} ${styles.skeletonLine}`} />
+      <span className={`${styles.skeleton} ${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+    </span>
+  </div>
+);
+
 const AudiobookDetail = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
   const { id } = useParams();
-  const navigate = useNavigate();
   const [audiobook, setAudiobook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relatedLoading, setRelatedLoading] = useState(true);
@@ -37,151 +54,137 @@ const AudiobookDetail = ({ isDarkMode }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
-  const audioRef = useRef(null);
-  
-  // Image paths
-  const header_image_dark = "/images/header-image-dark.png";
-  const header_image_light = "/images/header-image-light.png";
-  const bookImage = "/images/book-image.jpg";
-  const audioFile = "/images/Collections/Nitnem.mp3";
 
-  // Review form state
-  const [reviewForm, setReviewForm] = useState({
-    name: '',
-    email: '',
-    rating: 0,
-    review: '',
-  });
+  const audioRef = useRef(null);
+  const relatedRef = useRef(null);
+  const recommendedRef = useRef(null);
+
+  const header_image_dark = '/images/header-image-dark.png';
+  const header_image_light = '/images/header-image-light.png';
+  const bookImage = '/images/book-image.jpg';
+  const audioFile = '/images/Collections/Nitnem.mp3';
+
+  const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, review: '' });
   const [reviews, setReviews] = useState([]);
   const [visibleReviews, setVisibleReviews] = useState(5);
   const [sortBy, setSortBy] = useState('newest');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Audio player controls
+  // ---------- Player ----------
   const togglePlayPause = () => {
+    if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
+      setIsPlaying(false);
     } else {
-      audioRef.current.play();
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     }
-    setIsPlaying(!isPlaying);
   };
 
-  const handleTimeUpdate = () => {
-    setCurrentTime(audioRef.current.currentTime);
+  const skip = (seconds) => {
+    if (!audioRef.current) return;
+    const next = Math.min(Math.max(audioRef.current.currentTime + seconds, 0), duration || 0);
+    audioRef.current.currentTime = next;
+    setCurrentTime(next);
   };
 
-  const handleLoadedMetadata = () => {
-    setDuration(audioRef.current.duration);
-  };
+  const handleTimeUpdate = () => setCurrentTime(audioRef.current.currentTime);
+  const handleLoadedMetadata = () => setDuration(audioRef.current.duration);
 
   const handleSeek = (e) => {
-    const seekTime = e.target.value;
+    const seekTime = Number(e.target.value);
     audioRef.current.currentTime = seekTime;
     setCurrentTime(seekTime);
   };
 
   const formatTime = (time) => {
+    if (!Number.isFinite(time)) return '0:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
   useEffect(() => {
-    const fetchAudiobook = async () => {
-      setIsLoading(true);
-      setTimeout(() => {
-        setAudiobook({
-          id,
-          title: "Nitnem",
-          author: "Guru Granth Sahib",
-          cover: bookImage,
-          rating: 4.9,
-          reviews: 1842,
-          length: "2 hours 45 minutes",
-          format: "MP3",
-          genre: "Spiritual",
-          description: `Nitnem is a collection of Sikh hymns (Gurbani) to be read daily by devout Sikhs. These hymns are recited at specific times throughout the day and are considered essential for spiritual growth and connection with the Divine.
+    setIsLoading(true);
+    setRelatedLoading(true);
+    const t1 = setTimeout(() => {
+      setAudiobook({
+        id,
+        title: 'Nitnem',
+        author: 'Guru Granth Sahib',
+        cover: bookImage,
+        rating: 4.9,
+        reviews: 1842,
+        length: '2 hours 45 minutes',
+        format: 'MP3',
+        genre: 'Spiritual',
+        description: `Nitnem is a collection of Sikh hymns (Gurbani) to be read daily by devout Sikhs. These hymns are recited at specific times throughout the day and are considered essential for spiritual growth and connection with the Divine.
 
-          The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sahib, and Anand Sahib. These sacred compositions by the Sikh Gurus provide guidance, inspiration, and a framework for daily spiritual practice.`,
-          chapters: [
-            { id: 1, title: "Japji Sahib", duration: "20:15", locked: false },
-            { id: 2, title: "Jaap Sahib", duration: "15:30", locked: false },
-            { id: 3, title: "Tav-Prasad Savaiye", duration: "08:45", locked: false },
-            { id: 4, title: "Chaupai Sahib", duration: "12:20", locked: true },
-            { id: 5, title: "Anand Sahib", duration: "18:40", locked: true },
-          ],
-        });
-        
-        // Mock reviews data
-        const mockReviews = Array.from({ length: 20 }, (_, i) => ({
-          id: i + 1,
-          name: ['Amrit', 'Gurpreet', 'Harpreet', 'Jaspreet', 'Manpreet', 'Navpreet'][i % 6],
-          date: new Date(Date.now() - (i * 86400000)).toLocaleDateString(),
-          rating: [4, 5, 3, 4, 5, 4, 3, 5, 4, 5][i % 10],
-          review: [
-            "This audiobook brings peace to my daily routine. The recitation is beautiful!",
-            "A must-have for every Sikh household. Perfect for morning meditation.",
-            "The pronunciation is very clear and easy to follow along.",
-            "Listening to Nitnem while commuting has transformed my day.",
-            "The audio quality is excellent and the voice is very soothing.",
-            "Helps me maintain my daily spiritual practice even when traveling.",
-            "Would be better with translations included.",
-            "The chapters are perfectly timed for daily listening.",
-            "I love how this preserves the traditional way of reciting Gurbani.",
-            "The ending shabads give me chills every time."
-          ][i % 10],
-          helpful: Math.floor(Math.random() * 50)
-        }));
-        
-        setReviews(mockReviews);
-        setIsLoading(false);
-        
-        // Simulate separate loading for related books
-        setTimeout(() => {
-          setAudiobook(prev => ({
-            ...prev,
-            related: [
-              { id: 201, title: "Sukhmani Sahib", author: "Guru Arjan Dev", cover: bookImage },
-              { id: 202, title: "Asa Di Var", author: "Guru Nanak Dev", cover: bookImage },
-              { id: 203, title: "Rehras Sahib", author: "Guru Granth Sahib", cover: bookImage },
-              { id: 204, title: "Kirtan Sohila", author: "Guru Granth Sahib", cover: bookImage },
-              { id: 205, title: "Gurbani Kirtan", author: "Various Ragis", cover: bookImage },
-              { id: 206, title: "Sukhmani Sahib", author: "Guru Arjan Dev", cover: bookImage },
-              { id: 207, title: "Asa Di Var", author: "Guru Nanak Dev", cover: bookImage },
-              { id: 208, title: "Rehras Sahib", author: "Guru Granth Sahib", cover: bookImage },
-              { id: 209, title: "Kirtan Sohila", author: "Guru Granth Sahib", cover: bookImage },
-              { id: 210, title: "Gurbani Kirtan", author: "Various Ragis", cover: bookImage },
-            ]
-          }));
-          setRelatedLoading(false);
-        }, 1500);
-      }, 1000);
+The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sahib, and Anand Sahib. These sacred compositions by the Sikh Gurus provide guidance, inspiration, and a framework for daily spiritual practice.`,
+        chapters: [
+          { id: 1, title: 'Japji Sahib', duration: '20:15', locked: false },
+          { id: 2, title: 'Jaap Sahib', duration: '15:30', locked: false },
+          { id: 3, title: 'Tav-Prasad Savaiye', duration: '08:45', locked: false },
+          { id: 4, title: 'Chaupai Sahib', duration: '12:20', locked: true },
+          { id: 5, title: 'Anand Sahib', duration: '18:40', locked: true },
+        ],
+      });
+
+      setReviews(Array.from({ length: 20 }, (_, i) => ({
+        id: i + 1,
+        name: ['Amrit', 'Gurpreet', 'Harpreet', 'Jaspreet', 'Manpreet', 'Navpreet'][i % 6],
+        date: new Date(Date.now() - (i * 86400000)).toLocaleDateString(),
+        rating: [4, 5, 3, 4, 5, 4, 3, 5, 4, 5][i % 10],
+        review: [
+          'This audiobook brings peace to my daily routine. The recitation is beautiful!',
+          'A must-have for every Sikh household. Perfect for morning meditation.',
+          'The pronunciation is very clear and easy to follow along.',
+          'Listening to Nitnem while commuting has transformed my day.',
+          'The audio quality is excellent and the voice is very soothing.',
+          'Helps me maintain my daily spiritual practice even when traveling.',
+          'Would be better with translations included.',
+          'The chapters are perfectly timed for daily listening.',
+          'I love how this preserves the traditional way of reciting Gurbani.',
+          'The ending shabads give me chills every time.',
+        ][i % 10],
+        helpful: (i * 7) % 50,
+      })));
+      setIsLoading(false);
+    }, 600);
+
+    const t2 = setTimeout(() => {
+      setAudiobook((prev) => prev && ({
+        ...prev,
+        related: [
+          { id: 201, title: 'Sukhmani Sahib', author: 'Guru Arjan Dev', cover: bookImage },
+          { id: 202, title: 'Asa Di Var', author: 'Guru Nanak Dev', cover: bookImage },
+          { id: 203, title: 'Rehras Sahib', author: 'Guru Granth Sahib', cover: bookImage },
+          { id: 204, title: 'Kirtan Sohila', author: 'Guru Granth Sahib', cover: bookImage },
+          { id: 205, title: 'Gurbani Kirtan', author: 'Various Ragis', cover: bookImage },
+        ],
+      }));
+      setRelatedLoading(false);
+    }, 1200);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
-    fetchAudiobook();
   }, [id]);
 
-  const toggleChapter = (chapterId) => {
-    setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
-  };
+  const toggleChapter = (chapterId) => setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
 
-  const handleListenChapter = (chapterId) => {
-    // In a real app, this would load the specific chapter audio
+  const handleListenChapter = () => {
+    if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
-    audioRef.current.play();
-    setIsPlaying(true);
+    audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
   };
 
-  const scrollRelated = (direction, sectionId) => {
-    const container = document.querySelector(`.${styles.relatedScrollContainer}[data-section="${sectionId}"]`);
-    const scrollAmount = direction === 'left' ? -300 : 300;
-    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  const scrollRow = (ref, direction) => {
+    ref.current?.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
   };
 
-  const handleRatingChange = (rating) => {
-    setReviewForm({ ...reviewForm, rating });
-  };
+  const handleRatingChange = (rating) => setReviewForm({ ...reviewForm, rating });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -191,143 +194,160 @@ const AudiobookDetail = ({ isDarkMode }) => {
   const handleSubmitReview = (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
     setTimeout(() => {
-      const newReview = {
-        id: reviews.length + 1,
-        name: reviewForm.name,
-        date: new Date().toLocaleDateString(),
-        rating: reviewForm.rating,
-        review: reviewForm.review,
-        helpful: 0
-      };
-      
-      setReviews([newReview, ...reviews]);
-      setReviewForm({
-        name: '',
-        email: '',
-        rating: 0,
-        review: '',
-      });
+      setReviews((prev) => [
+        {
+          id: prev.length + 1,
+          name: reviewForm.name,
+          date: new Date().toLocaleDateString(),
+          rating: reviewForm.rating,
+          review: reviewForm.review,
+          helpful: 0,
+        },
+        ...prev,
+      ]);
+      setReviewForm({ name: '', email: '', rating: 0, review: '' });
       setIsSubmitting(false);
-    }, 1000);
-  };
-
-  const loadMoreReviews = () => {
-    setVisibleReviews(prev => prev + 5);
+    }, 600);
   };
 
   const toggleHelpful = (reviewId) => {
-    setReviews(reviews.map(review => 
-      review.id === reviewId 
-        ? { ...review, helpful: review.helpful + 1 } 
-        : review
-    ));
+    setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, helpful: r.helpful + 1 } : r)));
   };
 
-  const sortedReviews = [...reviews].sort((a, b) => {
-    if (sortBy === 'newest') {
-      return b.id - a.id;
-    } else {
-      return b.helpful - a.helpful;
-    }
-  });
-
+  const sortedReviews = useMemo(
+    () => [...reviews].sort((a, b) => (sortBy === 'newest' ? b.id - a.id : b.helpful - a.helpful)),
+    [reviews, sortBy]
+  );
   const displayedReviews = sortedReviews.slice(0, visibleReviews);
 
-  if (isLoading) {
-    return <div className={styles.audiobookDetailContainer}><Loader/></div>;
+  if (isLoading || !audiobook) {
+    return <div className={styles.page}><Loader /></div>;
   }
 
+  const [firstParagraph] = audiobook.description.split('\n');
+  const progress = duration ? (currentTime / duration) * 100 : 0;
+  const related = audiobook.related || [];
+
+  const renderRelated = (items, ref, label) => (
+    <section className={`${styles.asideBlock} ${styles.glass}`}>
+      <div className={styles.asideHead}>
+        <h3 className={styles.asideTitle}>{label}</h3>
+        <div className={styles.scrollButtons}>
+          <button type="button" onClick={() => scrollRow(ref, 'left')} className={styles.scrollButton} aria-label={`Scroll ${label} left`}>
+            <FaChevronLeft />
+          </button>
+          <button type="button" onClick={() => scrollRow(ref, 'right')} className={styles.scrollButton} aria-label={`Scroll ${label} right`}>
+            <FaChevronRight />
+          </button>
+        </div>
+      </div>
+      <div className={styles.relatedList} ref={ref}>
+        {relatedLoading
+          ? Array.from({ length: 4 }).map((_, i) => <RelatedSkeleton key={i} />)
+          : items.map((book) => (
+              <Link key={book.id} to={`/collections/audiobooks/audiobook/${book.id}`} className={styles.relatedCard}>
+                <img src={getImagePath(book.cover)} alt="" className={`${styles.relatedThumb} ${styles.relatedThumbSquare}`} loading="lazy" />
+                <span className={styles.relatedInfo}>
+                  <span className={styles.relatedTitle}>{book.title}</span>
+                  <span className={styles.relatedMeta}>{book.author}</span>
+                </span>
+              </Link>
+            ))}
+      </div>
+    </section>
+  );
+
   return (
-    <div className={styles.audiobookDetailContainer}>
-      {/* Hidden audio element */}
+    <div className={styles.page}>
       <audio
         ref={audioRef}
         src={audioFile}
+        preload="metadata"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => setIsPlaying(false)}
       />
-      
-      <div className={styles.headerImageSection}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Header"
-          className={styles.headerImage}
-        />
-        <div className={styles.headerText}>
-          <h1>NITNEM</h1>
-          <p>Daily prayers from Guru Granth Sahib</p>
-        </div>
-      </div>
 
-      <div className={styles.breadcrumb}>
-        <Link to="/">
-          <span>Home</span>
-        </Link>{" "}
-        /{" "}
-        <Link to="/collections">
-          <span> Collections</span>
-        </Link>{" "}
-        /{" "}
-        <Link to="/collections/audiobooks">
-          <span> Audiobooks</span>
-        </Link>{" "}
-        / <span> Nitnem</span>
-      </div>
+      <PageHero
+        compact
+        image={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
+        title="NITNEM"
+        subtitle="Daily prayers from Guru Granth Sahib"
+        crumbs={[
+          { label: 'Home', to: '/' },
+          { label: 'Collections', to: '/collections' },
+          { label: 'Audiobooks', to: '/collections/audiobooks' },
+          { label: audiobook.title },
+        ]}
+      />
 
-      <div className={styles.mainContentContainer}>
-        <div className={styles.leftColumn}>
-          <div className={styles.heroSection}>
-            <div className={styles.coverContainer}>
-              <img 
-                src={getImagePath(audiobook.cover)} 
-                alt={audiobook.title} 
-                className={styles.audiobookCover}
-              />
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          <section className={styles.productCard} aria-label="Audiobook details">
+            <div className={styles.coverStage}>
+              <div className={`${styles.cover} ${styles.coverSquare} ${isPlaying ? styles.coverPlaying : ''}`}>
+                <img src={getImagePath(audiobook.cover)} alt={`Cover of ${audiobook.title}`} className={styles.coverImg} />
+              </div>
             </div>
 
-            <div className={styles.detailsContainer}>
-              <div className={styles.metaHeader}>
-                <span className={styles.genre}>{audiobook.genre}</span>
-                <div className={styles.rating}>
-                  ⭐ {audiobook.rating} <span className={styles.reviews}>({audiobook.reviews} reviews)</span>
-                </div>
+            <div className={styles.info}>
+              <div className={styles.chipRow}>
+                <span className={styles.chip}><FaHeadphones aria-hidden="true" /> {audiobook.genre}</span>
+                <span className={styles.ratingRow}>
+                  <Stars value={audiobook.rating} />
+                  {audiobook.rating} · {audiobook.reviews.toLocaleString()} reviews
+                </span>
               </div>
 
-              <h1 className={styles.title}>{audiobook.title}</h1>
-              <h2 className={styles.author}>By {audiobook.author}</h2>
+              <h2 className={styles.title}>{audiobook.title}</h2>
+              <p className={styles.byline}>by {audiobook.author}</p>
 
-              <div className={styles.metaFooter}>
-                <span>{audiobook.length}</span>
-                <span>•</span>
-                <span>{audiobook.format}</span>
+              <div className={styles.metaRow}>
+                <span className={styles.metaPill}><FaClock aria-hidden="true" /> {audiobook.length}</span>
+                <span className={styles.metaPill}>{audiobook.format}</span>
+                <span className={styles.metaPill}>{audiobook.chapters.length} banis</span>
               </div>
 
-              <div className={styles.descriptionContainer}>
-                <h3 className={styles.sectionTitle}>Description</h3>
-                <div className={styles.descriptionText}>
-                  {showFullDescription ? audiobook.description : `${audiobook.description.split('\n')[0]}\n\n${audiobook.description.split('\n')[1]}`}
-                  <button 
-                    className={styles.showMoreButton}
-                    onClick={() => setShowFullDescription(!showFullDescription)}
-                  >
-                    {showFullDescription ? 'Show Less' : 'Show More'}
-                  </button>
-                </div>
+              <div className={styles.description}>
+                <p className={styles.descText}>{showFullDescription ? audiobook.description : firstParagraph}</p>
+                <button type="button" className={styles.moreButton} onClick={() => setShowFullDescription(!showFullDescription)}>
+                  {showFullDescription ? 'Show less' : 'Read full description'}
+                </button>
               </div>
 
-              {/* Audio Player Controls */}
-              <div className={styles.audioPlayer}>
-                <div className={styles.progressContainer}>
+              {/* Player */}
+              <div className={styles.player}>
+                <button
+                  type="button"
+                  className={styles.playButton}
+                  onClick={togglePlayPause}
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                >
+                  {isPlaying ? <FaPause /> : <FaPlay className={styles.playIconNudge} />}
+                </button>
+                <div className={styles.playerTrack}>
+                  <div className={styles.playerTop}>
+                    <span className={styles.playerLabel}>{isPlaying ? 'Now playing' : 'Ready to play'}</span>
+                    <div className={styles.skipButtons}>
+                      <button type="button" className={styles.skipButton} onClick={() => skip(-15)} aria-label="Back 15 seconds">
+                        <FaUndoAlt /><span>15</span>
+                      </button>
+                      <button type="button" className={styles.skipButton} onClick={() => skip(15)} aria-label="Forward 15 seconds">
+                        <FaRedoAlt /><span>15</span>
+                      </button>
+                    </div>
+                  </div>
                   <input
                     type="range"
                     min="0"
                     max={duration || 100}
+                    step="1"
                     value={currentTime}
                     onChange={handleSeek}
                     className={styles.progressBar}
+                    style={{ '--progress': `${progress}%` }}
+                    aria-label="Seek"
                   />
                   <div className={styles.timeDisplay}>
                     <span>{formatTime(currentTime)}</span>
@@ -336,300 +356,165 @@ const AudiobookDetail = ({ isDarkMode }) => {
                 </div>
               </div>
 
-              <div className={styles.actionButtons}>
-                <button 
-                  className={styles.primaryButton}
-                  onClick={togglePlayPause}
-                >
-                  {isPlaying ? <FaPause /> : <FaPlay />}
-                  {isPlaying ? 'Pause' : 'Listen Now'}
+              <div className={styles.actions}>
+                <button type="button" className={styles.secondaryButton}>
+                  <FaDownload aria-hidden="true" /> Download
                 </button>
-                <button className={styles.secondaryButton}>Download</button>
-                <button 
-                  className={styles.iconButton} 
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
                   onClick={() => setLiked(!liked)}
-                  aria-label={liked ? "Unlike" : "Like"}
+                  aria-pressed={liked}
+                  aria-label={liked ? 'Unlike' : 'Like'}
                 >
-                  {liked ? <FaHeart color="red" /> : <FaRegHeart />}
+                  {liked ? <FaHeart /> : <FaRegHeart />}
                 </button>
-                <button 
-                  className={styles.iconButton}
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
                   onClick={() => setSaved(!saved)}
-                  aria-label={saved ? "Unsave" : "Save for later"}
+                  aria-pressed={saved}
+                  aria-label={saved ? 'Remove from saved' : 'Save for later'}
                 >
-                  {saved ? <FaBookmark color="var(--icon-color)" /> : <FaRegBookmark />}
+                  {saved ? <FaBookmark /> : <FaRegBookmark />}
                 </button>
-                <button className={styles.iconButton} aria-label="Share">
+                <button type="button" className={styles.iconButton} aria-label="Share">
                   <FaShareAlt />
                 </button>
               </div>
             </div>
-          </div>
-
-          <section className={styles.chaptersSection}>
-            <h3 className={styles.sectionTitle}>Chapters</h3>
-            <div className={styles.chaptersList}>
-              {audiobook.chapters.map((chapter) => (
-                <div key={chapter.id} className={styles.chapterItem}>
-                  <div 
-                    className={styles.chapterHeader}
-                    onClick={() => toggleChapter(chapter.id)}
-                  >
-                    <span className={styles.chapterNumber}>Chapter {chapter.id}</span>
-                    <h4 className={styles.chapterTitle}>{chapter.title}</h4>
-                    <span className={styles.chapterDuration}>{chapter.duration}</span>
-                    {expandedChapter === chapter.id ? <IoIosArrowUp /> : <IoIosArrowDown />}
-                  </div>
-                  {expandedChapter === chapter.id && (
-                    <div className={styles.chapterContent}>
-                      <p className={styles.chapterSummary}>
-                        This chapter contains {chapter.title}. A sacred composition from Guru Granth Sahib.
-                      </p>
-                      {chapter.locked ? (
-                        <button className={styles.lockedButton}>Unlock with Premium</button>
-                      ) : (
-                        <button 
-                          className={styles.listenChapterButton}
-                          onClick={() => handleListenChapter(chapter.id)}
-                        >
-                          Listen to This Audiobook
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
           </section>
 
-          {/* Reviews Section (same as EbookDetail) */}
-          <section className={styles.reviewsSection}>
-            <h3 className={styles.sectionTitle}>Ratings & Reviews</h3>
-            
-            <div className={styles.reviewFormContainer}>
-              <h4>Write a Review</h4>
-              <form onSubmit={handleSubmitReview}>
-                <div className={styles.formGroup}>
-                  <label htmlFor="name">Name</label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={reviewForm.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                
-                <div className={styles.formGroup}>
-                  <label htmlFor="email">Email</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={reviewForm.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                
-                <div className={styles.formGroup}>
-                  <label>Rating</label>
-                  <div className={styles.ratingInput}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => handleRatingChange(star)}
-                        className={styles.starButton}
-                      >
-                        {star <= reviewForm.rating ? (
-                          <FaStar className={styles.starFilled} />
+          {/* Chapters */}
+          <section className={styles.section} aria-labelledby="chapters-title">
+            <div className={styles.sectionHead}>
+              <div>
+                <h3 id="chapters-title" className={styles.sectionTitle}>Chapters</h3>
+                <p className={styles.sectionNote}>{audiobook.chapters.filter((c) => !c.locked).length} free, {audiobook.chapters.filter((c) => c.locked).length} with Premium</p>
+              </div>
+            </div>
+            <ol className={styles.chapterList}>
+              {audiobook.chapters.map((chapter, index) => {
+                const open = expandedChapter === chapter.id;
+                return (
+                  <li key={chapter.id} className={`${styles.chapter} ${styles.glass} ${open ? styles.chapterOpen : ''}`}>
+                    <button type="button" className={styles.chapterHead} onClick={() => toggleChapter(chapter.id)} aria-expanded={open}>
+                      <span className={styles.chapterIndex}>{chapter.locked ? <FaLock aria-label="Premium" /> : index + 1}</span>
+                      <span className={styles.chapterName}>{chapter.title}</span>
+                      <span className={styles.chapterMeta}><FaClock aria-hidden="true" /> {chapter.duration}</span>
+                      <FaChevronDown className={styles.chapterChevron} aria-hidden="true" />
+                    </button>
+                    {open && (
+                      <div className={styles.chapterBody}>
+                        <p className={styles.chapterText}>{chapter.title}, a sacred composition from Guru Granth Sahib.</p>
+                        {chapter.locked ? (
+                          <Link to="/premium" className={`${styles.smallButton} ${styles.lockedButton}`}>
+                            <FaLock aria-hidden="true" /> Unlock with Premium
+                          </Link>
                         ) : (
-                          <FaRegStar className={styles.starEmpty} />
+                          <button type="button" className={styles.smallButton} onClick={() => handleListenChapter(chapter.id)}>
+                            <FaPlay aria-hidden="true" /> Listen to this chapter
+                          </button>
                         )}
-                      </button>
-                    ))}
-                    <span className={styles.ratingText}>
-                      {reviewForm.rating > 0 ? `${reviewForm.rating} star${reviewForm.rating !== 1 ? 's' : ''}` : 'Select rating'}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className={styles.formGroup}>
-                  <label htmlFor="review">Your Review</label>
-                  <textarea
-                    id="review"
-                    name="review"
-                    value={reviewForm.review}
-                    onChange={handleInputChange}
-                    rows="4"
-                    required
-                  />
-                </div>
-                
-                <button 
-                  type="submit" 
-                  className={styles.submitReviewButton}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit Review'}
-                </button>
-              </form>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+
+          {/* Reviews */}
+          <section className={styles.section} aria-labelledby="reviews-title">
+            <div className={styles.sectionHead}>
+              <h3 id="reviews-title" className={styles.sectionTitle}>Ratings and reviews</h3>
             </div>
-            
-            <div className={styles.reviewsListContainer}>
-              <div className={styles.reviewsHeader}>
-                <h4>{reviews.length} Reviews</h4>
-                <div className={styles.sortDropdown}>
-                  <FaSort className={styles.sortIcon} />
-                  <select 
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className={styles.sortSelect}
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="top">Top Comments</option>
-                  </select>
+
+            <form className={`${styles.reviewForm} ${styles.glass}`} onSubmit={handleSubmitReview}>
+              <h4 className={styles.formTitle}>Write a review</h4>
+              <div className={styles.formRow}>
+                <div className={styles.field}>
+                  <label htmlFor="name" className={styles.label}>Name</label>
+                  <input id="name" name="name" type="text" className={styles.input} value={reviewForm.name} onChange={handleInputChange} required />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="email" className={styles.label}>Email</label>
+                  <input id="email" name="email" type="email" className={styles.input} value={reviewForm.email} onChange={handleInputChange} required />
                 </div>
               </div>
-              
-              <div className={styles.reviewsList}>
-                {displayedReviews.map((review) => (
-                  <div key={review.id} className={styles.reviewItem}>
-                    <div className={styles.reviewHeader}>
-                      <div className={styles.reviewerInfo}>
-                        <div className={styles.reviewerInitial}>{review.name.charAt(0)}</div>
-                        <div>
-                          <div className={styles.reviewerName}>{review.name}</div>
-                          <div className={styles.reviewDate}>{review.date}</div>
-                        </div>
-                      </div>
-                      <div className={styles.reviewRating}>
-                        {[...Array(5)].map((_, i) => (
-                          i < review.rating ? 
-                            <FaStar key={i} className={styles.starFilled} /> : 
-                            <FaRegStar key={i} className={styles.starEmpty} />
-                        ))}
-                      </div>
-                    </div>
-                    <div className={styles.reviewContent}>
-                      {review.review}
-                    </div>
-                    <div className={styles.reviewActions}>
-                      <button 
-                        className={styles.helpfulButton}
-                        onClick={() => toggleHelpful(review.id)}
-                      >
-                        Helpful ({review.helpful})
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              <div className={styles.field}>
+                <span className={styles.label} id="a-rating-label">Your rating</span>
+                <div className={styles.starPicker} role="group" aria-labelledby="a-rating-label">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => handleRatingChange(star)}
+                      className={styles.starButton}
+                      aria-label={`${star} star${star !== 1 ? 's' : ''}`}
+                      aria-pressed={star <= reviewForm.rating}
+                    >
+                      {star <= reviewForm.rating ? <FaStar className={styles.starOn} /> : <FaRegStar className={styles.starOff} />}
+                    </button>
+                  ))}
+                  <span className={styles.ratingHint}>{reviewForm.rating > 0 ? `${reviewForm.rating} of 5` : 'Tap a star'}</span>
+                </div>
               </div>
-              
-              {visibleReviews < reviews.length && (
-                <button 
-                  className={styles.loadMoreButton}
-                  onClick={loadMoreReviews}
-                >
-                  Show More Reviews
+              <div className={styles.field}>
+                <label htmlFor="review" className={styles.label}>Your review</label>
+                <textarea id="review" name="review" className={styles.textarea} value={reviewForm.review} onChange={handleInputChange} required />
+              </div>
+              <div className={styles.formActions}>
+                <button type="submit" className={styles.primaryButton} disabled={isSubmitting || reviewForm.rating === 0}>
+                  {isSubmitting ? 'Posting…' : 'Post review'}
                 </button>
-              )}
+              </div>
+            </form>
+
+            <div className={styles.reviewsHeader}>
+              <p className={styles.reviewsCount}>{reviews.length} reviews</p>
+              <label className={styles.sortWrap}>
+                <FaSort aria-hidden="true" />
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles.sortSelect} aria-label="Sort reviews">
+                  <option value="newest">Newest first</option>
+                  <option value="top">Most helpful</option>
+                </select>
+              </label>
             </div>
+
+            <ul className={styles.reviewList}>
+              {displayedReviews.map((review) => (
+                <li key={review.id} className={`${styles.review} ${styles.glass}`}>
+                  <div className={styles.reviewTop}>
+                    <div className={styles.reviewer}>
+                      <span className={styles.avatar} aria-hidden="true">{review.name.charAt(0).toUpperCase()}</span>
+                      <div>
+                        <div className={styles.reviewName}>{review.name}</div>
+                        <div className={styles.reviewDate}>{review.date}</div>
+                      </div>
+                    </div>
+                    <Stars value={review.rating} />
+                  </div>
+                  <p className={styles.reviewBody}>{review.review}</p>
+                  <button type="button" className={styles.helpful} onClick={() => toggleHelpful(review.id)}>
+                    Helpful ({review.helpful})
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {visibleReviews < reviews.length && (
+              <button type="button" className={`${styles.secondaryButton} ${styles.loadMore}`} onClick={() => setVisibleReviews((v) => v + 5)}>
+                Show more reviews
+              </button>
+            )}
           </section>
         </div>
 
-        <div className={styles.rightColumn}>
-          <section className={styles.relatedSection}>
-            <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Related Audiobooks</h3>
-              <div className={styles.scrollButtons}>
-                <button onClick={() => scrollRelated('left', 'related')} className={styles.scrollButton}>
-                  <FaChevronLeft />
-                </button>
-                <button onClick={() => scrollRelated('right', 'related')} className={styles.scrollButton}>
-                  <FaChevronRight />
-                </button>
-              </div>
-            </div>
-            <div 
-              className={styles.relatedScrollContainer} 
-              data-section="related"
-            >
-              <div className={styles.relatedGrid}>
-                {relatedLoading ? (
-                  Array(5).fill().map((_, index) => (
-                    <RelatedCardSkeleton key={`related-skeleton-${index}`} />
-                  ))
-                ) : (
-                  audiobook.related.map((book) => (
-                    <div key={book.id} className={styles.relatedCard} onClick={() => navigate(`/audiobooks/${book.id}`)}>
-                      <div className={styles.relatedImageContainer}>
-                        <img src={getImagePath(book.cover)} alt={book.title} className={styles.relatedCover} />
-                      </div>
-                      <div className={styles.relatedInfo}>
-                        <h4 className={styles.relatedTitle}>{book.title}</h4>
-                        <p className={styles.relatedAuthor}>{book.author}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.recommendedSection}>
-            <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Because you liked Gurbani Kirtan</h3>
-              <div className={styles.scrollButtons}>
-                <button onClick={() => scrollRelated('left', 'recommended')} className={styles.scrollButton}>
-                  <FaChevronLeft />
-                </button>
-                <button onClick={() => scrollRelated('right', 'recommended')} className={styles.scrollButton}>
-                  <FaChevronRight />
-                </button>
-              </div>
-            </div>
-            <div 
-              className={styles.relatedScrollContainer} 
-              data-section="recommended"
-            >
-              <div className={styles.relatedGrid}>
-                {relatedLoading ? (
-                  Array(5).fill().map((_, index) => (
-                    <RelatedCardSkeleton key={`recommended-skeleton-${index}`} />
-                  ))
-                ) : (
-                  [...audiobook.related].reverse().map((book) => (
-                    <div key={book.id} className={styles.relatedCard} onClick={() => navigate(`/audiobooks/${book.id}`)}>
-                      <div className={styles.relatedImageContainer}>
-                        <img src={getImagePath(book.cover)} alt={book.title} className={styles.relatedCover} />
-                      </div>
-                      <div className={styles.relatedTextContent}>
-                        <h4 className={styles.relatedTitle}>{book.title}</h4>
-                        <p className={styles.relatedAuthor}>{book.author}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const RelatedCardSkeleton = () => {
-  return (
-    <div className={styles.relatedCard}>
-      <div className={styles.skeletonRelatedImageContainer}>
-      </div>
-      <div className={styles.relatedCardText}>
-        <div className={styles.skeletonRelatedTitle}></div>
-        <div className={styles.skeletonRelatedAuthor}></div>
+        <aside className={styles.aside}>
+          {renderRelated(related, relatedRef, 'Related audiobooks')}
+          {renderRelated([...related].reverse(), recommendedRef, 'Because you liked Gurbani Kirtan')}
+        </aside>
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/AuthContext';
 import styles from './WordSearch.module.css';
 import { Howl } from 'howler';
-import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaEdit, FaCreditCard, FaTrash, FaSignOutAlt, FaGamepad, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaEdit, FaCreditCard, FaTrash, FaSignOutAlt, FaGamepad, FaChevronLeft, FaChevronRight, FaMedal, FaFont, FaBolt } from 'react-icons/fa';
 import { GiTreasureMap, GiClockwork, GiStairsGoal } from 'react-icons/gi';
 import { IoMdTimer, IoMdSettings } from 'react-icons/io';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
@@ -65,11 +65,11 @@ const fetchUserAchievements = async (userId) => {
   await new Promise(resolve => setTimeout(resolve, 800));
   if (!userId) return [];
   return [
-    { id: 1, name: 'First Game', description: 'Complete your first game', earned: true, icon: '🥇' },
-    { id: 2, name: 'Word Master', description: 'Find 50 words', earned: false, icon: '🔤', progress: '12/50' },
-    { id: 3, name: 'Speedster', description: 'Complete a game in under 2 minutes', earned: true, icon: '⚡' },
-    { id: 4, name: 'Premium Player', description: 'Play a premium map', earned: false, icon: '💎' },
-    { id: 5, name: 'Coin Collector', description: 'Earn 1000 coins', earned: false, icon: '🪙', progress: '350/1000' },
+    { id: 1, name: 'First Game', description: 'Complete your first game', earned: true, icon: <FaMedal /> },
+    { id: 2, name: 'Word Master', description: 'Find 50 words', earned: false, icon: <FaFont />, progress: '12/50' },
+    { id: 3, name: 'Speedster', description: 'Complete a game in under 2 minutes', earned: true, icon: <FaBolt /> },
+    { id: 4, name: 'Premium Player', description: 'Play a premium map', earned: false, icon: <FaGem /> },
+    { id: 5, name: 'Coin Collector', description: 'Earn 1000 coins', earned: false, icon: <FaCoins />, progress: '350/1000' },
   ];
 };
 
@@ -1116,7 +1116,6 @@ const WordSearchGamePlay = () => {
           <div
             className={`${styles.tabContainer} ${isTabDropdownOpen ? styles.open : ''}`}
             onClick={() => {
-              console.log('Tab container clicked, toggling dropdown:', !isTabDropdownOpen);
               setIsTabDropdownOpen(!isTabDropdownOpen);
             }}
           >
@@ -1124,7 +1123,6 @@ const WordSearchGamePlay = () => {
               className={`${styles.tabButton} ${activeTab === 'game' ? styles.activeTab : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('Game tab selected');
                 setActiveTab('game');
                 setIsTabDropdownOpen(false);
               }}
@@ -1135,7 +1133,6 @@ const WordSearchGamePlay = () => {
               className={`${styles.tabButton} ${activeTab === 'achievements' ? styles.activeTab : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('Achievements tab selected');
                 setActiveTab('achievements');
                 setIsTabDropdownOpen(false);
               }}
@@ -1146,7 +1143,6 @@ const WordSearchGamePlay = () => {
               className={`${styles.tabButton} ${activeTab === 'scorers' ? styles.activeTab : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('Top Scorers tab selected');
                 setActiveTab('scorers');
                 setIsTabDropdownOpen(false);
               }}
@@ -1334,7 +1330,7 @@ const WordSearchGamePlay = () => {
           <h2>
             <IoMdSettings /> {settings.language === 'punjabi' ? 'ਸੈਟਿੰਗਾਂ' : 'Settings'}
           </h2>
-          <button className={styles.closeButton} onClick={() => setShowSettings(false)}>
+          <button className={styles.closeButton} onClick={() => setShowSettings(false)} aria-label="Close settings">
             ×
           </button>
         </div>
@@ -1702,7 +1698,7 @@ const WordSearchGamePlay = () => {
               {showProfileDropdown && renderProfileDropdown()}
             </div>
           )}
-          <button className={styles.settingsButton} onClick={() => setShowSettings(!showSettings)}>
+          <button className={styles.settingsButton} onClick={() => setShowSettings(!showSettings)} aria-label="Settings">
             <IoMdSettings className={styles.icon} />
           </button>
         </div>

@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import axios from 'axios';
+import {
+  FaLock, FaTimes, FaPlay, FaPause, FaRedo, FaTrophy, FaMedal, FaUsers, FaClock,
+  FaCheck, FaChevronLeft, FaChevronRight, FaCrown,
+} from 'react-icons/fa';
+import PageHero from '../../../components/PageHero/PageHero';
 import styles from './Quizzes.module.css';
 import { useAuth } from '../../../context/AuthContext';
-import axios from 'axios';
-import { FaLock, FaTimes } from 'react-icons/fa';
-
-const FALLBACK_API_URL = 'http://virsaa-prod.eba-7cc3yk92.us-east-1.elasticbeanstalk.com';
 
 // Utility function to handle public/static images
 const getProductionImagePath = (imagePath) => {
@@ -14,20 +16,56 @@ const getProductionImagePath = (imagePath) => {
       return imagePath.startsWith('/')
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-    } else {
-      return imagePath.default || imagePath;
     }
+    return imagePath.default || imagePath;
   }
   return imagePath;
+};
+
+const QUIZ_DURATION = 10 * 60; // 10 minutes
+const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+const RING = 2 * Math.PI * 52;
+
+const formatTime = (seconds) => {
+  const s = Math.max(0, seconds || 0);
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+};
+
+const formatDate = (value) => (value ? new Date(value).toLocaleString() : '');
+
+/* Small accessible dialog: closes on Escape and on backdrop click */
+const Dialog = ({ labelledBy, onClose, children, className = '' }) => {
+  const panelRef = useRef(null);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    panelRef.current?.focus();
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className={styles.overlay} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div
+        ref={panelRef}
+        className={`${styles.dialog} ${className}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        tabIndex={-1}
+      >
+        {children}
+      </div>
+    </div>
+  );
 };
 
 const Quizzes = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
   const { isLoggedIn, isPremium, accessToken, API_STRING } = useAuth();
-  const effectiveApiString = apiString || API_STRING || FALLBACK_API_URL;
-  const getStaticImagePath = getProductionImagePath;
-  const headerLight = getStaticImagePath('/images/header-image.png');
-  const headerDark = getStaticImagePath('/images/header-image-dark.png');
+  const apiUrl = (apiString || API_STRING || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
+  const headerImage = getProductionImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
+  const consoleRef = useRef(null);
+
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -36,7 +74,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const [selectedAnswers, setSelectedAnswers] = useState([]);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isEvaluated, setIsEvaluated] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(QUIZ_DURATION);
   const [timerStarted, setTimerStarted] = useState(false);
   const [timerPaused, setTimerPaused] = useState(false);
   const [showTimeUp, setShowTimeUp] = useState(false);
@@ -49,158 +87,54 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const [tournaments, setTournaments] = useState([]);
   const [badges, setBadges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null);     // only for "quiz could not load"
+  const [notice, setNotice] = useState(null);   // everything else, shown inline
   const [showTournamentModal, setShowTournamentModal] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [tournamentScores, setTournamentScores] = useState([]);
 
-  const quizDuration = 10 * 60; // Default 10 minutes
-
   useEffect(() => {
-    console.log('useAuth output:', { isLoggedIn, isPremium, accessToken, API_STRING });
-    console.log('Effective API_STRING:', effectiveApiString);
+    const config = isLoggedIn && accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {};
+    const base = `${apiUrl}/api/learning`;
 
-    const config = isLoggedIn && accessToken
-      ? { headers: { Authorization: `Bearer ${accessToken}` } }
-      : {};
-
+    // Only the quiz itself is required. The other sections fail quietly and
+    // just show their empty state, instead of blanking the whole page.
     const fetchQuizData = async () => {
       try {
-        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/`, config);
-        console.log('Fetched quiz:', response.data);
+        const response = await axios.get(`${base}/learning-material/${id}/`, config);
         setQuiz(response.data);
         setQuestions(response.data.questions || []);
-        setTimeLeft(quizDuration);
+        setTimeLeft(QUIZ_DURATION);
       } catch (err) {
-        const errorMessage = err.response
-          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Resource not found'}`
-          : 'Network error or server unreachable';
-        console.error('Error fetching quiz data:', errorMessage, err);
-        setError(errorMessage);
+        console.error('Error fetching quiz:', err.response?.status || err.message);
+        setError(err.response?.status === 404 ? 'This quiz doesn’t exist.' : 'This quiz couldn’t be loaded.');
       }
     };
 
-    const fetchDiscussions = async () => {
-      try {
-        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/discussions/`, config);
-        console.log('Fetched discussions:', response.data);
-        setDiscussionPosts(response.data.map(post => ({ ...post, replies: post.replies || [] })));
-      } catch (err) {
-        const errorMessage = err.response
-          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Discussions not found'}`
-          : 'Network error or server unreachable';
-        console.error('Error fetching discussions:', errorMessage, err);
-        setError(errorMessage);
-      }
-    };
-
-    const fetchTopScorers = async () => {
-      try {
-        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/top_scorers/`, config);
-        console.log('Fetched top scorers:', response.data);
-        setTopScorers(response.data);
-      } catch (err) {
-        const errorMessage = err.response
-          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Top scorers not found'}`
-          : 'Network error or server unreachable';
-        console.error('Error fetching top scorers:', errorMessage, err);
-        setError(errorMessage);
-      }
-    };
-
-    const fetchTournaments = async () => {
-      try {
-        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/tournaments/`, config);
-        console.log('Fetched tournaments:', response.data);
-        setTournaments(response.data);
-      } catch (err) {
-        const errorMessage = err.response
-          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Tournaments not found'}`
-          : 'Network error or server unreachable';
-        console.error('Error fetching tournaments:', errorMessage, err);
-        setError(errorMessage);
-      }
-    };
-
-    const fetchBadges = async () => {
-      if (!isLoggedIn || !accessToken) return;
-      try {
-        const response = await axios.get(`${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/badges/`, config);
-        console.log('Fetched badges:', response.data);
-        setBadges(response.data);
-      } catch (err) {
-        const errorMessage = err.response
-          ? `HTTP ${err.response.status}: ${err.response.data.detail || 'Badges not found'}`
-          : 'Network error or server unreachable';
-        console.error('Error fetching badges:', errorMessage, err);
-        setError(errorMessage);
-      }
-    };
+    const quiet = (label, request, setter, map = (d) => d) => request
+      .then((res) => setter(map(res.data || [])))
+      .catch((err) => console.error(`Error fetching ${label}:`, err.response?.status || err.message));
 
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
-      await Promise.all([fetchQuizData(), fetchDiscussions(), fetchTopScorers(), fetchTournaments(), fetchBadges()]);
+      await Promise.all([
+        fetchQuizData(),
+        quiet('discussions', axios.get(`${base}/learning-material/${id}/discussions/`, config), setDiscussionPosts,
+          (d) => d.map((post) => ({ ...post, replies: post.replies || [] }))),
+        quiet('top scorers', axios.get(`${base}/learning-material/${id}/top_scorers/`, config), setTopScorers),
+        quiet('tournaments', axios.get(`${base}/tournaments/`, config), setTournaments),
+        isLoggedIn && accessToken
+          ? quiet('badges', axios.get(`${base}/learning-material/${id}/badges/`, config), setBadges)
+          : Promise.resolve(),
+      ]);
       setIsLoading(false);
     };
 
     fetchData();
-  }, [id, isLoggedIn, isPremium, quizDuration, accessToken, API_STRING, effectiveApiString]);
+  }, [id, isLoggedIn, isPremium, accessToken, apiUrl]);
 
-  useEffect(() => {
-    console.log('showTournamentModal changed:', showTournamentModal);
-  }, [showTournamentModal]);
-
-  const startTimer = () => {
-    setTimeLeft(quizDuration);
-    setTimerStarted(true);
-    setTimerPaused(false);
-  };
-
-  const togglePauseResume = () => {
-    setTimerPaused(!timerPaused);
-  };
-
-  const handleStartQuiz = async (tournamentId = null) => {
-    if (!quiz || (quiz.is_restricted && !isLoggedIn) || (quiz.is_premium && !isPremium)) {
-      setError(quiz?.is_premium ? 'Premium subscription required' : 'Please log in to start the quiz');
-      return;
-    }
-    if (timerStarted) {
-      setShowWarning(true);
-      return;
-    }
-    if (tournamentId) {
-      if (!isLoggedIn || !accessToken) {
-        setError('Please log in to join the tournament');
-        return;
-      }
-      try {
-        console.log('Attempting to join tournament with ID:', tournamentId);
-        console.log('API Endpoint:', `${effectiveApiString.replace(/\/$/, "")}/api/learning/tournaments/${tournamentId}/join/`);
-        console.log('Access Token:', accessToken);
-        const response = await axios.post(
-          `${effectiveApiString.replace(/\/$/, "")}/api/learning/tournaments/${tournamentId}/join/`,
-          {},
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        console.log('Joined tournament:', response.data);
-        setTournamentScores(response.data.scores || []);
-      } catch (err) {
-        console.error('Error joining tournament:', err);
-        const errorMessage = err.response
-          ? `HTTP ${err.response.status}: ${err.response.data.error || 'Failed to join tournament'}`
-          : 'Network error or server unreachable';
-        console.error('Full error response:', err.response ? err.response.data : err);
-        setError(errorMessage);
-        return;
-      }
-    }
-    resetQuiz(tournamentId);
-    startTimer();
-    setShowTournamentModal(false);
-  };
-
+  // Countdown
   useEffect(() => {
     if (timerStarted && !timerPaused && timeLeft > 0) {
       const timer = setInterval(() => {
@@ -217,86 +151,18 @@ const Quizzes = ({ isDarkMode, apiString }) => {
       }, 1000);
       return () => clearInterval(timer);
     }
+    return undefined;
   }, [timerStarted, timerPaused, timeLeft]);
 
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const isBlocked = quiz && ((quiz.is_restricted && !isLoggedIn) || (quiz.is_premium && !isPremium));
+
+  const startTimer = () => {
+    setTimeLeft(QUIZ_DURATION);
+    setTimerStarted(true);
+    setTimerPaused(false);
   };
 
-  const handleAnswer = async (isCorrect, optionId) => {
-    if (isEvaluated || timeLeft <= 0 || timerPaused) return;
-
-    setSelectedOption(optionId);
-    setIsEvaluated(true);
-
-    setSelectedAnswers([...selectedAnswers, { questionId: currentQuestion, optionId }]);
-
-    if (isCorrect) {
-      setScore(score + 1);
-    }
-
-    setTimeout(() => {
-      setSelectedOption(null);
-      setIsEvaluated(false);
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-      } else {
-        submitScore();
-        setShowSummary(true);
-        setTimerStarted(false);
-        setTimerPaused(false);
-      }
-    }, 1500);
-  };
-
-  const submitScore = async () => {
-    if (!isLoggedIn || !accessToken) return;
-    try {
-      const endpoint = selectedTournament
-        ? `${effectiveApiString.replace(/\/$/, "")}/api/learning/tournaments/${selectedTournament}/submit_score/`
-        : `${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/submit_score/`;
-      await axios.post(
-        endpoint,
-        { score },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      console.log('Score submitted successfully');
-    } catch (err) {
-      console.error('Error submitting score:', err);
-      setError('Failed to submit score');
-    }
-  };
-
-  const handleSubmitQuiz = () => {
-    if (timeLeft > 0) {
-      submitScore();
-      setShowSummary(true);
-      setTimerStarted(false);
-      setTimerPaused(false);
-    }
-  };
-
-  const closeSummary = () => {
-    setShowSummary(false);
-    resetQuiz();
-  };
-
-  const closeTimeUp = () => {
-    setShowTimeUp(false);
-    resetQuiz();
-  };
-
-  const handleWarningContinue = () => {
-    setShowWarning(false);
-    resetQuiz(selectedTournament);
-    startTimer();
-  };
-
-  const handleWarningCancel = () => {
-    setShowWarning(false);
-  };
+  const togglePauseResume = () => setTimerPaused(!timerPaused);
 
   const resetQuiz = (tournamentId = null) => {
     setCurrentQuestion(0);
@@ -304,76 +170,141 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     setSelectedAnswers([]);
     setSelectedOption(null);
     setIsEvaluated(false);
-    setTimeLeft(quizDuration);
+    setTimeLeft(QUIZ_DURATION);
     setTimerStarted(false);
     setTimerPaused(false);
     setSelectedTournament(tournamentId);
   };
 
-  const handlePostSubmit = async (e) => {
-    e.preventDefault();
-    if (!isLoggedIn) {
-      setError('Please log in to post a discussion');
+  const handleStartQuiz = async (tournamentId = null) => {
+    setNotice(null);
+    if (!quiz || isBlocked) {
+      setNotice(quiz?.is_premium ? 'This quiz is for Premium members.' : 'Sign in to start this quiz.');
       return;
     }
-    if (newPostContent.trim()) {
+    if (timerStarted) {
+      setShowWarning(true);
+      return;
+    }
+    if (tournamentId) {
+      if (!isLoggedIn || !accessToken) {
+        setNotice('Sign in to join the tournament.');
+        return;
+      }
       try {
         const response = await axios.post(
-          `${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/add_discussion/`,
-          { content: newPostContent, quiz: id },
+          `${apiUrl}/api/learning/tournaments/${tournamentId}/join/`,
+          {},
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
-        const newPost = { ...response.data, replies: response.data.replies || [] };
-        console.log('New post:', newPost);
-        setDiscussionPosts([...discussionPosts, newPost]);
-        setNewPostContent('');
+        setTournamentScores(response.data.scores || []);
       } catch (err) {
-        console.error('Error posting discussion:', err);
-        setError('Failed to post discussion');
+        console.error('Error joining tournament:', err.response?.status || err.message);
+        setNotice(err.response?.data?.error || 'You couldn’t join the tournament. Try again.');
+        return;
       }
+    }
+    resetQuiz(tournamentId);
+    startTimer();
+    setShowTournamentModal(false);
+    consoleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const submitScore = async (finalScore) => {
+    if (!isLoggedIn || !accessToken) return;
+    try {
+      const endpoint = selectedTournament
+        ? `${apiUrl}/api/learning/tournaments/${selectedTournament}/submit_score/`
+        : `${apiUrl}/api/learning/learning-material/${id}/submit_score/`;
+      await axios.post(endpoint, { score: finalScore }, { headers: { Authorization: `Bearer ${accessToken}` } });
+    } catch (err) {
+      console.error('Error submitting score:', err.response?.status || err.message);
+      setNotice('Your score couldn’t be saved.');
+    }
+  };
+
+  const finishQuiz = (finalScore) => {
+    submitScore(finalScore);
+    setShowSummary(true);
+    setTimerStarted(false);
+    setTimerPaused(false);
+  };
+
+  const handleAnswer = (isCorrect, optionId) => {
+    if (isEvaluated || timeLeft <= 0 || timerPaused) return;
+
+    // Work out the new score now: the timeout below would otherwise see the old value
+    const newScore = isCorrect ? score + 1 : score;
+    setSelectedOption(optionId);
+    setIsEvaluated(true);
+    setSelectedAnswers([...selectedAnswers, { questionId: currentQuestion, optionId }]);
+    setScore(newScore);
+
+    setTimeout(() => {
+      setSelectedOption(null);
+      setIsEvaluated(false);
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+      } else {
+        finishQuiz(newScore);
+      }
+    }, 1500);
+  };
+
+  const handleSubmitQuiz = () => {
+    if (timeLeft > 0) finishQuiz(score);
+  };
+
+  const closeSummary = () => { setShowSummary(false); resetQuiz(); };
+  const closeTimeUp = () => { setShowTimeUp(false); resetQuiz(); };
+  const handleWarningContinue = () => { setShowWarning(false); resetQuiz(selectedTournament); startTimer(); };
+  const handleWarningCancel = () => setShowWarning(false);
+
+  const handlePostSubmit = async (e) => {
+    e.preventDefault();
+    setNotice(null);
+    if (!isLoggedIn) { setNotice('Sign in to start a discussion.'); return; }
+    if (!newPostContent.trim()) return;
+    try {
+      const response = await axios.post(
+        `${apiUrl}/api/learning/learning-material/${id}/add_discussion/`,
+        { content: newPostContent, quiz: id },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      setDiscussionPosts([...discussionPosts, { ...response.data, replies: response.data.replies || [] }]);
+      setNewPostContent('');
+    } catch (err) {
+      console.error('Error posting discussion:', err.response?.status || err.message);
+      setNotice('Your post couldn’t be published. Try again.');
     }
   };
 
   const handleReplySubmit = async (postId, e) => {
     e.preventDefault();
-    if (!isLoggedIn) {
-      setError('Please log in to post a reply');
-      return;
-    }
-    if (replyContent[postId]?.trim()) {
-      try {
-        const response = await axios.post(
-          `${effectiveApiString.replace(/\/$/, "")}/api/learning/learning-material/${id}/add_reply/`,
-          { content: replyContent[postId], post_id: postId },
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        setDiscussionPosts(
-          discussionPosts.map((post) =>
-            post.id === postId
-              ? { ...post, replies: [...(post.replies || []), response.data] }
-              : post
-          )
-        );
-        setReplyContent({ ...replyContent, [postId]: '' });
-      } catch (err) {
-        console.error('Error posting reply:', err);
-        setError('Failed to post reply');
-      }
+    setNotice(null);
+    if (!isLoggedIn) { setNotice('Sign in to reply.'); return; }
+    if (!replyContent[postId]?.trim()) return;
+    try {
+      const response = await axios.post(
+        `${apiUrl}/api/learning/learning-material/${id}/add_reply/`,
+        { content: replyContent[postId], post_id: postId },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      setDiscussionPosts(discussionPosts.map((post) =>
+        post.id === postId ? { ...post, replies: [...(post.replies || []), response.data] } : post
+      ));
+      setReplyContent({ ...replyContent, [postId]: '' });
+    } catch (err) {
+      console.error('Error posting reply:', err.response?.status || err.message);
+      setNotice('Your reply couldn’t be published. Try again.');
     }
   };
 
-  const toggleShowReplies = (postId) => {
-    setShowAllReplies((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }));
-  };
+  const toggleShowReplies = (postId) => setShowAllReplies((prev) => ({ ...prev, [postId]: !prev[postId] }));
 
-  const handleOpenTournamentModal = async (tournamentId) => {
-    console.log('handleOpenTournamentModal called with tournamentId:', tournamentId);
-    console.log('Auth status:', { isLoggedIn, accessToken });
+  const handleOpenTournamentModal = (tournamentId) => {
     setSelectedTournament(tournamentId);
-    // Mock scores for display in modal (replace with real API call if endpoint exists)
+    // Sample scores shown until the tournament has real ones (no scores endpoint yet).
     setTournamentScores([
       { user: 'User1', score: 90 },
       { user: 'User2', score: 85 },
@@ -388,374 +319,409 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     setTournamentScores([]);
   };
 
-  const getOptionStyle = (option) => {
-    if (!isEvaluated) return {};
-
-    if (option.id === selectedOption) {
-      return {
-        backgroundColor: option.is_correct ? 'green' : 'red',
-        color: 'white',
-      };
-    } else if (option.is_correct) {
-      return {
-        backgroundColor: 'green',
-        color: 'white',
-      };
-    }
-    return {};
+  const optionClass = (option) => {
+    if (!isEvaluated) return styles.option;
+    if (option.is_correct) return `${styles.option} ${styles.optionCorrect}`;
+    if (option.id === selectedOption) return `${styles.option} ${styles.optionWrong}`;
+    return `${styles.option} ${styles.optionDimmed}`;
   };
 
+  /* ---------- Loading / error ---------- */
   if (isLoading) {
-    return <div className={styles.loading}>Loading...</div>;
+    return (
+      <div className={styles.page}>
+        <div className={styles.stateBox}><p>Loading quiz…</p></div>
+      </div>
+    );
   }
 
-  if (error) {
-    return <div className={styles.error}>{error}</div>;
-  }
-
-  if (!quiz) {
-    return <div className={styles.error}>Quiz not found</div>;
-  }
-
-  return (
-    <div className={`${styles.quizzContainer} ${isDarkMode ? styles.darkMode : ''}`}>
-      <div
-        className={styles.headerSection}
-        style={{
-          backgroundImage: `url(${isDarkMode ? headerDark : headerLight})`,
-        }}
-      >
-        <div className={styles.textOverlay}>
-          <h1 className={styles.headerTitle}>{quiz.title}</h1>
-          <p className={styles.headerDescription}>{quiz.description}</p>
-          <button className={styles.headerButton} onClick={() => handleStartQuiz()}>
-            Start New Quiz
-          </button>
-          {(quiz.is_restricted || quiz.is_premium) && (
-            <div className={styles.lockOverlay}>
-              <FaLock />
-              <p>{quiz.is_premium ? 'Premium Required' : 'Login Required'}</p>
-            </div>
-          )}
+  if (error || !quiz) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.stateBox}>
+          <h2>{error || 'Quiz not found'}</h2>
+          <p>Check your connection, or pick another quiz from the Learning hub.</p>
+          <Link to="/learning" className={styles.primaryButton}>Back to Learning</Link>
         </div>
       </div>
+    );
+  }
 
-      <div className={styles.breadcrumb}>
-        <Link to={'/'}>
-          <span>Home</span>
-        </Link>{' '}
-        /{' '}
-        <Link to={'/learning'}>
-          <span>Learning</span>
-        </Link>{' '}
-        /{' '}
-        <Link to={`/learning/quizzes/${id}`}>
-          <span>Quizzes</span>
-        </Link>
-      </div>
+  const total = questions.length;
+  const question = questions[currentQuestion];
+  const timeFraction = timeLeft / QUIZ_DURATION;
+  const percent = total ? Math.round((score / total) * 100) : 0;
+  const activeTournaments = tournaments.filter((t) => t.is_active).slice(0, 3);
+  const playing = timerStarted && !timerPaused;
 
-      <div className={styles.mainContent}>
-        <div className={styles.quizSection}>
-          <div className={styles.timerSection}>
-            <span className={styles.timerText}>
-              Time Left: {timeLeft !== null ? formatTime(timeLeft) : '00:00'}
+  return (
+    <div className={styles.page}>
+      <PageHero
+        compact
+        image={headerImage}
+        title={quiz.title}
+        subtitle={quiz.description}
+        crumbs={[{ label: 'Home', to: '/' }, { label: 'Learning', to: '/learning' }, { label: quiz.title || 'Quiz' }]}
+      >
+        <div className={styles.heroActions}>
+          <button type="button" className={styles.heroButton} onClick={() => handleStartQuiz()}>
+            <FaPlay aria-hidden="true" /> Start quiz
+          </button>
+          {(quiz.is_restricted || quiz.is_premium) && (
+            <span className={styles.heroNote}>
+              {quiz.is_premium ? <FaCrown aria-hidden="true" /> : <FaLock aria-hidden="true" />}
+              {quiz.is_premium ? 'Premium quiz' : 'Sign in required'}
             </span>
-            <button
-              className={styles.startQuizButton}
-              onClick={timerStarted ? togglePauseResume : () => handleStartQuiz()}
+          )}
+        </div>
+      </PageHero>
+
+      {notice && (
+        <div className={styles.noticeWrap}>
+          <p className={styles.notice} role="alert">
+            {notice}
+            {isBlocked && (
+              <Link to={quiz.is_premium ? '/premium' : '/login'}>{quiz.is_premium ? 'See plans' : 'Sign in'}</Link>
+            )}
+            <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss"><FaTimes /></button>
+          </p>
+        </div>
+      )}
+
+      <div className={`${styles.section} ${styles.layout}`}>
+        {/* ---------- Quiz console ---------- */}
+        <section className={styles.console} ref={consoleRef} aria-label="Quiz">
+          <div className={styles.consoleTop}>
+            <div
+              className={`${styles.timerRing} ${timeLeft <= 60 && timerStarted ? styles.timerLow : ''}`}
+              role="timer"
+              aria-label={`Time left ${formatTime(timeLeft)}`}
             >
-              {timerStarted ? (timerPaused ? 'Resume' : 'Pause') : 'Start Quiz'}
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle className={styles.ringTrack} cx="60" cy="60" r="52" />
+                <circle
+                  className={styles.ringFill}
+                  cx="60" cy="60" r="52"
+                  strokeDasharray={RING}
+                  strokeDashoffset={RING * (1 - timeFraction)}
+                />
+              </svg>
+              <span className={styles.timerText}>{formatTime(timeLeft)}</span>
+            </div>
+
+            <div className={styles.consoleInfo}>
+              <h2 className={styles.consoleTitle}>
+                {total ? `Question ${currentQuestion + 1} of ${total}` : 'No questions yet'}
+              </h2>
+              <p className={styles.consoleMeta}>
+                {timerStarted ? (timerPaused ? 'Paused' : 'In progress') : '10 minutes · answer as many as you can'}
+              </p>
+              {total > 0 && (
+                <ol className={styles.progress} aria-label="Progress">
+                  {questions.map((q, i) => (
+                    <li
+                      key={q.id || i}
+                      className={`${styles.step} ${i < currentQuestion ? styles.stepDone : ''} ${i === currentQuestion ? styles.stepNow : ''}`}
+                    >
+                      <span className={styles.srOnly}>Question {i + 1}{i < currentQuestion ? ', answered' : ''}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={timerStarted ? togglePauseResume : () => handleStartQuiz()}
+              disabled={!total}
+            >
+              {timerStarted
+                ? (timerPaused ? <><FaPlay aria-hidden="true" /> Resume</> : <><FaPause aria-hidden="true" /> Pause</>)
+                : <><FaPlay aria-hidden="true" /> Start</>}
             </button>
           </div>
-          {questions.length > 0 && (
-            <div className={styles.questionSection}>
-              <div className={styles.questionHeader}>
-                <span className={styles.questionNumber}>
-                  Question {currentQuestion + 1} of {questions.length}
-                </span>
-              </div>
-              <p className={styles.questionText}>{questions[currentQuestion].text}</p>
+
+          {total > 0 ? (
+            <div className={`${styles.questionCard} ${!playing ? styles.questionIdle : ''}`}>
+              <p className={styles.questionText}>{question.text}</p>
               <div className={styles.options}>
-                {questions[currentQuestion].options.map((option) => (
+                {question.options.map((option, i) => (
                   <button
                     key={option.id}
-                    className={styles.optionButton}
-                    style={getOptionStyle(option)}
+                    type="button"
+                    className={optionClass(option)}
                     onClick={() => handleAnswer(option.is_correct, option.id)}
                     disabled={!timerStarted || isEvaluated || timeLeft <= 0 || timerPaused}
                   >
-                    {option.text}
+                    <span className={styles.optionLetter} aria-hidden="true">
+                      {isEvaluated && option.is_correct ? <FaCheck /> : OPTION_LETTERS[i] || i + 1}
+                    </span>
+                    <span>{option.text}</span>
                   </button>
                 ))}
               </div>
+              {!timerStarted && (
+                <p className={styles.idleHint}>
+                  {isBlocked ? 'This quiz is locked.' : 'Press Start to begin. The timer runs for 10 minutes.'}
+                </p>
+              )}
             </div>
+          ) : (
+            <p className={styles.emptyNote}>This quiz has no questions yet.</p>
           )}
-          {questions.length > 0 && (
-            <div className={styles.navigationButtons}>
+
+          {total > 0 && (
+            <div className={styles.navRow}>
               <button
-                className={styles.prevButton}
+                type="button"
+                className={styles.secondaryButton}
                 disabled={currentQuestion === 0 || timeLeft <= 0 || timerPaused}
                 onClick={() => setCurrentQuestion(currentQuestion - 1)}
               >
-                Previous
+                <FaChevronLeft aria-hidden="true" /> Previous
               </button>
-              {currentQuestion < questions.length - 1 ? (
+              {currentQuestion < total - 1 ? (
                 <button
-                  className={styles.nextButton}
+                  type="button"
+                  className={styles.secondaryButton}
                   onClick={() => setCurrentQuestion(currentQuestion + 1)}
                   disabled={!isEvaluated || timeLeft <= 0 || timerPaused}
                 >
-                  Next
+                  Next <FaChevronRight aria-hidden="true" />
                 </button>
               ) : (
                 <button
-                  className={styles.submitButton}
+                  type="button"
+                  className={styles.primaryButton}
                   onClick={handleSubmitQuiz}
-                  disabled={timeLeft <= 0 || timerPaused}
+                  disabled={!timerStarted || timeLeft <= 0 || timerPaused}
                 >
-                  Submit Quiz
+                  Submit quiz
                 </button>
               )}
             </div>
           )}
-          <div className={styles.topScorersSection}>
-            <h2 className={styles.sectionTitle}>Today's Top Scorers</h2>
-            <div className={styles.scorersList}>
-              {topScorers.length > 0 ? (
-                topScorers.map((scorer, index) => (
-                  <div key={index} className={styles.scorerCard}>
+        </section>
+
+        {/* ---------- Side panels ---------- */}
+        <aside className={styles.aside}>
+          <section className={styles.panel} aria-labelledby="tournaments-title">
+            <h2 id="tournaments-title" className={styles.panelTitle}><FaTrophy aria-hidden="true" /> Live tournaments</h2>
+            {activeTournaments.length > 0 ? (
+              <ul className={styles.panelList}>
+                {activeTournaments.map((t) => (
+                  <li key={t.id} className={styles.tournament}>
+                    <h3>{t.title}</h3>
+                    <p className={styles.tournamentMeta}>
+                      <span><FaClock aria-hidden="true" /> {t.time_left}</span>
+                      <span><FaUsers aria-hidden="true" /> {t.participant_count} joined</span>
+                    </p>
+                    <button type="button" className={styles.smallButton} onClick={() => handleOpenTournamentModal(t.id)}>
+                      Join
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.panelEmpty}>No tournaments are running right now.</p>
+            )}
+          </section>
+
+          <section className={styles.panel} aria-labelledby="scorers-title">
+            <h2 id="scorers-title" className={styles.panelTitle}><FaMedal aria-hidden="true" /> Today’s top scorers</h2>
+            {topScorers.length > 0 ? (
+              <ol className={styles.scorers}>
+                {topScorers.map((scorer, index) => (
+                  <li key={`${scorer.user}-${index}`} className={styles.scorer}>
+                    <span className={styles.rank}>{index + 1}</span>
                     <span className={styles.scorerName}>{scorer.user}</span>
-                    <span className={styles.scorerScore}>{scorer.score} Points</span>
-                  </div>
-                ))
-              ) : (
-                <p>No top scorers available.</p>
-              )}
-            </div>
-          </div>
-        </div>
+                    <span className={styles.scorerScore}>{scorer.score} pts</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className={styles.panelEmpty}>No scores yet today. Be the first.</p>
+            )}
+          </section>
 
-        <div className={styles.sidebar}>
-          <div className={styles.tournamentsSection}>
-            <h2 className={styles.sidebarTitle}>Live Tournaments</h2>
-            {console.log('Tournaments:', tournaments)}
-            <div className={styles.tournamentList}>
-              {tournaments.filter(tournament => tournament.is_active).length > 0 ? (
-                tournaments
-                  .filter(tournament => tournament.is_active)
-                  .slice(0, 3)
-                  .map((tournament, index) => (
-                    <div key={index} className={styles.tournamentCard}>
-                      <h3 className={styles.tournamentTitle}>{tournament.title}</h3>
-                      <p className={styles.tournamentTime}>Time Left: {tournament.time_left}</p>
-                      <p className={styles.tournamentParticipants}>
-                        {tournament.participant_count} Participants
-                      </p>
-                      <button
-                        className={styles.joinButton}
-                        onClick={() => handleOpenTournamentModal(tournament.id)}
-                      >
-                        Join Now
-                      </button>
+          <section className={styles.panel} aria-labelledby="badges-title">
+            <h2 id="badges-title" className={styles.panelTitle}><FaCrown aria-hidden="true" /> Your badges</h2>
+            {badges.length > 0 ? (
+              <ul className={styles.badges}>
+                {badges.map((badge, index) => (
+                  <li key={`${badge.badge_type}-${index}`} className={styles.badge}>
+                    <span className={styles.badgeIcon} aria-hidden="true">
+                      {badge.badge_type === 'quiz_master' ? <FaTrophy /> : <FaMedal />}
+                    </span>
+                    <div>
+                      <h3>{badge.display_name}</h3>
+                      <p>{badge.description}</p>
                     </div>
-                  ))
-              ) : (
-                <p>No active tournaments available.</p>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.badgesSection}>
-            <h2 className={styles.sidebarTitle}>Your Badges</h2>
-            <div className={styles.badgesGrid}>
-              {badges.length > 0 ? (
-                badges.map((badge, index) => (
-                  <div key={index} className={styles.badgeCard}>
-                    <div className={styles.badgeIcon}>
-                      {badge.badge_type === 'quiz_master' ? '🏆' : '🎖️'}
-                    </div>
-                    <h3 className={styles.badgeTitle}>{badge.display_name}</h3>
-                    <p className={styles.badgeDescription}>{badge.description}</p>
-                  </div>
-                ))
-              ) : (
-                <p>No badges earned yet.</p>
-              )}
-            </div>
-          </div>
-        </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.panelEmpty}>
+                {isLoggedIn ? 'Finish quizzes to earn badges.' : <><Link to="/login">Sign in</Link> to collect badges.</>}
+              </p>
+            )}
+          </section>
+        </aside>
       </div>
 
-      <div className={styles.discussionSection}>
-        <h2 className={styles.discussionTitle}>Discussion Forum</h2>
-        <div className={styles.newPostForm}>
-          <textarea
-            className={styles.newPostTextarea}
-            value={newPostContent}
-            onChange={(e) => setNewPostContent(e.target.value)}
-            placeholder="Start a new discussion..."
-            disabled={!isLoggedIn}
-          ></textarea>
-          <button onClick={handlePostSubmit} className={styles.postButton} disabled={!isLoggedIn}>
-            Post
-          </button>
-        </div>
-        <div className={styles.postsList}>
-          {discussionPosts.length > 0 ? (
-            discussionPosts.map((post) => (
-              <div key={post.id} className={styles.postCard}>
-                <div className={styles.postHeader}>
-                  <span className={styles.postAuthor}>{post.author}</span>
-                  <span className={styles.postTimestamp}>
-                    {new Date(post.created_at).toLocaleString()}
-                  </span>
-                </div>
-                <p className={styles.postContent}>{post.content}</p>
-                <div className={styles.replies}>
-                  {(post.replies || [])
-                    .slice(0, showAllReplies[post.id] ? post.replies.length : 2)
-                    .map((reply) => (
-                      <div key={reply.id} className={styles.replyCard}>
-                        <div className={styles.postHeader}>
-                          <span className={styles.postAuthor}>{reply.author}</span>
-                          <span className={styles.postTimestamp}>
-                            {new Date(reply.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                        <p className={styles.postContent}>{reply.content}</p>
-                      </div>
-                    ))}
-                  {post.replies.length > 2 && (
-                    <button
-                      className={styles.showMoreButton}
-                      onClick={() => toggleShowReplies(post.id)}
-                    >
-                      {showAllReplies[post.id] ? 'Show Less' : 'Show More'}
-                    </button>
-                  )}
-                </div>
-                <div className={styles.replyForm}>
-                  <textarea
-                    className={styles.replyTextarea}
-                    value={replyContent[post.id] || ''}
-                    onChange={(e) =>
-                      setReplyContent({ ...replyContent, [post.id]: e.target.value })
-                    }
-                    placeholder="Write a reply..."
-                    disabled={!isLoggedIn}
-                  ></textarea>
-                  <button
-                    onClick={(e) => handleReplySubmit(post.id, e)}
-                    className={styles.replyButton}
-                    disabled={!isLoggedIn}
-                  >
-                    Reply
-                  </button>
-                </div>
-              </div>
-            ))
+      {/* ---------- Discussion ---------- */}
+      <section className={styles.section} aria-labelledby="forum-title">
+        <div className={styles.forum}>
+          <h2 id="forum-title" className={styles.sectionTitle}>Discussion</h2>
+          <p className={styles.lede}>Talk through the answers with other learners.</p>
+
+          <form className={styles.composer} onSubmit={handlePostSubmit}>
+            {!isLoggedIn && <p className={styles.formNote}><Link to="/login">Sign in</Link> to post or reply.</p>}
+            <label htmlFor="new-post" className={styles.srOnly}>New discussion</label>
+            <textarea
+              id="new-post"
+              className={styles.textarea}
+              value={newPostContent}
+              onChange={(e) => setNewPostContent(e.target.value)}
+              placeholder="Start a new discussion…"
+              disabled={!isLoggedIn}
+            />
+            <div className={styles.composerActions}>
+              <button type="submit" className={styles.primaryButton} disabled={!isLoggedIn}>Post</button>
+            </div>
+          </form>
+
+          {discussionPosts.length === 0 ? (
+            <p className={styles.emptyNote}>No discussions yet. Start the first one.</p>
           ) : (
-            <p>No discussions available.</p>
+            <ul className={styles.postList}>
+              {discussionPosts.map((post) => {
+                const replies = post.replies || [];
+                const shown = showAllReplies[post.id] ? replies : replies.slice(0, 2);
+                return (
+                  <li key={post.id} className={styles.post}>
+                    <div className={styles.postHead}>
+                      <span className={styles.avatar} aria-hidden="true">{String(post.author || '?').charAt(0).toUpperCase()}</span>
+                      <div>
+                        <div className={styles.postAuthor}>{post.author}</div>
+                        <div className={styles.postTime}>{formatDate(post.created_at)}</div>
+                      </div>
+                    </div>
+                    <p className={styles.postBody}>{post.content}</p>
+
+                    {replies.length > 0 && (
+                      <ul className={styles.replies}>
+                        {shown.map((reply) => (
+                          <li key={reply.id} className={styles.reply}>
+                            <div className={styles.postHead}>
+                              <span className={`${styles.avatar} ${styles.avatarSmall}`} aria-hidden="true">{String(reply.author || '?').charAt(0).toUpperCase()}</span>
+                              <div>
+                                <div className={styles.postAuthor}>{reply.author}</div>
+                                <div className={styles.postTime}>{formatDate(reply.created_at)}</div>
+                              </div>
+                            </div>
+                            <p className={styles.postBody}>{reply.content}</p>
+                          </li>
+                        ))}
+                        {replies.length > 2 && (
+                          <button type="button" className={styles.showMore} onClick={() => toggleShowReplies(post.id)}>
+                            {showAllReplies[post.id] ? 'Show fewer replies' : `Show all ${replies.length} replies`}
+                          </button>
+                        )}
+                      </ul>
+                    )}
+
+                    <form className={styles.replyForm} onSubmit={(e) => handleReplySubmit(post.id, e)}>
+                      <textarea
+                        className={styles.textarea}
+                        value={replyContent[post.id] || ''}
+                        onChange={(e) => setReplyContent({ ...replyContent, [post.id]: e.target.value })}
+                        placeholder="Write a reply…"
+                        aria-label={`Reply to ${post.author}`}
+                        disabled={!isLoggedIn}
+                      />
+                      <button type="submit" className={styles.smallButton} disabled={!isLoggedIn}>Reply</button>
+                    </form>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
-      </div>
+      </section>
 
+      {/* ---------- Dialogs ---------- */}
       {showSummary && (
-        <div className={styles.summaryPopup}>
-          <div className={`${styles.summaryContent} ${styles.success}`}>
-            <div className={styles.circularProgress}>
-              <svg
-                viewBox="0 0 36 36"
-                className={styles.circularChart}
-                style={{
-                  width: `${100 + (score / questions.length) * 60}px`,
-                  height: `${100 + (score / questions.length) * 60}px`,
-                }}
-              >
-                <path
-                  className={styles.circleBg}
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className={styles.circle}
-                  strokeDasharray={`${(score / questions.length) * 100}, 100`}
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-            </div>
-            <h2 className={styles.summaryTitle}>Quiz Completed!</h2>
-            <p className={styles.summaryScore}>Your Score: {score}/{questions.length}</p>
-            <p className={styles.summaryBadge}>Badge Earned: 🏆 Quiz Master</p>
-            <button className={styles.closeButton} onClick={closeSummary}>
-              Close
-            </button>
+        <Dialog labelledBy="summary-title" onClose={closeSummary}>
+          <div className={styles.scoreRing} aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <circle className={styles.ringTrack} cx="60" cy="60" r="52" />
+              <circle className={styles.ringFill} cx="60" cy="60" r="52" strokeDasharray={RING} strokeDashoffset={RING * (1 - percent / 100)} />
+            </svg>
+            <span>{percent}%</span>
           </div>
-        </div>
+          <h2 id="summary-title" className={styles.dialogTitle}>Quiz complete</h2>
+          <p className={styles.dialogText}>You scored {score} out of {total}.</p>
+          {total > 0 && score === total && (
+            <p className={styles.dialogHighlight}><FaTrophy aria-hidden="true" /> Perfect score</p>
+          )}
+          {!isLoggedIn && <p className={styles.dialogText}><Link to="/login">Sign in</Link> to save your scores and earn badges.</p>}
+          <div className={styles.dialogActions}>
+            <button type="button" className={styles.primaryButton} onClick={closeSummary}>Done</button>
+          </div>
+        </Dialog>
       )}
 
       {showTimeUp && (
-        <div className={styles.summaryPopup}>
-          <div className={`${styles.summaryContent} ${styles.failure}`}>
-            <h2 className={styles.summaryTitle}>Time's Up!</h2>
-            <p className={styles.summaryMessage}>Better luck next time! Try again to complete the quiz within the time limit.</p>
-            <button className={styles.closeButton} onClick={closeTimeUp}>
-              Try Again
-            </button>
+        <Dialog labelledBy="timeup-title" onClose={closeTimeUp}>
+          <span className={styles.dialogIcon} aria-hidden="true"><FaClock /></span>
+          <h2 id="timeup-title" className={styles.dialogTitle}>Time’s up</h2>
+          <p className={styles.dialogText}>The 10 minutes ran out before you finished. You can try again from the start.</p>
+          <div className={styles.dialogActions}>
+            <button type="button" className={styles.primaryButton} onClick={closeTimeUp}><FaRedo aria-hidden="true" /> Try again</button>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {showWarning && (
-        <div className={styles.warningPopup}>
-          <div className={styles.warningContent}>
-            <h2 className={styles.warningTitle}>Warning</h2>
-            <p className={styles.warningMessage}>
-              This action will leave your current quiz. Are you sure you want to continue?
-            </p>
-            <div className={styles.warningButtons}>
-              <button className={styles.cancelButton} onClick={handleWarningCancel}>
-                Cancel
-              </button>
-              <button className={styles.continueButton} onClick={handleWarningContinue}>
-                Continue
-              </button>
-            </div>
+        <Dialog labelledBy="warning-title" onClose={handleWarningCancel}>
+          <h2 id="warning-title" className={styles.dialogTitle}>Restart the quiz?</h2>
+          <p className={styles.dialogText}>Your current attempt and score will be lost.</p>
+          <div className={styles.dialogActions}>
+            <button type="button" className={styles.secondaryButton} onClick={handleWarningCancel}>Keep going</button>
+            <button type="button" className={styles.primaryButton} onClick={handleWarningContinue}>Restart</button>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {showTournamentModal && (
-        console.log('Rendering tournament modal with scores:', tournamentScores),
-        <div key={selectedTournament} className={styles.tournamentModal}>
-          <div className={styles.tournamentModalContent}>
-            <button className={styles.tournamentModalCloseIcon} onClick={closeTournamentModal}>
-              <FaTimes />
-            </button>
-            <p className={styles.tournamentModalSubheading}>I can beat that!</p>
-            <h2 className={styles.tournamentModalTitle}>Join Tournament</h2>
-            <div className={styles.tournamentScoresList}>
-              {tournamentScores.length > 0 ? (
-                tournamentScores.map((score, index) => (
-                  <div key={index} className={styles.tournamentScoreCard}>
-                    <span className={styles.tournamentScoreUser}>{score.user}</span>
-                    <span className={styles.tournamentScoreValue}>{score.score} Points</span>
-                  </div>
-                ))
-              ) : (
-                <p>No scores available for this tournament.</p>
-              )}
-            </div>
-            <button
-              className={styles.tournamentStartButton}
-              onClick={() => {
-                handleStartQuiz(selectedTournament);
-                // Do not close modal here; let handleStartQuiz handle it
-              }}
-            >
-              Start
+        <Dialog labelledBy="tournament-title" onClose={closeTournamentModal} className={styles.dialogWide}>
+          <button type="button" className={styles.dialogClose} onClick={closeTournamentModal} aria-label="Close">
+            <FaTimes />
+          </button>
+          <span className={styles.dialogIcon} aria-hidden="true"><FaTrophy /></span>
+          <h2 id="tournament-title" className={styles.dialogTitle}>Join tournament</h2>
+          <p className={styles.dialogText}>Scores to beat</p>
+          {tournamentScores.length > 0 ? (
+            <ol className={styles.scorers}>
+              {tournamentScores.map((s, index) => (
+                <li key={`${s.user}-${index}`} className={styles.scorer}>
+                  <span className={styles.rank}>{index + 1}</span>
+                  <span className={styles.scorerName}>{s.user}</span>
+                  <span className={styles.scorerScore}>{s.score} pts</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className={styles.panelEmpty}>No scores yet for this tournament.</p>
+          )}
+          <div className={styles.dialogActions}>
+            <button type="button" className={styles.primaryButton} onClick={() => handleStartQuiz(selectedTournament)}>
+              <FaPlay aria-hidden="true" /> Start
             </button>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );

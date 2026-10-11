@@ -1,0 +1,145 @@
+/* =========================================================================
+   Shared page header. The photo sits behind a maroon scrim so white text
+   stays readable on any image, in light and dark mode. Content is centred
+   vertically; the breadcrumb pill floats on the bottom edge.
+   ========================================================================= */
+.hero {
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(320px, 50vh, 460px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 56px clamp(16px, 5vw, 72px) 76px;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(135deg, var(--maroon-bright), var(--maroon-deep));
+}
+
+.compact {
+  min-height: clamp(260px, 38vh, 360px);
+}
+
+.media {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(40, 3, 14, 0.82) 0%, rgba(63, 2, 18, 0.55) 45%, rgba(63, 2, 18, 0.12) 100%),
+    linear-gradient(0deg, rgba(20, 2, 8, 0.5) 0%, transparent 45%);
+}
+
+.inner {
+  max-width: 760px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 1rem + 3.8vw, 3.6rem);
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  color: #fff;
+  margin: 0 0 12px;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+.subtitle {
+  font-family: var(--font-body);
+  font-size: clamp(1rem, 0.9rem + 0.4vw, 1.2rem);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+  max-width: 56ch;
+  margin: 0;
+}
+
+/* Glass breadcrumb pill, floating on the bottom edge */
+.crumbs {
+  position: absolute;
+  left: clamp(16px, 5vw, 72px);
+  right: clamp(16px, 5vw, 72px);
+  bottom: 18px;
+  pointer-events: none;
+}
+
+.crumbs ol {
+  pointer-events: auto;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+}
+
+.crumbs li {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.crumbs li + li::before {
+  content: '/';
+  margin: 0 8px 0 4px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.crumbs a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.crumbs span {
+  color: #fff;
+  font-weight: 600;
+  max-width: 40ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 767.98px) {
+  .hero {
+    min-height: clamp(280px, 44vh, 380px);
+    padding-top: 44px;
+    padding-bottom: 72px;
+  }
+
+  .compact {
+    min-height: 250px;
+  }
+
+  .crumbs span {
+    max-width: 22ch;
+  }
+}

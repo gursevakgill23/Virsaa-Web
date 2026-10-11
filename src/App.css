@@ -1,5 +1,188 @@
-h1,h2,h3,p{
-    font-family: serif;
+/* =========================================================================
+   Virsaa global styles
+   - Fonts used by the redesigned sections
+   - Colour theme (maroon #65041d + white) for light and dark mode
+   - Shared glass / depth tokens for the spatial UI
+   ========================================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Mukta+Mahee:wght@400;500;600;700&display=swap');
+
+/* Global reset. This used to live inside MemoryMatch.module.css, which made it
+   apply to the whole site anyway; it now lives here on purpose. `outline: none`
+   was dropped so keyboard users can see focus. */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
 
+button,
+input,
+select {
+  border: none;
+  background: none;
+}
+
+h1, h2, h3, p {
+  font-family: serif;
+}
+
+/* ---------- Light theme: maroon + white ---------- */
+:root {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Mukta Mahee', 'Segoe UI', system-ui, sans-serif;
+
+  --maroon: #65041d;
+  --maroon-deep: #3f0212;
+  --maroon-bright: #8c1232;
+  --primary-rgb: 101, 4, 29;
+
+  --background-color: #ffffff;
+  --header-bg-color: #fbf5f6;
+  --section-bg-color: #ffffff;
+  --section-alt-bg: #fbf3f5;
+  --text-color: #2b0f16;
+  --headline-color: #65041d;
+  --icon-color: #65041d;
+  --primary-color: #65041d;
+  --accent-soft: #f6e7eb;
+
+  /* Buttons: maroon with white text, invert on hover */
+  --button-bg-color: #65041d;
+  --button-text-color: #ffffff;
+  --button-hover-bg-color: #ffffff;
+  --button-hover-text-color: #65041d;
+  --button-border: 2px solid #65041d;
+
+  --card-bg-color: #ffffff;
+  --input-bg-color: #ffffff;
+  --input-border-color: #e8d3d9;
+  --input-focus-border-color: #65041d;
+  --link-color: #65041d;
+  --link-hover-color: #8c1232;
+  --card-overlay-bg: rgba(255, 255, 255, 0.92);
+  --border-color: #f0e1e5;
+  --table-header-bg: #f8edf0;
+  --secondary-text-color: #6e5258;
+  --skeleton-bg-color: #f4e8eb;
+  --skeleton-shine-color: rgba(255, 255, 255, 0.65);
+
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #3a1820;
+  --sidebar-hover: #f8edf0;
+  --sidebar-bg-rgb: 255, 255, 255;
+
+  /* Spatial / glass tokens */
+  --glass-bg: rgba(255, 255, 255, 0.62);
+  --glass-bg-strong: rgba(255, 255, 255, 0.84);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --glass-edge: rgba(101, 4, 29, 0.08);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --shadow-soft: 0 12px 30px -14px rgba(101, 4, 29, 0.28);
+  --shadow-deep: 0 34px 60px -24px rgba(101, 4, 29, 0.38), 0 14px 26px -14px rgba(101, 4, 29, 0.22);
+  --aura: radial-gradient(60% 60% at 15% 10%, rgba(101, 4, 29, 0.10), transparent 70%),
+          radial-gradient(50% 50% at 90% 80%, rgba(140, 18, 50, 0.08), transparent 70%);
+}
+
+/* ---------- Dark theme: deep maroon + white ---------- */
+[data-theme='dark'] {
+  --primary-rgb: 242, 179, 194;
+
+  --background-color: #14050a;
+  --header-bg-color: #1b070d;
+  --section-bg-color: #14050a;
+  --section-alt-bg: #1d0810;
+  --text-color: #f3e6e9;
+  --headline-color: #ffffff;
+  --icon-color: #f2b3c2;
+  --primary-color: #f2b3c2;
+  --accent-soft: #2a0c14;
+
+  --button-bg-color: #ffffff;
+  --button-text-color: #65041d;
+  --button-hover-bg-color: #65041d;
+  --button-hover-text-color: #ffffff;
+  --button-border: 2px solid #ffffff;
+
+  --card-bg-color: #220a11;
+  --input-bg-color: #1d0810;
+  --input-border-color: #4a1a26;
+  --input-focus-border-color: #f2b3c2;
+  --link-color: #f2b3c2;
+  --link-hover-color: #ffffff;
+  --card-overlay-bg: rgba(34, 10, 17, 0.92);
+  --border-color: #3a131d;
+  --table-header-bg: #2a0c14;
+  --secondary-text-color: #c4a3ab;
+  --skeleton-bg-color: #2a0c14;
+  --skeleton-shine-color: rgba(255, 255, 255, 0.06);
+
+  --sidebar-bg: #1b070d;
+  --sidebar-text: #f0dfe3;
+  --sidebar-hover: #2c0d16;
+  --sidebar-bg-rgb: 27, 7, 13;
+
+  --glass-bg: rgba(40, 10, 18, 0.55);
+  --glass-bg-strong: rgba(36, 9, 16, 0.86);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-edge: rgba(255, 255, 255, 0.06);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-soft: 0 12px 30px -14px rgba(0, 0, 0, 0.65);
+  --shadow-deep: 0 34px 60px -24px rgba(0, 0, 0, 0.75), 0 14px 26px -14px rgba(0, 0, 0, 0.5);
+  --aura: radial-gradient(60% 60% at 15% 10%, rgba(140, 18, 50, 0.35), transparent 70%),
+          radial-gradient(50% 50% at 90% 80%, rgba(101, 4, 29, 0.35), transparent 70%);
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* Previously set (globally) inside several page stylesheets; kept here so
+   links across the app look the same as before */
+a {
+  text-decoration: none;
+  list-style: none;
+}
+
+::selection {
+  background: rgba(101, 4, 29, 0.85);
+  color: #ffffff;
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 3px;
+}
+
+/* Used by the sidebar to stop the page scrolling behind it */
+body.no-scroll {
+  overflow: hidden;
+}
+
+/* Leave room for the floating bottom navbar on phones */
+@media (max-width: 767.98px) {
+  body {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

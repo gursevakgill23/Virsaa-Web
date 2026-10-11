@@ -1,34 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar, FaPenFancy, FaBook, FaAward, FaChevronDown } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
-import Loader from '../../../components/Loader'
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import {
+  FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight,
+  FaStar, FaRegStar, FaPenFancy, FaBook, FaAward, FaQuoteLeft,
+} from 'react-icons/fa';
+import Loader from '../../../components/Loader';
+import PageHero from '../../../components/PageHero/PageHero';
 import styles from './AuthorDetail.module.css';
-// Utility function to handle production image paths
+
 const useProductionImagePath = () => {
   return (imagePath) => {
-    // Only modify in production
     if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
       if (typeof imagePath === 'string') {
-        // For public folder images
-        return imagePath.startsWith('/') 
-          ? imagePath 
+        return imagePath.startsWith('/')
+          ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
       }
+      return imagePath.default || imagePath;
     }
     return imagePath;
   };
 };
 
+const TABS = [
+  { id: 'biography', label: 'Biography' },
+  { id: 'works', label: 'Major works' },
+  { id: 'awards', label: 'Awards' },
+  { id: 'reviews', label: 'Reviews' },
+];
+
+const Stars = ({ value }) => (
+  <span className={styles.stars} aria-label={`${value} out of 5`}>
+    {[1, 2, 3, 4, 5].map((i) =>
+      i <= Math.floor(value) ? <FaStar key={i} className={styles.starOn} /> : <FaRegStar key={i} className={styles.starOff} />
+    )}
+  </span>
+);
+
+const RelatedAuthorSkeleton = () => (
+  <div className={styles.relatedCard} aria-hidden="true">
+    <span className={`${styles.relatedThumb} ${styles.relatedThumbRound} ${styles.skeleton}`} />
+    <span className={styles.relatedInfo}>
+      <span className={`${styles.skeleton} ${styles.skeletonLine}`} />
+      <span className={`${styles.skeleton} ${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+    </span>
+  </div>
+);
 
 const AuthorDetail = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
   const { id } = useParams();
-  const navigate = useNavigate();
+  const relatedRef = useRef(null);
   const [author, setAuthor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relatedLoading, setRelatedLoading] = useState(true);
@@ -36,97 +58,89 @@ const AuthorDetail = ({ isDarkMode }) => {
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState('biography');
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [showMobileTabs, setShowMobileTabs] = useState(false);
-  const header_image_dark = "/images/header-image-dark.png";
-  const header_image_light = "/images/header-image-light.png";
-  const authorImage = "/images/author-image.jpg";
+  const header_image_dark = '/images/header-image-dark.png';
+  const header_image_light = '/images/header-image-light.png';
+  const authorImage = '/images/author-image.jpg';
 
-  
-  const [reviewForm, setReviewForm] = useState({
-    name: '',
-    email: '',
-    rating: 0,
-    review: '',
-  });
+  const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, review: '' });
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
-    const fetchAuthor = async () => {
-      setIsLoading(true);
-      setTimeout(() => {
-        setAuthor({
-          id,
-          name: "Waris Shah",
-          image: authorImage,
-          rating: 4.7,
-          reviews: 892,
-          born: "1722, Jandiala Sher Khan, Punjab",
-          died: "1798, Malka Hans, Punjab",
-          genre: "Punjabi Poetry, Sufi Poetry",
-          notableWorks: ["Heer Ranjha", "Ishq Daa Waaris"],
-          biography: `Waris Shah was an 18th-century Punjabi Sufi poet, renowned for his contribution to Punjabi literature. He is best known for his seminal work Heer Ranjha, based on the traditional folk tale of Heer and her lover Ranjha.
+    setIsLoading(true);
+    setRelatedLoading(true);
+    const t1 = setTimeout(() => {
+      setAuthor({
+        id,
+        name: 'Waris Shah',
+        image: authorImage,
+        rating: 4.7,
+        reviews: 892,
+        born: '1722, Jandiala Sher Khan, Punjab',
+        died: '1798, Malka Hans, Punjab',
+        genre: 'Punjabi Poetry, Sufi Poetry',
+        notableWorks: ['Heer Ranjha', 'Ishq Daa Waaris'],
+        biography: `Waris Shah was an 18th-century Punjabi Sufi poet, renowned for his contribution to Punjabi literature. He is best known for his seminal work Heer Ranjha, based on the traditional folk tale of Heer and her lover Ranjha.
 
-          Born into a Syed family, Waris Shah received his early education in Kasur and later studied at the shrine of Hafiz Ghulam Murtaza in Qasur. His work is characterized by its spiritual depth, lyrical beauty, and profound understanding of human nature.
+Born into a Syed family, Waris Shah received his early education in Kasur and later studied at the shrine of Hafiz Ghulam Murtaza in Qasur. His work is characterized by its spiritual depth, lyrical beauty, and profound understanding of human nature.
 
-          Waris Shah's version of Heer Ranjha is considered the most popular and is a landmark in Punjabi literature. His poetry explores themes of divine love, human relationships, and social commentary. He wrote in the Majhi dialect of Punjabi, which became the standard literary language.
+Waris Shah's version of Heer Ranjha is considered the most popular and is a landmark in Punjabi literature. His poetry explores themes of divine love, human relationships, and social commentary. He wrote in the Majhi dialect of Punjabi, which became the standard literary language.
 
-          Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi language, and his work continues to influence Punjabi culture, music, and literature.`,
-          books: [
-            { id: 101, title: "Heer Ranjha", cover: authorImage, rating: 4.8, year: 1766 },
-            { id: 102, title: "Ishq Daa Waaris", cover: authorImage, rating: 4.5, year: 1776 },
-            { id: 103, title: "Dastan-E-Ranjeet", cover: authorImage, rating: 4.2, year: 1782 },
-            { id: 104, title: "Punjabi Diyan Kahanian", cover: authorImage, rating: 4.0, year: 1788 },
-          ],
-          awards: [
-            { name: "Pride of Punjab", year: 1998 },
-            { name: "Literary Excellence Award", year: 2005 }
-          ]
-        });
-        
-        const mockReviews = Array.from({ length: 15 }, (_, i) => ({
-          id: i + 1,
-          name: ['Amanpreet', 'Gurpreet', 'Harpreet', 'Jaspreet', 'Manpreet', 'Navpreet'][i % 6],
-          date: new Date(Date.now() - (i * 86400000)).toLocaleDateString(),
-          rating: [4, 5, 3, 4, 5, 4, 3, 5, 4, 5][i % 10],
-          review: [
-            "Waris Shah's poetry transcends time and speaks directly to the soul.",
-            "A true master of Punjabi literature whose work remains relevant centuries later.",
-            "His understanding of human emotions is unparalleled in Punjabi poetry.",
-            "The way he blends spiritual themes with human love is remarkable.",
-            "Every Punjabi household should have a copy of Heer Ranjha.",
-            "His work captures the essence of Punjabi culture beautifully.",
-            "A bit difficult to understand at first, but worth the effort.",
-            "The depth of his poetry increases with each reading.",
-            "His work is the foundation of modern Punjabi literature.",
-            "A literary giant whose influence continues to grow."
-          ][i % 10],
-          helpful: Math.floor(Math.random() * 50)
-        }));
-        
-        setReviews(mockReviews);
-        setIsLoading(false);
-        
-        setTimeout(() => {
-          setAuthor(prev => ({
-            ...prev,
-            relatedAuthors: [
-              { id: 201, name: "Bulleh Shah", image: authorImage, genre: "Sufi Poetry" },
-              { id: 202, name: "Amrita Pritam", image: authorImage, genre: "Modern Poetry" },
-              { id: 203, name: "Shiv Kumar Batalvi", image: authorImage, genre: "Lyrical Poetry" },
-              { id: 204, name: "Pash", image: authorImage, genre: "Revolutionary Poetry" },
-              { id: 205, name: "Surjit Patar", image: authorImage, genre: "Contemporary Poetry" },
-            ]
-          }));
-          setRelatedLoading(false);
-        }, 1500);
-      }, 1000);
+Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi language, and his work continues to influence Punjabi culture, music, and literature.`,
+        books: [
+          { id: 101, title: 'Heer Ranjha', cover: authorImage, rating: 4.8, year: 1766 },
+          { id: 102, title: 'Ishq Daa Waaris', cover: authorImage, rating: 4.5, year: 1776 },
+          { id: 103, title: 'Dastan-E-Ranjeet', cover: authorImage, rating: 4.2, year: 1782 },
+          { id: 104, title: 'Punjabi Diyan Kahanian', cover: authorImage, rating: 4.0, year: 1788 },
+        ],
+        awards: [
+          { name: 'Pride of Punjab', year: 1998 },
+          { name: 'Literary Excellence Award', year: 2005 },
+        ],
+      });
+
+      setReviews(Array.from({ length: 15 }, (_, i) => ({
+        id: i + 1,
+        name: ['Amanpreet', 'Gurpreet', 'Harpreet', 'Jaspreet', 'Manpreet', 'Navpreet'][i % 6],
+        date: new Date(Date.now() - (i * 86400000)).toLocaleDateString(),
+        rating: [4, 5, 3, 4, 5, 4, 3, 5, 4, 5][i % 10],
+        review: [
+          "Waris Shah's poetry transcends time and speaks directly to the soul.",
+          'A true master of Punjabi literature whose work remains relevant centuries later.',
+          'His understanding of human emotions is unparalleled in Punjabi poetry.',
+          'The way he blends spiritual themes with human love is remarkable.',
+          'Every Punjabi household should have a copy of Heer Ranjha.',
+          'His work captures the essence of Punjabi culture beautifully.',
+          'A bit difficult to understand at first, but worth the effort.',
+          'The depth of his poetry increases with each reading.',
+          'His work is the foundation of modern Punjabi literature.',
+          'A literary giant whose influence continues to grow.',
+        ][i % 10],
+        helpful: (i * 7) % 50,
+      })));
+      setIsLoading(false);
+    }, 600);
+
+    const t2 = setTimeout(() => {
+      setAuthor((prev) => prev && ({
+        ...prev,
+        relatedAuthors: [
+          { id: 201, name: 'Bulleh Shah', image: authorImage, genre: 'Sufi Poetry' },
+          { id: 202, name: 'Amrita Pritam', image: authorImage, genre: 'Modern Poetry' },
+          { id: 203, name: 'Shiv Kumar Batalvi', image: authorImage, genre: 'Lyrical Poetry' },
+          { id: 204, name: 'Pash', image: authorImage, genre: 'Revolutionary Poetry' },
+          { id: 205, name: 'Surjit Patar', image: authorImage, genre: 'Contemporary Poetry' },
+        ],
+      }));
+      setRelatedLoading(false);
+    }, 1200);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
-    fetchAuthor();
   }, [id]);
 
-  const handleRatingChange = (rating) => {
-    setReviewForm({ ...reviewForm, rating });
-  };
+  const handleRatingChange = (rating) => setReviewForm({ ...reviewForm, rating });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -135,482 +149,304 @@ const AuthorDetail = ({ isDarkMode }) => {
 
   const handleSubmitReview = (e) => {
     e.preventDefault();
-    const newReview = {
-      id: reviews.length + 1,
-      name: reviewForm.name,
-      date: new Date().toLocaleDateString(),
-      rating: reviewForm.rating,
-      review: reviewForm.review,
-      helpful: 0
-    };
-    
-    setReviews([newReview, ...reviews]);
-    setReviewForm({
-      name: '',
-      email: '',
-      rating: 0,
-      review: '',
-    });
+    setReviews([
+      {
+        id: reviews.length + 1,
+        name: reviewForm.name,
+        date: new Date().toLocaleDateString(),
+        rating: reviewForm.rating,
+        review: reviewForm.review,
+        helpful: 0,
+      },
+      ...reviews,
+    ]);
+    setReviewForm({ name: '', email: '', rating: 0, review: '' });
     setShowReviewForm(false);
   };
 
   const toggleHelpful = (reviewId) => {
-    setReviews(reviews.map(review => 
-      review.id === reviewId 
-        ? { ...review, helpful: review.helpful + 1 } 
-        : review
-    ));
+    setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, helpful: r.helpful + 1 } : r)));
   };
 
-  const scrollRelated = (direction, sectionId) => {
-    const container = document.querySelector(`.${styles.relatedScrollContainer}[data-section="${sectionId}"]`);
-    const scrollAmount = direction === 'left' ? -300 : 300;
-    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  const scrollRelated = (direction) => {
+    relatedRef.current?.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
   };
 
-  const toggleMobileTabs = () => {
-    setShowMobileTabs(!showMobileTabs);
+  const openWorks = () => {
+    setActiveTab('works');
+    document.getElementById('author-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const getActiveTabName = () => {
-    switch(activeTab) {
-      case 'biography': return 'Biography';
-      case 'works': return 'Major Works';
-      case 'awards': return 'Awards';
-      case 'reviews': return 'Reviews';
-      default: return 'Biography';
-    }
-  };
-
-  if (isLoading) {
-    return <div className={styles.authorDetailContainer}><Loader/></div>;
+  if (isLoading || !author) {
+    return <div className={styles.page}><Loader /></div>;
   }
 
   return (
-    <div className={styles.authorDetailContainer}>
-      <div className={styles.headerImageSection}>
-        <img
-          src={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-          alt="Header"
-          className={styles.headerImage}
-        />
-        <div className={styles.headerText}>
-          <h1>{author.name}</h1>
-          <p>Renowned Punjabi Sufi Poet (1722-1798)</p>
-        </div>
-      </div>
+    <div className={styles.page}>
+      <PageHero
+        compact
+        image={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
+        title={author.name}
+        subtitle="Renowned Punjabi Sufi Poet (1722-1798)"
+        crumbs={[
+          { label: 'Home', to: '/' },
+          { label: 'Authors', to: '/collections/authors' },
+          { label: author.name },
+        ]}
+      />
 
-      <div className={styles.breadcrumb}>
-        <Link to="/">
-          <span>Home</span>
-        </Link>{" "}
-        /{" "}
-        <Link to="/authors">
-          <span> Authors</span>
-        </Link>{" "}
-        / <span> {author.name}</span>
-      </div>
-
-      <div className={styles.mainContentContainer}>
-        <div className={styles.leftColumn}>
-          <div className={styles.heroSection}>
-            <div className={styles.authorImageContainer}>
-              <img 
-                src={getImagePath(author.image)} 
-                alt={author.name} 
-                className={styles.authorImage}
-              />
-              <div className={styles.authorRating}>
-                <div className={styles.ratingStars}>
-                  {[...Array(5)].map((_, i) => (
-                    i < Math.floor(author.rating) ? 
-                      <FaStar key={i} className={styles.starFilled} /> : 
-                      <FaRegStar key={i} className={styles.starEmpty} />
-                  ))}
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          {/* ---------- Author card ---------- */}
+          <section className={styles.productCard} aria-label="About the author">
+            <div className={styles.portraitStage}>
+              <div className={styles.portrait}>
+                <img src={getImagePath(author.image)} alt={author.name} className={styles.portraitImg} />
+                <div className={styles.portraitRating}>
+                  <Stars value={author.rating} />
+                  <span>{author.rating} · {author.reviews} reviews</span>
                 </div>
-                <span>{author.rating} ({author.reviews} reviews)</span>
               </div>
             </div>
 
-            <div className={styles.detailsContainer}>
-              <div className={styles.metaInfo}>
-                <div className={styles.metaItem}>
-                  <FaPenFancy className={styles.metaIcon} />
-                  <span>{author.genre}</span>
+            <div className={styles.info}>
+              <div className={styles.chipRow}>
+                <span className={styles.chip}><FaPenFancy aria-hidden="true" /> {author.genre}</span>
+              </div>
+              <h2 className={styles.title}>{author.name}</h2>
+
+              <dl className={styles.lifeDates}>
+                <div className={styles.lifeItem}>
+                  <dt>Born</dt>
+                  <dd>{author.born}</dd>
                 </div>
-                <div className={styles.metaItem}>
-                  <FaBook className={styles.metaIcon} />
-                  <span>{author.books.length} major works</span>
+                <div className={styles.lifeItem}>
+                  <dt>Died</dt>
+                  <dd>{author.died}</dd>
                 </div>
+              </dl>
+
+              <div className={styles.metaRow}>
+                <span className={styles.metaPill}><FaBook aria-hidden="true" /> {author.books.length} major works</span>
                 {author.awards.length > 0 && (
-                  <div className={styles.metaItem}>
-                    <FaAward className={styles.metaIcon} />
-                    <span>{author.awards.length} awards</span>
-                  </div>
+                  <span className={styles.metaPill}><FaAward aria-hidden="true" /> {author.awards.length} awards</span>
                 )}
               </div>
 
-              <div className={styles.lifeDates}>
-                <span>Born: {author.born}</span>
-                <span>Died: {author.died}</span>
-              </div>
-
-              <div className={styles.actionButtons}>
-                <button className={styles.primaryButton}>View All Works</button>
-                <button 
-                  className={styles.iconButton} 
+              <div className={styles.actions}>
+                <button type="button" className={styles.primaryButton} onClick={openWorks}>
+                  <FaBook aria-hidden="true" /> View all works
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
                   onClick={() => setLiked(!liked)}
-                  aria-label={liked ? "Unlike" : "Like"}
+                  aria-pressed={liked}
+                  aria-label={liked ? 'Unlike' : 'Like'}
                 >
-                  {liked ? <FaHeart color="red" /> : <FaRegHeart />}
+                  {liked ? <FaHeart /> : <FaRegHeart />}
                 </button>
-                <button 
-                  className={styles.iconButton}
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
                   onClick={() => setSaved(!saved)}
-                  aria-label={saved ? "Unsave" : "Save for later"}
+                  aria-pressed={saved}
+                  aria-label={saved ? 'Remove from saved' : 'Save for later'}
                 >
-                  {saved ? <FaBookmark color="var(--icon-color)" /> : <FaRegBookmark />}
+                  {saved ? <FaBookmark /> : <FaRegBookmark />}
                 </button>
-                <button className={styles.iconButton} aria-label="Share">
+                <button type="button" className={styles.iconButton} aria-label="Share">
                   <FaShareAlt />
                 </button>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className={styles.tabContainer}>
-            <div className={styles.tabButtons}>
-              <button 
-                className={`${styles.tabButton} ${activeTab === 'biography' ? styles.activeTab : ''}`}
-                onClick={() => setActiveTab('biography')}
-              >
-                Biography
-              </button>
-              <button 
-                className={`${styles.tabButton} ${activeTab === 'works' ? styles.activeTab : ''}`}
-                onClick={() => setActiveTab('works')}
-              >
-                Major Works
-              </button>
-              <button 
-                className={`${styles.tabButton} ${activeTab === 'awards' ? styles.activeTab : ''}`}
-                onClick={() => setActiveTab('awards')}
-              >
-                Awards
-              </button>
-              <button 
-                className={`${styles.tabButton} ${activeTab === 'reviews' ? styles.activeTab : ''}`}
-                onClick={() => setActiveTab('reviews')}
-              >
-                Reviews
-              </button>
+          {/* ---------- Tabs ---------- */}
+          <section className={styles.section} id="author-tabs">
+            <div className={styles.tabs} role="tablist" aria-label="Author information">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  id={`tab-${tab.id}`}
+                  aria-selected={activeTab === tab.id}
+                  aria-controls={`panel-${tab.id}`}
+                  className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                  {tab.id === 'reviews' && <span className={styles.tabCount}>{reviews.length}</span>}
+                </button>
+              ))}
             </div>
 
-            {/* Mobile Tabs Dropdown */}
-            <div className={styles.mobileTabsDropdown}>
-              <button 
-                className={styles.mobileTabsToggle}
-                onClick={toggleMobileTabs}
-              >
-                {getActiveTabName()}
-                <FaChevronDown className={`${styles.dropdownIcon} ${showMobileTabs ? styles.rotateIcon : ''}`} />
-              </button>
-              {showMobileTabs && (
-                <div className={styles.mobileTabsMenu}>
-                  <button 
-                    className={`${styles.mobileTabButton} ${activeTab === 'biography' ? styles.activeMobileTab : ''}`}
-                    onClick={() => {
-                      setActiveTab('biography');
-                      setShowMobileTabs(false);
-                    }}
-                  >
-                    Biography
-                  </button>
-                  <button 
-                    className={`${styles.mobileTabButton} ${activeTab === 'works' ? styles.activeMobileTab : ''}`}
-                    onClick={() => {
-                      setActiveTab('works');
-                      setShowMobileTabs(false);
-                    }}
-                  >
-                    Major Works
-                  </button>
-                  <button 
-                    className={`${styles.mobileTabButton} ${activeTab === 'awards' ? styles.activeMobileTab : ''}`}
-                    onClick={() => {
-                      setActiveTab('awards');
-                      setShowMobileTabs(false);
-                    }}
-                  >
-                    Awards
-                  </button>
-                  <button 
-                    className={`${styles.mobileTabButton} ${activeTab === 'reviews' ? styles.activeMobileTab : ''}`}
-                    onClick={() => {
-                      setActiveTab('reviews');
-                      setShowMobileTabs(false);
-                    }}
-                  >
-                    Reviews
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className={styles.tabContent}>
+            <div
+              className={`${styles.tabPanel} ${styles.glass}`}
+              role="tabpanel"
+              id={`panel-${activeTab}`}
+              aria-labelledby={`tab-${activeTab}`}
+            >
               {activeTab === 'biography' && (
-                <div className={styles.biographyContent}>
+                <>
                   <h3 className={styles.sectionTitle}>About {author.name}</h3>
-                  <div className={styles.biographyText}>
-                    {author.biography.split('\n').map((paragraph, i) => (
-                      <p key={i}>{paragraph}</p>
+                  <div className={styles.bio}>
+                    {author.biography.split('\n').filter((p) => p.trim()).map((paragraph, i) => (
+                      <p key={i}>{paragraph.trim()}</p>
                     ))}
                   </div>
-                </div>
+                </>
               )}
 
               {activeTab === 'works' && (
-                <div className={styles.worksContent}>
-                  <h3 className={styles.sectionTitle}>Major Works</h3>
+                <>
+                  <h3 className={styles.sectionTitle}>Major works</h3>
                   <div className={styles.worksGrid}>
-                    {author.books.map(book => (
-                      <div key={book.id} className={styles.workCard} onClick={() => navigate(`/ebooks/${book.id}`)}>
-                        <div className={styles.workImageContainer}>
-                          <img src={getImagePath(book.cover)} alt={book.title} className={styles.workImage} />
-                        </div>
-                        <div className={styles.workInfo}>
-                          <h4 className={styles.workTitle}>{book.title}</h4>
-                          <div className={styles.workMeta}>
-                            <span className={styles.workRating}>
-                              ⭐ {book.rating}
-                            </span>
-                            <span className={styles.workYear}>{book.year}</span>
-                          </div>
-                        </div>
-                      </div>
+                    {author.books.map((book) => (
+                      <Link key={book.id} to={`/collections/ebooks/ebook/${book.id}`} className={styles.workCard}>
+                        <span className={styles.workCover}>
+                          <img src={getImagePath(book.cover)} alt="" />
+                        </span>
+                        <span className={styles.workTitle}>{book.title}</span>
+                        <span className={styles.workMeta}>
+                          <span><FaStar className={styles.starOn} aria-hidden="true" /> {book.rating}</span>
+                          <span>{book.year}</span>
+                        </span>
+                      </Link>
                     ))}
                   </div>
-                </div>
+                </>
               )}
 
               {activeTab === 'awards' && (
-                <div className={styles.awardsContent}>
-                  <h3 className={styles.sectionTitle}>Awards & Honors</h3>
-                  <div className={styles.awardsList}>
-                    {author.awards.map((award, i) => (
-                      <div key={i} className={styles.awardItem}>
-                        <div className={styles.awardIcon}>
-                          <FaAward />
-                        </div>
-                        <div className={styles.awardDetails}>
-                          <h4 className={styles.awardName}>{award.name}</h4>
+                <>
+                  <h3 className={styles.sectionTitle}>Awards and honours</h3>
+                  <ul className={styles.awardList}>
+                    {author.awards.map((award) => (
+                      <li key={award.name} className={styles.award}>
+                        <span className={styles.awardIcon} aria-hidden="true"><FaAward /></span>
+                        <span>
+                          <span className={styles.awardName}>{award.name}</span>
                           <span className={styles.awardYear}>{award.year}</span>
-                        </div>
-                      </div>
+                        </span>
+                      </li>
                     ))}
-                  </div>
-                </div>
+                  </ul>
+                </>
               )}
 
               {activeTab === 'reviews' && (
-                <div className={styles.reviewsContent}>
-                  {showReviewForm ? (
-                    <div className={styles.reviewFormContainer}>
-                      <h3 className={styles.sectionTitle}>Write a Review</h3>
-                      <form onSubmit={handleSubmitReview}>
-                        <div className={styles.formGroup}>
-                          <label htmlFor="name">Name</label>
-                          <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value={reviewForm.name}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </div>
-                        
-                        <div className={styles.formGroup}>
-                          <label htmlFor="email">Email</label>
-                          <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            value={reviewForm.email}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </div>
-                        
-                        <div className={styles.formGroup}>
-                          <label>Rating</label>
-                          <div className={styles.ratingInput}>
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <button
-                                key={star}
-                                type="button"
-                                onClick={() => handleRatingChange(star)}
-                                className={styles.starButton}
-                              >
-                                {star <= reviewForm.rating ? (
-                                  <FaStar className={styles.starFilled} />
-                                ) : (
-                                  <FaRegStar className={styles.starEmpty} />
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div className={styles.formGroup}>
-                          <label htmlFor="review">Your Review</label>
-                          <textarea
-                            id="review"
-                            name="review"
-                            value={reviewForm.review}
-                            onChange={handleInputChange}
-                            rows="4"
-                            required
-                          />
-                        </div>
-                        
-                        <div className={styles.formActions}>
-                          <button 
-                            type="button"
-                            className={styles.secondaryButton}
-                            onClick={() => setShowReviewForm(false)}
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            type="submit" 
-                            className={styles.primaryButton}
-                          >
-                            Submit Review
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  ) : (
-                    <>
-                      <div className={styles.reviewsHeader}>
-                        <h3 className={styles.sectionTitle}>Reviews ({reviews.length})</h3>
-                        <button 
-                          className={styles.primaryButton}
-                          onClick={() => setShowReviewForm(true)}
-                        >
-                          Write a Review
-                        </button>
+                showReviewForm ? (
+                  <form onSubmit={handleSubmitReview}>
+                    <h3 className={styles.formTitle}>Write a review</h3>
+                    <div className={styles.formRow}>
+                      <div className={styles.field}>
+                        <label htmlFor="name" className={styles.label}>Name</label>
+                        <input id="name" name="name" type="text" className={styles.input} value={reviewForm.name} onChange={handleInputChange} required />
                       </div>
-                      <div className={styles.reviewsListContainer}>
-                        <div className={styles.reviewsList}>
-                          {reviews.map((review) => (
-                            <div key={review.id} className={styles.reviewItem}>
-                              <div className={styles.reviewHeader}>
-                                <div className={styles.reviewerInfo}>
-                                  <div className={styles.reviewerInitial}>{review.name.charAt(0)}</div>
-                                  <div>
-                                    <div className={styles.reviewerName}>{review.name}</div>
-                                    <div className={styles.reviewDate}>{review.date}</div>
-                                  </div>
-                                </div>
-                                <div className={styles.reviewRating}>
-                                  {[...Array(5)].map((_, i) => (
-                                    i < review.rating ? 
-                                      <FaStar key={i} className={styles.starFilled} /> : 
-                                      <FaRegStar key={i} className={styles.starEmpty} />
-                                  ))}
-                                </div>
-                              </div>
-                              <div className={styles.reviewContent}>
-                                {review.review}
-                              </div>
-                              <div className={styles.reviewActions}>
-                                <button 
-                                  className={styles.helpfulButton}
-                                  onClick={() => toggleHelpful(review.id)}
-                                >
-                                  Helpful ({review.helpful})
-                                </button>
+                      <div className={styles.field}>
+                        <label htmlFor="email" className={styles.label}>Email</label>
+                        <input id="email" name="email" type="email" className={styles.input} value={reviewForm.email} onChange={handleInputChange} required />
+                      </div>
+                    </div>
+                    <div className={styles.field}>
+                      <span className={styles.label} id="au-rating-label">Your rating</span>
+                      <div className={styles.starPicker} role="group" aria-labelledby="au-rating-label">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => handleRatingChange(star)}
+                            className={styles.starButton}
+                            aria-label={`${star} star${star !== 1 ? 's' : ''}`}
+                            aria-pressed={star <= reviewForm.rating}
+                          >
+                            {star <= reviewForm.rating ? <FaStar className={styles.starOn} /> : <FaRegStar className={styles.starOff} />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="review" className={styles.label}>Your review</label>
+                      <textarea id="review" name="review" className={styles.textarea} value={reviewForm.review} onChange={handleInputChange} required />
+                    </div>
+                    <div className={styles.formActions}>
+                      <button type="button" className={styles.secondaryButton} onClick={() => setShowReviewForm(false)}>Cancel</button>
+                      <button type="submit" className={styles.primaryButton} disabled={reviewForm.rating === 0}>Post review</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div className={styles.reviewsHeader}>
+                      <h3 className={styles.sectionTitle}>Reviews ({reviews.length})</h3>
+                      <button type="button" className={styles.primaryButton} onClick={() => setShowReviewForm(true)}>
+                        Write a review
+                      </button>
+                    </div>
+                    <ul className={`${styles.reviewList} ${styles.reviewScroll}`}>
+                      {reviews.map((review) => (
+                        <li key={review.id} className={styles.review}>
+                          <div className={styles.reviewTop}>
+                            <div className={styles.reviewer}>
+                              <span className={styles.avatar} aria-hidden="true">{review.name.charAt(0).toUpperCase()}</span>
+                              <div>
+                                <div className={styles.reviewName}>{review.name}</div>
+                                <div className={styles.reviewDate}>{review.date}</div>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                            <Stars value={review.rating} />
+                          </div>
+                          <p className={styles.reviewBody}>{review.review}</p>
+                          <button type="button" className={styles.helpful} onClick={() => toggleHelpful(review.id)}>
+                            Helpful ({review.helpful})
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )
               )}
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className={styles.rightColumn}>
-          <section className={styles.relatedSection}>
-            <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Similar Authors</h3>
+        <aside className={styles.aside}>
+          <section className={`${styles.asideBlock} ${styles.glass}`}>
+            <div className={styles.asideHead}>
+              <h3 className={styles.asideTitle}>Similar authors</h3>
               <div className={styles.scrollButtons}>
-                <button onClick={() => scrollRelated('left', 'authors')} className={styles.scrollButton}>
+                <button type="button" onClick={() => scrollRelated('left')} className={styles.scrollButton} aria-label="Scroll left">
                   <FaChevronLeft />
                 </button>
-                <button onClick={() => scrollRelated('right', 'authors')} className={styles.scrollButton}>
+                <button type="button" onClick={() => scrollRelated('right')} className={styles.scrollButton} aria-label="Scroll right">
                   <FaChevronRight />
                 </button>
               </div>
             </div>
-            <div 
-              className={styles.relatedScrollContainer} 
-              data-section="authors"
-            >
-              <div className={styles.relatedGrid}>
-                {relatedLoading ? (
-                  Array(5).fill().map((_, index) => (
-                    <RelatedAuthorSkeleton key={`author-skeleton-${index}`} />
-                  ))
-                ) : (
-                  author.relatedAuthors.map((relatedAuthor) => (
-                    <div 
-                      key={relatedAuthor.id} 
-                      className={styles.relatedCard}
-                      onClick={() => navigate(`/authors/${relatedAuthor.id}`)}
-                    >
-                      <div className={styles.relatedImageContainer}>
-                        <img src={getImagePath(relatedAuthor.image)} alt={relatedAuthor.name} className={styles.relatedCover} />
-                      </div>
-                      <div className={styles.relatedInfo}>
-                        <h4 className={styles.relatedTitle}>{relatedAuthor.name}</h4>
-                        <p className={styles.relatedGenre}>{relatedAuthor.genre}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+            <div className={styles.relatedList} ref={relatedRef}>
+              {relatedLoading
+                ? Array.from({ length: 4 }).map((_, i) => <RelatedAuthorSkeleton key={i} />)
+                : (author.relatedAuthors || []).map((related) => (
+                    <Link key={related.id} to={`/collections/authors/author/${related.id}`} className={styles.relatedCard}>
+                      <img src={getImagePath(related.image)} alt="" className={`${styles.relatedThumb} ${styles.relatedThumbRound}`} loading="lazy" />
+                      <span className={styles.relatedInfo}>
+                        <span className={styles.relatedTitle}>{related.name}</span>
+                        <span className={styles.relatedMeta}>{related.genre}</span>
+                      </span>
+                    </Link>
+                  ))}
             </div>
           </section>
 
-          <section className={styles.quoteSection}>
-            <h3 className={styles.sectionTitle}>Famous Quote</h3>
-            <div className={styles.quoteCard}>
-              <blockquote className={styles.quoteText}>
-                "The one who is in love with the Lord, neither dies nor is killed."
-              </blockquote>
-              <div className={styles.quoteSource}>— Waris Shah, Heer Ranjha</div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const RelatedAuthorSkeleton = () => {
-  return (
-    <div className={styles.relatedCard}>
-      <div className={styles.skeletonRelatedImageContainer}>
-      </div>
-      <div className={styles.relatedCardText}>
-        <div className={styles.skeletonRelatedTitle}></div>
-        <div className={styles.skeletonRelatedAuthor}></div>
+          <figure className={styles.quoteCard}>
+            <FaQuoteLeft className={styles.quoteMark} aria-hidden="true" />
+            <blockquote className={styles.quoteText}>
+              The one who is in love with the Lord, neither dies nor is killed.
+            </blockquote>
+            <figcaption className={styles.quoteSource}>Waris Shah, Heer Ranjha</figcaption>
+          </figure>
+        </aside>
       </div>
     </div>
   );

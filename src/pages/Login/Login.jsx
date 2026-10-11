@@ -1,10 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import ReCAPTCHA from 'react-google-recaptcha';
 import styles from './Login.module.css';
-import { FaGoogle, FaFacebook, FaGamepad, FaCoins, FaEye, FaEyeSlash } from 'react-icons/fa';
+import {
+  FaGoogle, FaFacebook, FaEye, FaEyeSlash, FaBook, FaRegFileAudio,
+  FaHeart, FaHistory, FaGamepad,
+} from 'react-icons/fa';
+import { FaHandsPraying } from 'react-icons/fa6';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 
@@ -23,6 +26,40 @@ const useProductionImagePath = () => {
   };
 };
 
+const PERKS = [
+  { icon: <FaBook />, title: 'Your reading, saved', text: 'Pick up any ebook where you left off.' },
+  { icon: <FaHeart />, title: 'Favourites in one place', text: 'Save books, audiobooks and shabads to come back to.' },
+  { icon: <FaHandsPraying />, title: 'Full Hukamnama', text: 'Read the daily Hukamnama with English translation and arth.' },
+];
+
+const FEATURES = [
+  { to: '/collections/ebooks', icon: <FaBook />, title: 'Ebooks', text: 'Punjabi books on history, poetry and Sikhi.' },
+  { to: '/collections/audiobooks', icon: <FaRegFileAudio />, title: 'Audiobooks', text: 'Narrated books and kirtan to listen anywhere.' },
+  { to: '/learning', icon: <FaGamepad />, title: 'Games and quizzes', text: 'Shabd Khoj, Memory Match and topic quizzes.' },
+  { to: '/my-favorites', icon: <FaHeart />, title: 'My favourites', text: 'Everything you’ve saved, on every device.' },
+  { to: '/history', icon: <FaHistory />, title: 'History', text: 'See what you’ve read and listened to recently.' },
+  { to: '/gurbani', icon: <FaHandsPraying />, title: 'Gurbani', text: 'Read and listen with meanings.' },
+];
+
+const FAQS = [
+  {
+    q: 'I forgot my password. What do I do?',
+    a: 'Choose “Forgot password?” under the form. We’ll email you a link to set a new one.',
+  },
+  {
+    q: 'Can I sign in with my username?',
+    a: 'Yes. Enter either the email address or the username you signed up with.',
+  },
+  {
+    q: 'What does “Remember me” do?',
+    a: 'It keeps you signed in on this device after you close the browser. Leave it off on shared computers.',
+  },
+  {
+    q: 'Do I need Premium to use Virsaa?',
+    a: 'No. A free account gives you the library, games and Gurbani. Premium unlocks extra audiobook chapters and more.',
+  },
+];
+
 const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
   const getImagePath = useProductionImagePath();
   const { login } = useAuth();
@@ -32,8 +69,6 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
   const formSideImage = '/images/Login/right_section.png';
   const headerImageLight = '/images/Login/background.jpeg';
   const headerImageDark = '/images/Login/background-dark.jpeg';
-  const latest_content = '/images/Login/latest_content.jpg';
-  const games = '../../images/Login/games.jpg';
 
   const [formData, setFormData] = useState({
     email: '',
@@ -45,60 +80,35 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
   const [showPassword, setShowPassword] = useState(false);
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
-  // Log environment variables and reCAPTCHA state
-  console.log('Environment Variables:', {
-    REACT_APP_RECAPTCHA_PUBLIC_KEY: process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY,
-    REACT_APP_API_URL: process.env.REACT_APP_API_URL,
-  });
-
-  const latestContent = [
-    { id: 1, image: latest_content, title: 'Content 1', description: 'Description for Content 1' },
-    { id: 2, image: latest_content, title: 'Content 2', description: 'Description for Content 2' },
-    { id: 3, image: latest_content, title: 'Content 3', description: 'Description for Content 3' },
-    { id: 4, image: latest_content, title: 'Content 4', description: 'Description for Content 4' },
-    { id: 5, image: latest_content, title: 'Content 5', description: 'Description for Content 5' },
-  ];
-
-  const popularInKids = [
-    { id: 1, image: games, title: 'Game 1', level: 'Beginner', fees: 50 },
-    { id: 2, image: games, title: 'Game 2', level: 'Intermediate', fees: 100 },
-    { id: 3, image: games, title: 'Game 3', level: 'Advanced', fees: 150 },
-    { id: 4, image: games, title: 'Game 4', level: 'Expert', fees: 200 },
-    { id: 5, image: games, title: 'Game 5', level: 'Advanced', fees: 150 },
-  ];
-
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [id]: type === 'checkbox' ? checked : value,
     }));
     if (errors[id]) {
-      setErrors(prev => ({ ...prev, [id]: '' }));
+      setErrors((prev) => ({ ...prev, [id]: '' }));
     }
   };
 
   const togglePasswordVisibility = () => {
-    setShowPassword(prev => !prev);
+    setShowPassword((prev) => !prev);
   };
 
   const validateForm = () => {
     const newErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = 'Enter your email or username';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Enter your password';
     }
 
     const captchaToken = recaptchaRef.current?.getValue();
     if (!captchaToken) {
-      newErrors.captcha = 'Please complete the reCAPTCHA challenge';
+      newErrors.captcha = 'Tick the reCAPTCHA box to continue';
     }
 
     setErrors(newErrors);
@@ -113,22 +123,18 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
 
     try {
       const captchaToken = recaptchaRef.current.getValue();
-      console.log('reCAPTCHA Token:', captchaToken);
       if (!captchaToken) {
-        throw new Error('Please complete the reCAPTCHA challenge');
+        throw new Error('Tick the reCAPTCHA box to continue');
       }
 
       const payload = {
-        login: formData.email,
+        login: formData.email.trim(),
         password: formData.password,
         captcha: captchaToken,
       };
-      console.log('Request Payload:', payload);
 
-      console.log('Submitting login request to:', `${apiString}/api/auth/login/`);
       const response = await axios.post(`${apiString}/api/auth/login/`, payload);
 
-      console.log('Login response:', response.data);
       login(
         response.data.access,
         response.data.refresh,
@@ -147,7 +153,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
         formData.rememberMe
       );
 
-      toast.success('Login Successful! Redirecting...', {
+      toast.success('Signed in. Taking you home…', {
         position: 'top-center',
         autoClose: 2000,
         theme: isDarkMode ? 'dark' : 'light',
@@ -160,8 +166,8 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
         error.response?.data?.error ||
         error.response?.data?.captcha?.[0] ||
         error.message ||
-        'An error occurred during login';
-      console.error('Login error:', errorMessage, error.response?.data);
+        'Sign in failed. Check your details and try again.';
+      console.error('Login error:', error.response?.status || error.message);
       toast.error(errorMessage, {
         position: 'top-center',
         autoClose: 5000,
@@ -173,175 +179,160 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
     }
   };
 
-  // Log reCAPTCHA initialization status
-  useEffect(() => {
-    if (!recaptchaRef.current) {
-      console.error('reCAPTCHA ref is not initialized');
-    }
-  }, []);
-
   return (
-    <div className={styles.container} data-theme={isDarkMode ? 'dark' : 'light'}>
-      <ToastContainer />
-
-      {/* Header Section */}
-      <div className={styles.header}>
+    <div className={styles.container}>
+      {/* ---------- Hero with floating glass form ---------- */}
+      <section className={styles.hero}>
         <div
-          className={styles.headerImage}
+          className={styles.heroImage}
           style={{ backgroundImage: `url(${headerImage})` }}
-        ></div>
-        <div className={styles.headerContent}>
-          <div className={styles.headerText}>
-            <h1>LOGIN HERE</h1>
-          </div>
-        </div>
-      </div>
+          aria-hidden="true"
+        />
+        <div className={styles.heroShade} aria-hidden="true" />
 
-      {/* Form Container */}
-      <div className={styles.formContainer}>
-        <div className={styles.leftSection}>
-          <h2 className={styles.formTitle}>Login</h2>
-          <form className={styles.form} onSubmit={handleSubmit}>
-            {/* Email Input */}
-            <div className={styles.inputGroup}>
-              <label htmlFor="email" className={styles.label}>
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                className={`${styles.input} ${errors.email ? styles.errorInput : ''}`}
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              {errors.email && <div className={styles.errorMessage}>{errors.email}</div>}
-            </div>
+        <div className={styles.heroInner}>
+          <div className={styles.formCard}>
+            <p className={styles.gurmukhi} lang="pa">ਜੀ ਆਇਆਂ ਨੂੰ</p>
+            <h1 className={styles.formTitle}>Welcome back</h1>
+            <p className={styles.formLede}>Sign in to continue reading, listening and learning.</p>
 
-            {/* Password Input */}
-            <div className={styles.inputGroup}>
-              <label htmlFor="password" className={styles.label}>
-                Password
-              </label>
-              <div className={styles.passwordContainer}>
+            <form className={styles.form} onSubmit={handleSubmit} noValidate>
+              <div className={styles.inputGroup}>
+                <label htmlFor="email" className={styles.label}>Email or username</label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  className={`${styles.input} ${errors.password ? styles.errorInput : ''}`}
-                  placeholder="Enter your password"
-                  value={formData.password}
+                  type="text"
+                  id="email"
+                  autoComplete="username"
+                  className={`${styles.input} ${errors.email ? styles.errorInput : ''}`}
+                  placeholder="you@example.com"
+                  value={formData.email}
                   onChange={handleChange}
+                  aria-invalid={!!errors.email}
                 />
-                <button
-                  type="button"
-                  className={styles.togglePassword}
-                  onClick={togglePasswordVisibility}
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
+                {errors.email && <div className={styles.errorMessage}>{errors.email}</div>}
               </div>
-              {errors.password && <div className={styles.errorMessage}>{errors.password}</div>}
-            </div>
 
-            {/* reCAPTCHA */}
-            <div className={styles.inputGroup}>
-              <ReCAPTCHA
-                ref={recaptchaRef}
-                size="normal"
-                sitekey={process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY}
-                onChange={(token) => console.log('reCAPTCHA onChange Token:', token)}
-                onErrored={() => console.error('reCAPTCHA Error: Failed to load or initialize')}
-              />
-              {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
-            </div>
+              <div className={styles.inputGroup}>
+                <label htmlFor="password" className={styles.label}>Password</label>
+                <div className={styles.passwordContainer}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    autoComplete="current-password"
+                    className={`${styles.input} ${errors.password ? styles.errorInput : ''}`}
+                    placeholder="Your password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    aria-invalid={!!errors.password}
+                  />
+                  <button
+                    type="button"
+                    className={styles.togglePassword}
+                    onClick={togglePasswordVisibility}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
+                {errors.password && <div className={styles.errorMessage}>{errors.password}</div>}
+              </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className={styles.rememberForgot}>
-              <div className={styles.rememberMe}>
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                  className={styles.checkboxInput}
-                />
+              <div className={styles.rememberForgot}>
                 <label htmlFor="rememberMe" className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    id="rememberMe"
+                    checked={formData.rememberMe}
+                    onChange={handleChange}
+                    className={styles.checkboxInput}
+                  />
                   Remember me
                 </label>
+                <Link to="/forgot-password" className={styles.inlineLink}>Forgot password?</Link>
               </div>
-              <Link to="/forgot-password" className={styles.forgotPassword}>
-                Forgot Password?
-              </Link>
-            </div>
 
-            {/* Login Button */}
-            <button
-              type="submit"
-              className={styles.loginButton}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className={styles.spinner}></span>
-              ) : 'Login'}
-            </button>
+              <div className={styles.captcha}>
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  size="normal"
+                  theme={isDarkMode ? 'dark' : 'light'}
+                  sitekey={process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY}
+                  onErrored={() => console.error('reCAPTCHA failed to load')}
+                />
+                {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
+              </div>
 
-            {/* Social Login Buttons */}
-            <div className={styles.socialLogin}>
-              <button type="button" className={styles.googleButton}>
-                <FaGoogle /> Login with Google
+              <button type="submit" className={styles.primaryButton} disabled={isSubmitting}>
+                {isSubmitting ? <span className={styles.spinner} aria-label="Signing in" /> : 'Sign in'}
               </button>
-              <button type="button" className={styles.facebookButton}>
-                <FaFacebook /> Login with Facebook
-              </button>
-            </div>
-          </form>
-        </div>
 
-        {/* Right Section */}
-        <div className={styles.rightSection}>
-          <div className={styles.rightContent}>
-            <img src={getImagePath(formSideImage)} alt="Side" className={styles.rightImage} />
-            <p className={styles.rightText}>
-              Join our community and explore the latest content and games tailored just for you.
+              <div className={styles.divider}><span>or</span></div>
+
+              <div className={styles.socialLogin}>
+                <button type="button" className={styles.socialButton}>
+                  <FaGoogle /> Google
+                </button>
+                <button type="button" className={styles.socialButton}>
+                  <FaFacebook /> Facebook
+                </button>
+              </div>
+            </form>
+
+            <p className={styles.switchText}>
+              New to Virsaa? <Link to="/signup" className={styles.inlineLink}>Create an account</Link>
             </p>
-            <Link to="/signup" className={styles.signupButton}>
-              Signup
+          </div>
+
+          <aside className={styles.perksPanel}>
+            <img src={getImagePath(formSideImage)} alt="" className={styles.perksImage} />
+            <h2 className={styles.perksTitle}>Everything you saved is waiting</h2>
+            <ul className={styles.perkList}>
+              {PERKS.map((perk) => (
+                <li key={perk.title} className={styles.perk}>
+                  <span className={styles.perkIcon} aria-hidden="true">{perk.icon}</span>
+                  <div>
+                    <h3>{perk.title}</h3>
+                    <p>{perk.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      {/* ---------- What you can do ---------- */}
+      <section className={styles.section} aria-labelledby="features-title">
+        <h2 id="features-title" className={styles.sectionTitle}>What your account opens up</h2>
+        <p className={styles.sectionLede}>Explore the library now, or sign in to keep your place across devices.</p>
+        <div className={styles.featureGrid}>
+          {FEATURES.map((f) => (
+            <Link key={f.to} to={f.to} className={styles.featureCard}>
+              <span className={styles.featureIcon} aria-hidden="true">{f.icon}</span>
+              <h3>{f.title}</h3>
+              <p>{f.text}</p>
             </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------- FAQ ---------- */}
+      <section className={styles.section} aria-labelledby="faq-title">
+        <div className={styles.faqLayout}>
+          <div>
+            <h2 id="faq-title" className={styles.sectionTitle}>Trouble signing in?</h2>
+            <p className={styles.sectionLede}>Quick answers to the questions we hear most.</p>
+          </div>
+          <div className={styles.faqList}>
+            {FAQS.map((item) => (
+              <details key={item.q} className={styles.faqItem}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* Content Sections */}
-      <div className={styles.latestContent}>
-        <h2 className={styles.sectionTitle}>Latest Content</h2>
-        <div className={styles.cardGrid}>
-          {latestContent.map((content) => (
-            <div key={content.id} className={styles.card}>
-              <img src={getImagePath(content.image)} alt={content.title} className={styles.cardImage} />
-              <h3 className={styles.cardTitle}>{content.title}</h3>
-              <p className={styles.cardDescription}>{content.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className={styles.popularInKids}>
-        <h2 className={styles.sectionTitle}>Popular in Kids</h2>
-        <div className={styles.cardGrid}>
-          {popularInKids.map((game) => (
-            <div key={game.id} className={styles.card}>
-              <img src={getImagePath(game.image)} alt={game.title} className={styles.cardImage} />
-              <h3 className={styles.cardTitle}>{game.title}</h3>
-              <p className={styles.cardInfo}>
-                <FaGamepad /> Level: {game.level}
-              </p>
-              <p className={styles.cardInfo}>
-                <FaCoins /> Fees: {game.fees} coins
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+      </section>
     </div>
   );
 };

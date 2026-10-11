@@ -1,146 +1,64 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import ReCAPTCHA from 'react-google-recaptcha';
-import styles from './ForgotPassword.module.css';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaEnvelope, FaKey, FaLock, FaCheck, FaArrowLeft } from 'react-icons/fa';
 import axios from 'axios';
+import styles from './ForgotPassword.module.css';
+
+const STEPS = [
+  { title: 'Your email', icon: <FaEnvelope /> },
+  { title: 'Enter code', icon: <FaKey /> },
+  { title: 'New password', icon: <FaLock /> },
+];
 
 const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
   const navigate = useNavigate();
   const recaptchaRef = useRef(null);
-  
-  // Enhanced API URL sanitization with better error handling
-  const getSanitizedApiUrl = () => {
-    try {
-      let url = apiString?.trim() || '';
-      
-      // Remove comments, trailing slashes, and whitespace
-      url = url.replace(/#.*$/, '')
-               .replace(/\/+$/, '')
-               .replace(/\s+/g, '');
-      
-      // Ensure HTTPS if not in development
-      if (process.env.NODE_ENV !== 'development' && !url.startsWith('https://')) {
-        url = url.replace(/^http:\/\//i, 'https://');
-      }
-      
-      // Fallback URL if still invalid
-      if (!url || !/^https?:\/\//i.test(url)) {
-        console.warn('Invalid or missing apiString, using fallback URL');
-        url = 'https://virsaa-prod.eba-7cc3yk92.us-east-1.elasticbeanstalk.com';
-      }
-      
-      return url;
-    } catch (error) {
-      console.error('Error sanitizing API URL:', error);
-      return 'https://virsaa-prod.eba-7cc3yk92.us-east-1.elasticbeanstalk.com';
-    }
-  };
 
-  const apiUrl = getSanitizedApiUrl();
-  console.log('Sanitized API URL:', apiUrl);
+  // Use the API address exactly as the app passes it (it may be a relative proxy path)
+  const apiUrl = (apiString || '').trim().replace(/\/+$/, '');
 
-  // State management
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    email: '',
-    code: '',
-    newPassword: '',
-    confirmNewPassword: '',
-  });
+  const [formData, setFormData] = useState({ email: '', code: '', newPassword: '', confirmNewPassword: '' });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [emailSent, setEmailSent] = useState('');
-  const [recaptchaReady, setRecaptchaReady] = useState(false);
 
-  // Countdown timer for resend code
+  const headerImage = isDarkMode ? '/images/Login/background-dark.jpeg' : '/images/Login/background.jpeg';
+  const toastTheme = isDarkMode ? 'dark' : 'light';
+
+  // Countdown before the code can be re-sent
   useEffect(() => {
-    let timer;
-    if (countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    }
+    if (countdown <= 0) return undefined;
+    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Handle reCAPTCHA load
-  useEffect(() => {
-    const handleRecaptchaLoad = () => {
-      setRecaptchaReady(true);
-      console.log('reCAPTCHA loaded successfully');
-    };
-
-    if (window.grecaptcha) {
-      handleRecaptchaLoad();
-    } else {
-      const script = document.createElement('script');
-      script.src = 'https://www.google.com/recaptcha/api.js';
-      script.async = true;
-      script.defer = true;
-      script.onload = handleRecaptchaLoad;
-      script.onerror = () => {
-        console.error('Failed to load reCAPTCHA script');
-        toast.error('Failed to load security verification. Please refresh the page.', {
-          position: 'top-center',
-          autoClose: 5000,
-          theme: isDarkMode ? 'dark' : 'light',
-        });
-      };
-      document.body.appendChild(script);
-    }
-  }, [isDarkMode]);
-
-  // Handle form input changes
   const handleChange = (e) => {
     const { id, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
-    if (errors[id]) {
-      setErrors((prev) => ({ ...prev, [id]: '' }));
-    }
+    setFormData((prev) => ({ ...prev, [id]: id === 'code' ? value.replace(/\D/g, '').slice(0, 6) : value }));
+    if (errors[id]) setErrors((prev) => ({ ...prev, [id]: '' }));
   };
 
-  // Toggle password visibility
-  const togglePasswordVisibility = (field) => {
-    if (field === 'newPassword') {
-      setShowPassword((prev) => !prev);
-    } else {
-      setShowConfirmPassword((prev) => !prev);
-    }
-  };
-
-  // Validation functions
+  // ---------- Validation ----------
   const validateEmailForm = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
-    }
-
-    if (!recaptchaRef.current?.getValue()) {
-      newErrors.captcha = 'Please complete the security verification';
-    }
-
+    if (!formData.email.trim()) newErrors.email = 'Enter the email you signed up with';
+    else if (!emailRegex.test(formData.email)) newErrors.email = 'Enter an email like name@example.com';
+    if (!recaptchaRef.current?.getValue()) newErrors.captcha = 'Tick the reCAPTCHA box to continue';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateCodeForm = () => {
     const newErrors = {};
-    if (!formData.code.trim()) {
-      newErrors.code = 'Verification code is required';
-    } else if (formData.code.length !== 6 || !/^\d{6}$/.test(formData.code)) {
-      newErrors.code = 'Code must be a 6-digit number';
-    }
+    if (!formData.code.trim()) newErrors.code = 'Enter the 6-digit code from your email';
+    else if (!/^\d{6}$/.test(formData.code)) newErrors.code = 'The code is 6 digits';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -148,515 +66,316 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
   const validatePasswordForm = () => {
     const newErrors = {};
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-
-    if (!formData.newPassword) {
-      newErrors.newPassword = 'New password is required';
-    } else if (!passwordRegex.test(formData.newPassword)) {
-      newErrors.newPassword = 'Password must contain at least one uppercase letter, one lowercase letter, one number, and be at least 8 characters long';
-    }
-
-    if (!formData.confirmNewPassword) {
-      newErrors.confirmNewPassword = 'Please confirm your password';
-    } else if (formData.newPassword !== formData.confirmNewPassword) {
-      newErrors.confirmNewPassword = 'Passwords do not match';
-    }
-
+    if (!formData.newPassword) newErrors.newPassword = 'Create a new password';
+    else if (!passwordRegex.test(formData.newPassword)) newErrors.newPassword = 'Use 8+ characters with upper case, lower case and a number';
+    if (!formData.confirmNewPassword) newErrors.confirmNewPassword = 'Type your new password again';
+    else if (formData.newPassword !== formData.confirmNewPassword) newErrors.confirmNewPassword = 'Passwords don’t match';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Form submission handlers
+  const errorMessageFrom = (error, fallback) => {
+    if (error.code === 'ECONNABORTED') return 'The request timed out. Check your connection and try again.';
+    if (error.response) {
+      const d = error.response.data || {};
+      if (error.response.status === 429) return d.captcha || 'Too many attempts. Wait a few minutes and try again.';
+      return (Array.isArray(d.captcha) && d.captcha.join(', '))
+        || (Array.isArray(d.email) && d.email.join(', '))
+        || d.error || d.message || fallback;
+    }
+    if (error.request) return 'The server didn’t respond. Try again later.';
+    return error.message || fallback;
+  };
+
+  const post = (path, payload) => axios.post(`${apiUrl}${path}`, payload, {
+    timeout: 10000,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  // ---------- Step 1: send code ----------
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     if (!validateEmailForm()) return;
-
     setIsSubmitting(true);
-    const requestUrl = `${apiUrl}/api/auth/forget-password/`;
-    
     try {
-      const recaptchaToken = recaptchaRef.current?.getValue();
-      if (!recaptchaToken) {
-        throw new Error('Security verification failed. Please try again.');
-      }
-
-      const payload = {
-        email: formData.email,
-        captcha: recaptchaToken,
-      };
-      console.log('Request Payload:', payload);
-      console.log('Submitting forget-password request to:', requestUrl);
-
-      const response = await axios.post(requestUrl, payload, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await post('/api/auth/forget-password/', {
+        email: formData.email.trim(),
+        captcha: recaptchaRef.current.getValue(),
       });
-
       if (response.data.message) {
-        toast.success(response.data.message, {
-          position: 'top-center',
-          autoClose: 3000,
-          theme: isDarkMode ? 'dark' : 'light',
-        });
-        setEmailSent(formData.email);
+        toast.success(response.data.message, { position: 'top-center', autoClose: 3000, theme: toastTheme });
+        setEmailSent(formData.email.trim());
         setCountdown(30);
         setStep(2);
-        recaptchaRef.current.reset();
       }
     } catch (error) {
-      console.error('Request error:', error);
-      let errorMessage = 'Failed to send verification code';
-
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Request timed out. Please check your connection and try again.';
-      } else if (error.response) {
-        console.log('Error response data:', error.response.data);
-        if (error.response.status === 429) {
-          errorMessage = error.response.data?.captcha || 'Too many attempts. Please wait a few minutes and try again.';
-        } else {
-          errorMessage =
-            error.response.data?.captcha?.join(', ') ||
-            error.response.data?.email?.join(', ') ||
-            error.response.data?.error ||
-            error.response.data?.message ||
-            'Invalid request. Please check your input and try again.';
-        }
-      } else if (error.request) {
-        errorMessage = 'No response from server. Please try again later.';
-      }
-
-      toast.error(errorMessage, {
-        position: 'top-center',
-        autoClose: 5000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
-      recaptchaRef.current.reset(); // Reset reCAPTCHA on error
+      console.error('Forgot password error:', error.response?.status || error.message);
+      toast.error(errorMessageFrom(error, 'The code couldn’t be sent'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
+      recaptchaRef.current?.reset();
       setIsSubmitting(false);
     }
   };
 
+  // ---------- Step 2: verify code ----------
   const handleCodeSubmit = async (e) => {
     e.preventDefault();
     if (!validateCodeForm()) return;
-
     setIsSubmitting(true);
-    const requestUrl = `${apiUrl}/api/auth/verify-reset-code/`;
-    
     try {
-      const payload = {
-        email: emailSent,
-        code: formData.code,
-      };
-      console.log('Request Payload:', payload);
-      console.log('Submitting verify-reset-code request to:', requestUrl);
-
-      const response = await axios.post(requestUrl, payload, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
+      const response = await post('/api/auth/verify-reset-code/', { email: emailSent, code: formData.code });
       if (response.data.message) {
-        toast.success(response.data.message, {
-          position: 'top-center',
-          autoClose: 3000,
-          theme: isDarkMode ? 'dark' : 'light',
-        });
+        toast.success(response.data.message, { position: 'top-center', autoClose: 3000, theme: toastTheme });
         setStep(3);
       }
     } catch (error) {
-      console.error('Request error:', error);
-      let errorMessage = 'Invalid or expired verification code';
-
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Request timed out. Please check your connection and try again.';
-      } else if (error.response) {
-        console.log('Error response data:', error.response.data);
-        errorMessage =
-          error.response.data?.error ||
-          error.response.data?.message ||
-          errorMessage;
-      } else if (error.request) {
-        errorMessage = 'No response from server. Please try again later.';
-      }
-
-      toast.error(errorMessage, {
-        position: 'top-center',
-        autoClose: 5000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
+      console.error('Verify code error:', error.response?.status || error.message);
+      toast.error(errorMessageFrom(error, 'That code is wrong or has expired'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ---------- Step 3: new password ----------
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (!validatePasswordForm()) return;
-
     setIsSubmitting(true);
-    const requestUrl = `${apiUrl}/api/auth/reset-password/`;
-    
     try {
-      const payload = {
+      const response = await post('/api/auth/reset-password/', {
         email: emailSent,
         code: formData.code,
         new_password: formData.newPassword,
         confirm_new_password: formData.confirmNewPassword,
-      };
-      console.log('Request Payload:', payload);
-      console.log('Submitting reset-password request to:', requestUrl);
-
-      const response = await axios.post(requestUrl, payload, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
-
       if (response.data.message) {
-        toast.success(response.data.message, {
-          position: 'top-center',
-          autoClose: 3000,
-          theme: isDarkMode ? 'dark' : 'light',
-        });
+        toast.success(response.data.message, { position: 'top-center', autoClose: 3000, theme: toastTheme });
         setTimeout(() => navigate('/login'), 3000);
       }
     } catch (error) {
-      console.error('Request error:', error);
-      let errorMessage = 'Failed to reset password';
-
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Request timed out. Please check your connection and try again.';
-      } else if (error.response) {
-        console.log('Error response data:', error.response.data);
-        errorMessage =
-          error.response.data?.error ||
-          error.response.data?.message ||
-          errorMessage;
-      } else if (error.request) {
-        errorMessage = 'No response from server. Please try again later.';
-      }
-
-      toast.error(errorMessage, {
-        position: 'top-center',
-        autoClose: 5000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
+      console.error('Reset password error:', error.response?.status || error.message);
+      toast.error(errorMessageFrom(error, 'Your password couldn’t be reset'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ---------- Resend (needs a fresh reCAPTCHA tick on step 2) ----------
   const handleResendCode = async () => {
     if (countdown > 0 || isSubmitting) return;
-
+    const token = recaptchaRef.current?.getValue();
+    if (!token) {
+      setErrors((prev) => ({ ...prev, captcha: 'Tick the reCAPTCHA box, then choose “Resend code”' }));
+      return;
+    }
     setIsSubmitting(true);
-    const requestUrl = `${apiUrl}/api/auth/forget-password/`;
-    
     try {
-      const recaptchaToken = recaptchaRef.current?.getValue();
-      if (!recaptchaToken) {
-        throw new Error('Security verification failed. Please try again.');
-      }
-
-      const payload = {
-        email: emailSent,
-        captcha: recaptchaToken,
-      };
-      console.log('Request Payload:', payload);
-      console.log('Submitting resend-code request to:', requestUrl);
-
-      const response = await axios.post(requestUrl, payload, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
+      const response = await post('/api/auth/forget-password/', { email: emailSent, captcha: token });
       if (response.data.message) {
-        toast.success(response.data.message, {
-          position: 'top-center',
-          autoClose: 3000,
-          theme: isDarkMode ? 'dark' : 'light',
-        });
+        toast.success(response.data.message, { position: 'top-center', autoClose: 3000, theme: toastTheme });
         setCountdown(30);
-        recaptchaRef.current.reset();
+        setErrors((prev) => ({ ...prev, captcha: '' }));
       }
     } catch (error) {
-      console.error('Request error:', error);
-      let errorMessage = 'Failed to resend code';
-
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Request timed out. Please check your connection and try again.';
-      } else if (error.response) {
-        console.log('Error response data:', error.response.data);
-        if (error.response.status === 429) {
-          errorMessage = error.response.data?.captcha || 'Too many attempts. Please wait a few minutes and try again.';
-        } else {
-          errorMessage =
-            error.response.data?.captcha?.join(', ') ||
-            error.response.data?.email?.join(', ') ||
-            error.response.data?.error ||
-            error.response.data?.message ||
-            'Invalid request. Please check your input and try again.';
-        }
-      } else if (error.request) {
-        errorMessage = 'No response from server. Please try again later.';
-      }
-
-      toast.error(errorMessage, {
-        position: 'top-center',
-        autoClose: 5000,
-        theme: isDarkMode ? 'dark' : 'light',
-      });
-      recaptchaRef.current.reset(); // Reset reCAPTCHA on error
+      console.error('Resend code error:', error.response?.status || error.message);
+      toast.error(errorMessageFrom(error, 'The code couldn’t be re-sent'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
+      recaptchaRef.current?.reset();
       setIsSubmitting(false);
     }
   };
 
+  const recaptcha = (
+    <div className={styles.captcha}>
+      <ReCAPTCHA
+        ref={recaptchaRef}
+        sitekey={process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY}
+        size="normal"
+        theme={isDarkMode ? 'dark' : 'light'}
+        onErrored={() => toast.error('Security check failed to load. Refresh the page.', { position: 'top-center', autoClose: 5000, theme: toastTheme })}
+        onExpired={() => recaptchaRef.current?.reset()}
+      />
+      {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
+    </div>
+  );
+
+  const passwordRules = [
+    { ok: formData.newPassword.length >= 8, label: '8 or more characters' },
+    { ok: /[A-Z]/.test(formData.newPassword) && /[a-z]/.test(formData.newPassword), label: 'Upper and lower case' },
+    { ok: /\d/.test(formData.newPassword), label: 'At least one number' },
+  ];
+
   return (
-    <div className={styles.container} data-theme={isDarkMode ? 'dark' : 'light'}>
-      <ToastContainer />
-      <div className={styles.formContainer}>
-        <div className={styles.formSection}>
-          <h2 className={styles.formTitle}>
-            {step === 1
-              ? 'Reset Password'
-              : step === 2
-              ? 'Verify Code'
-              : 'Create New Password'}
-          </h2>
+    <div className={styles.container}>
+      <section className={styles.hero}>
+        <div className={styles.heroImage} style={{ backgroundImage: `url(${headerImage})` }} aria-hidden="true" />
+        <div className={styles.heroShade} aria-hidden="true" />
+
+        <div className={styles.card}>
+          <Link to="/login" className={styles.backLink}><FaArrowLeft aria-hidden="true" /> Back to sign in</Link>
+
+          <h1 className={styles.title}>
+            {step === 1 ? 'Reset your password' : step === 2 ? 'Check your email' : 'Create a new password'}
+          </h1>
+          <p className={styles.lede}>
+            {step === 1 && 'Enter the email you signed up with and we’ll send you a 6-digit code.'}
+            {step === 2 && <>We sent a 6-digit code to <strong>{emailSent}</strong>. It may take a minute to arrive.</>}
+            {step === 3 && 'Choose a password you haven’t used on Virsaa before.'}
+          </p>
+
+          {/* Real 3-step sequence, so it's numbered */}
+          <ol className={styles.stepper} aria-label="Progress">
+            {STEPS.map((s, i) => {
+              const n = i + 1;
+              const state = n < step ? 'done' : n === step ? 'current' : 'todo';
+              return (
+                <li key={s.title} className={`${styles.step} ${styles[state]}`} aria-current={state === 'current' ? 'step' : undefined}>
+                  <span className={styles.stepDot}>{state === 'done' ? <FaCheck aria-hidden="true" /> : n}</span>
+                  <span className={styles.stepLabel}>{s.title}</span>
+                </li>
+              );
+            })}
+          </ol>
 
           {step === 1 && (
-            <form className={styles.form} onSubmit={handleEmailSubmit}>
+            <form className={styles.form} onSubmit={handleEmailSubmit} noValidate>
               <div className={styles.inputGroup}>
-                <label htmlFor="email" className={styles.label}>
-                  Email
-                </label>
+                <label htmlFor="email" className={styles.label}>Email</label>
                 <input
                   type="email"
                   id="email"
+                  autoComplete="email"
                   className={`${styles.input} ${errors.email ? styles.errorInput : ''}`}
-                  placeholder="Enter your email"
+                  placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  aria-invalid={!!errors.email}
                 />
                 {errors.email && <div className={styles.errorMessage}>{errors.email}</div>}
               </div>
-
-              <div className={styles.inputGroup}>
-                {recaptchaReady ? (
-                  <ReCAPTCHA
-                    ref={recaptchaRef}
-                    sitekey={process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY}
-                    size="normal"
-                    theme={isDarkMode ? 'dark' : 'light'}
-                    onChange={(token) => console.log('reCAPTCHA verification passed:', token)}
-                    onErrored={() => {
-                      console.error('reCAPTCHA error');
-                      toast.error('Security verification failed. Please refresh the page.', {
-                        position: 'top-center',
-                        autoClose: 5000,
-                        theme: isDarkMode ? 'dark' : 'light',
-                      });
-                    }}
-                    onExpired={() => {
-                      console.log('reCAPTCHA expired');
-                      toast.warn('Security verification expired. Please verify again.', {
-                        position: 'top-center',
-                        autoClose: 5000,
-                        theme: isDarkMode ? 'dark' : 'light',
-                      });
-                      recaptchaRef.current.reset();
-                    }}
-                  />
-                ) : (
-                  <div className={styles.recaptchaLoading}>
-                    Loading security verification...
-                  </div>
-                )}
-                {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
-              </div>
-
-              <button
-                type="submit"
-                className={styles.submitButton}
-                disabled={isSubmitting || !recaptchaReady}
-              >
-                {isSubmitting ? (
-                  <span className={styles.spinner}></span>
-                ) : (
-                  'Send Verification Code'
-                )}
+              {recaptcha}
+              <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
+                {isSubmitting ? <span className={styles.spinner} aria-label="Sending" /> : 'Send code'}
               </button>
-
-              <div className={styles.bottomLinks}>
-                <Link to="/login" className={styles.link}>
-                  Back to Login
-                </Link>
-              </div>
             </form>
           )}
 
           {step === 2 && (
-            <form className={styles.form} onSubmit={handleCodeSubmit}>
-              <div className={styles.infoText}>
-                We've sent a 6-digit code to <strong>{emailSent}</strong>
-              </div>
-
+            <form className={styles.form} onSubmit={handleCodeSubmit} noValidate>
               <div className={styles.inputGroup}>
-                <label htmlFor="code" className={styles.label}>
-                  Verification Code
-                </label>
+                <label htmlFor="code" className={styles.label}>6-digit code</label>
                 <input
                   type="text"
                   id="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   maxLength="6"
-                  className={`${styles.input} ${errors.code ? styles.errorInput : ''}`}
-                  placeholder="Enter 6-digit code"
+                  className={`${styles.input} ${styles.codeInput} ${errors.code ? styles.errorInput : ''}`}
+                  placeholder="••••••"
                   value={formData.code}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  aria-invalid={!!errors.code}
                 />
                 {errors.code && <div className={styles.errorMessage}>{errors.code}</div>}
               </div>
 
-              <div className={styles.resendContainer}>
+              <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
+                {isSubmitting ? <span className={styles.spinner} aria-label="Checking" /> : 'Verify code'}
+              </button>
+
+              <details className={styles.resendBox}>
+                <summary>Didn’t get the code?</summary>
+                <p>Check your spam folder first. To get a new code, tick the box below and choose “Resend code”.</p>
+                {recaptcha}
                 <button
                   type="button"
                   className={styles.resendButton}
                   onClick={handleResendCode}
                   disabled={countdown > 0 || isSubmitting}
                 >
-                  {countdown > 0 ? `Resend in ${countdown}s` : 'Resend Code'}
+                  {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
                 </button>
-              </div>
+              </details>
 
-              <button
-                type="submit"
-                className={styles.submitButton}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <span className={styles.spinner}></span>
-                ) : (
-                  'Verify Code'
-                )}
+              <button type="button" className={styles.textButton} onClick={() => setStep(1)} disabled={isSubmitting}>
+                Use a different email
               </button>
-
-              <div className={styles.bottomLinks}>
-                <button
-                  type="button"
-                  className={styles.link}
-                  onClick={() => setStep(1)}
-                  disabled={isSubmitting}
-                >
-                  Back
-                </button>
-              </div>
             </form>
           )}
 
           {step === 3 && (
-            <form className={styles.form} onSubmit={handlePasswordSubmit}>
-              <div className={styles.passwordRequirements}>
-                <p>Password must contain:</p>
-                <ul>
-                  <li>At least 8 characters</li>
-                  <li>One uppercase letter</li>
-                  <li>One lowercase letter</li>
-                  <li>One number</li>
-                </ul>
-              </div>
-
+            <form className={styles.form} onSubmit={handlePasswordSubmit} noValidate>
               <div className={styles.inputGroup}>
-                <label htmlFor="newPassword" className={styles.label}>
-                  New Password
-                </label>
+                <label htmlFor="newPassword" className={styles.label}>New password</label>
                 <div className={styles.passwordContainer}>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     id="newPassword"
+                    autoComplete="new-password"
                     className={`${styles.input} ${errors.newPassword ? styles.errorInput : ''}`}
-                    placeholder="Enter new password"
+                    placeholder="Create a password"
                     value={formData.newPassword}
                     onChange={handleChange}
                     disabled={isSubmitting}
+                    aria-invalid={!!errors.newPassword}
                   />
                   <button
                     type="button"
                     className={styles.togglePassword}
-                    onClick={() => togglePasswordVisibility('newPassword')}
-                    disabled={isSubmitting}
+                    onClick={() => setShowPassword((p) => !p)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.newPassword && (
-                  <div className={styles.errorMessage}>{errors.newPassword}</div>
-                )}
+                <ul className={styles.rules}>
+                  {passwordRules.map((rule) => (
+                    <li key={rule.label} className={rule.ok ? styles.ruleOk : ''}>
+                      <FaCheck aria-hidden="true" /> {rule.label}
+                    </li>
+                  ))}
+                </ul>
+                {errors.newPassword && <div className={styles.errorMessage}>{errors.newPassword}</div>}
               </div>
 
               <div className={styles.inputGroup}>
-                <label htmlFor="confirmNewPassword" className={styles.label}>
-                  Confirm Password
-                </label>
+                <label htmlFor="confirmNewPassword" className={styles.label}>Confirm password</label>
                 <div className={styles.passwordContainer}>
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     id="confirmNewPassword"
+                    autoComplete="new-password"
                     className={`${styles.input} ${errors.confirmNewPassword ? styles.errorInput : ''}`}
-                    placeholder="Confirm new password"
+                    placeholder="Type it again"
                     value={formData.confirmNewPassword}
                     onChange={handleChange}
                     disabled={isSubmitting}
+                    aria-invalid={!!errors.confirmNewPassword}
                   />
                   <button
                     type="button"
                     className={styles.togglePassword}
-                    onClick={() => togglePasswordVisibility('confirmNewPassword')}
-                    disabled={isSubmitting}
+                    onClick={() => setShowConfirmPassword((p) => !p)}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   >
                     {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.confirmNewPassword && (
-                  <div className={styles.errorMessage}>{errors.confirmNewPassword}</div>
-                )}
+                {errors.confirmNewPassword && <div className={styles.errorMessage}>{errors.confirmNewPassword}</div>}
               </div>
 
-              <button
-                type="submit"
-                className={styles.submitButton}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <span className={styles.spinner}></span>
-                ) : (
-                  'Reset Password'
-                )}
+              <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
+                {isSubmitting ? <span className={styles.spinner} aria-label="Saving" /> : 'Reset password'}
               </button>
-
-              <div className={styles.bottomLinks}>
-                <button
-                  type="button"
-                  className={styles.link}
-                  onClick={() => setStep(2)}
-                  disabled={isSubmitting}
-                >
-                  Back
-                </button>
-              </div>
+              <button type="button" className={styles.textButton} onClick={() => setStep(2)} disabled={isSubmitting}>
+                Back to the code
+              </button>
             </form>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 };
