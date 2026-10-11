@@ -1,57 +1,36 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
   FiSearch, FiX, FiChevronLeft, FiChevronRight, FiGrid, FiList,
-  FiBook, FiHeadphones, FiUser, FiClock, FiHeart, FiTrash2,
+  FiBook, FiHeadphones, FiUser, FiClock, FiHeart, FiTrash2, FiDownload, FiBookmark,
 } from 'react-icons/fi';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
+import { useAuth } from '../../../context/AuthContext';
+import libraryApi, { startDownload } from '../../../api/libraryApi';
 import styles from './MyFavorites.module.css';
 
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
-    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
   }
   return imagePath;
 };
 
 const bookImage = '/images/book-image.jpg';
 const authorImage = '/images/author-image.jpg';
+const fallbackImage = (item) => item.image || (item.type === 'author' ? authorImage : bookImage);
 
-// Placeholder favourites until the favourites API exists
-const makeEbooks = () => Array.from({ length: 10 }, (_, i) => ({
-  id: `ebook-${i + 1}`,
-  title: `Sacred Wisdom Vol. ${i + 1}`,
-  author: `Author ${String.fromCharCode(65 + i)}`,
-  image: bookImage,
-  progress: (i * 23 + 12) % 100,
-  rating: (4.5 + ((i * 7) % 5) / 10).toFixed(1),
-}));
-
-const makeAudiobooks = () => Array.from({ length: 10 }, (_, i) => ({
-  id: `audiobook-${i + 1}`,
-  title: `Divine Listenings Vol. ${i + 1}`,
-  author: `Narrator ${String.fromCharCode(65 + i)}`,
-  image: bookImage,
-  duration: `${(i % 3) + 1}h ${(i * 17) % 60}m`,
-  rating: (4.5 + ((i * 3) % 5) / 10).toFixed(1),
-}));
-
-const makeAuthors = () => Array.from({ length: 10 }, (_, i) => ({
-  id: `author-${i + 1}`,
-  name: `Scholar ${String.fromCharCode(65 + i)} Singh`,
-  image: authorImage,
-  books: 5 + ((i * 7) % 20),
-  followers: `${10 + ((i * 11) % 50)}k`,
-}));
-
-const makeSaved = () => Array.from({ length: 8 }, (_, i) => ({
-  id: `saved-${i + 1}`,
-  title: `Spiritual Journey ${i + 1}`,
-  type: ['Ebook', 'Audiobook', 'Article'][i % 3],
-  image: i % 2 === 0 ? bookImage : authorImage,
-  added: `${(i * 4) + 1} days ago`,
-}));
+// Swap a broken cover for the placeholder (once, so a missing placeholder can't loop)
+const onImgError = (e) => {
+  const img = e.currentTarget;
+  if (img.dataset.fallback) return;
+  img.dataset.fallback = '1';
+  const isPerson = img.classList.contains(styles.thumbRound) || img.classList.contains(styles.savedThumbRound)
+    || Boolean(img.closest(`.${styles.authorFrame}`));
+  img.src = isPerson ? authorImage : bookImage;
+};
 
 const TABS = [
   { id: 'ebooks', label: 'Ebooks', icon: <FiBook />, path: '/collections/ebooks' },
@@ -59,10 +38,27 @@ const TABS = [
   { id: 'authors', label: 'Authors', icon: <FiUser />, path: '/collections/authors' },
 ];
 
+const TYPE_LABELS = { ebook: 'Ebook', audiobook: 'Audiobook', author: 'Author' };
+// const TAB_TYPE = { ebooks: 'ebook', audiobooks: 'audiobook', authors: 'author' };
+
+const EMPTY = { ebooks: [], audiobooks: [], authors: [], saved: [], downloads: [] };
+
 const matches = (item, q) => {
   if (!q) return true;
-  const text = `${item.title || ''} ${item.name || ''} ${item.author || ''} ${item.type || ''}`.toLowerCase();
+  const text = `${item.title || ''} ${item.name || ''} ${item.author || ''} ${item.genre || ''} ${TYPE_LABELS[item.type] || ''}`.toLowerCase();
   return text.includes(q.toLowerCase());
+};
+
+// "3 days ago", "just now"
+const timeAgo = (iso) => {
+  if (!iso) return '';
+  const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  const units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]];
+  for (const [unit, size] of units) {
+    const n = Math.floor(seconds / size);
+    if (n >= 1) return `${n} ${unit}${n > 1 ? 's' : ''} ago`;
+  }
+  return 'just now';
 };
 
 /* Horizontally scrolling row with previous / next buttons */
@@ -85,13 +81,16 @@ const ScrollRow = ({ label, children }) => {
   );
 };
 
-const Stars = ({ rating }) => (
-  <span className={styles.rating}>
-    <span className={styles.stars} style={{ '--rating': rating }} aria-hidden="true" />
-    <span className={styles.ratingValue}>{rating}</span>
-    <span className={styles.srOnly}>out of 5</span>
-  </span>
-);
+const Stars = ({ rating }) => {
+  const value = Number(rating || 0).toFixed(1);
+  return (
+    <span className={styles.rating}>
+      <span className={styles.stars} style={{ '--rating': value }} aria-hidden="true" />
+      <span className={styles.ratingValue}>{value}</span>
+      <span className={styles.srOnly}>out of 5</span>
+    </span>
+  );
+};
 
 const RemoveButton = ({ label, onClick, variant = 'card' }) => (
   <button
@@ -105,36 +104,103 @@ const RemoveButton = ({ label, onClick, variant = 'card' }) => (
   </button>
 );
 
-const MyFavorites = ({ isDarkMode }) => {
+const allowanceText = (a) => {
+  if (!a) return '';
+  if (a.limit === null) return 'Unlimited downloads on your plan.';
+  if (a.limit === 0) return 'Downloads come with a membership.';
+  return `${a.used} of ${a.limit} downloads used this month.`;
+};
+
+const MyFavorites = ({ isDarkMode, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
+  const { isLoggedIn, accessToken } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [activeTab, setActiveTab] = useState('ebooks');
-  const [lists, setLists] = useState(() => ({
-    ebooks: makeEbooks(),
-    audiobooks: makeAudiobooks(),
-    authors: makeAuthors(),
-    saved: makeSaved(),
-  }));
+  const [lists, setLists] = useState(EMPTY);
+  const [allowance, setAllowance] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [lastRemoved, setLastRemoved] = useState(null); // { key, item, index }
+  const [downloadingId, setDownloadingId] = useState(null);
 
-  const remove = (key, id) => {
-    const index = lists[key].findIndex((x) => x.id === id);
+  const load = useCallback(async () => {
+    if (!isLoggedIn || !accessToken) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await libraryApi.all(apiString, accessToken);
+      setLists({
+        ebooks: data.likes?.ebooks || [],
+        audiobooks: data.likes?.audiobooks || [],
+        authors: data.likes?.authors || [],
+        saved: data.saved || [],
+        downloads: data.downloads || [],
+      });
+      setAllowance(data.download_allowance || null);
+    } catch (err) {
+      setLoadError(err.response?.status === 401
+        ? 'Your session has ended. Log in again to see your favorites.'
+        : 'Your favorites couldn’t be loaded right now.');
+    } finally {
+      setLoading(false);
+    }
+  }, [apiString, accessToken, isLoggedIn]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Likes come from the three tabs; saved items from "Saved for later"
+  const remove = async (key, item) => {
+    const index = lists[key].findIndex((x) => x.type === item.type && x.id === item.id);
     if (index === -1) return;
-    setLastRemoved({ key, item: lists[key][index], index });
-    setLists((prev) => ({ ...prev, [key]: prev[key].filter((x) => x.id !== id) }));
+    const kind = key === 'saved' ? 'save' : 'like';
+    setLastRemoved({ key, item, index });
+    setLists((prev) => ({ ...prev, [key]: prev[key].filter((_, i) => i !== index) }));
+    try {
+      await libraryApi.remove(apiString, accessToken, kind, item.type, item.id);
+    } catch {
+      setLists((prev) => {
+        const next = [...prev[key]];
+        next.splice(index, 0, item);
+        return { ...prev, [key]: next };
+      });
+      setLastRemoved(null);
+      toast.error('That couldn’t be removed. Try again.', { position: 'top-right', autoClose: 3000 });
+    }
   };
 
-  const undo = () => {
+  const undo = async () => {
     if (!lastRemoved) return;
     const { key, item, index } = lastRemoved;
+    setLastRemoved(null);
     setLists((prev) => {
       const next = [...prev[key]];
-      next.splice(index, 0, item);
+      next.splice(Math.min(index, next.length), 0, item);
       return { ...prev, [key]: next };
     });
-    setLastRemoved(null);
+    try {
+      await libraryApi.add(apiString, accessToken, key === 'saved' ? 'save' : 'like', item.type, item.id);
+    } catch {
+      toast.error('That couldn’t be restored. Try again.', { position: 'top-right', autoClose: 3000 });
+      load();
+    }
+  };
+
+  const downloadAgain = async (item) => {
+    setDownloadingId(item.id);
+    try {
+      const data = await libraryApi.downloadEbook(apiString, accessToken, item.id);
+      startDownload(data.download_url, data.filename);
+      setAllowance(data.download_allowance || allowance);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'The download couldn’t start. Try again.', { position: 'top-right', autoClose: 3500 });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const filtered = useMemo(() => ({
@@ -142,6 +208,7 @@ const MyFavorites = ({ isDarkMode }) => {
     audiobooks: lists.audiobooks.filter((x) => matches(x, searchQuery)),
     authors: lists.authors.filter((x) => matches(x, searchQuery)),
     saved: lists.saved.filter((x) => matches(x, searchQuery)),
+    downloads: lists.downloads.filter((x) => matches(x, searchQuery)),
   }), [lists, searchQuery]);
 
   const current = filtered[activeTab];
@@ -151,7 +218,7 @@ const MyFavorites = ({ isDarkMode }) => {
     <p className={styles.emptyNote}>
       {searchQuery
         ? `Nothing in ${what} matches “${searchQuery}”.`
-        : <>No {what} yet. Tap the heart on anything in <Link to={path}>Collections</Link> to save it here.</>}
+        : <>No liked {what} yet. Tap the heart on any of the {what} in <Link to={path}>Collections</Link> to add it here.</>}
     </p>
   );
 
@@ -163,37 +230,34 @@ const MyFavorites = ({ isDarkMode }) => {
         {current.map((item) => {
           if (activeTab === 'authors') {
             return (
-              <article key={item.id} className={styles.authorCard}>
+              <article key={`${item.type}-${item.id}`} className={styles.authorCard}>
                 <div className={styles.authorFrame}>
-                  <img src={getImagePath(item.image)} alt="" loading="lazy" />
-                  <RemoveButton label={`${item.name} from favorites`} onClick={() => remove('authors', item.id)} />
+                  <Link to={item.url} aria-label={item.name}><img src={getImagePath(fallbackImage(item))} alt="" loading="lazy" onError={onImgError} /></Link>
+                  <RemoveButton label={`${item.name} from liked authors`} onClick={() => remove('authors', item)} />
                 </div>
-                <h3 className={styles.cardTitle}>{item.name}</h3>
-                <p className={styles.cardMeta}>{item.books} books, {item.followers} followers</p>
+                <h3 className={styles.cardTitle}><Link to={item.url} className={styles.cardLink}>{item.name}</Link></h3>
+                <p className={styles.cardMeta}>
+                  {item.books} {item.books === 1 ? 'book' : 'books'}{item.genre ? `, ${item.genre}` : ''}
+                </p>
               </article>
             );
           }
           const isEbook = activeTab === 'ebooks';
           return (
-            <article key={item.id} className={isEbook ? styles.bookCard : styles.audioCard}>
+            <article key={`${item.type}-${item.id}`} className={isEbook ? styles.bookCard : styles.audioCard}>
               <div className={isEbook ? styles.bookCover : styles.audioCover}>
-                <img src={getImagePath(item.image)} alt="" loading="lazy" />
+                <Link to={item.url} aria-label={item.title}><img src={getImagePath(fallbackImage(item))} alt="" loading="lazy" onError={onImgError} /></Link>
                 {!isEbook && <span className={styles.audioBadge} aria-hidden="true"><FiHeadphones /></span>}
-                <RemoveButton label={`${item.title} from favorites`} onClick={() => remove(activeTab, item.id)} />
+                <RemoveButton label={`${item.title} from liked ${tab.label.toLowerCase()}`} onClick={() => remove(activeTab, item)} />
               </div>
-              <h3 className={styles.cardTitle}>{item.title}</h3>
+              <h3 className={styles.cardTitle}><Link to={item.url} className={styles.cardLink}>{item.title}</Link></h3>
               <p className={styles.cardMeta}>{item.author}</p>
               <div className={styles.cardFoot}>
                 <Stars rating={item.rating} />
                 {isEbook
-                  ? <span className={styles.cardMeta}>{item.progress}% read</span>
-                  : <span className={styles.cardMeta}><FiClock aria-hidden="true" /> {item.duration}</span>}
+                  ? <span className={styles.cardMeta}>{item.pages} pages</span>
+                  : item.duration && <span className={styles.cardMeta}><FiClock aria-hidden="true" /> {item.duration}</span>}
               </div>
-              {isEbook && (
-                <div className={styles.progress} role="progressbar" aria-valuenow={item.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${item.title} reading progress`}>
-                  <div className={styles.progressFill} style={{ width: `${item.progress}%` }} />
-                </div>
-              )}
             </article>
           );
         })}
@@ -204,44 +268,36 @@ const MyFavorites = ({ isDarkMode }) => {
   const renderList = () => {
     if (current.length === 0) return empty(tab.label.toLowerCase(), tab.path);
     const cols = {
-      ebooks: ['Title', 'Author', 'Progress', 'Rating'],
-      audiobooks: ['Title', 'Narrator', 'Duration', 'Rating'],
-      authors: ['Name', 'Books', 'Followers', ''],
+      ebooks: ['Title', 'Author', 'Pages', 'Rating'],
+      audiobooks: ['Title', 'Author', 'Duration', 'Rating'],
+      authors: ['Name', 'Books', 'Genre', 'Rating'],
     }[activeTab];
     return (
-      <div className={styles.table} role="table" aria-label={`Favorite ${tab.label.toLowerCase()}`}>
+      <div className={styles.table} role="table" aria-label={`Liked ${tab.label.toLowerCase()}`}>
         <div className={`${styles.tr} ${styles.thead}`} role="row">
-          {cols.map((c, i) => <span key={i} role="columnheader">{c}</span>)}
+          {cols.map((c) => <span key={c} role="columnheader">{c}</span>)}
           <span role="columnheader"><span className={styles.srOnly}>Actions</span></span>
         </div>
         {current.map((item) => (
-          <div key={item.id} className={styles.tr} role="row">
+          <div key={`${item.type}-${item.id}`} className={styles.tr} role="row">
             <span role="cell" className={styles.tdMain}>
-              <img src={getImagePath(item.image)} alt="" className={activeTab === 'authors' ? styles.thumbRound : styles.thumb} loading="lazy" />
-              <span>{item.title || item.name}</span>
+              <img src={getImagePath(fallbackImage(item))} alt="" className={activeTab === 'authors' ? styles.thumbRound : styles.thumb} loading="lazy" onError={onImgError} />
+              <Link to={item.url} className={styles.cardLink}>{item.title || item.name}</Link>
             </span>
             {activeTab === 'authors' ? (
               <>
-                <span role="cell">{item.books} books</span>
-                <span role="cell">{item.followers}</span>
-                <span role="cell" />
+                <span role="cell">{item.books} {item.books === 1 ? 'book' : 'books'}</span>
+                <span role="cell">{item.genre || '—'}</span>
               </>
             ) : (
               <>
-                <span role="cell">{item.author}</span>
-                <span role="cell">
-                  {activeTab === 'ebooks' ? (
-                    <span className={styles.inlineProgress}>
-                      <span className={styles.progress}><span className={styles.progressFill} style={{ width: `${item.progress}%` }} /></span>
-                      {item.progress}%
-                    </span>
-                  ) : item.duration}
-                </span>
-                <span role="cell"><Stars rating={item.rating} /></span>
+                <span role="cell">{item.author || '—'}</span>
+                <span role="cell">{activeTab === 'ebooks' ? `${item.pages} pages` : item.duration || '—'}</span>
               </>
             )}
+            <span role="cell"><Stars rating={item.rating} /></span>
             <span role="cell" className={styles.tdAction}>
-              <RemoveButton variant="inline" label={`${item.title || item.name} from favorites`} onClick={() => remove(activeTab, item.id)} />
+              <RemoveButton variant="inline" label={`${item.title || item.name} from liked ${tab.label.toLowerCase()}`} onClick={() => remove(activeTab, item)} />
             </span>
           </div>
         ))}
@@ -249,17 +305,56 @@ const MyFavorites = ({ isDarkMode }) => {
     );
   };
 
+  const hero = (
+    <PageHero
+      compact
+      image={headerImage}
+      title="My favorites"
+      subtitle="Everything you’ve liked, saved and downloaded, in one place."
+      crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'Favorites' }]}
+    >
+      <AccountTabs />
+    </PageHero>
+  );
+
+  if (!isLoggedIn) {
+    return (
+      <div className={styles.page}>
+        {hero}
+        <div className={styles.stateBox}>
+          <h2>Log in to see your favorites</h2>
+          <p>Likes, saved books and downloads are kept in your Virsaa account.</p>
+          <Link to="/login" className={styles.primaryButton}>Log in</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || loadError) {
+    return (
+      <div className={styles.page}>
+        {hero}
+        <div className={styles.stateBox} role={loadError ? 'alert' : 'status'}>
+          {loadError ? (
+            <>
+              <h2>Couldn’t load your favorites</h2>
+              <p>{loadError}</p>
+              <button type="button" className={styles.primaryButton} onClick={load}>Try again</button>
+            </>
+          ) : (
+            <>
+              <span className={styles.spinner} aria-hidden="true" />
+              <p>Loading your favorites…</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
-      <PageHero
-        compact
-        image={headerImage}
-        title="My favorites"
-        subtitle="Everything you’ve saved, in one place."
-        crumbs={[{ label: 'Home', to: '/' }, { label: 'My profile', to: '/my-profile' }, { label: 'Favorites' }]}
-      >
-        <AccountTabs />
-      </PageHero>
+      {hero}
 
       {/* ---------- Toolbar ---------- */}
       <div className={styles.toolbarWrap}>
@@ -319,10 +414,10 @@ const MyFavorites = ({ isDarkMode }) => {
         </div>
       )}
 
-      {/* ---------- Favorites ---------- */}
+      {/* ---------- Liked ---------- */}
       <section className={styles.section} aria-labelledby="fav-title">
         <div className={styles.rowHead}>
-          <h2 id="fav-title" className={styles.sectionTitle}>Favorite {tab.label.toLowerCase()}</h2>
+          <h2 id="fav-title" className={styles.sectionTitle}><FiHeart aria-hidden="true" className={styles.titleIcon} /> Liked {tab.label.toLowerCase()}</h2>
           <Link to={tab.path} className={styles.textLink}>Browse {tab.label.toLowerCase()}</Link>
         </div>
         {viewMode === 'grid' ? renderGrid() : renderList()}
@@ -331,20 +426,66 @@ const MyFavorites = ({ isDarkMode }) => {
       {/* ---------- Saved for later ---------- */}
       <section className={styles.section} aria-labelledby="saved-title">
         <div className={styles.rowHead}>
-          <h2 id="saved-title" className={styles.sectionTitle}><FiClock aria-hidden="true" className={styles.titleIcon} /> Saved for later</h2>
+          <h2 id="saved-title" className={styles.sectionTitle}><FiBookmark aria-hidden="true" className={styles.titleIcon} /> Saved for later</h2>
         </div>
         {filtered.saved.length === 0 ? (
-          <p className={styles.emptyNote}>{searchQuery ? `Nothing saved matches “${searchQuery}”.` : 'Nothing saved for later.'}</p>
+          <p className={styles.emptyNote}>
+            {searchQuery
+              ? `Nothing saved matches “${searchQuery}”.`
+              : 'Nothing saved yet. Tap the bookmark on a book, audiobook or author to come back to it later.'}
+          </p>
         ) : (
           <ul className={styles.savedList}>
             {filtered.saved.map((item) => (
-              <li key={item.id} className={styles.savedItem}>
-                <img src={getImagePath(item.image)} alt="" loading="lazy" className={styles.savedThumb} />
+              <li key={`${item.type}-${item.id}`} className={styles.savedItem}>
+                <img src={getImagePath(fallbackImage(item))} alt="" loading="lazy" onError={onImgError} className={`${styles.savedThumb} ${item.type === 'author' ? styles.savedThumbRound : ''}`} />
                 <div className={styles.savedBody}>
-                  <h3>{item.title}</h3>
-                  <p><span className={styles.typeTag}>{item.type}</span> <span className={styles.savedWhen}>Saved {item.added}</span></p>
+                  <h3><Link to={item.url} className={styles.cardLink}>{item.title}</Link></h3>
+                  <p><span className={styles.typeTag}>{TYPE_LABELS[item.type]}</span> <span className={styles.savedWhen}>Saved {timeAgo(item.added_at)}</span></p>
                 </div>
-                <RemoveButton variant="inline" label={`${item.title} from saved`} onClick={() => remove('saved', item.id)} />
+                <RemoveButton variant="inline" label={`${item.title} from saved`} onClick={() => remove('saved', item)} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* ---------- Downloads ---------- */}
+      <section className={styles.section} aria-labelledby="downloads-title">
+        <div className={styles.rowHead}>
+          <h2 id="downloads-title" className={styles.sectionTitle}><FiDownload aria-hidden="true" className={styles.titleIcon} /> Downloads</h2>
+          {allowance && (
+            <p className={styles.allowance}>
+              {allowanceText(allowance)}
+              {allowance.limit !== null && <> <Link to="/premium" className={styles.textLink}>{allowance.limit === 0 ? 'See plans' : 'Get more'}</Link></>}
+            </p>
+          )}
+        </div>
+        {filtered.downloads.length === 0 ? (
+          <p className={styles.emptyNote}>
+            {searchQuery
+              ? `No downloads match “${searchQuery}”.`
+              : <>Books you download appear here. Open any <Link to="/collections/ebooks">ebook</Link> and choose Download.</>}
+          </p>
+        ) : (
+          <ul className={styles.savedList}>
+            {filtered.downloads.map((item) => (
+              <li key={`dl-${item.id}`} className={styles.savedItem}>
+                <img src={getImagePath(fallbackImage(item))} alt="" loading="lazy" onError={onImgError} className={styles.savedThumb} />
+                <div className={styles.savedBody}>
+                  <h3><Link to={item.url} className={styles.cardLink}>{item.title}</Link></h3>
+                  <p><span className={styles.savedMeta}>{item.author ? `${item.author}. ` : ''}Downloaded {timeAgo(item.downloaded_at)}</span></p>
+                </div>
+                <button
+                  type="button"
+                  className={`${styles.removeInline} ${styles.downloadInline}`}
+                  onClick={() => downloadAgain(item)}
+                  disabled={downloadingId === item.id}
+                  aria-label={`Download ${item.title} again`}
+                  title="Download again"
+                >
+                  <FiDownload />
+                </button>
               </li>
             ))}
           </ul>

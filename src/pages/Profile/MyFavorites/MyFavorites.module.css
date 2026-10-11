@@ -1024,3 +1024,48 @@
     display: none;
   }
 }
+
+
+/* ---------- Links, downloads ---------- */
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardLink:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cardLink:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.savedThumbRound {
+  border-radius: 50%;
+}
+
+.allowance {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--secondary-text-color);
+}
+
+.downloadInline:hover:not(:disabled) {
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.1);
+}
+
+.downloadInline:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.rowHead { flex-wrap: wrap; }
+
+.savedMeta {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

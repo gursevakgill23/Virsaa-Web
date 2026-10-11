@@ -26,6 +26,7 @@ import Learning from './pages/Learning/Learning';
 import Cookies from 'js-cookie';
 import News from './pages/News/News';
 import About from './pages/About/About';
+import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
 import Quizzes from './pages/Learning/Quizzes/Quizzes';
 import EbookDetail from './pages/Collections/EbookDetail/EbookDetail';
 import AuthorDetail from './pages/Collections/AuthorDetail/AuthorDetail';
@@ -143,6 +144,7 @@ const App = () => {
             <Route path="/gurdwara-access/history/:id" element={<GurdwaraHistory isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/news" element={<News isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/about" element={<About isDarkMode={isDarkMode} apiString={API_STRING} />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/my-profile" element={<ProfileRoute isDarkMode={isDarkMode} apiString={API_STRING} />} />
             <Route path="/account-settings" element={<Settings isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />
             <Route path="/my-favorites" element={<MyFavorites isDarkMode={isDarkMode} apiString={API_STRING} toggleTheme={toggleTheme}/>} />

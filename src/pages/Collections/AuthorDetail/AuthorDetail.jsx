@@ -5,6 +5,8 @@ import {
   FaStar, FaRegStar, FaPenFancy, FaBook, FaAward, FaQuoteLeft,
 } from 'react-icons/fa';
 import Loader from '../../../components/VirsaaLoader/Loader';
+import axios from 'axios';
+import useLibraryItem from '../../../hooks/useLibraryItem';
 import PageHero from '../../../components/PageHero/PageHero';
 import styles from './AuthorDetail.module.css';
 
@@ -12,7 +14,7 @@ const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -47,98 +49,120 @@ const RelatedAuthorSkeleton = () => (
   </div>
 );
 
-const AuthorDetail = ({ isDarkMode }) => {
+// "1722-03-05" -> "5 March 1722"
+const formatDate = (iso) => {
+  if (!iso) return '';
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!y) return iso;
+  if (!m || !d) return String(y);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+// Awards are stored as text, one per line (or comma separated): "Sahitya Akademi Award 1956"
+const parseAwards = (text) => String(text || '')
+  .split(/\n|,/)
+  .map((line) => line.trim())
+  .filter(Boolean)
+  .map((line) => {
+    const match = line.match(/^(.*?)[\s(,-]*((?:1[5-9]|20)\d{2})\)?$/);
+    return match && match[1] ? { name: match[1].trim(), year: match[2] } : { name: line, year: '' };
+  });
+
+const AuthorDetail = ({ isDarkMode, apiString }) => {
   const getImagePath = useProductionImagePath();
   const { id } = useParams();
   const relatedRef = useRef(null);
   const [author, setAuthor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relatedLoading, setRelatedLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const library = useLibraryItem(apiString, 'author', id);
+  const { liked, saved } = library;
+  const [loadError, setLoadError] = useState(null);
+  const apiUrl = (apiString || '').replace(/\/$/, '');
   const [activeTab, setActiveTab] = useState('biography');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const header_image_dark = '/images/header-image-dark.png';
-  const header_image_light = '/images/header-image-light.png';
+  const header_image_light = '/images/header-image.png';
   const authorImage = '/images/author-image.jpg';
 
   const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, review: '' });
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
+    let cancelled = false;
     setIsLoading(true);
     setRelatedLoading(true);
-    const t1 = setTimeout(() => {
-      setAuthor({
-        id,
-        name: 'Waris Shah',
-        image: authorImage,
-        rating: 4.7,
-        reviews: 892,
-        born: '1722, Jandiala Sher Khan, Punjab',
-        died: '1798, Malka Hans, Punjab',
-        genre: 'Punjabi Poetry, Sufi Poetry',
-        notableWorks: ['Heer Ranjha', 'Ishq Daa Waaris'],
-        biography: `Waris Shah was an 18th-century Punjabi Sufi poet, renowned for his contribution to Punjabi literature. He is best known for his seminal work Heer Ranjha, based on the traditional folk tale of Heer and her lover Ranjha.
+    setLoadError(null);
 
-Born into a Syed family, Waris Shah received his early education in Kasur and later studied at the shrine of Hafiz Ghulam Murtaza in Qasur. His work is characterized by its spiritual depth, lyrical beauty, and profound understanding of human nature.
+    const asList = (data) => (Array.isArray(data) ? data : data?.results || []);
 
-Waris Shah's version of Heer Ranjha is considered the most popular and is a landmark in Punjabi literature. His poetry explores themes of divine love, human relationships, and social commentary. He wrote in the Majhi dialect of Punjabi, which became the standard literary language.
+    const load = async () => {
+      try {
+        const { data } = await axios.get(`${apiUrl}/collections/authors/${id}/`);
+        const [booksRes, reviewRes] = await Promise.all([
+          axios.get(`${apiUrl}/collections/ebooks/`, { params: { author__name: data.name } }).catch(() => ({ data: [] })),
+          axios.get(`${apiUrl}/collections/authors/${id}/reviews/`).catch(() => ({ data: [] })),
+        ]);
+        if (cancelled) return;
+        const books = asList(booksRes.data)
+          .filter((b) => String(b.author) === String(data.id))
+          .map((b) => ({ id: b.id, title: b.title, cover: b.cover_image || authorImage, rating: Number(b.rating) || 0, pages: b.pages }));
+        setAuthor({
+          id: data.id,
+          name: data.name,
+          image: data.image || authorImage,
+          rating: Number(data.rating) || 0,
+          born: formatDate(data.born),
+          died: formatDate(data.died),
+          bornYear: data.born ? String(data.born).slice(0, 4) : '',
+          diedYear: data.died ? String(data.died).slice(0, 4) : '',
+          genre: data.genre || 'Author',
+          notableWorks: String(data.notable_works || '').split(/\n|,/).map((w) => w.trim()).filter(Boolean),
+          biography: data.biography || `${data.name} is one of the authors in the Virsaa library.`,
+          books,
+          awards: parseAwards(data.awards),
+        });
+        setReviews(asList(reviewRes.data).map((r) => ({
+          id: r.id,
+          name: r.user,
+          date: new Date(r.date).toLocaleDateString(),
+          rating: r.rating,
+          review: r.review,
+          helpful: r.helpful || 0,
+        })));
 
-Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi language, and his work continues to influence Punjabi culture, music, and literature.`,
-        books: [
-          { id: 101, title: 'Heer Ranjha', cover: authorImage, rating: 4.8, year: 1766 },
-          { id: 102, title: 'Ishq Daa Waaris', cover: authorImage, rating: 4.5, year: 1776 },
-          { id: 103, title: 'Dastan-E-Ranjeet', cover: authorImage, rating: 4.2, year: 1782 },
-          { id: 104, title: 'Punjabi Diyan Kahanian', cover: authorImage, rating: 4.0, year: 1788 },
-        ],
-        awards: [
-          { name: 'Pride of Punjab', year: 1998 },
-          { name: 'Literary Excellence Award', year: 2005 },
-        ],
-      });
-
-      setReviews(Array.from({ length: 15 }, (_, i) => ({
-        id: i + 1,
-        name: ['Amanpreet', 'Gurpreet', 'Harpreet', 'Jaspreet', 'Manpreet', 'Navpreet'][i % 6],
-        date: new Date(Date.now() - (i * 86400000)).toLocaleDateString(),
-        rating: [4, 5, 3, 4, 5, 4, 3, 5, 4, 5][i % 10],
-        review: [
-          "Waris Shah's poetry transcends time and speaks directly to the soul.",
-          'A true master of Punjabi literature whose work remains relevant centuries later.',
-          'His understanding of human emotions is unparalleled in Punjabi poetry.',
-          'The way he blends spiritual themes with human love is remarkable.',
-          'Every Punjabi household should have a copy of Heer Ranjha.',
-          'His work captures the essence of Punjabi culture beautifully.',
-          'A bit difficult to understand at first, but worth the effort.',
-          'The depth of his poetry increases with each reading.',
-          'His work is the foundation of modern Punjabi literature.',
-          'A literary giant whose influence continues to grow.',
-        ][i % 10],
-        helpful: (i * 7) % 50,
-      })));
-      setIsLoading(false);
-    }, 600);
-
-    const t2 = setTimeout(() => {
-      setAuthor((prev) => prev && ({
-        ...prev,
-        relatedAuthors: [
-          { id: 201, name: 'Bulleh Shah', image: authorImage, genre: 'Sufi Poetry' },
-          { id: 202, name: 'Amrita Pritam', image: authorImage, genre: 'Modern Poetry' },
-          { id: 203, name: 'Shiv Kumar Batalvi', image: authorImage, genre: 'Lyrical Poetry' },
-          { id: 204, name: 'Pash', image: authorImage, genre: 'Revolutionary Poetry' },
-          { id: 205, name: 'Surjit Patar', image: authorImage, genre: 'Contemporary Poetry' },
-        ],
-      }));
-      setRelatedLoading(false);
-    }, 1200);
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+        const all = await axios.get(`${apiUrl}/collections/authors/`).catch(() => ({ data: [] }));
+        if (cancelled) return;
+        const others = asList(all.data).filter((a) => String(a.id) !== String(data.id));
+        const sameGenre = others.filter((a) => data.genre && a.genre === data.genre);
+        setAuthor((prev) => prev && ({
+          ...prev,
+          relatedAuthors: [...sameGenre, ...others.filter((a) => !sameGenre.includes(a))].slice(0, 8)
+            .map((a) => ({ id: a.id, name: a.name, image: a.image || authorImage, genre: a.genre })),
+        }));
+      } catch (err) {
+        if (!cancelled) setLoadError(err.response?.status === 404 ? 'This author could not be found.' : 'This author couldn’t be loaded right now.');
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+          setRelatedLoading(false);
+        }
+      }
     };
-  }, [id]);
+
+    load();
+    return () => { cancelled = true; };
+  }, [id, apiUrl]);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) await navigator.share({ title: author?.name, url });
+      else await navigator.clipboard.writeText(url);
+    } catch {
+      // share sheet dismissed
+    }
+  };
 
   const handleRatingChange = (rating) => setReviewForm({ ...reviewForm, rating });
 
@@ -177,8 +201,18 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
     document.getElementById('author-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  if (isLoading || !author) {
+  if (isLoading) {
     return <div className={styles.page}><Loader /></div>;
+  }
+
+  if (loadError || !author) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.layout}>
+          <p>{loadError || 'This author could not be found.'} <Link to="/collections/authors">Browse authors</Link></p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -187,7 +221,7 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
         compact
         image={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
         title={author.name}
-        subtitle="Renowned Punjabi Sufi Poet (1722-1798)"
+        subtitle={[author.genre, [author.bornYear, author.diedYear].filter(Boolean).join('–')].filter(Boolean).join(', ')}
         crumbs={[
           { label: 'Home', to: '/' },
           { label: 'Authors', to: '/collections/authors' },
@@ -201,10 +235,15 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
           <section className={styles.productCard} aria-label="About the author">
             <div className={styles.portraitStage}>
               <div className={styles.portrait}>
-                <img src={getImagePath(author.image)} alt={author.name} className={styles.portraitImg} />
+                <img
+                  src={getImagePath(author.image)}
+                  alt={author.name}
+                  className={styles.portraitImg}
+                  onError={(e) => { if (!e.currentTarget.dataset.fallback) { e.currentTarget.dataset.fallback = '1'; e.currentTarget.src = authorImage; } }}
+                />
                 <div className={styles.portraitRating}>
                   <Stars value={author.rating} />
-                  <span>{author.rating} · {author.reviews} reviews</span>
+                  <span>{author.rating.toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}</span>
                 </div>
               </div>
             </div>
@@ -215,19 +254,25 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
               </div>
               <h2 className={styles.title}>{author.name}</h2>
 
-              <dl className={styles.lifeDates}>
-                <div className={styles.lifeItem}>
-                  <dt>Born</dt>
-                  <dd>{author.born}</dd>
-                </div>
-                <div className={styles.lifeItem}>
-                  <dt>Died</dt>
-                  <dd>{author.died}</dd>
-                </div>
-              </dl>
+              {(author.born || author.died) && (
+                <dl className={styles.lifeDates}>
+                  {author.born && (
+                    <div className={styles.lifeItem}>
+                      <dt>Born</dt>
+                      <dd>{author.born}</dd>
+                    </div>
+                  )}
+                  {author.died && (
+                    <div className={styles.lifeItem}>
+                      <dt>Died</dt>
+                      <dd>{author.died}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
 
               <div className={styles.metaRow}>
-                <span className={styles.metaPill}><FaBook aria-hidden="true" /> {author.books.length} major works</span>
+                <span className={styles.metaPill}><FaBook aria-hidden="true" /> {author.books.length} {author.books.length === 1 ? 'book' : 'books'} on Virsaa</span>
                 {author.awards.length > 0 && (
                   <span className={styles.metaPill}><FaAward aria-hidden="true" /> {author.awards.length} awards</span>
                 )}
@@ -240,7 +285,8 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
                 <button
                   type="button"
                   className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
-                  onClick={() => setLiked(!liked)}
+                  onClick={library.toggleLike}
+                  disabled={library.busy === 'like'}
                   aria-pressed={liked}
                   aria-label={liked ? 'Unlike' : 'Like'}
                 >
@@ -249,13 +295,14 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
                 <button
                   type="button"
                   className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
-                  onClick={() => setSaved(!saved)}
+                  onClick={library.toggleSave}
+                  disabled={library.busy === 'save'}
                   aria-pressed={saved}
                   aria-label={saved ? 'Remove from saved' : 'Save for later'}
                 >
                   {saved ? <FaBookmark /> : <FaRegBookmark />}
                 </button>
-                <button type="button" className={styles.iconButton} aria-label="Share">
+                <button type="button" className={styles.iconButton} onClick={handleShare} aria-label="Share">
                   <FaShareAlt />
                 </button>
               </div>
@@ -302,6 +349,9 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
               {activeTab === 'works' && (
                 <>
                   <h3 className={styles.sectionTitle}>Major works</h3>
+                  {author.books.length === 0 && (
+                    <p>{author.notableWorks.length ? `Known for ${author.notableWorks.join(', ')}. ` : ''}No books by {author.name} on Virsaa yet.</p>
+                  )}
                   <div className={styles.worksGrid}>
                     {author.books.map((book) => (
                       <Link key={book.id} to={`/collections/ebooks/ebook/${book.id}`} className={styles.workCard}>
@@ -311,7 +361,7 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
                         <span className={styles.workTitle}>{book.title}</span>
                         <span className={styles.workMeta}>
                           <span><FaStar className={styles.starOn} aria-hidden="true" /> {book.rating}</span>
-                          <span>{book.year}</span>
+                          {book.pages ? <span>{book.pages} pages</span> : null}
                         </span>
                       </Link>
                     ))}
@@ -322,6 +372,7 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
               {activeTab === 'awards' && (
                 <>
                   <h3 className={styles.sectionTitle}>Awards and honours</h3>
+                  {author.awards.length === 0 && <p>No awards listed yet.</p>}
                   <ul className={styles.awardList}>
                     {author.awards.map((award) => (
                       <li key={award.name} className={styles.award}>
@@ -439,13 +490,15 @@ Today, Waris Shah is celebrated as one of the greatest poets in the Punjabi lang
             </div>
           </section>
 
-          <figure className={styles.quoteCard}>
-            <FaQuoteLeft className={styles.quoteMark} aria-hidden="true" />
-            <blockquote className={styles.quoteText}>
-              The one who is in love with the Lord, neither dies nor is killed.
-            </blockquote>
-            <figcaption className={styles.quoteSource}>Waris Shah, Heer Ranjha</figcaption>
-          </figure>
+          {author.notableWorks.length > 0 && (
+            <figure className={styles.quoteCard}>
+              <FaQuoteLeft className={styles.quoteMark} aria-hidden="true" />
+              <blockquote className={styles.quoteText}>
+                {author.notableWorks.slice(0, 3).join(', ')}
+              </blockquote>
+              <figcaption className={styles.quoteSource}>Best-known works of {author.name}</figcaption>
+            </figure>
+          )}
         </aside>
       </div>
     </div>

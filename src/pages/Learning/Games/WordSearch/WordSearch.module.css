@@ -1937,3 +1937,131 @@
   margin-bottom: 20px;
   text-align: left;
 }
+
+/* ---------- Settings panel: floats in from the right, like the site's account panel ---------- */
+.settingsBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1990;
+  background: rgba(30, 4, 12, 0.32);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.settingsBackdropVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.settingsSidebar {
+  position: fixed;
+  top: 14px;
+  bottom: 14px;
+  right: 14px;
+  left: auto;
+  z-index: 2000;
+  width: 360px;
+  max-width: calc(100vw - 28px);
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow-y: auto;
+  isolation: isolate;
+  color: var(--text-color);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  backdrop-filter: blur(28px) saturate(170%);
+  border: 1px solid var(--glass-border, var(--glass-edge));
+  border-radius: 30px;
+  box-shadow: var(--glass-highlight), 0 0 0 1px var(--glass-edge), var(--shadow-deep);
+  transform: translateX(calc(100% + 40px)) scale(0.98);
+  transform-origin: right center;
+  opacity: 0;
+  visibility: hidden;
+  animation: none;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, visibility 0s linear 0.45s;
+}
+
+.settingsSidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--aura);
+  pointer-events: none;
+}
+
+.settingsOpen {
+  transform: translateX(0) scale(1);
+  opacity: 1;
+  visibility: visible;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, visibility 0s;
+}
+
+@media (max-width: 767.98px) {
+  .settingsSidebar {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    border-radius: 28px;
+    padding: 20px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settingsSidebar,
+  .settingsOpen,
+  .settingsBackdrop {
+    transition: opacity 0.2s ease, visibility 0s;
+  }
+}
+
+/* ---------- Game profile card: solid, so it reads clearly over the game ---------- */
+.profileDropdown {
+  background:
+    linear-gradient(180deg, rgba(var(--primary-rgb), 0.06), transparent 120px),
+    var(--card-bg-color);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.5) inset, 0 28px 60px -24px rgba(40, 4, 14, 0.45), 0 6px 18px -8px rgba(40, 4, 14, 0.25);
+  opacity: 1;
+}
+
+[data-theme='dark'] .profileDropdown {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 28px 60px -20px rgba(0, 0, 0, 0.75);
+}
+
+/* ---------- Dropdowns: our own arrow, with room on the right ---------- */
+.wordSearchContainer select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 44px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2365041d' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 16px center !important;
+  background-size: 12px 8px !important;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .wordSearchContainer select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23f2b3c2' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+}
+
+.wordSearchContainer select::-ms-expand {
+  display: none;
+}
+
+/* Stop the game bar's top margin from pushing the whole page down (it left a strip under the site navbar) */
+.wordSearchContainer {
+  display: flow-root;
+}

@@ -384,6 +384,38 @@ body, html {
   opacity: 0.85;
 }
 
+.premiumCurrent {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 700;
+  color: #65041d;
+  background: #f1d58c;
+}
+
+/* Plan badge under the email in the account card */
+.planChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #7a5a12;
+  background: rgba(201, 162, 74, 0.2);
+}
+
+[data-theme='dark'] .planChip {
+  color: #f1d58c;
+}
+
 .premiumIcon {
   display: grid;
   place-items: center;

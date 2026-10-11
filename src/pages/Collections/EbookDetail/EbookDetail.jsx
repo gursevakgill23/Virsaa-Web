@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar,
-  FaSort, FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown,
+  FaSort, FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown, FaDownload,
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import styles from './EbookDetail.module.css';
@@ -11,6 +11,7 @@ import Loader from '../../../components/VirsaaLoader/Loader';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import axios from 'axios';
 import BookReader from '../../../components/BookReader/BookReader';
+import useLibraryItem from '../../../hooks/useLibraryItem';
 
 const DEFAULT_IMAGE_PATH = '/images/Collections/book-image.jpg';
 
@@ -27,7 +28,7 @@ const shuffleArray = (array) => {
 // Public/static images
 const getProductionImagePath = (imagePath) => {
   if (!imagePath || typeof imagePath !== 'string') return DEFAULT_IMAGE_PATH;
-  if (process.env.NODE_ENV === 'production' && !imagePath.startsWith('/') && !imagePath.startsWith('http')) {
+  if (process.env.NODE_ENV === 'production' && !(imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) && !imagePath.startsWith('http')) {
     return `/images/Collections/${imagePath.split('/').pop()}`;
   }
   return imagePath;
@@ -61,6 +62,8 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const { isLoggedIn, accessToken, userData } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
+  const library = useLibraryItem(apiString, 'ebook', id);
+  const { liked, saved } = library;
   const relatedRef = useRef(null);
   const recommendedRef = useRef(null);
 
@@ -69,8 +72,6 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const [related, setRelated] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [expandedChapter, setExpandedChapter] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -185,10 +186,6 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
 
   const closeReader = () => setShowPdfModal(false);
 
-  const handleLike = () => {
-    setLiked(!liked);
-    toast.success(liked ? 'Removed from liked books' : 'Added to liked books', { position: 'top-right', autoClose: 2500 });
-  };
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -388,10 +385,14 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                 <button type="button" className={styles.primaryButton} onClick={handleReadNow} disabled={pdfLoading}>
                   <FaBookOpen aria-hidden="true" /> {pdfLoading ? 'Opening…' : 'Read now'}
                 </button>
+                <button type="button" className={styles.secondaryButton} onClick={library.download} disabled={library.downloading}>
+                  <FaDownload aria-hidden="true" /> {library.downloading ? 'Preparing…' : 'Download'}
+                </button>
                 <button
                   type="button"
                   className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
-                  onClick={handleLike}
+                  onClick={library.toggleLike}
+                  disabled={library.busy === 'like'}
                   aria-pressed={liked}
                   aria-label={liked ? 'Unlike this book' : 'Like this book'}
                 >
@@ -400,9 +401,11 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                 <button
                   type="button"
                   className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
-                  onClick={() => setSaved(!saved)}
+                  onClick={library.toggleSave}
+                  disabled={library.busy === 'save'}
                   aria-pressed={saved}
                   aria-label={saved ? 'Remove from saved' : 'Save for later'}
+                  title={saved ? 'Saved for later' : 'Save for later'}
                 >
                   {saved ? <FaBookmark /> : <FaRegBookmark />}
                 </button>

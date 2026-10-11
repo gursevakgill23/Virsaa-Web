@@ -692,3 +692,215 @@
     flex: 1;
   }
 }
+
+/* ---------- Membership link ---------- */
+a.membershipBadge {
+  text-decoration: none;
+}
+
+a.membershipBadge:hover {
+  filter: brightness(0.97);
+}
+
+.inlineButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---------- Coins ---------- */
+.coinPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 28px;
+  border-radius: 28px;
+  background:
+    radial-gradient(80% 140% at 0% 0%, rgba(201, 162, 74, 0.18), transparent 60%),
+    var(--glass-bg);
+  border: 1px solid rgba(201, 162, 74, 0.35);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+}
+
+.coinBalance {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.coinIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  color: #7a5a12;
+  background: linear-gradient(150deg, #f6e2a6, #d9b45a);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 10px 22px -12px rgba(122, 90, 18, 0.7);
+}
+
+.coinValue {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 1.6rem + 1.4vw, 2.8rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--headline-color);
+}
+
+.coinLabel {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.92rem;
+  color: var(--secondary-text-color);
+}
+
+.coinTotals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0;
+}
+
+.coinTotals > div {
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(var(--primary-rgb), 0.05);
+}
+
+.coinTotals dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--secondary-text-color);
+}
+
+.coinTotals dd {
+  margin: 4px 0 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color);
+}
+
+.coinButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  color: #fff;
+  background: linear-gradient(150deg, var(--maroon-bright), var(--maroon) 55%, var(--maroon-deep));
+  box-shadow: 0 12px 22px -14px rgba(63, 2, 18, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.coinButton:hover {
+  transform: translateY(-1px);
+}
+
+.coinButton:focus-visible,
+.inlineButton:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}
+
+/* ---------- Badges ---------- */
+.badgeShelf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.badgeItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 12px;
+  border-radius: 24px;
+  text-align: center;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+}
+
+.badgeMedal {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, var(--maroon-bright), var(--maroon) 60%, var(--maroon-deep));
+  box-shadow: 0 0 0 4px rgba(201, 162, 74, 0.55), 0 12px 22px -12px rgba(63, 2, 18, 0.7);
+}
+
+.badgeName {
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  color: var(--headline-color);
+}
+
+.badgeDate {
+  font-size: 0.8rem;
+  color: var(--secondary-text-color);
+}
+
+/* ---------- Achievement extras ---------- */
+.achievementMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0 !important;
+  font-size: 0.82rem;
+  color: var(--secondary-text-color);
+}
+
+.rewardChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  color: #7a5a12;
+  background: rgba(201, 162, 74, 0.18);
+}
+
+[data-theme='dark'] .rewardChip,
+[data-theme='dark'] .coinTotals dd {
+  color: #f1d58c;
+}
+
+@media (max-width: 900px) {
+  .coinPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .coinButton {
+    justify-self: start;
+  }
+}

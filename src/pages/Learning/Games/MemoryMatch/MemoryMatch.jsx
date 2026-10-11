@@ -5,9 +5,10 @@ import { useAuth } from '../../../../context/AuthContext';
 import learningApi from '../../../../api/learningApi';
 import BadgeIcon from '../../../../components/BadgeIcon/BadgeIcon';
 import useGameWallet from '../useGameWallet';
+import GameProfileCard from '../GameProfileCard';
 import styles from './MemoryMatch.module.css';
 import { Howl } from 'howler';
-import { FaCoins, FaUser, FaSignInAlt, FaEdit, FaCreditCard, FaSignOutAlt, FaCog, FaPlay, FaList, FaClock, FaExchangeAlt, FaStar, FaTachometerAlt } from 'react-icons/fa';
+import { FaCoins, FaUser, FaSignInAlt, FaCog, FaPlay, FaList, FaClock, FaExchangeAlt, FaStar, FaTachometerAlt } from 'react-icons/fa';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
@@ -57,6 +58,17 @@ const sounds = {
   found: new Howl({ src: [SOUND_URLS.found] }),
   achievement: new Howl({ src: [SOUND_URLS.levelUp] }),
   complete: new Howl({ src: [SOUND_URLS.complete] }),
+  error: new Howl({ src: [SOUND_URLS.error], volume: 0.6 }),
+};
+
+// The Sound switch is remembered on this device
+const SOUND_PREF_KEY = 'virsaa:memory-match:sound';
+const readSoundPref = () => {
+  try {
+    return localStorage.getItem(SOUND_PREF_KEY) !== 'off';
+  } catch {
+    return true;
+  }
 };
 
 // Card sets
@@ -115,6 +127,7 @@ const fetchUserGameStats = async (apiString, token) => {
     wins: game.won || 0,
     losses: (game.played || 0) - (game.won || 0),
     totalCoinsWon: stats.coins_earned_total || 0,
+    totalCoinsSpent: stats.coins_spent_total || 0,
   };
 };
 
@@ -172,6 +185,7 @@ const MemoryMatch = ({ apiString }) => {
   const [newName, setNewName] = useState(userData?.name || '');
   const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
   const [newAvatarFile, setNewAvatarFile] = useState(null);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [lastResult, setLastResult] = useState(null);   // server reply: XP, badges, best score
   const [refreshKey, setRefreshKey] = useState(0);
   const scoreRef = useRef(0);
@@ -192,6 +206,22 @@ const MemoryMatch = ({ apiString }) => {
   const timerRef = useRef(null);
   const countdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
+  // Sound effects on/off. The ref lets callbacks read the latest value.
+  const [soundEnabled, setSoundEnabled] = useState(readSoundPref);
+  const soundEnabledRef = useRef(soundEnabled);
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+    try {
+      localStorage.setItem(SOUND_PREF_KEY, soundEnabled ? 'on' : 'off');
+    } catch {
+      /* storage blocked: the switch still works for this visit */
+    }
+    if (!soundEnabled) Object.values(sounds).forEach((s) => s.stop());
+  }, [soundEnabled]);
+  const playSound = useCallback((name) => {
+    if (soundEnabledRef.current && sounds[name]) sounds[name].play();
+  }, []);
+
   // State for Music and Notifications
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -275,6 +305,14 @@ const MemoryMatch = ({ apiString }) => {
   };
 
   // Handle game end with useCallback
+  // Escape closes the settings panel
+  useEffect(() => {
+    if (!showSettings) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setShowSettings(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showSettings]);
+
   // Tell the player if their coins couldn't be loaded
   useEffect(() => {
     if (wallet.error) toast.error(wallet.error, { toastId: 'wallet-error' });
@@ -298,7 +336,7 @@ const MemoryMatch = ({ apiString }) => {
 
     if (completed) {
       setChapter(prev => prev + 1);
-      sounds.complete.play();
+      playSound('complete');
     }
 
     if (isLoggedIn || playAsGuest) {
@@ -329,7 +367,7 @@ const MemoryMatch = ({ apiString }) => {
     setGameState('select');
     setShowMemorizeScreen(false);
     setCountdown(null);
-  }, [isLoggedIn, playAsGuest, submitResult, selectedMode.id, selectedDifficulty, selectedCardSet]);
+  }, [isLoggedIn, playAsGuest, submitResult, selectedMode.id, selectedDifficulty, selectedCardSet, playSound]);
 
   // Handle countdown and game start
   useEffect(() => {
@@ -429,11 +467,12 @@ const MemoryMatch = ({ apiString }) => {
         setCards(prev => prev.map(c => (c.pairId === first.pairId ? { ...c, isMatched: true } : c)));
         const points = selectedMode.id === 'timeAttack' ? 100 : 50;
         setScore(prev => prev + points);
-        sounds.found.play();
+        playSound('found');
         if (matchedPairs.length + 1 === selectedDifficulty.cardCount / 2) {
           handleGameEnd(true, score + points);
         }
       } else {
+        playSound('error');
         setTimeout(() => {
           setCards(prev => prev.map(c => (c.isFlipped && !c.isMatched ? { ...c, isFlipped: false } : c)));
         }, 1000);
@@ -445,7 +484,9 @@ const MemoryMatch = ({ apiString }) => {
   // Handle profile update
   const handleProfileUpdate = async () => {
     if (isLoggedIn) {
+      setSavingProfile(true);
       const ok = await wallet.saveProfile({ name: newName.trim(), avatarFile: newAvatarFile, avatarPreview: newAvatar });
+      setSavingProfile(false);
       if (!ok) {
         toast.error('Your game profile couldn’t be saved. Try again.');
         return;
@@ -511,58 +552,40 @@ const MemoryMatch = ({ apiString }) => {
               <FaCog />
             </button>
             {showProfileDropdown && (
-              <div className={styles.profileDropdown} ref={profileDropdownRef}>
-                <div className={styles.profileHeader}>
-                  <h3>{language === 'punjabi' ? 'ਪ੍ਰੋਫਾਈਲ' : 'Game Profile'}</h3>
-                  <button onClick={() => setShowProfileDropdown(false)} className={styles.closeButton} aria-label="Close">×</button>
-                </div>
-                <div className={styles.profileContent}>
-                  {editingProfile ? (
-                    <div className={styles.profileEdit}>
-                      <div className={styles.avatarUpload}>
-                        <img src={getImagePath(newAvatar)} alt="User Avatar" className={styles.profileAvatar} />
-                        <input type="file" accept="image/*" onChange={handleAvatarChange} id="avatar-upload" />
-                        <label htmlFor="avatar-upload">{language === 'punjabi' ? 'ਅਵਤਾਰ ਬਦਲੋ' : 'Change Avatar'}</label>
-                      </div>
-                      <input
-                        type="text"
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        placeholder={language === 'punjabi' ? 'ਨਵਾਂ ਨਾਮ' : 'New Name'}
-                      />
-                      <div className={styles.profileEditButtons}>
-                        <button onClick={handleProfileUpdate}>{language === 'punjabi' ? 'ਸੰਭਾਲੋ' : 'Save'}</button>
-                        <button onClick={() => setEditingProfile(false)}>{language === 'punjabi' ? 'ਰੱਦ ਕਰੋ' : 'Cancel'}</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={styles.profileInfo}>
-                      <img src={getImagePath(userData.avatar || userDefault)} alt="User Avatar" className={styles.profileAvatar} />
-                      <h4>{userData.name || 'Virsaa Player'}</h4>
-                      <button onClick={() => setEditingProfile(true)}>
-                        <FaEdit /> {language === 'punjabi' ? 'ਸੋਧੋ' : 'Edit Profile'}
-                      </button>
-                    </div>
-                  )}
-                  {userStats && (
-                    <div className={styles.profileSection}>
-                      <h4>{language === 'punjabi' ? 'ਖੇਡ ਦੇ ਅੰਕੜੇ' : 'Game Stats'}</h4>
-                      <div className={styles.statsList}>
-                        <div><span>{language === 'punjabi' ? 'ਕੁੱਲ ਮੈਚ' : 'Total Matches'}</span><span>{userStats.totalMatches}</span></div>
-                        <div><span>{language === 'punjabi' ? 'ਜਿੱਤਾਂ' : 'Wins'}</span><span>{userStats.wins}</span></div>
-                        <div><span>{language === 'punjabi' ? 'ਹਾਰਾਂ' : 'Losses'}</span><span>{userStats.losses}</span></div>
-                        <div><span>{language === 'punjabi' ? 'ਕੁੱਲ ਸਿੱਕੇ' : 'Total Coins'}</span><span>{userStats.totalCoinsWon} <FaCoins /></span></div>
-                      </div>
-                    </div>
-                  )}
-                  <button className={styles.actionButton} onClick={() => setShowCoinShop(true)}>
-                    <FaCreditCard /> {language === 'punjabi' ? 'ਸਿੱਕੇ ਖਰੀਦੋ' : 'Buy Coins'}
-                  </button>
-                  <button className={styles.actionButton} onClick={logout}>
-                    <FaSignOutAlt /> {language === 'punjabi' ? 'ਲੌਗਆਉਟ' : 'Logout'}
-                  </button>
-                </div>
-              </div>
+              <GameProfileCard
+                ref={profileDropdownRef}
+                idPrefix="mm"
+                language={language}
+                name={userData.name || 'Virsaa Player'}
+                avatar={getImagePath(userData.avatar || userDefault)}
+                coins={coins}
+                level={wallet.level}
+                xpIntoLevel={wallet.xpIntoLevel}
+                xpPerLevel={wallet.xpPerLevel}
+                stats={userStats && {
+                  played: userStats.totalMatches,
+                  wins: userStats.wins,
+                  losses: userStats.losses,
+                  earned: userStats.totalCoinsWon,
+                  spent: userStats.totalCoinsSpent,
+                }}
+                editing={editingProfile}
+                saving={savingProfile}
+                newName={newName}
+                newAvatar={getImagePath(newAvatar)}
+                onNameChange={setNewName}
+                onAvatarChange={handleAvatarChange}
+                onStartEdit={() => {
+                  setNewName(userData.name || '');
+                  setNewAvatar(userData.avatar || userDefault);
+                  setEditingProfile(true);
+                }}
+                onSave={handleProfileUpdate}
+                onCancelEdit={() => setEditingProfile(false)}
+                onBuyCoins={() => { setShowProfileDropdown(false); setShowCoinShop(true); }}
+                onLogout={logout}
+                onClose={() => setShowProfileDropdown(false)}
+              />
             )}
           </div>
         ) : (
@@ -584,7 +607,19 @@ const MemoryMatch = ({ apiString }) => {
     
   
     return (
-      <div className={`${styles.settingsSidebar} ${showSettings ? styles.sidebarOpen : ''}`}>
+      <>
+      <div
+        className={`${styles.settingsBackdrop} ${showSettings ? styles.settingsBackdropVisible : ''}`}
+        onClick={() => setShowSettings(false)}
+        aria-hidden="true"
+      />
+      <aside
+        className={`${styles.settingsSidebar} ${showSettings ? styles.settingsOpen : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        aria-hidden={!showSettings}
+      >
         <div className={styles.sidebarHeader}>
           <h2>{language === 'punjabi' ? 'ਸੈਟਿੰਗਾਂ' : 'Settings'}</h2>
           <button onClick={() => setShowSettings(false)} className={styles.closeButton} aria-label="Close">×</button>
@@ -593,8 +628,8 @@ const MemoryMatch = ({ apiString }) => {
           <label>
             <input
               type="checkbox"
-              checked={sounds.found.volume() > 0}
-              onChange={() => sounds.found.volume(sounds.found.volume() > 0 ? 0 : 1)}
+              checked={soundEnabled}
+              onChange={() => setSoundEnabled((on) => !on)}
             />
             <span>{language === 'punjabi' ? 'ਆਵਾਜ਼' : 'Sound'}</span>
           </label>
@@ -630,7 +665,8 @@ const MemoryMatch = ({ apiString }) => {
             </select>
           </label>
         </div>
-      </div>
+      </aside>
+      </>
     );
   };
   // Render coin shop modal
@@ -965,7 +1001,7 @@ const MemoryMatch = ({ apiString }) => {
   return (
     <div className={styles.container}>
       {renderNavbar()}
-      {showSettings && renderSettingsSidebar()}
+      {renderSettingsSidebar()}
       {showCoinShop && renderCoinShopModal()}
       {gameState === 'select' && renderSelectionScreen()}
       {showMemorizeScreen && renderMemorizeScreen()}

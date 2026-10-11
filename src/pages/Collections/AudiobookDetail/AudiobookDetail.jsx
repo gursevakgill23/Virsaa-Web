@@ -3,17 +3,19 @@ import { useParams, Link } from 'react-router-dom';
 import {
   FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight,
   FaStar, FaRegStar, FaSort, FaPlay, FaPause, FaHeadphones, FaClock, FaLock, FaChevronDown,
-  FaDownload, FaUndoAlt, FaRedoAlt,
+  FaUndoAlt, FaRedoAlt,
 } from 'react-icons/fa';
 import styles from './AudiobookDetail.module.css';
 import PageHero from '../../../components/PageHero/PageHero';
 import Loader from '../../../components/VirsaaLoader/Loader';
+import axios from 'axios';
+import useLibraryItem from '../../../hooks/useLibraryItem';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -41,14 +43,18 @@ const RelatedSkeleton = () => (
   </div>
 );
 
-const AudiobookDetail = ({ isDarkMode }) => {
+const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const getImagePath = useProductionImagePath();
   const { id } = useParams();
   const [audiobook, setAudiobook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relatedLoading, setRelatedLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const library = useLibraryItem(apiString, 'audiobook', id);
+  const { liked, saved } = library;
+  const [loadError, setLoadError] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [related, setRelated] = useState([]);
+  const apiUrl = (apiString || '').replace(/\/$/, '');
   const [expandedChapter, setExpandedChapter] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -60,9 +66,8 @@ const AudiobookDetail = ({ isDarkMode }) => {
   const recommendedRef = useRef(null);
 
   const header_image_dark = '/images/header-image-dark.png';
-  const header_image_light = '/images/header-image-light.png';
+  const header_image_light = '/images/header-image.png';
   const bookImage = '/images/book-image.jpg';
-  const audioFile = '/images/Collections/Nitnem.mp3';
 
   const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, review: '' });
   const [reviews, setReviews] = useState([]);
@@ -105,72 +110,79 @@ const AudiobookDetail = ({ isDarkMode }) => {
   };
 
   useEffect(() => {
+    let cancelled = false;
     setIsLoading(true);
     setRelatedLoading(true);
-    const t1 = setTimeout(() => {
-      setAudiobook({
-        id,
-        title: 'Nitnem',
-        author: 'Guru Granth Sahib',
-        cover: bookImage,
-        rating: 4.9,
-        reviews: 1842,
-        length: '2 hours 45 minutes',
-        format: 'MP3',
-        genre: 'Spiritual',
-        description: `Nitnem is a collection of Sikh hymns (Gurbani) to be read daily by devout Sikhs. These hymns are recited at specific times throughout the day and are considered essential for spiritual growth and connection with the Divine.
+    setLoadError(null);
+    setAudioUrl(null);
+    setIsPlaying(false);
+    setCurrentTime(0);
 
-The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sahib, and Anand Sahib. These sacred compositions by the Sikh Gurus provide guidance, inspiration, and a framework for daily spiritual practice.`,
-        chapters: [
-          { id: 1, title: 'Japji Sahib', duration: '20:15', locked: false },
-          { id: 2, title: 'Jaap Sahib', duration: '15:30', locked: false },
-          { id: 3, title: 'Tav-Prasad Savaiye', duration: '08:45', locked: false },
-          { id: 4, title: 'Chaupai Sahib', duration: '12:20', locked: true },
-          { id: 5, title: 'Anand Sahib', duration: '18:40', locked: true },
-        ],
-      });
+    const load = async () => {
+      try {
+        const { data } = await axios.get(`${apiUrl}/collections/audiobooks/${id}/`);
+        let authorName = '';
+        if (data.author) {
+          authorName = await axios.get(`${apiUrl}/collections/authors/${data.author}/`)
+            .then((r) => r.data.name).catch(() => '');
+        }
+        const reviewRes = await axios.get(`${apiUrl}/collections/audiobooks/${id}/reviews/`).catch(() => ({ data: [] }));
+        if (cancelled) return;
+        setAudiobook({
+          id: data.id,
+          title: data.title,
+          author: authorName,
+          authorId: data.author,
+          cover: data.cover || bookImage,
+          rating: Number(data.rating) || 0,
+          length: data.duration,
+          format: data.format || 'MP3',
+          genre: data.genre || 'Audiobook',
+          description: data.description || '',
+          chapters: data.chapters || [],
+        });
+        const rows = Array.isArray(reviewRes.data) ? reviewRes.data : [];
+        setReviews(rows.map((r) => ({
+          id: r.id,
+          name: r.user,
+          date: new Date(r.date).toLocaleDateString(),
+          rating: r.rating,
+          review: r.review,
+          helpful: r.helpful || 0,
+        })));
+      } catch (err) {
+        if (!cancelled) setLoadError(err.response?.status === 404 ? 'This audiobook could not be found.' : 'This audiobook couldn’t be loaded right now.');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
 
-      setReviews(Array.from({ length: 20 }, (_, i) => ({
-        id: i + 1,
-        name: ['Amrit', 'Gurpreet', 'Harpreet', 'Jaspreet', 'Manpreet', 'Navpreet'][i % 6],
-        date: new Date(Date.now() - (i * 86400000)).toLocaleDateString(),
-        rating: [4, 5, 3, 4, 5, 4, 3, 5, 4, 5][i % 10],
-        review: [
-          'This audiobook brings peace to my daily routine. The recitation is beautiful!',
-          'A must-have for every Sikh household. Perfect for morning meditation.',
-          'The pronunciation is very clear and easy to follow along.',
-          'Listening to Nitnem while commuting has transformed my day.',
-          'The audio quality is excellent and the voice is very soothing.',
-          'Helps me maintain my daily spiritual practice even when traveling.',
-          'Would be better with translations included.',
-          'The chapters are perfectly timed for daily listening.',
-          'I love how this preserves the traditional way of reciting Gurbani.',
-          'The ending shabads give me chills every time.',
-        ][i % 10],
-        helpful: (i * 7) % 50,
+      // Audio files are private on S3; stream_audio returns a temporary link
+      axios.get(`${apiUrl}/collections/audiobooks/${id}/stream_audio/`)
+        .then((r) => { if (!cancelled) setAudioUrl(r.data.audio_url || null); })
+        .catch(() => { if (!cancelled) setAudioUrl(null); });
+
+      const all = await axios.get(`${apiUrl}/collections/audiobooks/`).catch(() => ({ data: [] }));
+      if (cancelled) return;
+      const list = Array.isArray(all.data) ? all.data : all.data?.results || [];
+      setRelated(list.filter((a) => String(a.id) !== String(id)).slice(0, 10).map((a) => ({
+        id: a.id, title: a.title, author: a.genre || 'Audiobook', cover: a.cover || bookImage,
       })));
-      setIsLoading(false);
-    }, 600);
-
-    const t2 = setTimeout(() => {
-      setAudiobook((prev) => prev && ({
-        ...prev,
-        related: [
-          { id: 201, title: 'Sukhmani Sahib', author: 'Guru Arjan Dev', cover: bookImage },
-          { id: 202, title: 'Asa Di Var', author: 'Guru Nanak Dev', cover: bookImage },
-          { id: 203, title: 'Rehras Sahib', author: 'Guru Granth Sahib', cover: bookImage },
-          { id: 204, title: 'Kirtan Sohila', author: 'Guru Granth Sahib', cover: bookImage },
-          { id: 205, title: 'Gurbani Kirtan', author: 'Various Ragis', cover: bookImage },
-        ],
-      }));
       setRelatedLoading(false);
-    }, 1200);
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
     };
-  }, [id]);
+
+    load();
+    return () => { cancelled = true; };
+  }, [id, apiUrl]);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) await navigator.share({ title: audiobook?.title, url });
+      else await navigator.clipboard.writeText(url);
+    } catch {
+      // share sheet dismissed
+    }
+  };
 
   const toggleChapter = (chapterId) => setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
 
@@ -221,13 +233,25 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
   );
   const displayedReviews = sortedReviews.slice(0, visibleReviews);
 
-  if (isLoading || !audiobook) {
+  if (isLoading) {
     return <div className={styles.page}><Loader /></div>;
+  }
+
+  if (loadError || !audiobook) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.layout}>
+          <p className={styles.sectionNote}>
+            {loadError || 'This audiobook could not be found.'} <Link to="/collections/audiobooks">Browse audiobooks</Link>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const [firstParagraph] = audiobook.description.split('\n');
   const progress = duration ? (currentTime / duration) * 100 : 0;
-  const related = audiobook.related || [];
+  const hasMoreDescription = audiobook.description.length > firstParagraph.length;
 
   const renderRelated = (items, ref, label) => (
     <section className={`${styles.asideBlock} ${styles.glass}`}>
@@ -262,7 +286,7 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
     <div className={styles.page}>
       <audio
         ref={audioRef}
-        src={audioFile}
+        src={audioUrl || undefined}
         preload="metadata"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
@@ -272,8 +296,8 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
       <PageHero
         compact
         image={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
-        title="NITNEM"
-        subtitle="Daily prayers from Guru Granth Sahib"
+        title={audiobook.title}
+        subtitle={audiobook.author ? `by ${audiobook.author}` : 'Audiobook'}
         crumbs={[
           { label: 'Home', to: '/' },
           { label: 'Collections', to: '/collections' },
@@ -296,24 +320,32 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
                 <span className={styles.chip}><FaHeadphones aria-hidden="true" /> {audiobook.genre}</span>
                 <span className={styles.ratingRow}>
                   <Stars value={audiobook.rating} />
-                  {audiobook.rating} · {audiobook.reviews.toLocaleString()} reviews
+                  {audiobook.rating.toFixed(1)} · {reviews.length.toLocaleString()} {reviews.length === 1 ? 'review' : 'reviews'}
                 </span>
               </div>
 
               <h2 className={styles.title}>{audiobook.title}</h2>
-              <p className={styles.byline}>by {audiobook.author}</p>
+              {audiobook.author && (
+                <p className={styles.byline}>
+                  by {audiobook.authorId ? <Link to={`/collections/authors/author/${audiobook.authorId}`}>{audiobook.author}</Link> : audiobook.author}
+                </p>
+              )}
 
               <div className={styles.metaRow}>
-                <span className={styles.metaPill}><FaClock aria-hidden="true" /> {audiobook.length}</span>
+                {audiobook.length && <span className={styles.metaPill}><FaClock aria-hidden="true" /> {audiobook.length}</span>}
                 <span className={styles.metaPill}>{audiobook.format}</span>
-                <span className={styles.metaPill}>{audiobook.chapters.length} banis</span>
+                {audiobook.chapters.length > 0 && (
+                  <span className={styles.metaPill}>{audiobook.chapters.length} {audiobook.chapters.length === 1 ? 'chapter' : 'chapters'}</span>
+                )}
               </div>
 
               <div className={styles.description}>
                 <p className={styles.descText}>{showFullDescription ? audiobook.description : firstParagraph}</p>
-                <button type="button" className={styles.moreButton} onClick={() => setShowFullDescription(!showFullDescription)}>
-                  {showFullDescription ? 'Show less' : 'Read full description'}
-                </button>
+                {hasMoreDescription && (
+                  <button type="button" className={styles.moreButton} onClick={() => setShowFullDescription(!showFullDescription)}>
+                    {showFullDescription ? 'Show less' : 'Read full description'}
+                  </button>
+                )}
               </div>
 
               {/* Player */}
@@ -328,7 +360,7 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
                 </button>
                 <div className={styles.playerTrack}>
                   <div className={styles.playerTop}>
-                    <span className={styles.playerLabel}>{isPlaying ? 'Now playing' : 'Ready to play'}</span>
+                    <span className={styles.playerLabel}>{!audioUrl ? 'Audio not available yet' : isPlaying ? 'Now playing' : 'Ready to play'}</span>
                     <div className={styles.skipButtons}>
                       <button type="button" className={styles.skipButton} onClick={() => skip(-15)} aria-label="Back 15 seconds">
                         <FaUndoAlt /><span>15</span>
@@ -357,13 +389,11 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
               </div>
 
               <div className={styles.actions}>
-                <button type="button" className={styles.secondaryButton}>
-                  <FaDownload aria-hidden="true" /> Download
-                </button>
                 <button
                   type="button"
                   className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
-                  onClick={() => setLiked(!liked)}
+                  onClick={library.toggleLike}
+                  disabled={library.busy === 'like'}
                   aria-pressed={liked}
                   aria-label={liked ? 'Unlike' : 'Like'}
                 >
@@ -372,13 +402,14 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
                 <button
                   type="button"
                   className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
-                  onClick={() => setSaved(!saved)}
+                  onClick={library.toggleSave}
+                  disabled={library.busy === 'save'}
                   aria-pressed={saved}
                   aria-label={saved ? 'Remove from saved' : 'Save for later'}
                 >
                   {saved ? <FaBookmark /> : <FaRegBookmark />}
                 </button>
-                <button type="button" className={styles.iconButton} aria-label="Share">
+                <button type="button" className={styles.iconButton} onClick={handleShare} aria-label="Share">
                   <FaShareAlt />
                 </button>
               </div>
@@ -386,6 +417,7 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
           </section>
 
           {/* Chapters */}
+          {audiobook.chapters.length > 0 && (
           <section className={styles.section} aria-labelledby="chapters-title">
             <div className={styles.sectionHead}>
               <div>
@@ -406,7 +438,7 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
                     </button>
                     {open && (
                       <div className={styles.chapterBody}>
-                        <p className={styles.chapterText}>{chapter.title}, a sacred composition from Guru Granth Sahib.</p>
+                        <p className={styles.chapterText}>{chapter.title}{chapter.duration ? `, ${chapter.duration}` : ''}.</p>
                         {chapter.locked ? (
                           <Link to="/premium" className={`${styles.smallButton} ${styles.lockedButton}`}>
                             <FaLock aria-hidden="true" /> Unlock with Premium
@@ -423,6 +455,7 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
               })}
             </ol>
           </section>
+          )}
 
           {/* Reviews */}
           <section className={styles.section} aria-labelledby="reviews-title">
@@ -513,7 +546,7 @@ The Nitnem banis include Japji Sahib, Jaap Sahib, Tav-Prasad Savaiye, Chaupai Sa
 
         <aside className={styles.aside}>
           {renderRelated(related, relatedRef, 'Related audiobooks')}
-          {renderRelated([...related].reverse(), recommendedRef, 'Because you liked Gurbani Kirtan')}
+          {related.length > 3 && renderRelated([...related].reverse(), recommendedRef, 'More to listen to')}
         </aside>
       </div>
     </div>

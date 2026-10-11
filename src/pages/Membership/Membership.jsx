@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaCheck, FaTimes, FaStar, FaDownload, FaAd, FaHeadset, FaBookOpen, FaChevronDown } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaStar, FaDownload, FaAd, FaHeadset, FaBookOpen, FaChevronDown, FaCrown } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import PageHero from '../../components/PageHero/PageHero';
+import useMembership, { PLAN_RANK } from '../../hooks/useMembership';
 import styles from './Membership.module.css';
 
 const headerLight = '/images/header-image.png';
@@ -11,7 +12,7 @@ const headerDark = '/images/header-image-dark.png';
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
+      return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
@@ -25,6 +26,7 @@ const ANNUAL_DISCOUNT = 0.2; // matches the FAQ: 20% off yearly plans
 const plans = [
   {
     id: 1,
+    key: 'basic',
     title: 'Basic',
     monthly: 4.99,
     blurb: 'For getting started with Virsaa.',
@@ -37,6 +39,7 @@ const plans = [
   },
   {
     id: 2,
+    key: 'standard',
     title: 'Standard',
     monthly: 9.99,
     blurb: 'Everything in the library, without ads.',
@@ -50,6 +53,7 @@ const plans = [
   },
   {
     id: 3,
+    key: 'premium',
     title: 'Premium',
     monthly: 14.99,
     blurb: 'Unlimited, with priority help.',
@@ -88,7 +92,12 @@ const Cell = ({ value }) => {
   return <span className={styles.cellText}>{value}</span>;
 };
 
-const Membership = ({ isDarkMode }) => {
+const formatDate = (date) =>
+  date ? date.toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+
+const Membership = ({ isDarkMode, apiString }) => {
+  const membership = useMembership(apiString);
+  const currentRank = membership.rank;
   const headerImage = useMemo(() => getImagePath(isDarkMode ? headerDark : headerLight), [isDarkMode]);
   const [billing, setBilling] = useState('monthly');
   const yearly = billing === 'yearly';
@@ -118,7 +127,9 @@ const Membership = ({ isDarkMode }) => {
       >
         <div className={styles.heroActions}>
           <button type="button" className={styles.heroButton} onClick={scrollToPlans}>Compare plans</button>
-          <span className={styles.heroNote}>7-day free trial on every plan</span>
+          <span className={styles.heroNote}>
+            {membership.isMember ? `You're on the ${membership.planName} plan` : '7-day free trial on every plan'}
+          </span>
         </div>
       </PageHero>
 
@@ -127,7 +138,7 @@ const Membership = ({ isDarkMode }) => {
         <div className={styles.plansHead}>
           <div>
             <h2 id="plans-title" className={styles.sectionTitle}>Plans</h2>
-            <p className={styles.lede}>Cancel anytime. Prices in USD.</p>
+            <p className={styles.lede}>Cancel anytime. Prices in CAD.</p>
           </div>
           <div className={styles.billing} role="group" aria-label="Billing period">
             <button
@@ -149,12 +160,42 @@ const Membership = ({ isDarkMode }) => {
           </div>
         </div>
 
+        {membership.isMember && (
+          <div className={styles.currentStrip} role="status">
+            <span className={styles.currentIcon} aria-hidden="true"><FaCrown /></span>
+            <p>
+              You're on the <strong>{membership.planName}</strong> plan
+              {membership.billing ? ` (${membership.billing})` : ''}.
+              {membership.periodEnd && (
+                membership.status === 'cancelled'
+                  ? ` It ends on ${formatDate(membership.periodEnd)}.`
+                  : ` Active until ${formatDate(membership.periodEnd)}.`
+              )}
+              {' '}Upgrade or downgrade below.
+            </p>
+          </div>
+        )}
+
         <div className={styles.plansGrid}>
           {plans.map((plan) => {
             const price = yearly ? plan.monthly * 12 * (1 - ANNUAL_DISCOUNT) : plan.monthly;
+            const isCurrent = membership.plan === plan.key;
+            const sameBilling = !membership.billing || membership.billing === billing;
+            const rank = PLAN_RANK[plan.key];
+            let action = `Choose ${plan.title}`;
+            if (isCurrent) action = sameBilling ? 'Current plan' : `Switch to ${billing}`;
+            else if (currentRank > 0) action = rank > currentRank ? `Upgrade to ${plan.title}` : `Downgrade to ${plan.title}`;
             return (
-              <article key={plan.id} className={`${styles.planCard} ${plan.isPopular ? styles.popular : ''}`}>
-                {plan.isPopular && <span className={styles.popularBadge}><FaStar aria-hidden="true" /> Most popular</span>}
+              <article
+                key={plan.id}
+                className={`${styles.planCard} ${plan.isPopular ? styles.popular : ''} ${isCurrent ? styles.currentCard : ''}`}
+                aria-current={isCurrent ? 'true' : undefined}
+              >
+                {isCurrent ? (
+                  <span className={`${styles.popularBadge} ${styles.currentBadge}`}><FaCrown aria-hidden="true" /> Current plan</span>
+                ) : plan.isPopular && (
+                  <span className={styles.popularBadge}><FaStar aria-hidden="true" /> Most popular</span>
+                )}
                 <h3 className={styles.planTitle}>{plan.title}</h3>
                 <p className={styles.planBlurb}>{plan.blurb}</p>
                 <p className={styles.planPrice}>
@@ -172,10 +213,11 @@ const Membership = ({ isDarkMode }) => {
                 </ul>
                 <button
                   type="button"
-                  className={plan.isPopular ? styles.primaryButton : styles.secondaryButton}
+                  className={plan.isPopular || (currentRank > 0 && rank > currentRank) ? styles.primaryButton : styles.secondaryButton}
                   onClick={() => handleChoosePlan(plan.title)}
+                  disabled={isCurrent && sameBilling}
                 >
-                  Choose {plan.title}
+                  {action}
                 </button>
               </article>
             );
@@ -193,7 +235,10 @@ const Membership = ({ isDarkMode }) => {
               <tr>
                 <th scope="col">Feature</th>
                 {plans.map((p) => (
-                  <th scope="col" key={p.id} className={p.isPopular ? styles.colPopular : ''}>{p.title}</th>
+                  <th scope="col" key={p.id} className={p.isPopular ? styles.colPopular : ''}>
+                    {p.title}
+                    {membership.plan === p.key && <span className={styles.currentTag}>Current</span>}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -234,15 +279,27 @@ const Membership = ({ isDarkMode }) => {
 
       {/* ---------- Closing call to action ---------- */}
       <section className={styles.section}>
-        <div className={styles.ctaBand}>
-          <div>
-            <h2>Ready to get started?</h2>
-            <p>Try any plan free for 7 days.</p>
+        {membership.isMember ? (
+          <div className={styles.ctaBand}>
+            <div>
+              <h2>Need a different plan?</h2>
+              <p>You're on {membership.planName}. Upgrade or downgrade anytime.</p>
+            </div>
+            <button type="button" className={styles.ctaButton} onClick={scrollToPlans}>
+              Compare plans
+            </button>
           </div>
-          <button type="button" className={styles.ctaButton} onClick={() => handleChoosePlan()}>
-            Start free trial
-          </button>
-        </div>
+        ) : (
+          <div className={styles.ctaBand}>
+            <div>
+              <h2>Ready to get started?</h2>
+              <p>Try any plan free for 7 days.</p>
+            </div>
+            <button type="button" className={styles.ctaButton} onClick={() => handleChoosePlan()}>
+              Start free trial
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

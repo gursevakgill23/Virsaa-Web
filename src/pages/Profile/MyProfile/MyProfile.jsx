@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import {
   FaCrown, FaBook, FaFire, FaGamepad, FaQuestionCircle, FaCoins, FaStar,
   FaEdit, FaSave, FaTimes, FaVenusMars,
-  FaCalendarAlt, FaHeart, FaPen, FaUser,
+  FaCalendarAlt, FaHeart, FaPen, FaUser, FaMedal, FaShoppingCart, FaArrowUp, FaArrowDown,
 } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
@@ -12,11 +12,12 @@ import styles from './MyProfile.module.css';
 import { useAuth } from '../../../context/AuthContext';
 import learningApi from '../../../api/learningApi';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
+import useMembership from '../../../hooks/useMembership';
 
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
+      return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
@@ -44,8 +45,12 @@ const formatDob = (iso) => {
 
 const ACHIEVEMENTS_SHOWN = 8;
 
+const formatNumber = (n) => Number(n || 0).toLocaleString();
+const formatShortDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+
 const MyProfile = ({ isDarkMode, apiString }) => {
   const { accessToken, logout } = useAuth();
+  const membership = useMembership(apiString);
   const navigate = useNavigate();
   // Kept in refs so the profile fetch only re-runs when the token or API address changes
   const logoutRef = useRef(logout);
@@ -112,27 +117,47 @@ const MyProfile = ({ isDarkMode, apiString }) => {
   // If it can't be reached, the rest of the profile still shows.
   const [journey, setJourney] = useState(null);
   const [achievements, setAchievements] = useState([]);
+  const [badges, setBadges] = useState([]);
+  const [learningState, setLearningState] = useState('loading'); // loading | ready | error
   const [showAllAchievements, setShowAllAchievements] = useState(false);
+  const [learningReload, setLearningReload] = useState(0);
+  const stat = (value) => (learningState === 'loading' && !journey ? '—' : formatNumber(value));
 
   useEffect(() => {
     if (!accessToken) return undefined;
     let cancelled = false;
-    Promise.all([
+    setLearningState('loading');
+    // Each request shows what it can on its own, so one failure doesn't blank the whole section
+    Promise.allSettled([
       learningApi.summary(apiString, accessToken),
       learningApi.achievements(apiString, accessToken),
-    ])
-      .then(([summary, ach]) => {
-        if (cancelled) return;
+      learningApi.myBadges(apiString, accessToken),
+    ]).then(([summaryRes, achRes, badgeRes]) => {
+      if (cancelled) return;
+      if (summaryRes.status === 'fulfilled') {
+        const summary = summaryRes.value;
         setJourney({ ...summary.stats, wallet: summary.wallet });
+      }
+      const ach = achRes.status === 'fulfilled' ? achRes.value : null;
+      if (ach) {
         // Earned first (newest first), then the closest to being earned
         const rows = [...(ach.achievements || [])].sort((a, b) =>
           (b.earned - a.earned)
           || (a.earned ? new Date(b.earned_at) - new Date(a.earned_at) : b.progress - a.progress));
         setAchievements(rows);
-      })
-      .catch((err) => console.error('Learning summary failed:', err.response?.status || err.message));
+        if (summaryRes.status !== 'fulfilled' && ach.stats) setJourney({ ...ach.stats });
+      }
+      if (badgeRes.status === 'fulfilled') {
+        setBadges(Array.isArray(badgeRes.value) ? badgeRes.value : []);
+      } else if (summaryRes.status === 'fulfilled') {
+        setBadges(summaryRes.value.badges || []);
+      }
+      const allFailed = [summaryRes, achRes, badgeRes].every((r) => r.status === 'rejected');
+      if (allFailed) console.error('Learning summary failed:', summaryRes.reason?.response?.status || summaryRes.reason?.message);
+      setLearningState(allFailed ? 'error' : 'ready');
+    });
     return () => { cancelled = true; };
-  }, [accessToken, apiString]);
+  }, [accessToken, apiString, learningReload]);
 
   const startEditing = (section) => {
     setEditSection(section);
@@ -298,9 +323,9 @@ const MyProfile = ({ isDarkMode, apiString }) => {
             )}
 
             <div className={styles.identityMeta}>
-              {userData.status && (
-                <span className={styles.membershipBadge}><FaCrown aria-hidden="true" /> {prettify(userData.status)}</span>
-              )}
+              <Link to="/premium" className={styles.membershipBadge}>
+                <FaCrown aria-hidden="true" /> {membership.isMember ? `${membership.planName} member` : 'Free plan'}
+              </Link>
               {userData.joinDate && <span className={styles.joined}>Joined {userData.joinDate}</span>}
             </div>
 
@@ -427,14 +452,71 @@ const MyProfile = ({ isDarkMode, apiString }) => {
             ? `Level ${journey.level} · ${journey.wallet?.xp_into_level ?? 0} of ${journey.wallet?.xp_per_level ?? 500} XP to the next level`
             : 'Your lessons, quizzes and games on Virsaa.'}
         </p>
-        <div className={styles.stats}>
-          <StatBox icon={<FaBook />} title="Lessons completed" value={journey?.lessons_completed ?? 0} />
-          <StatBox icon={<FaQuestionCircle />} title="Quizzes completed" value={journey?.quizzes_completed ?? 0} />
-          <StatBox icon={<FaGamepad />} title="Games played" value={journey?.games_played ?? 0} />
-          <StatBox icon={<FaFire />} title="Day streak" value={journey?.current_streak ?? 0} />
-          <StatBox icon={<FaStar />} title="XP" value={journey?.xp ?? 0} />
-          <StatBox icon={<FaCoins />} title="Coins" value={journey?.coins ?? 0} />
+        {learningState === 'error' && (
+          <p className={styles.emptyNote} role="alert">
+            Your progress couldn’t be loaded right now.{' '}
+            <button type="button" className={styles.inlineButton} onClick={() => setLearningReload((n) => n + 1)}>Try again</button>
+          </p>
+        )}
+        <div className={styles.stats} aria-busy={learningState === 'loading'}>
+          <StatBox icon={<FaBook />} title="Lessons completed" value={stat(journey?.lessons_completed)} />
+          <StatBox icon={<FaQuestionCircle />} title="Quizzes completed" value={stat(journey?.quizzes_completed)} />
+          <StatBox icon={<FaGamepad />} title="Games played" value={stat(journey?.games_played)} />
+          <StatBox icon={<FaFire />} title="Day streak" value={stat(journey?.current_streak)} />
+          <StatBox icon={<FaStar />} title="XP" value={stat(journey?.xp)} />
+          <StatBox icon={<FaMedal />} title="Badges" value={learningState === 'loading' ? '—' : formatNumber(badges.length)} />
         </div>
+      </section>
+
+      {/* ---------- Coins ---------- */}
+      <section className={styles.section} aria-labelledby="coins-title">
+        <h2 id="coins-title" className={styles.sectionTitle}>Coins</h2>
+        <div className={styles.coinPanel}>
+          <div className={styles.coinBalance}>
+            <span className={styles.coinIcon} aria-hidden="true"><FaCoins /></span>
+            <div>
+              <span className={styles.coinValue}>{stat(journey?.coins)}</span>
+              <span className={styles.coinLabel}>coins to spend on hints and extra time in games</span>
+            </div>
+          </div>
+          <dl className={styles.coinTotals}>
+            <div>
+              <dt><FaArrowUp aria-hidden="true" /> Earned</dt>
+              <dd>{stat(journey?.coins_earned_total)}</dd>
+            </div>
+            <div>
+              <dt><FaArrowDown aria-hidden="true" /> Spent</dt>
+              <dd>{stat(journey?.coins_spent_total)}</dd>
+            </div>
+          </dl>
+          <Link to="/checkout?product=coins_250&return=/my-profile" className={styles.coinButton}>
+            <FaShoppingCart aria-hidden="true" /> Buy coins
+          </Link>
+        </div>
+      </section>
+
+      {/* ---------- Badges ---------- */}
+      <section className={styles.section} aria-labelledby="badges-title">
+        <h2 id="badges-title" className={styles.sectionTitle}>Badges</h2>
+        {learningState === 'loading' ? (
+          <p className={styles.lede}>Loading your badges…</p>
+        ) : badges.length > 0 ? (
+          <ul className={styles.badgeShelf}>
+            {badges.map((b) => (
+              <li key={b.id} className={styles.badgeItem}>
+                <span className={styles.badgeMedal} aria-hidden="true">
+                  <BadgeIcon name={b.badge?.icon} image={b.badge?.image} />
+                </span>
+                <span className={styles.badgeName}>{b.badge?.name || b.display_name || b.badge_type}</span>
+                <span className={styles.badgeDate}>{formatShortDate(b.earned_at)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.emptyNote}>
+            No badges yet. Badges appear here when you finish an achievement below.
+          </p>
+        )}
       </section>
 
       <section className={styles.section} aria-labelledby="achievements-title">
@@ -450,7 +532,14 @@ const MyProfile = ({ isDarkMode, apiString }) => {
                 <span className={styles.achievementIcon} aria-hidden="true"><BadgeIcon name={item.icon} image={item.image} /></span>
                 <div className={styles.achievementBody}>
                   <h4>{item.name}</h4>
-                  <p>{item.description}{!item.earned && item.target > 1 ? ` (${item.current}/${item.target})` : ''}</p>
+                  <p>{item.description}{!item.earned && item.target > 1 ? ` (${formatNumber(item.current)}/${formatNumber(item.target)})` : ''}</p>
+                  {(item.earned || item.coin_reward > 0 || item.xp_reward > 0) && (
+                    <p className={styles.achievementMeta}>
+                      {item.earned ? `Earned ${formatShortDate(item.earned_at)}` : 'Reward:'}
+                      {!item.earned && item.coin_reward > 0 && <span className={styles.rewardChip}><FaCoins aria-hidden="true" /> {item.coin_reward}</span>}
+                      {!item.earned && item.xp_reward > 0 && <span className={styles.rewardChip}><FaStar aria-hidden="true" /> {item.xp_reward} XP</span>}
+                    </p>
+                  )}
                   <div className={styles.progress} role="progressbar" aria-valuenow={item.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${item.name} progress`}>
                     <div className={styles.progressFill} style={{ width: `${Math.min(100, item.progress)}%` }} />
                   </div>
@@ -465,6 +554,8 @@ const MyProfile = ({ isDarkMode, apiString }) => {
             </button>
           )}
           </>
+        ) : learningState === 'loading' ? (
+          <p className={styles.lede}>Loading achievements…</p>
         ) : (
           <p className={styles.emptyNote}>
             No achievements yet. Finish a <Link to="/learning">lesson</Link>, take a quiz or play a game to earn your first one.

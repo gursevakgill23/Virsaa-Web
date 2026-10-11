@@ -5,6 +5,7 @@ import PageHero from '../../components/PageHero/PageHero';
 import { useAuth } from '../../context/AuthContext';
 import paymentsApi, { formatMoney, readReturnTo } from '../../api/paymentsApi';
 import { Steps, Summary } from '../Checkout/Checkout';
+import { announceMembershipChange } from '../../hooks/useMembership';
 import styles from '../Checkout/Checkout.module.css';
 
 const headerLight = '/images/header-image.png';
@@ -156,6 +157,7 @@ const Payment = ({ isDarkMode, apiString }) => {
       if (data.membership_level && updateUserData && userData) {
         updateUserData({ ...userData, membership_level: data.membership_level });
       }
+      if (data.membership_level) announceMembershipChange();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const status = err.response?.status;

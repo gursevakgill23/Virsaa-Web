@@ -11,9 +11,10 @@ import { useAuth } from '../../../../context/AuthContext';
 import learningApi from '../../../../api/learningApi';
 import BadgeIcon from '../../../../components/BadgeIcon/BadgeIcon';
 import useGameWallet from '../useGameWallet';
+import GameProfileCard from '../GameProfileCard';
 import styles from './WordSearch.module.css';
 import { Howl } from 'howler';
-import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaEdit, FaCreditCard, FaTrash, FaSignOutAlt, FaGamepad, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaLock, FaCoins, FaTrophy, FaCrown, FaUser, FaSignInAlt, FaInfoCircle, FaLightbulb, FaGem, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { GiTreasureMap, GiClockwork, GiStairsGoal } from 'react-icons/gi';
 import { IoMdTimer, IoMdSettings } from 'react-icons/io';
 import { MdLeaderboard, MdStars } from 'react-icons/md';
@@ -88,15 +89,6 @@ const fetchUserGameStats = async (apiString, token) => {
   };
 };
 
-// Mock API to fetch user payment methods (to be replaced with actual API)
-const fetchPaymentMethods = async (userId) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  if (!userId) return [];
-  return [
-    { id: 1, type: 'Credit Card', lastFour: '1234', expiry: '12/25' },
-    { id: 2, type: 'PayPal', email: 'user@example.com' },
-  ];
-};
 
 // Words come from the server (Admin > Learning api > Game words), by map level and difficulty
 const fetchWords = async (apiString, map, difficulty, language) => {
@@ -347,7 +339,7 @@ const WordSearchGamePlay = ({ apiString }) => {
   const [errorMessage, setErrorMessage] = useState(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [userStats, setUserStats] = useState(null);
-  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [newName, setNewName] = useState(userData?.name || '');
   const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
@@ -389,6 +381,14 @@ const WordSearchGamePlay = ({ apiString }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletLoaded, welcomeBonusGiven, claimWelcomeBonus]);
 
+  // Escape closes the settings panel
+  useEffect(() => {
+    if (!showSettings) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setShowSettings(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showSettings]);
+
   // Tell the player if their coins couldn't be loaded
   useEffect(() => {
     if (wallet.error) toast.error(wallet.error, { toastId: 'wallet-error' });
@@ -413,9 +413,6 @@ const WordSearchGamePlay = ({ apiString }) => {
           ]);
           setUserAchievements(achievements);
           setUserStats(stats);
-
-          const methods = await fetchPaymentMethods(authUser?.id);
-          setPaymentMethods(methods);
         }
         setLoadingAchievements(false);
       } catch (error) {
@@ -770,7 +767,9 @@ const WordSearchGamePlay = ({ apiString }) => {
   // Handle profile updates (avatar and name)
   const handleProfileUpdate = async () => {
     if (isLoggedIn) {
+      setSavingProfile(true);
       const ok = await wallet.saveProfile({ name: newName.trim(), avatarFile: newAvatarFile, avatarPreview: newAvatar });
+      setSavingProfile(false);
       if (!ok) {
         setErrorMessage('Your game profile couldn’t be saved. Try again.');
         return;
@@ -794,21 +793,6 @@ const WordSearchGamePlay = ({ apiString }) => {
     }
   };
 
-  // Handle adding a payment method (mock for now)
-  const handleAddPaymentMethod = () => {
-    const newMethod = {
-      id: paymentMethods.length + 1,
-      type: 'Credit Card',
-      lastFour: '5678',
-      expiry: '01/27',
-    };
-    setPaymentMethods([...paymentMethods, newMethod]);
-  };
-
-  // Handle removing a payment method
-  const handleRemovePaymentMethod = (id) => {
-    setPaymentMethods(paymentMethods.filter(method => method.id !== id));
-  };
 
   // Handle Virsaa Playables display toggle
   const handleToggleDisplay = () => {
@@ -1350,7 +1334,19 @@ const WordSearchGamePlay = ({ apiString }) => {
   // Render the settings sidebar
   const renderSettingsSidebar = () => {
     return (
-      <div className={`${styles.settingsSidebar} ${showSettings ? styles.open : ''}`}>
+      <>
+      <div
+        className={`${styles.settingsBackdrop} ${showSettings ? styles.settingsBackdropVisible : ''}`}
+        onClick={() => setShowSettings(false)}
+        aria-hidden="true"
+      />
+      <aside
+        className={`${styles.settingsSidebar} ${showSettings ? styles.settingsOpen : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        aria-hidden={!showSettings}
+      >
         <div className={styles.settingsHeader}>
           <h2>
             <IoMdSettings /> {settings.language === 'punjabi' ? 'ਸੈਟਿੰਗਾਂ' : 'Settings'}
@@ -1445,7 +1441,8 @@ const WordSearchGamePlay = ({ apiString }) => {
             )}
           </div>
         </div>
-      </div>
+      </aside>
+      </>
     );
   };
 
@@ -1554,143 +1551,41 @@ const WordSearchGamePlay = ({ apiString }) => {
   // Render the user profile dropdown
   const renderProfileDropdown = () => {
     if (!isLoggedIn || !userData) return null;
-
     return (
-      <div className={styles.profileDropdown} ref={profileDropdownRef}>
-        <div className={styles.profileHeader}>
-          <h3>{settings.language === 'punjabi' ? 'ਪ੍ਰੋਫਾਈਲ' : 'Game Profile'}</h3>
-          <button
-            className={styles.profileCloseButton}
-            onClick={() => setShowProfileDropdown(false)}
-            aria-label={settings.language === 'punjabi' ? 'ਬੰਦ ਕਰੋ' : 'Close'}
-          >
-            ×
-          </button>
-        </div>
-        <div className={styles.profileContent}>
-          <div className={styles.profileSection}>
-            {editingProfile ? (
-              <div className={styles.profileEdit}>
-                <div className={styles.avatarUpload}>
-                  <img src={getImagePath(newAvatar)} alt="User Avatar" className={styles.profileAvatar} />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className={styles.avatarInput}
-                    id="avatar-upload"
-                  />
-                  <label htmlFor="avatar-upload" className={styles.avatarUploadButton}>
-                    {settings.language === 'punjabi' ? 'ਅਵਤਾਰ ਬਦਲੋ' : 'Change Avatar'}
-                  </label>
-                </div>
-                <div className={styles.nameEdit}>
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder={settings.language === 'punjabi' ? 'ਨਵਾਂ ਨਾਮ ਦਰਜ ਕਰੋ' : 'Enter new name'}
-                    className={styles.nameInput}
-                  />
-                </div>
-                <div className={styles.editActions}>
-                  <button onClick={handleProfileUpdate} className={styles.saveButton}>
-                    {settings.language === 'punjabi' ? 'ਸੰਭਾਲੋ' : 'Save'}
-                  </button>
-                  <button onClick={() => setEditingProfile(false)} className={styles.cancelButton}>
-                    {settings.language === 'punjabi' ? 'ਰੱਦ ਕਰੋ' : 'Cancel'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className={styles.profileInfo}>
-                <img src={getImagePath(userData.avatar || userDefault)} alt="User Avatar" className={styles.profileAvatar} />
-                <h4>{userData.name}</h4>
-                <button
-                  onClick={() => {
-                    setNewName(userData.name || '');
-                    setNewAvatar(userData.avatar || userDefault);
-                    setEditingProfile(true);
-                  }}
-                  className={styles.editProfileButton}
-                >
-                  <FaEdit /> {settings.language === 'punjabi' ? 'ਸੋਧੋ' : 'Edit Profile'}
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.profileSection}>
-            <h4>
-              <FaGamepad /> {settings.language === 'punjabi' ? 'ਖੇਡ ਦੇ ਅੰਕੜੇ' : 'Game Stats'}
-            </h4>
-            {userStats ? (
-              <div className={styles.statsList}>
-                <div className={styles.statItem}>
-                  <span>{settings.language === 'punjabi' ? 'ਕੁੱਲ ਮੈਚ' : 'Total Matches'}</span>
-                  <span>{userStats.totalMatches}</span>
-                </div>
-                <div className={styles.statItem}>
-                  <span>{settings.language === 'punjabi' ? 'ਜਿੱਤਾਂ' : 'Wins'}</span>
-                  <span>{userStats.wins}</span>
-                </div>
-                <div className={styles.statItem}>
-                  <span>{settings.language === 'punjabi' ? 'ਹਾਰਾਂ' : 'Losses'}</span>
-                  <span>{userStats.losses}</span>
-                </div>
-                <div className={styles.statItem}>
-                  <span>{settings.language === 'punjabi' ? 'ਕੁੱਲ ਸਿੱਕੇ ਜਿੱਤੇ' : 'Total Coins Won'}</span>
-                  <span>{userStats.totalCoinsWon} <FaCoins /></span>
-                </div>
-                <div className={styles.statItem}>
-                  <span>{settings.language === 'punjabi' ? 'ਸੰਕੇਤਾਂ ਤੇ ਖਰਚੇ ਸਿੱਕੇ' : 'Coins Spent on Hints'}</span>
-                  <span>{userStats.totalCoinsLostOnHints} <FaCoins /></span>
-                </div>
-              </div>
-            ) : (
-              <p>{settings.language === 'punjabi' ? 'ਅੰਕੜੇ ਲੋਡ ਹੋ ਰਹੇ ਹਨ...' : 'Loading stats...'}</p>
-            )}
-          </div>
-
-          <div className={styles.profileSection}>
-            <h4>
-              <FaCreditCard /> {settings.language === 'punjabi' ? 'ਭੁਗਤਾਨ ਵਿਧੀਆਂ' : 'Payment Methods'}
-            </h4>
-            <div className={styles.paymentMethods}>
-              {paymentMethods.length > 0 ? (
-                paymentMethods.map(method => (
-                  <div key={method.id} className={styles.paymentMethod}>
-                    <div className={styles.methodDetails}>
-                      <span>{method.type}</span>
-                      {method.lastFour ? (
-                        <span>**** {method.lastFour} (Exp: {method.expiry})</span>
-                      ) : (
-                        <span>{method.email}</span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleRemovePaymentMethod(method.id)}
-                      className={styles.removeMethodButton}
-                      aria-label={settings.language === 'punjabi' ? 'ਭੁਗਤਾਨ ਵਿਧੀ ਹਟਾਓ' : 'Remove payment method'}
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p>{settings.language === 'punjabi' ? 'ਕੋਈ ਭੁਗਤਾਨ ਵਿਧੀ ਨਹੀਂ ਜੋੜੀ ਗਈ।' : 'No payment methods added.'}</p>
-              )}
-              <button onClick={handleAddPaymentMethod} className={styles.addMethodButton}>
-                {settings.language === 'punjabi' ? '+ ਨਵੀਂ ਵਿਧੀ ਜੋੜੋ' : '+ Add New Method'}
-              </button>
-            </div>
-          </div>
-
-          <button onClick={logout} className={styles.logoutButton}>
-            <FaSignOutAlt /> {settings.language === 'punjabi' ? 'ਲੌਗਆਉਟ' : 'Logout'}
-          </button>
-        </div>
-      </div>
+      <GameProfileCard
+        ref={profileDropdownRef}
+        idPrefix="ws"
+        language={settings.language}
+        name={userData.name}
+        avatar={getImagePath(userData.avatar || userDefault)}
+        coins={coins}
+        level={wallet.level}
+        xpIntoLevel={wallet.xpIntoLevel}
+        xpPerLevel={wallet.xpPerLevel}
+        stats={userStats && {
+          played: userStats.totalMatches,
+          wins: userStats.wins,
+          losses: userStats.losses,
+          earned: userStats.totalCoinsWon,
+          spent: userStats.totalCoinsLostOnHints,
+        }}
+        editing={editingProfile}
+        saving={savingProfile}
+        newName={newName}
+        newAvatar={getImagePath(newAvatar)}
+        onNameChange={setNewName}
+        onAvatarChange={handleAvatarChange}
+        onStartEdit={() => {
+          setNewName(userData.name || '');
+          setNewAvatar(userData.avatar || userDefault);
+          setEditingProfile(true);
+        }}
+        onSave={handleProfileUpdate}
+        onCancelEdit={() => setEditingProfile(false)}
+        onBuyCoins={() => { setShowProfileDropdown(false); setShowBuyCoins(true); }}
+        onLogout={logout}
+        onClose={() => setShowProfileDropdown(false)}
+      />
     );
   };
 

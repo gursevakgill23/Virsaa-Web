@@ -1,0 +1,193 @@
+.page {
+  background: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-body);
+  overflow-x: clip;
+}
+
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
+.page p,
+.page li,
+.page h3 {
+  font-family: var(--font-body);
+}
+
+/* Contents on the left, policy text on the right */
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 56px);
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: clamp(36px, 6vw, 64px) clamp(16px, 4vw, 32px) clamp(56px, 8vw, 96px);
+}
+
+/* ---------- Contents panel ---------- */
+.toc {
+  position: relative;
+}
+
+.tocPanel {
+  position: sticky;
+  top: 96px;
+  padding: 20px 14px 16px;
+  border-radius: 26px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+.tocTitle {
+  margin: 0 0 10px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.tocList {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tocLink {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 0.94rem;
+  line-height: 1.3;
+  color: var(--text-color);
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.tocLink:hover {
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.06);
+}
+
+.tocActive {
+  font-weight: 700;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.1);
+}
+
+/* ---------- Article ---------- */
+.article {
+  max-width: 72ch;
+}
+
+.updated {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.section {
+  padding-top: 28px;
+  scroll-margin-top: 90px;
+}
+
+.section + .section {
+  margin-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.85rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--headline-color);
+}
+
+.prose {
+  font-size: 1.02rem;
+  line-height: 1.75;
+}
+
+.prose p {
+  margin: 0 0 14px;
+}
+
+.prose h3 {
+  margin: 20px 0 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--headline-color);
+}
+
+.prose ul {
+  margin: 0 0 14px;
+  padding-left: 1.2em;
+}
+
+.prose li {
+  margin-bottom: 6px;
+}
+
+.prose li::marker {
+  color: var(--primary-color);
+}
+
+.prose strong {
+  color: var(--headline-color);
+}
+
+.prose a {
+  color: var(--link-color);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prose a:hover {
+  color: var(--link-hover-color);
+}
+
+.tocLink:focus-visible,
+.prose a:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .tocPanel {
+    position: static;
+  }
+
+  .tocList {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .article {
+    max-width: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .tocList {
+    grid-template-columns: 1fr;
+  }
+}

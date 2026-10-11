@@ -19,6 +19,7 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import SearchPalette from './SearchPalette';
+import useMembership from '../../hooks/useMembership';
 
 const useProductionImagePath = () => {
   return (imagePath) => {
@@ -48,6 +49,27 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const navbarRef = useRef(null);
   const navigate = useNavigate();
   const { isLoggedIn, userData, accessToken, logout } = useAuth();
+  const membership = useMembership(apiString);
+  const refreshMembership = membership.refresh;
+
+  // Check the plan again each time the account panel opens
+  useEffect(() => {
+    if (showProfileSidebar) refreshMembership();
+  }, [showProfileSidebar, refreshMembership]);
+
+  // What the plan card in the account panel says
+  const planCard = (() => {
+    switch (membership.plan) {
+      case 'premium':
+        return { title: 'Change plan', text: 'You have every feature. Switch to Standard or Basic anytime.' };
+      case 'standard':
+        return { title: 'Upgrade or downgrade', text: 'Upgrade to Premium for unlimited downloads, or switch to Basic.' };
+      case 'basic':
+        return { title: 'Upgrade your plan', text: 'Get every ebook, audiobook and lesson, ad-free' };
+      default:
+        return { title: 'Get Premium', text: 'Every ebook, audiobook and lesson, ad-free' };
+    }
+  })();
   // Latest values for the profile fetch, so it only re-runs when the panel opens
   const latest = useRef({});
   latest.current = { logout, navigate, isDarkMode, userData };
@@ -314,6 +336,9 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
                         : userData?.username || 'Your account'}
                   </h3>
                   {(profileData?.email || userData?.email) && <p>{profileData?.email || userData?.email}</p>}
+                  {membership.isMember && (
+                    <span className={styles.planChip}><FaCrown aria-hidden="true" /> {membership.planName} member</span>
+                  )}
                 </div>
               </section>
 
@@ -348,8 +373,8 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
               <Link to="/premium" className={styles.premiumCard} onClick={closeProfileSidebar}>
                 <span className={styles.premiumIcon} aria-hidden="true"><FaCrown /></span>
                 <span>
-                  <strong>Get Premium</strong>
-                  <small>Every ebook, audiobook and lesson, ad-free</small>
+                  <strong>{planCard.title}</strong>
+                  <small>{planCard.text}</small>
                 </span>
               </Link>
 
