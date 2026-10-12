@@ -633,3 +633,111 @@
     display: none;
   }
 }
+
+/* ---------- Live events extras ---------- */
+a.primaryButton {
+  text-decoration: none;
+  text-align: center;
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.moreLink {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.postedBy {
+  margin-top: 6px !important;
+  font-size: 0.8rem;
+  color: var(--secondary-text-color);
+}
+
+/* "Nothing on today" pick: an upcoming event or a news story */
+.pickCard {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  color: var(--text-color);
+  text-decoration: none;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight);
+  transition: transform 0.2s ease;
+}
+
+.pickCard:hover {
+  transform: translateY(-2px);
+}
+
+.pickImage,
+.pickIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.pickIcon {
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.1);
+}
+
+.pickBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pickLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.pickTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.25;
+  color: var(--headline-color);
+}
+
+.pickText {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--secondary-text-color);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pickCard:focus-visible,
+.moreLink:focus-visible,
+.linkButton:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}

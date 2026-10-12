@@ -1,21 +1,24 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FaTimes, FaHome, FaBook, FaHistory, FaGraduationCap, FaNewspaper, FaRegFileAudio,
-  FaUsers, FaPlus, FaCalendarAlt, FaMapMarkerAlt, FaImage, FaTrashAlt, FaArrowLeft,
+  FaUsers, FaPlus, FaCalendarAlt, FaMapMarkerAlt, FaImage, FaTrashAlt, FaArrowLeft, FaClock,
 } from 'react-icons/fa';
 import { FaHandsPraying, FaHouseFlag } from 'react-icons/fa6';
 import { MdChevronRight } from 'react-icons/md';
 import { BsCollectionFill } from 'react-icons/bs';
 import { IoIosPeople } from 'react-icons/io';
+import { useAuth } from '../../context/AuthContext';
+import newsApi, { localISODate } from '../../api/newsApi';
 import styles from './Sidebar.module.css';
 
 /*
- * Events are kept in this browser (localStorage) until the backend exists.
- * When the API is ready, replace saveEvent() with the POST shown in handleSubmit.
+ * The panel shows what's on today (from /collections/events/today/). When nothing is on,
+ * it shows a random upcoming event or news story instead. Signed-in users can add events;
+ * they appear straight away, and the list refreshes every minute while the panel is open.
  */
-const EVENTS_KEY = 'virsaa_events';
-const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024; // 1.5 MB, keeps localStorage happy
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB, same limit as the server
+const REFRESH_MS = 60000;
 
 const FACTS = [
   'Punjab means "land of five waters": the Jhelum, Chenab, Ravi, Beas and Sutlej rivers.',
@@ -25,26 +28,13 @@ const FACTS = [
   'Vaisakhi marks the harvest in Punjab and the founding of the Khalsa by Guru Gobind Singh Ji in 1699.',
 ];
 
-const EMPTY_FORM = { name: '', date: '', place: '', description: '', details: '', image: '' };
+const emptyForm = () => ({ name: '', date: localISODate(), time: '', place: '', description: '', details: '' });
 
-const loadEvents = () => {
-  try {
-    return JSON.parse(localStorage.getItem(EVENTS_KEY)) || [];
-  } catch {
-    return [];
-  }
+const formatTime = (hhmm) => {
+  if (!hhmm) return '';
+  const [h, m] = hhmm.split(':').map(Number);
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 };
-
-const persistEvents = (events) => {
-  try {
-    localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const formatDate = (iso) => {
   if (!iso) return '';
@@ -52,11 +42,15 @@ const formatDate = (iso) => {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-const Sidebar = ({ open, closeSidebar }) => {
+const Sidebar = ({ open, closeSidebar, apiString }) => {
+  const { isLoggedIn, accessToken } = useAuth();
   const [activeMenu, setActiveMenu] = useState(null);
   const [view, setView] = useState('home'); // 'home' | 'form'
-  const [events, setEvents] = useState(loadEvents);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [today, setToday] = useState({ events: [], pick: null });
+  const [todayState, setTodayState] = useState('loading'); // loading | ready | error
+  const [form, setForm] = useState(emptyForm);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [errors, setErrors] = useState({});
   const [notice, setNotice] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -105,12 +99,27 @@ const Sidebar = ({ open, closeSidebar }) => {
     []
   );
 
-  const sortedEvents = useMemo(() => {
-    const today = todayISO();
-    const upcoming = events.filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
-    const past = events.filter((e) => e.date < today).sort((a, b) => b.date.localeCompare(a.date));
-    return [...upcoming, ...past];
-  }, [events]);
+  // Today's events: load when the panel opens, then refresh every minute while it stays open
+  const loadToday = useCallback(async (quiet = false) => {
+    if (!quiet) setTodayState((s) => (s === 'ready' ? s : 'loading'));
+    try {
+      const data = await newsApi.today(apiString, isLoggedIn ? accessToken : null);
+      setToday({ events: data.events || [], pick: data.pick || null });
+      setTodayState('ready');
+    } catch {
+      if (!quiet) setTodayState('error');
+    }
+  }, [apiString, accessToken, isLoggedIn]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    loadToday();
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') loadToday(true); }, REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [open, loadToday]);
+
+  // Free the image preview when it changes
+  useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); }, [imagePreview]);
 
   // Stop the page scrolling while the panel is open
   useEffect(() => {
@@ -165,24 +174,22 @@ const Sidebar = ({ open, closeSidebar }) => {
   const handleImage = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
       setErrors((prev) => ({ ...prev, image: 'Choose a JPG, PNG or WebP image.' }));
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setErrors((prev) => ({ ...prev, image: 'Image must be smaller than 1.5 MB.' }));
+      setErrors((prev) => ({ ...prev, image: 'Image must be smaller than 5 MB.' }));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setForm((prev) => ({ ...prev, image: reader.result }));
-      setErrors((prev) => ({ ...prev, image: '' }));
-    };
-    reader.readAsDataURL(file);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setErrors((prev) => ({ ...prev, image: '' }));
   };
 
   const removeImage = () => {
-    setForm((prev) => ({ ...prev, image: '' }));
+    setImageFile(null);
+    setImagePreview('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -200,50 +207,113 @@ const Sidebar = ({ open, closeSidebar }) => {
     e.preventDefault();
     if (!validate()) return;
     setIsSaving(true);
-
-    const newEvent = {
-      id: Date.now(),
-      name: form.name.trim(),
-      date: form.date,
-      place: form.place.trim(),
-      description: form.description.trim(),
-      details: form.details.trim(),
-      image: form.image,
-    };
-
-    /*
-     * Backend version (when /api/events/ exists):
-     *
-     * const body = new FormData();
-     * Object.entries({ ...newEvent, image: undefined }).forEach(([k, v]) => v && body.append(k, v));
-     * if (fileInputRef.current?.files?.[0]) body.append('image', fileInputRef.current.files[0]);
-     * await fetch(`${apiString}/api/events/`, {   // pass apiString in as a prop
-     *   method: 'POST',
-     *   headers: { Authorization: `Bearer ${accessToken}` },
-     *   body,
-     * });
-     */
-    const next = [...events, newEvent];
-    const saved = persistEvents(next);
-    setIsSaving(false);
-
-    if (!saved) {
-      setErrors({ image: 'Could not save. Try a smaller image or remove it.' });
-      return;
+    try {
+      const created = await newsApi.createEvent(apiString, accessToken, {
+        title: form.name.trim(),
+        start_date: form.date,
+        start_time: form.time || undefined,
+        location: form.place.trim(),
+        description: form.description.trim(),
+        details: form.details.trim(),
+      }, imageFile);
+      // Show it straight away if it's on today, then refresh from the server
+      if (created.start_date === localISODate()) {
+        setToday((prev) => ({ events: [...prev.events, created], pick: null }));
+      }
+      loadToday(true);
+      setForm(emptyForm());
+      removeImage();
+      setNotice(created.start_date === localISODate()
+        ? `"${created.title}" was added to today's events.`
+        : `"${created.title}" was added. It's on the News & Events page.`);
+      setView('home');
+      setTimeout(() => setNotice(''), 5000);
+    } catch (err) {
+      const d = err.response?.data || {};
+      const first = (v) => (Array.isArray(v) ? v[0] : v);
+      if (err.response?.status === 401) {
+        setErrors({ form: 'Your session has ended. Log in again to add an event.' });
+      } else {
+        setErrors({
+          name: first(d.title), date: first(d.start_date) || first(d.end_date), place: first(d.location),
+          details: first(d.details), image: first(d.image),
+          form: !Object.keys(d).length ? 'The event couldn’t be added. Try again.' : undefined,
+        });
+      }
+    } finally {
+      setIsSaving(false);
     }
-
-    setEvents(next);
-    setForm(EMPTY_FORM);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setNotice(`"${newEvent.name}" was added to events.`);
-    setView('home');
-    setTimeout(() => setNotice(''), 4000);
   };
 
-  const deleteEvent = (id) => {
-    const next = events.filter((ev) => ev.id !== id);
-    persistEvents(next);
-    setEvents(next);
+  const deleteEvent = async (id) => {
+    const before = today;
+    setToday((prev) => ({ ...prev, events: prev.events.filter((ev) => ev.id !== id) }));
+    try {
+      await newsApi.deleteEvent(apiString, accessToken, id);
+      loadToday(true);
+    } catch {
+      setToday(before);
+      setNotice('That event couldn’t be deleted. Try again.');
+      setTimeout(() => setNotice(''), 4000);
+    }
+  };
+
+  const renderEvent = (ev) => (
+    <li key={ev.id} className={styles.eventCard}>
+      {ev.image_url ? (
+        <img src={ev.image_url} alt="" className={styles.eventImage} />
+      ) : (
+        <div className={styles.eventImagePlaceholder} aria-hidden="true"><FaCalendarAlt /></div>
+      )}
+      <div className={styles.eventInfo}>
+        <h4>{ev.title}</h4>
+        <p className={styles.eventMeta}>
+          <FaCalendarAlt aria-hidden="true" /> {formatDate(ev.start_date)}
+          {ev.end_date && ev.end_date !== ev.start_date ? ` – ${formatDate(ev.end_date)}` : ''}
+        </p>
+        {ev.start_time && (
+          <p className={styles.eventMeta}><FaClock aria-hidden="true" /> {formatTime(ev.start_time)}</p>
+        )}
+        <p className={styles.eventMeta}><FaMapMarkerAlt aria-hidden="true" /> {ev.location}</p>
+        {ev.description && <p className={styles.eventDesc}>{ev.description}</p>}
+        {ev.details && (
+          <details className={styles.eventDetails}>
+            <summary>Details</summary>
+            <p>{ev.details}</p>
+            <p className={styles.postedBy}>Added by {ev.posted_by}</p>
+          </details>
+        )}
+      </div>
+      {ev.can_delete && (
+        <button
+          type="button"
+          className={styles.deleteButton}
+          onClick={() => deleteEvent(ev.id)}
+          aria-label={`Delete ${ev.title}`}
+        >
+          <FaTrashAlt />
+        </button>
+      )}
+    </li>
+  );
+
+  const renderPick = (pick) => {
+    const item = pick.item;
+    const isEvent = pick.type === 'event';
+    return (
+      <Link to="/news" className={styles.pickCard} onClick={handleClose}>
+        {(isEvent ? item.image_url : item.image) ? (
+          <img src={isEvent ? item.image_url : item.image} alt="" className={styles.pickImage} />
+        ) : (
+          <span className={styles.pickIcon} aria-hidden="true">{isEvent ? <FaCalendarAlt /> : <FaNewspaper />}</span>
+        )}
+        <span className={styles.pickBody}>
+          <span className={styles.pickLabel}>{isEvent ? `Coming up ${formatDate(item.start_date)}` : 'From the news'}</span>
+          <span className={styles.pickTitle}>{item.title}</span>
+          <span className={styles.pickText}>{isEvent ? item.location : item.excerpt}</span>
+        </span>
+      </Link>
+    );
   };
 
   return (
@@ -289,54 +359,37 @@ const Sidebar = ({ open, closeSidebar }) => {
                     Kirtan, nagar kirtan, langar seva or a class at your Gurdwara: add it so others can join.
                   </p>
                 </div>
-                <button type="button" className={styles.primaryButton} onClick={() => setView('form')}>
-                  <FaPlus aria-hidden="true" /> Add event
-                </button>
+                {isLoggedIn ? (
+                  <button type="button" className={styles.primaryButton} onClick={() => setView('form')}>
+                    <FaPlus aria-hidden="true" /> Add event
+                  </button>
+                ) : (
+                  <Link to="/login" className={styles.primaryButton} onClick={handleClose}>
+                    Log in to add an event
+                  </Link>
+                )}
               </section>
 
-              {/* Events list */}
-              <section className={styles.block}>
-                <h3 className={styles.blockTitle}>Events</h3>
-                {sortedEvents.length === 0 ? (
-                  <p className={styles.empty}>No events yet. Add the first one with the button above.</p>
+              {/* Today */}
+              <section className={styles.block} aria-live="polite">
+                <h3 className={styles.blockTitle}>Today</h3>
+                {todayState === 'loading' ? (
+                  <p className={styles.empty}>Checking what’s on today…</p>
+                ) : todayState === 'error' ? (
+                  <p className={styles.empty}>
+                    Today’s events couldn’t be loaded. <button type="button" className={styles.linkButton} onClick={() => loadToday()}>Try again</button>
+                  </p>
+                ) : today.events.length > 0 ? (
+                  <ul className={styles.eventList}>{today.events.map(renderEvent)}</ul>
                 ) : (
-                  <ul className={styles.eventList}>
-                    {sortedEvents.map((ev) => {
-                      const isPast = ev.date < todayISO();
-                      return (
-                        <li key={ev.id} className={`${styles.eventCard} ${isPast ? styles.eventPast : ''}`}>
-                          {ev.image ? (
-                            <img src={ev.image} alt="" className={styles.eventImage} />
-                          ) : (
-                            <div className={styles.eventImagePlaceholder} aria-hidden="true"><FaCalendarAlt /></div>
-                          )}
-                          <div className={styles.eventInfo}>
-                            <h4>{ev.name}</h4>
-                            <p className={styles.eventMeta}>
-                              <FaCalendarAlt aria-hidden="true" /> {formatDate(ev.date)}{isPast ? ' (past)' : ''}
-                            </p>
-                            <p className={styles.eventMeta}>
-                              <FaMapMarkerAlt aria-hidden="true" /> {ev.place}
-                            </p>
-                            {ev.description && <p className={styles.eventDesc}>{ev.description}</p>}
-                            <details className={styles.eventDetails}>
-                              <summary>Details</summary>
-                              <p>{ev.details}</p>
-                            </details>
-                          </div>
-                          <button
-                            type="button"
-                            className={styles.deleteButton}
-                            onClick={() => deleteEvent(ev.id)}
-                            aria-label={`Delete ${ev.name}`}
-                          >
-                            <FaTrashAlt />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <>
+                    <p className={styles.empty}>Nothing is on today.{today.pick ? ' Here’s something to look at:' : ''}</p>
+                    {today.pick && renderPick(today.pick)}
+                  </>
                 )}
+                <Link to="/news" className={styles.moreLink} onClick={handleClose}>
+                  See all upcoming events
+                </Link>
               </section>
 
               {/* Did you know */}
@@ -378,22 +431,27 @@ const Sidebar = ({ open, closeSidebar }) => {
 
               <label className={styles.field}>
                 <span>Event date *</span>
-                <input type="date" name="date" value={form.date} onChange={updateField}
+                <input type="date" name="date" value={form.date} min={localISODate()} onChange={updateField}
                   className={errors.date ? styles.inputError : ''} />
                 {errors.date && <small className={styles.error}>{errors.date}</small>}
               </label>
 
+              <label className={styles.field}>
+                <span>Start time</span>
+                <input type="time" name="time" value={form.time} onChange={updateField} />
+              </label>
+
               <div className={styles.field}>
                 <span>Event image</span>
-                {form.image ? (
+                {imagePreview ? (
                   <div className={styles.imagePreview}>
-                    <img src={form.image} alt="Selected event" />
+                    <img src={imagePreview} alt="Selected event" />
                     <button type="button" onClick={removeImage} className={styles.removeImage}>Remove</button>
                   </div>
                 ) : (
                   <label className={styles.dropzone}>
                     <FaImage aria-hidden="true" />
-                    <span>Choose an image (max 1.5 MB)</span>
+                    <span>Choose an image (max 5 MB)</span>
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImage} />
                   </label>
                 )}
@@ -421,6 +479,7 @@ const Sidebar = ({ open, closeSidebar }) => {
                 {errors.details && <small className={styles.error}>{errors.details}</small>}
               </label>
 
+              {errors.form && <p className={styles.error} role="alert">{errors.form}</p>}
               <button type="submit" className={styles.primaryButton} disabled={isSaving}>
                 {isSaving ? 'Adding…' : 'Add event'}
               </button>

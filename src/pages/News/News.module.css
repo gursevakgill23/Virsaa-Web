@@ -383,3 +383,93 @@
     min-height: 320px;
   }
 }
+
+/* ---------- Live news & events extras ---------- */
+.note {
+  margin: 0;
+  padding: 22px;
+  border-radius: 20px;
+  border: 1px dashed var(--input-border-color);
+  text-align: center;
+  color: var(--secondary-text-color);
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.featuredSingle {
+  grid-template-columns: 1fr;
+}
+
+.featuredDate {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.eventBody .eventDesc {
+  display: block;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.eventDetails,
+.newsMore {
+  margin-top: 10px;
+  font-size: 0.92rem;
+  color: var(--secondary-text-color);
+}
+
+.eventDetails summary,
+.newsMore summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.eventDetails p,
+.newsMore p {
+  display: block !important;
+  margin: 8px 0 0 !important;
+  line-height: 1.55;
+}
+
+.postedBy {
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.readMore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.readMore svg {
+  font-size: 0.75rem;
+}
+
+.linkButton:focus-visible,
+.readMore:focus-visible,
+.eventDetails summary:focus-visible,
+.newsMore summary:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}
