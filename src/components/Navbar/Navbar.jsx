@@ -416,7 +416,6 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
                 <span className={styles.premiumIcon} aria-hidden="true"><FaCrown /></span>
                 <span>
                   <strong>{planCard.title}</strong>
-                  {membership.isMember && <em className={styles.premiumCurrent}>Current plan: {membership.planName}</em>}
                   <small>{planCard.text}</small>
                 </span>
               </Link>
