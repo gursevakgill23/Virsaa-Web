@@ -1,3 +1,12 @@
+/*
+ * components/BookReader/BookReader.module.css
+ * -----------------------------------------------------------------------------
+ * The full-screen flip-book reader: dark stage, the book and its pages, the
+ * turning leaf with shading, the top and bottom bars, and the loading/error
+ * messages.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Book reader: a full-screen reading room with a flip-book.
    The room is always dark so the paper stands out, in light or dark theme.

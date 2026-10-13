@@ -1,3 +1,11 @@
+/*
+ * pages/Collections/AuthorDetail/AuthorDetail.module.css
+ * -----------------------------------------------------------------------------
+ * One author: portrait card, tabs (biography, works, awards, reviews), review
+ * form and related authors.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Detail pages (ebook, audiobook, author) share this base.
    Layout: glass product card + sections on the left, sticky aside on the right.
@@ -562,6 +570,31 @@
   margin-left: 8px;
   font-size: 0.9rem;
   color: var(--secondary-text-color);
+}
+
+/* Message under a review form field */
+.fieldError {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #b3261e;
+}
+
+[data-theme='dark'] .fieldError {
+  color: #ffb4a9;
+}
+
+/* Text-style button used for "Try again" in messages */
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .formActions {

@@ -1,11 +1,34 @@
+/**
+ * components/VirsaaLoader/Loader.jsx
+ * -----------------------------------------------------------------------------
+ * The Virsaa loader: a glass Gurdwara doorway whose outline traces itself in
+ * gold. It is used in three ways, picked with the `variant` prop:
+ *
+ *   'splash' (default when onLoadingComplete is given)
+ *       Shown once when the app starts (App.js). Traces the doorway, steps
+ *       "through" it and calls onLoadingComplete() when it has gone.
+ *
+ *   'quick'
+ *       A shorter version of the splash, played on every page change
+ *       (App.js → RouteLoader), so each page opens with the Virsaa loader.
+ *       Also calls onLoadingComplete() at the end.
+ *
+ *   'wait' (default when no onLoadingComplete is given)
+ *       Stays on screen, tracing over and over, until the parent removes it.
+ *       Used while a page loads its data (e.g. EbookDetail) and while a page's
+ *       code is downloading (Suspense fallback in App.js).
+ * -----------------------------------------------------------------------------
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './Loader.module.css';
+
+// Converts image paths for the production build (same helper used across pages)
 
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -20,15 +43,24 @@ const useProductionImagePath = () => {
 const ARCH =
   'M14 252 V118 C14 64 58 40 100 10 C142 40 186 64 186 118 V252 Z';
 
-const TRACE_MS = 1550; // how long the outline takes to draw
-const EXIT_MS = 450; // the "step through the doorway" at the end
+// Timings per variant (ms): how long the outline takes to draw, and how long the
+// "step through the doorway" exit lasts. 'wait' has no exit; it loops until removed.
+const TIMINGS = {
+  splash: { trace: 1550, exit: 450 },
+  quick: { trace: 650, exit: 300 },
+  wait: { trace: 1550, exit: 0 },
+};
 
 /**
- * Splash screen shown while the app starts.
- * A glass doorway traces itself in gold, then opens toward you and fades away.
- * Props: onLoadingComplete() is called once, when the splash has gone.
+ * Props:
+ *   onLoadingComplete()  called once, when a 'splash' or 'quick' loader has gone
+ *   variant              'splash' | 'quick' | 'wait' (see the top of this file)
  */
-const Loader = ({ onLoadingComplete }) => {
+const Loader = ({ onLoadingComplete, variant }) => {
+  // Without a callback there is nothing to tell when it ends, so it waits
+  const mode = TIMINGS[variant] ? variant : (onLoadingComplete ? 'splash' : 'wait');
+  const { trace: TRACE_MS, exit: EXIT_MS } = TIMINGS[mode];
+
   const getImagePath = useProductionImagePath();
   const logo = getImagePath('/images/logo.png');
 
@@ -41,7 +73,10 @@ const Loader = ({ onLoadingComplete }) => {
     doneRef.current = onLoadingComplete;
   }, [onLoadingComplete]);
 
+  // 'splash' / 'quick': trace → exit → done, then tell the parent.
+  // 'wait' skips this and keeps tracing until it is unmounted.
   useEffect(() => {
+    if (mode === 'wait') return undefined;
     const exitTimer = setTimeout(() => setPhase('exit'), TRACE_MS);
     const doneTimer = setTimeout(() => {
       setPhase('done');
@@ -51,7 +86,7 @@ const Loader = ({ onLoadingComplete }) => {
       clearTimeout(exitTimer);
       clearTimeout(doneTimer);
     };
-  }, []);
+  }, [mode, TRACE_MS, EXIT_MS]);
 
   // The doorway leans gently toward the pointer, so it feels like an object in space
   const handlePointerMove = (e) => {
@@ -67,7 +102,7 @@ const Loader = ({ onLoadingComplete }) => {
 
   return (
     <div
-      className={`${styles.overlay} ${phase === 'exit' ? styles.exiting : ''}`}
+      className={`${styles.overlay} ${phase === 'exit' ? styles.exiting : ''} ${mode === 'wait' ? styles.waiting : ''} ${mode === 'quick' ? styles.quick : ''}`}
       onPointerMove={handlePointerMove}
       role="status"
       aria-live="polite"

@@ -1,3 +1,11 @@
+/*
+ * pages/Learning/LearningMaterial/LearningMaterial.module.css
+ * -----------------------------------------------------------------------------
+ * One lesson: video, lesson text, progress and reward, locked state, and the
+ * discussion (posts, replies, forms).
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);
@@ -299,6 +307,14 @@
   background: var(--glass-bg);
   border: 1px solid var(--glass-edge);
   box-shadow: var(--glass-highlight), var(--shadow-soft);
+}
+
+/* Buttons under a "couldn't load" message */
+.stateActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
 }
 
 .stateBox h2 {

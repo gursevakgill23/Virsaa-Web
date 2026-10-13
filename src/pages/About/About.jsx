@@ -1,3 +1,11 @@
+/**
+ * pages/About/About.jsx
+ * -----------------------------------------------------------------------------
+ * The About page (/about): Virsaa's story and timeline, mission and community,
+ * values, team, digitisation work and a call to action. Static content only,
+ * no API calls.
+ * -----------------------------------------------------------------------------
+ */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,11 +15,12 @@ import {
 import PageHero from '../../components/PageHero/PageHero';
 import styles from './About.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -21,6 +30,7 @@ const useProductionImagePath = () => {
   };
 };
 
+// Milestones shown in the story section
 const TIMELINE = [
   {
     icon: <FaCalendarAlt />,
@@ -39,6 +49,7 @@ const TIMELINE = [
   },
 ];
 
+// Cards in the values grid
 const VALUES = [
   { icon: <FaBook />, title: 'Preservation', description: 'We are committed to preserving Punjabi and Sikh heritage through digitization and archiving.' },
   { icon: <FaGlobeAmericas />, title: 'Accessibility', description: 'Making heritage accessible to everyone, everywhere, regardless of language or location.' },
@@ -53,17 +64,19 @@ const VALUES = [
 ];
 
 const About = ({ isDarkMode }) => {
+  // Pictures used on the page (files in public/images)
   const getImagePath = useProductionImagePath();
-  const teamMember = '../../images/About/team-member.jpg';
-  const headerDark = '../../images/header-image-dark.png';
-  const headerLight = '../../images/header-image.png';
-  const heritageImage = '../../images/About/heritage.jpg';
-  const communityImage = '../../images/About/community.jpg';
-  const digitizationImage = '../../images/About/digitization.jpg';
+  const teamMember = '/images/About/team-member.jpg';
+  const headerDark = '/images/header-image-dark.png';
+  const headerLight = '/images/header-image.png';
+  const heritageImage = '/images/About/heritage.jpg';
+  const communityImage = '/images/About/community.jpg';
+  const digitizationImage = '/images/About/digitization.jpg';
 
   const navigate = useNavigate();
   const headerImage = isDarkMode ? headerDark : headerLight;
 
+  // Team cards (replace with the real team when ready)
   const team = [
     { name: 'John Doe', role: 'Founder & CEO', image: teamMember },
     { name: 'Jane Smith', role: 'Content Curator', image: teamMember },

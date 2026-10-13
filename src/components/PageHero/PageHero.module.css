@@ -1,3 +1,11 @@
+/*
+ * components/PageHero/PageHero.module.css
+ * -----------------------------------------------------------------------------
+ * The shared page header: background photo with a dark gradient, title and
+ * subtitle, and the glass breadcrumb pill on its bottom edge.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Shared page header. The photo sits behind a maroon scrim so white text
    stays readable on any image, in light and dark mode. Content is centred
@@ -20,6 +28,7 @@
   min-height: clamp(260px, 38vh, 360px);
 }
 
+/* ---------- Photo and gradient ---------- */
 .media {
   position: absolute;
   inset: 0;
@@ -42,6 +51,7 @@
     linear-gradient(0deg, rgba(20, 2, 8, 0.5) 0%, transparent 45%);
 }
 
+/* ---------- Title and subtitle ---------- */
 .inner {
   max-width: 760px;
 }

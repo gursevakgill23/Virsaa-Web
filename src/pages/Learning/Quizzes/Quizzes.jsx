@@ -1,3 +1,16 @@
+/**
+ * pages/Learning/Quizzes/Quizzes.jsx
+ * -----------------------------------------------------------------------------
+ * One quiz (/learning/quizzes/:id):
+ *   - the quiz console: overall timer (pause/resume), optional per-question
+ *     timer, answer checking, progress and a results summary
+ *   - the server marks the answers and returns score, XP, coins and badges
+ *   - side panels: top scorers, live tournaments (join and play), badges
+ *   - a discussion where signed-in users can post and reply
+ * Only the quiz itself must load; the side sections fail quietly to their
+ * empty state. While loading, the Virsaa loader is shown.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -11,8 +24,11 @@ import { useAuth } from '../../../context/AuthContext';
 import learningApi from '../../../api/learningApi';
 import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
+import Loader from '../../../components/VirsaaLoader/Loader';
+import { describeApiError } from '../../../utils/apiError';
 
 // Utility function to handle public/static images
+// Converts image paths for the production build (same helper used across pages)
 const getProductionImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
@@ -25,16 +41,19 @@ const getProductionImagePath = (imagePath) => {
   return imagePath;
 };
 
+// ---------------------------------------------------------------- settings and helpers
 const QUIZ_DURATION = 10 * 60; // used when the quiz has no time limit set in the admin
 const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const RING = 2 * Math.PI * 52;
 
+// Seconds → "m:ss"
 const formatTime = (seconds) => {
   const s = Math.max(0, seconds || 0);
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 };
 
 // "2d 4h left" from the tournament's end_time
+// "2 days left" style text for a tournament's end time
 const tournamentTimeLeft = (end) => {
   const ms = new Date(end) - Date.now();
   if (!end || Number.isNaN(ms)) return '';
@@ -47,6 +66,7 @@ const tournamentTimeLeft = (end) => {
 };
 
 // "4 minutes", "1 min 30 s"
+// "10 minutes" style text for the time limit
 const describeDuration = (seconds) => {
   if (!seconds) return '';
   const m = Math.floor(seconds / 60);
@@ -92,6 +112,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const headerImage = getProductionImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
   const consoleRef = useRef(null);
 
+  // Quiz, questions and the player's progress through them
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -100,11 +121,13 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const [selectedAnswers, setSelectedAnswers] = useState([]);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isEvaluated, setIsEvaluated] = useState(false);
+  // Timer and the dialogs it can open
   const [timeLeft, setTimeLeft] = useState(QUIZ_DURATION);
   const [timerStarted, setTimerStarted] = useState(false);
   const [timerPaused, setTimerPaused] = useState(false);
   const [showTimeUp, setShowTimeUp] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  // Discussion and side panels
   const [discussionPosts, setDiscussionPosts] = useState([]);
   const [newPostContent, setNewPostContent] = useState('');
   const [replyContent, setReplyContent] = useState({});
@@ -118,10 +141,15 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const [showTournamentModal, setShowTournamentModal] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [tournamentScores, setTournamentScores] = useState([]);
+  // Answers sent for server marking, per-question timer, server result
   const [answers, setAnswers] = useState({});               // { questionId: optionId } for server marking
   const [questionTimeLeft, setQuestionTimeLeft] = useState(null);
   const [result, setResult] = useState(null);               // what the server sent back after submitting
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [posting, setPosting] = useState(false);            // a post or reply is being sent
+  const [reloadKey, setReloadKey] = useState(0);            // bumped by "Try again"
+  const safeId = encodeURIComponent(id);                    // the id comes from the URL
+  // Time actually spent (pauses excluded), sent with the result
   const startedAtRef = useRef(null);
   const pausedMsRef = useRef(0);
   const pauseStartRef = useRef(null);
@@ -129,23 +157,28 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   useEffect(() => {
     const config = isLoggedIn && accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {};
     const base = `${apiUrl}/api/learning`;
+    let cancelled = false;
 
     // Only the quiz itself is required. The other sections fail quietly and
     // just show their empty state, instead of blanking the whole page.
     const fetchQuizData = async () => {
       try {
-        const response = await axios.get(`${base}/learning-material/${id}/`, config);
+        const response = await axios.get(`${base}/learning-material/${safeId}/`, { ...config, timeout: 20000 });
+        if (cancelled) return;
         setQuiz(response.data);
-        setQuestions(response.data.questions || []);
+        setQuestions(Array.isArray(response.data?.questions) ? response.data.questions : []);
         setTimeLeft(response.data.time_limit_seconds || QUIZ_DURATION);
       } catch (err) {
+        if (cancelled) return;
         console.error('Error fetching quiz:', err.response?.status || err.message);
         setError(err.response?.status === 404 ? 'This quiz doesn’t exist.' : 'This quiz couldn’t be loaded.');
       }
     };
 
+    // Lists may come back plain or paginated; anything else counts as empty
+    const asList = (data) => (Array.isArray(data) ? data : data?.results || []);
     const quiet = (label, request, setter, map = (d) => d) => request
-      .then((res) => setter(map(res.data || [])))
+      .then((res) => { if (!cancelled) setter(map(asList(res.data))); })
       .catch((err) => console.error(`Error fetching ${label}:`, err.response?.status || err.message));
 
     const fetchData = async () => {
@@ -153,19 +186,20 @@ const Quizzes = ({ isDarkMode, apiString }) => {
       setError(null);
       await Promise.all([
         fetchQuizData(),
-        quiet('discussions', axios.get(`${base}/learning-material/${id}/discussions/`, config), setDiscussionPosts,
-          (d) => d.map((post) => ({ ...post, replies: post.replies || [] }))),
-        quiet('top scorers', axios.get(`${base}/items/${id}/leaderboard/`, config), setTopScorers),
-        quiet('tournaments', axios.get(`${base}/tournaments/`, config), setTournaments),
+        quiet('discussions', axios.get(`${base}/learning-material/${safeId}/discussions/`, { ...config, timeout: 20000 }), setDiscussionPosts,
+          (d) => d.map((post) => ({ ...post, replies: Array.isArray(post.replies) ? post.replies : [] }))),
+        quiet('top scorers', axios.get(`${base}/items/${safeId}/leaderboard/`, { ...config, timeout: 20000 }), setTopScorers),
+        quiet('tournaments', axios.get(`${base}/tournaments/`, { ...config, timeout: 20000 }), setTournaments),
         isLoggedIn && accessToken
-          ? quiet('badges', axios.get(`${base}/learning-material/${id}/badges/`, config), setBadges)
+          ? quiet('badges', axios.get(`${base}/learning-material/${safeId}/badges/`, { ...config, timeout: 20000 }), setBadges)
           : Promise.resolve(),
       ]);
-      setIsLoading(false);
+      if (!cancelled) setIsLoading(false);
     };
 
     fetchData();
-  }, [id, isLoggedIn, isPremium, accessToken, apiUrl]);
+    return () => { cancelled = true; };
+  }, [id, safeId, isLoggedIn, isPremium, accessToken, apiUrl, reloadKey]);
 
   // Opening a quiz adds it to History
   useEffect(() => {
@@ -222,6 +256,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentQuestion, timerStarted]);
 
+  // ---------------------------------------------------------------- timer
   const startTimer = () => {
     setTimeLeft(quizDuration);
     setTimerStarted(true);
@@ -248,6 +283,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     return Math.max(1, Math.round((Date.now() - startedAtRef.current - pausedMsRef.current) / 1000));
   };
 
+  // Back to question 1 with a fresh timer
   const resetQuiz = (tournamentId = null) => {
     setCurrentQuestion(0);
     setScore(0);
@@ -263,6 +299,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     setResult(null);
   };
 
+  // Start (or restart) the quiz, optionally as a tournament entry
   const handleStartQuiz = async (tournamentId = null) => {
     setNotice(null);
     if (!quiz || isBlocked) {
@@ -280,10 +317,10 @@ const Quizzes = ({ isDarkMode, apiString }) => {
       }
       try {
         const data = await learningApi.joinTournament(apiUrl, accessToken, tournamentId);
-        setTournamentScores(data.scores || []);
+        setTournamentScores(Array.isArray(data?.scores) ? data.scores : []);
       } catch (err) {
         console.error('Error joining tournament:', err.response?.status || err.message);
-        setNotice(err.response?.data?.error || 'You couldn’t join the tournament. Try again.');
+        setNotice(describeApiError(err, 'You couldn’t join the tournament. Try again.'));
         return;
       }
     }
@@ -320,12 +357,13 @@ const Quizzes = ({ isDarkMode, apiString }) => {
       learningApi.itemLeaderboard(apiUrl, id).then(setTopScorers).catch(() => {});
     } catch (err) {
       console.error('Error submitting score:', err.response?.status || err.message);
-      setNotice(err.response?.data?.error || 'Your score couldn’t be saved.');
+      setNotice(describeApiError(err, 'Your score couldn’t be saved.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // End the quiz: send the result and show the summary
   const finishQuiz = (finalScore, finalAnswers = answers) => {
     submitScore(finalScore, finalAnswers, true);
     setShowSummary(true);
@@ -334,6 +372,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     setQuestionTimeLeft(null);
   };
 
+  // Pick an answer: mark it, then move on
   const handleAnswer = (isCorrect, optionId) => {
     if (isEvaluated || timeLeft <= 0 || timerPaused) return;
 
@@ -375,22 +414,29 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const handleWarningContinue = () => { setShowWarning(false); resetQuiz(selectedTournament); startTimer(); };
   const handleWarningCancel = () => setShowWarning(false);
 
+  // ---------------------------------------------------------------- discussion
   const handlePostSubmit = async (e) => {
     e.preventDefault();
     setNotice(null);
     if (!isLoggedIn) { setNotice('Sign in to start a discussion.'); return; }
-    if (!newPostContent.trim()) return;
+    if (!newPostContent.trim()) { setNotice('Write something before posting.'); return; }
+    if (posting) return; // already sending
+    setPosting(true);
     try {
       const response = await axios.post(
-        `${apiUrl}/api/learning/learning-material/${id}/add_discussion/`,
-        { content: newPostContent, quiz: id },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        `${apiUrl}/api/learning/learning-material/${safeId}/add_discussion/`,
+        { content: newPostContent.trim(), quiz: id },
+        { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 20000 }
       );
       setDiscussionPosts([...discussionPosts, { ...response.data, replies: response.data.replies || [] }]);
       setNewPostContent('');
     } catch (err) {
       console.error('Error posting discussion:', err.response?.status || err.message);
-      setNotice('Your post couldn’t be published. Try again.');
+      setNotice(err.response?.status === 401
+        ? 'Your session has ended. Log in again to post.'
+        : describeApiError(err, 'Your post couldn’t be published. Try again.'));
+    } finally {
+      setPosting(false);
     }
   };
 
@@ -398,12 +444,14 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     e.preventDefault();
     setNotice(null);
     if (!isLoggedIn) { setNotice('Sign in to reply.'); return; }
-    if (!replyContent[postId]?.trim()) return;
+    if (!replyContent[postId]?.trim()) { setNotice('Write a reply before sending.'); return; }
+    if (posting) return; // already sending
+    setPosting(true);
     try {
       const response = await axios.post(
-        `${apiUrl}/api/learning/learning-material/${id}/add_reply/`,
-        { content: replyContent[postId], post_id: postId },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        `${apiUrl}/api/learning/learning-material/${safeId}/add_reply/`,
+        { content: replyContent[postId].trim(), post_id: postId },
+        { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 20000 }
       );
       setDiscussionPosts(discussionPosts.map((post) =>
         post.id === postId ? { ...post, replies: [...(post.replies || []), response.data] } : post
@@ -411,18 +459,23 @@ const Quizzes = ({ isDarkMode, apiString }) => {
       setReplyContent({ ...replyContent, [postId]: '' });
     } catch (err) {
       console.error('Error posting reply:', err.response?.status || err.message);
-      setNotice('Your reply couldn’t be published. Try again.');
+      setNotice(err.response?.status === 401
+        ? 'Your session has ended. Log in again to reply.'
+        : describeApiError(err, 'Your reply couldn’t be published. Try again.'));
+    } finally {
+      setPosting(false);
     }
   };
 
   const toggleShowReplies = (postId) => setShowAllReplies((prev) => ({ ...prev, [postId]: !prev[postId] }));
 
+  // Tournament dialog with its leaderboard
   const handleOpenTournamentModal = (tournamentId) => {
     setSelectedTournament(tournamentId);
     setTournamentScores([]);
     setShowTournamentModal(true);
     learningApi.tournamentLeaderboard(apiUrl, tournamentId)
-      .then((rows) => setTournamentScores(rows || []))
+      .then((rows) => setTournamentScores(Array.isArray(rows) ? rows : []))
       .catch((err) => console.error('Error fetching tournament scores:', err.response?.status || err.message));
   };
 
@@ -432,6 +485,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     setTournamentScores([]);
   };
 
+  // Answer button style after checking: correct, wrong or dimmed
   const optionClass = (option) => {
     if (!isEvaluated) return styles.option;
     if (option.is_correct) return `${styles.option} ${styles.optionCorrect}`;
@@ -443,7 +497,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   if (isLoading) {
     return (
       <div className={styles.page}>
-        <div className={styles.stateBox}><p>Loading quiz…</p></div>
+        <Loader />
       </div>
     );
   }
@@ -454,7 +508,12 @@ const Quizzes = ({ isDarkMode, apiString }) => {
         <div className={styles.stateBox}>
           <h2>{error || 'Quiz not found'}</h2>
           <p>Check your connection, or pick another quiz from the Learning hub.</p>
-          <Link to="/learning" className={styles.primaryButton}>Back to Learning</Link>
+          <div className={styles.stateActions}>
+            {error && error !== 'This quiz doesn’t exist.' && (
+              <button type="button" className={styles.primaryButton} onClick={() => setReloadKey((k) => k + 1)}>Try again</button>
+            )}
+            <Link to="/learning" className={styles.primaryButton}>Back to Learning</Link>
+          </div>
         </div>
       </div>
     );
@@ -714,9 +773,10 @@ const Quizzes = ({ isDarkMode, apiString }) => {
               onChange={(e) => setNewPostContent(e.target.value)}
               placeholder="Start a new discussion…"
               disabled={!isLoggedIn}
+              maxLength={2000}
             />
             <div className={styles.composerActions}>
-              <button type="submit" className={styles.primaryButton} disabled={!isLoggedIn}>Post</button>
+              <button type="submit" className={styles.primaryButton} disabled={!isLoggedIn || posting}>{posting ? 'Posting…' : 'Post'}</button>
             </div>
           </form>
 
@@ -768,8 +828,9 @@ const Quizzes = ({ isDarkMode, apiString }) => {
                         placeholder="Write a reply…"
                         aria-label={`Reply to ${post.author}`}
                         disabled={!isLoggedIn}
+                        maxLength={2000}
                       />
-                      <button type="submit" className={styles.smallButton} disabled={!isLoggedIn}>Reply</button>
+                      <button type="submit" className={styles.smallButton} disabled={!isLoggedIn || posting}>Reply</button>
                     </form>
                   </li>
                 );

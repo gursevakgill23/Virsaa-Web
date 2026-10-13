@@ -1,16 +1,26 @@
+/**
+ * pages/Profile/CompleteProfile/CompleteProfile.jsx
+ * -----------------------------------------------------------------------------
+ * "Complete your profile" (shown at /my-profile until every required detail
+ * is filled in, see ProfileRoute). Photo, name, about me, preferred content,
+ * date of birth and gender, with a progress count. Every field is checked
+ * before sending; server errors are shown under the matching field too.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../../utils/notify';
 import { FaCamera, FaUser, FaPen, FaCalendarAlt, FaVenusMars, FaHeart, FaCheck } from 'react-icons/fa';
 import axios from 'axios';
 import PageHero from '../../../components/PageHero/PageHero';
 import { useAuth } from '../../../context/AuthContext';
 import styles from './CompleteProfile.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
+      return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
@@ -20,8 +30,17 @@ const getImagePath = (imagePath) => {
 };
 
 const PLACEHOLDER_PHOTO = '/images/Login/user-placeholder.jpg';
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 MB
+
+// Today as YYYY-MM-DD in the visitor's time zone (for the date-of-birth check)
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+// Content types people can pick
 const CONTENT_OPTIONS = ['fiction', 'sikh_history', 'punjabi_culture', 'spirituality', 'non_fiction', 'poetry', 'audiobook', 'ebook'];
 
+// "sikh_history" → "Sikh history"
 const prettify = (value = '') => {
   const text = String(value).replace(/_/g, ' ');
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -38,12 +57,13 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
   const toastTheme = isDarkMode ? 'dark' : 'light';
 
+  // Form values (pre-filled from the profile), errors, sending state, photo preview
   const [formData, setFormData] = useState({
     first_name: userData?.first_name || '',
     last_name: userData?.last_name || '',
     profile_photo: null,
     about_me: userData?.about_me || '',
-    preferred_content: userData?.preferred_content || [],
+    preferred_content: Array.isArray(userData?.preferred_content) ? userData.preferred_content : [],
     dob: userData?.dob || '',
     gender: initialGender(userData?.gender),
   });
@@ -64,16 +84,24 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
     if (previewPhoto && previewPhoto.startsWith('blob:')) URL.revokeObjectURL(previewPhoto);
   }, [previewPhoto]);
 
+  // Remove one field's error once it's being fixed
   const clearError = (key) => {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: '' }));
   };
 
+  // Text fields, and the photo (type and size checked before the preview)
   const handleChange = (e) => {
     const { id, value, type, files } = e.target;
     if (type === 'file') {
       const file = files[0];
-      if (file && !file.type.startsWith('image/')) {
+      if (file && !/^image\/(jpeg|png|webp)$/.test(file.type)) {
         setErrors((prev) => ({ ...prev, profile_photo: 'Choose a JPG, PNG or WebP image.' }));
+        e.target.value = '';
+        return;
+      }
+      if (file && file.size > MAX_PHOTO_BYTES) {
+        setErrors((prev) => ({ ...prev, profile_photo: 'The photo must be smaller than 5 MB.' }));
+        e.target.value = '';
         return;
       }
       setFormData((prev) => ({ ...prev, profile_photo: file || null }));
@@ -84,6 +112,7 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
     clearError(id);
   };
 
+  // Pick / unpick a content type
   const handleContentToggle = (content) => {
     setFormData((prev) => ({
       ...prev,
@@ -94,6 +123,7 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
     clearError('preferred_content');
   };
 
+  // Every required field, and a sensible date of birth
   const validateForm = () => {
     const next = {};
     if (!formData.first_name.trim()) next.first_name = 'Add your first name.';
@@ -102,11 +132,14 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
     if (!formData.about_me.trim()) next.about_me = 'Write a line or two about yourself.';
     if (formData.preferred_content.length === 0) next.preferred_content = 'Pick at least one.';
     if (!formData.dob) next.dob = 'Add your date of birth.';
+    else if (formData.dob > todayISO()) next.dob = 'The date of birth can’t be in the future.';
+    else if (formData.dob < '1900-01-01') next.dob = 'Check the year of your date of birth.';
     if (!formData.gender) next.gender = 'Choose an option.';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
+  // Save the profile (multipart, because of the photo)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -120,10 +153,10 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
 
     setIsSubmitting(true);
     const body = new FormData();
-    body.append('first_name', formData.first_name);
-    body.append('last_name', formData.last_name);
+    body.append('first_name', formData.first_name.trim());
+    body.append('last_name', formData.last_name.trim());
     if (formData.profile_photo) body.append('profile_photo', formData.profile_photo);
-    body.append('about_me', formData.about_me);
+    body.append('about_me', formData.about_me.trim());
     body.append('preferred_content', JSON.stringify(formData.preferred_content));
     body.append('dob', formData.dob);
     body.append('gender', formData.gender);
@@ -131,6 +164,7 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
     try {
       const response = await axios.put(`${apiString}/api/auth/complete-profile/`, body, {
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'multipart/form-data' },
+        timeout: 60000, // a photo upload can take a while on slow connections
       });
       updateUserData(response.data);
       toast.success('Profile saved', { position: 'top-center', autoClose: 2000, theme: toastTheme });
@@ -146,8 +180,16 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
         navigate('/login');
         return;
       }
-      if (error.response?.data && typeof error.response.data === 'object') {
-        const fieldErrors = Object.entries(error.response.data)
+      if (error.response?.status >= 500) {
+        message = 'Something went wrong on our side. Try again in a moment.';
+      } else if (error.response?.data && typeof error.response.data === 'object') {
+        // Show each server field error under its field, and list them in the alert
+        const serverErrors = {};
+        Object.entries(error.response.data).forEach(([key, value]) => {
+          serverErrors[key] = Array.isArray(value) ? String(value[0]) : String(value);
+        });
+        setErrors((prev) => ({ ...prev, ...serverErrors }));
+        const fieldErrors = Object.entries(serverErrors)
           .map(([key, value]) => `${prettify(key)}: ${value}`)
           .join('; ');
         message = fieldErrors || message;
@@ -160,6 +202,7 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
     }
   };
 
+  // Name preview and the "x of 7 done" progress
   const displayName = `${formData.first_name} ${formData.last_name}`.trim();
   const required = ['first_name', 'last_name', 'about_me', 'dob', 'gender'];
   const doneCount = required.filter((k) => String(formData[k]).trim()).length
@@ -185,12 +228,12 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
             <label htmlFor="profile_photo" className={styles.cameraButton}>
               <FaCamera aria-hidden="true" />
               <span className={styles.srOnly}>Choose profile photo</span>
-              <input type="file" id="profile_photo" accept="image/*" onChange={handleChange} className={styles.fileInput} />
+              <input type="file" id="profile_photo" accept="image/jpeg,image/png,image/webp" onChange={handleChange} className={styles.fileInput} />
             </label>
           </div>
           <h2 className={styles.previewName}>{displayName || 'Your name'}</h2>
           {errors.profile_photo
-            ? <p className={styles.errorText}>{errors.profile_photo}</p>
+            ? <p className={styles.errorText} role="alert">{errors.profile_photo}</p>
             : <p className={styles.hint}>Tap the camera to add a photo.</p>}
 
           <div className={styles.progressBlock}>
@@ -211,17 +254,17 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
           <div className={styles.row}>
             <div className={styles.field}>
               <label htmlFor="first_name" className={styles.fieldLabel}><FaUser aria-hidden="true" /> First name</label>
-              <input type="text" id="first_name" autoComplete="given-name"
+              <input type="text" id="first_name" autoComplete="given-name" maxLength={50}
                 className={`${styles.input} ${errors.first_name ? styles.inputError : ''}`}
                 value={formData.first_name} onChange={handleChange} placeholder="e.g. Harpreet" />
-              {errors.first_name && <p className={styles.errorText}>{errors.first_name}</p>}
+              {errors.first_name && <p className={styles.errorText} role="alert">{errors.first_name}</p>}
             </div>
             <div className={styles.field}>
               <label htmlFor="last_name" className={styles.fieldLabel}><FaUser aria-hidden="true" /> Last name</label>
-              <input type="text" id="last_name" autoComplete="family-name"
+              <input type="text" id="last_name" autoComplete="family-name" maxLength={50}
                 className={`${styles.input} ${errors.last_name ? styles.inputError : ''}`}
                 value={formData.last_name} onChange={handleChange} placeholder="e.g. Kaur" />
-              {errors.last_name && <p className={styles.errorText}>{errors.last_name}</p>}
+              {errors.last_name && <p className={styles.errorText} role="alert">{errors.last_name}</p>}
             </div>
           </div>
 
@@ -232,7 +275,7 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
               value={formData.about_me} onChange={handleChange}
               placeholder="What brings you to Virsaa? What do you like to read or learn?" />
             <div className={styles.fieldFoot}>
-              {errors.about_me ? <p className={styles.errorText}>{errors.about_me}</p> : <span />}
+              {errors.about_me ? <p className={styles.errorText} role="alert">{errors.about_me}</p> : <span />}
               <span className={styles.hint}>{formData.about_me.length}/500</span>
             </div>
           </div>
@@ -255,16 +298,16 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
                 );
               })}
             </div>
-            {errors.preferred_content && <p className={styles.errorText}>{errors.preferred_content}</p>}
+            {errors.preferred_content && <p className={styles.errorText} role="alert">{errors.preferred_content}</p>}
           </fieldset>
 
           <div className={styles.row}>
             <div className={styles.field}>
               <label htmlFor="dob" className={styles.fieldLabel}><FaCalendarAlt aria-hidden="true" /> Date of birth</label>
-              <input type="date" id="dob" autoComplete="bday"
+              <input type="date" id="dob" autoComplete="bday" min="1900-01-01" max={todayISO()}
                 className={`${styles.input} ${errors.dob ? styles.inputError : ''}`}
                 value={formData.dob} onChange={handleChange} />
-              {errors.dob && <p className={styles.errorText}>{errors.dob}</p>}
+              {errors.dob && <p className={styles.errorText} role="alert">{errors.dob}</p>}
             </div>
             <div className={styles.field}>
               <label htmlFor="gender" className={styles.fieldLabel}><FaVenusMars aria-hidden="true" /> Gender</label>
@@ -276,7 +319,7 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
                 <option value="female">Female</option>
                 <option value="other">Other</option>
               </select>
-              {errors.gender && <p className={styles.errorText}>{errors.gender}</p>}
+              {errors.gender && <p className={styles.errorText} role="alert">{errors.gender}</p>}
             </div>
           </div>
 

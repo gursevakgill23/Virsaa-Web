@@ -1,3 +1,10 @@
+/**
+ * pages/Profile/AccountTabs/AccountTabs.jsx
+ * -----------------------------------------------------------------------------
+ * Tab bar shared by the five account pages (Profile, Favorites, History,
+ * Notifications, Settings). Shows the unread notification count as a badge.
+ * -----------------------------------------------------------------------------
+ */
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaUser, FaHeart, FaHistory, FaBell, FaUserCog } from 'react-icons/fa';
@@ -17,6 +24,7 @@ const TABS = [
 const AccountTabs = ({ badge = {} }) => {
   const { pathname } = useLocation();
   const unread = useUnreadNotifications();
+  // Badge numbers per tab: the live unread count, unless the page passes a fresher one
   const counts = { '/notifications': unread, ...badge };
 
   return (

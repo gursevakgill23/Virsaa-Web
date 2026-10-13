@@ -1,3 +1,11 @@
+/*
+ * pages/Profile/Settings/Settings.module.css
+ * -----------------------------------------------------------------------------
+ * Account Settings: section navigation, switch rows, theme choices, password
+ * and delete-account forms, storage meter.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

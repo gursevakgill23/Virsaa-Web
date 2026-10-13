@@ -1,3 +1,16 @@
+/**
+ * pages/HomePage/Home.jsx
+ * -----------------------------------------------------------------------------
+ * The home page (/ and /home):
+ *   - header slideshow (changes every 3 s, or with the up/down arrows) with the
+ *     "Play Now" video link
+ *   - quick dock of shortcuts, shelf of the newest ebooks, today's Hukamnama
+ *     (a small prompt appears after 2 s; the full text opens in a modal),
+ *     "Listen, learn and play", featured authors, heritage, Gurdwara + Premium
+ *   - the "Ask about Sikhism" chat button
+ * Data: /collections/ebooks/ and /collections/authors/ (public, no token).
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MdPlayArrow, MdClose } from 'react-icons/md';
@@ -15,10 +28,11 @@ import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 const FALLBACK_IMAGE = '/images/logo.png';
 
 // Utility function to handle public/static images
+// Converts image paths for the production build (same helper used across pages)
 const getProductionImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
+      return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     } else {
@@ -28,6 +42,7 @@ const getProductionImagePath = (imagePath) => {
   return imagePath;
 };
 
+// onError handler for covers/portraits: use the logo instead (once)
 const handleImageError = (e) => {
   if (e.currentTarget.dataset.fallback) return;
   e.currentTarget.dataset.fallback = '1';
@@ -36,30 +51,35 @@ const handleImageError = (e) => {
 
 const Home = ({ isDarkMode, apiString }) => {
   const getStaticImagePath = getProductionImagePath;
-  const slide1Light = getStaticImagePath('../../images/header-slide1.jpg');
-  const slide2Light = getStaticImagePath('../../images/header-slide2.jpg');
-  const slide3Light = getStaticImagePath('../../images/header-slide3.jpg');
+  // Header slideshow pictures (light mode)
+  const slide1Light = getStaticImagePath('/images/header-slide1.jpg');
+  const slide2Light = getStaticImagePath('/images/header-slide2.jpg');
+  const slide3Light = getStaticImagePath('/images/header-slide3.jpg');
 
   // Dark mode images
-  const slide1Dark = getStaticImagePath('../../images/header-slide1-dark.jpeg');
-  const slide2Dark = getStaticImagePath('../../images/header-slide2-dark.jpg');
-  const slide3Dark = getStaticImagePath('../../images/header-slide3-dark.jpg');
+  const slide1Dark = getStaticImagePath('/images/header-slide1-dark.jpeg');
+  const slide2Dark = getStaticImagePath('/images/header-slide2-dark.jpg');
+  const slide3Dark = getStaticImagePath('/images/header-slide3-dark.jpg');
 
-  const audiobooks_kirtan = getStaticImagePath('../../images/audiobooks_kirtan.jpg');
-  const learning_resources = getStaticImagePath('../../images/learning_resources.jpg');
-  const games_quizzes = getStaticImagePath('../../images/games_quizzes.jpg');
-  const sikh_history = getStaticImagePath('../../images/sikh_history.jpg');
-  const recent_news = getStaticImagePath('../../images/recent_news.jpg');
-  const gurbani = getStaticImagePath('../../images/gurbani.jpg');
-  const heritage = getStaticImagePath('../../images/heritage.jpg');
+  // Section pictures
+  const audiobooks_kirtan = getStaticImagePath('/images/audiobooks_kirtan.jpg');
+  const learning_resources = getStaticImagePath('/images/learning_resources.jpg');
+  const games_quizzes = getStaticImagePath('/images/games_quizzes.jpg');
+  const sikh_history = getStaticImagePath('/images/sikh_history.jpg');
+  const recent_news = getStaticImagePath('/images/recent_news.jpg');
+  const gurbani = getStaticImagePath('/images/gurbani.jpg');
+  const heritage = getStaticImagePath('/images/heritage.jpg');
 
+  // Slideshow position and loading state for the book shelf
   const [imageIndex, setImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Newest ebooks and all authors (for names and the authors row)
   const [latestBooks, setLatestBooks] = useState([]);
   const [authors, setAuthors] = useState([]);
 
+  // Hukamnama prompt / modal state (the translation needs sign-in)
   const { isLoggedIn } = useAuth();
   const [showHukamnamaToast, setShowHukamnamaToast] = useState(false);
   const [showHukamnamaModal, setShowHukamnamaModal] = useState(false);
@@ -69,24 +89,26 @@ const Home = ({ isDarkMode, apiString }) => {
   // Books and authors are public, so they're fetched without a token.
   // (Sending an expired token would make the request fail with 401.)
   useEffect(() => {
-    const apiUrl = (apiString || '').replace(/\/$/, '');
+    const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
+    // Lists may come back plain or paginated ({ results: [...] })
+    const toList = (data) => (Array.isArray(data) ? data : data?.results || []);
     let cancelled = false;
 
     const load = async () => {
       setIsLoading(true);
       const [booksRes, authorsRes] = await Promise.allSettled([
-        axios.get(`${apiUrl}/collections/ebooks/`),
-        axios.get(`${apiUrl}/collections/authors/`),
+        axios.get(`${apiUrl}/collections/ebooks/`, { timeout: 20000 }),
+        axios.get(`${apiUrl}/collections/authors/`, { timeout: 20000 }),
       ]);
       if (cancelled) return;
 
       if (booksRes.status === 'fulfilled') {
-        setLatestBooks([...booksRes.value.data].sort((a, b) => b.id - a.id).slice(0, 12));
+        setLatestBooks([...toList(booksRes.value.data)].sort((a, b) => b.id - a.id).slice(0, 12));
       } else {
         console.error('Error fetching ebooks:', booksRes.reason?.response?.status);
       }
       if (authorsRes.status === 'fulfilled') {
-        setAuthors(authorsRes.value.data);
+        setAuthors(toList(authorsRes.value.data));
       } else {
         console.error('Error fetching authors:', authorsRes.reason?.response?.status);
       }
@@ -120,6 +142,7 @@ const Home = ({ isDarkMode, apiString }) => {
     };
   }, []);
 
+  // Open the Hukamnama from the prompt or the Hukamnama section
   const handleToastClick = () => {
     clearTimeout(toastTimer.current);
     setShowHukamnamaToast(false);
@@ -136,6 +159,7 @@ const Home = ({ isDarkMode, apiString }) => {
     setShowHukamnamaModal(false);
   };
 
+  // Today's Hukamnama: Gurmukhi, English translation and explanation
   const hukamnamaData = {
     punjabi: `ਹੁਕਮਿ ਰਜਾਈ ਚਲਣਾ ਨਾਨਕ ਲਿਖਿਆ ਨਾਲਿ ॥
     ਗਾਵੀਐ ਸੁਣੀਐ ਮਨਿ ਰਖੀਐ ਭਾਉ ॥
@@ -170,6 +194,7 @@ const Home = ({ isDarkMode, apiString }) => {
     },
   };
 
+  // Slides for the current theme, advanced every 3 s
   const bgImages = useMemo(() => {
     return isDarkMode
       ? [slide1Dark, slide2Dark, slide3Dark]
@@ -184,6 +209,7 @@ const Home = ({ isDarkMode, apiString }) => {
     return () => clearInterval(interval);
   }, [bgImages.length]);
 
+  // Up / down arrows on the header
   const handleImageChange = (direction) => {
     if (direction === 'up') {
       setImageIndex((prevIndex) => (prevIndex - 1 + bgImages.length) % bgImages.length);
@@ -192,6 +218,7 @@ const Home = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // Heading and text that go with each slide
   const textContent = [
     {
       h1: 'Ebooks and Audiobooks',
@@ -207,6 +234,7 @@ const Home = ({ isDarkMode, apiString }) => {
     },
   ];
 
+  // Content for the sections below (shortcuts, experiences, heritage)
   const quickLinks = [
     { to: '/collections/ebooks', icon: <FaBook />, label: 'Ebooks' },
     { to: '/collections/audiobooks', icon: <FaRegFileAudio />, label: 'Audiobooks' },
@@ -270,8 +298,15 @@ const Home = ({ isDarkMode, apiString }) => {
 
   return (
     <div className={styles.homeContainer}>
+      {/* "View today's Hukamnama" prompt */}
       {showHukamnamaToast && (
-        <div className={styles.hukamnamaToast} onClick={handleToastClick}>
+        <div
+          className={styles.hukamnamaToast}
+          onClick={handleToastClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToastClick(); } }}
+          role="button"
+          tabIndex={0}
+        >
           <div className={styles.toastContent}>
             <span>View Today's Hukamnama</span>
             <span>ਅੱਜ ਦਾ ਹੁਕਮਨਾਮਾ ਦੇਖੋ</span>
@@ -279,6 +314,7 @@ const Home = ({ isDarkMode, apiString }) => {
         </div>
       )}
 
+      {/* Hukamnama modal */}
       {showHukamnamaModal && (
         <div className={styles.hukamnamaModalOverlay}>
           <div className={styles.hukamnamaModal}>

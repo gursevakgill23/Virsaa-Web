@@ -1,8 +1,23 @@
+/**
+ * components/BookReader/BookReader.jsx
+ * -----------------------------------------------------------------------------
+ * Full-screen flip-book reader for ebooks (opened from EbookDetail).
+ *   - loads pdf.js from a CDN only when a book is opened
+ *   - renders pages to images in the background, nearest pages first, and
+ *     keeps at most CACHE_LIMIT of them in memory
+ *   - two-page spreads on wide screens, one page on phones / portrait
+ *   - turn pages by dragging, tapping either half, the arrow buttons, the
+ *     slider or the keyboard (arrows, Page Up/Down, Space, Home, End, Esc)
+ *   - reports the current page through onProgress (used for History)
+ *   - shows a clear message with "Try again" / "Open PDF" if the book can't load
+ * -----------------------------------------------------------------------------
+ */
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   FaTimes, FaExpand, FaCompress, FaChevronLeft, FaChevronRight, FaExternalLinkAlt, FaRedo,
 } from 'react-icons/fa';
 import styles from './BookReader.module.css';
+import { safeUrl } from '../../utils/safeUrl';
 
 /* -------------------------------------------------------------------------
    pdf.js is loaded from a CDN only when someone opens a book, so it adds
@@ -27,6 +42,7 @@ const loadPdfjs = () => {
   return pdfjsPromise;
 };
 
+// ---------------------------------------------------------------- small helpers
 const CACHE_LIMIT = 24; // rendered pages kept in memory
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -51,22 +67,26 @@ const rightOf = (s, n) => (2 * s + 1 <= n ? 2 * s + 1 : null);
  *  - onProgress(page, numPages): optional, called when the page changes (for History)
  */
 const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => {
+  // DOM nodes and the open PDF document
   const rootRef = useRef(null);
   const stageRef = useRef(null);
   const pdfRef = useRef(null);
 
+  // Loading state of the book
   const [status, setStatus] = useState('loading'); // loading | ready | error
   const [loadPercent, setLoadPercent] = useState(0);
   const [loadError, setLoadError] = useState(null);
   const [numPages, setNumPages] = useState(0);
   const [aspect, setAspect] = useState(0.7); // width / height of page 1
 
+  // Layout, current position, the leaf being turned, rendered pages, full screen
   const [stage, setStage] = useState({ w: 0, h: 0 });
   const [index, setIndex] = useState(0); // spread number (two-page) or page number (one-page)
   const [flip, setFlip] = useState(null); // { a, x }: turning the leaf between position a and a+1, x 0..1
   const [images, setImages] = useState({}); // page number -> { src, h }
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
 
+  // Mirrors of state for animation / drag handlers (avoid stale values)
   const flipRef = useRef(null);
   const animRef = useRef(0);
   const dragRef = useRef(null);
@@ -82,6 +102,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     return () => ro.disconnect();
   }, []);
 
+  // Page size that fits the stage (two pages side by side in spread view)
   const spread = stage.w >= 760 && stage.w > stage.h * 1.05;
   const availW = Math.max(0, stage.w - (spread ? 48 : 24));
   const availH = Math.max(0, stage.h - 24);
@@ -96,6 +117,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     setIndex((i) => (spread ? Math.floor(i / 2) : Math.max(1, i === 0 ? 1 : 2 * i)));
   }, [spread]);
 
+  // First and last position, and the current one kept inside that range
   const maxIndex = spread ? Math.floor(numPages / 2) : numPages;
   const minIndex = spread ? 0 : 1;
   const current = clamp(index, minIndex, Math.max(minIndex, maxIndex));
@@ -123,7 +145,8 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     loadPdfjs()
       .then((pdfjs) => {
         if (cancelled) return null;
-        task = pdfjs.getDocument({ url, withCredentials: false });
+        // No cookies sent with the file request; never run code generated from the PDF
+        task = pdfjs.getDocument({ url, withCredentials: false, isEvalSupported: false });
         task.onProgress = ({ loaded, total }) => {
           if (total) setLoadPercent(Math.round((loaded / total) * 100));
         };
@@ -169,6 +192,8 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   renderHRef.current = Math.round(pageH * dpr);
 
+  // Works through the queue of pages to render, one at a time, closest to the
+  // reader first. Each page is drawn on a canvas and kept as a JPEG blob URL.
   const pump = useCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -219,6 +244,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   }, []);
 
   useEffect(() => {
+    // Queue the pages around the current position whenever it changes
     if (status !== 'ready' || !pageH) return;
     const focus = spread ? Math.max(1, 2 * current) : current;
     focusRef.current = focus;
@@ -239,11 +265,13 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   const canNext = status === 'ready' && current < maxIndex;
   const canPrev = status === 'ready' && current > minIndex;
 
+  // Keep the ref and the state of the turning leaf in step
   const setFlipState = (value) => {
     flipRef.current = value;
     setFlip(value);
   };
 
+  // Animate the turning leaf to fully turned (1) or back (0), then settle the index
   const animateTo = useCallback((target, easing = easeOut) => {
     const start = flipRef.current;
     if (!start) return;
@@ -267,6 +295,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     animRef.current = requestAnimationFrame(step);
   }, []);
 
+  // Turn one page / spread forward or back
   const goNext = useCallback(() => {
     if (flipRef.current || !canNext) return;
     setFlipState({ a: current, x: 0 });
@@ -279,6 +308,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     animateTo(0, easeInOut);
   }, [canPrev, current, animateTo]);
 
+  // Jump straight to a position (slider, Home/End)
   const jumpTo = (value) => {
     if (flipRef.current) return;
     setIndex(clamp(Number(value), minIndex, maxIndex));
@@ -364,6 +394,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     };
   }, []);
 
+  // Full screen on/off (errors such as a blocked request are ignored)
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     else document.documentElement.requestFullscreen?.().catch(() => {});
@@ -384,6 +415,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     return `Page ${l || r} of ${numPages}`;
   })();
 
+  // One sheet of paper: the rendered page, or its number while it renders
   const pageFace = (num, extra = '') => (
     <div className={`${styles.paper} ${extra}`}>
       {num && images[num] ? (
@@ -394,6 +426,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     </div>
   );
 
+  // The book on the stage, including the leaf while a page is being turned
   const renderBook = () => {
     const f = flip;
     const s = f ? Math.sin(Math.PI * f.x) : 0; // how far the leaf is lifted
@@ -474,6 +507,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     );
   };
 
+  // A problem fetching the link (from the parent) or opening the PDF (here)
   const errorMessage = linkError || loadError;
 
   return (
@@ -487,6 +521,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     >
       <div className={styles.aura} aria-hidden="true" />
 
+      {/* Title, page count, full screen and close */}
       <header className={styles.topBar}>
         <div className={styles.titleBlock}>
           <h2 className={styles.title}>{title}</h2>
@@ -509,6 +544,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
         </div>
       </header>
 
+      {/* Error message, loading animation, or the book */}
       <div className={styles.stage} ref={stageRef}>
         {errorMessage ? (
           <div className={styles.message}>
@@ -520,8 +556,8 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
                   <FaRedo aria-hidden="true" /> Try again
                 </button>
               )}
-              {url && (
-                <a className={styles.ghostButton} href={url} target="_blank" rel="noopener noreferrer">
+              {safeUrl(url) && (
+                <a className={styles.ghostButton} href={safeUrl(url)} target="_blank" rel="noopener noreferrer">
                   <FaExternalLinkAlt aria-hidden="true" /> Open PDF
                 </a>
               )}
@@ -548,6 +584,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
         )}
       </div>
 
+      {/* Page controls */}
       {status === 'ready' && !errorMessage && (
         <footer className={styles.bottomBar}>
           <button type="button" className={styles.roundButton} onClick={goPrev} disabled={!canPrev} aria-label="Previous page">

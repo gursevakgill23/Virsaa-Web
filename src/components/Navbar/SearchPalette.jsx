@@ -1,3 +1,12 @@
+/**
+ * components/Navbar/SearchPalette.jsx
+ * -----------------------------------------------------------------------------
+ * The search overlay opened from the navbar (or Ctrl/Cmd+K, or "/").
+ * Searches ebooks, audiobooks and authors as you type (after 2 letters, with a
+ * short pause), groups the results, and supports the keyboard: arrows to move,
+ * Enter to open, Esc to close. Shows recent searches and quick links when empty.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -8,9 +17,12 @@ import {
 import { FaHandsPraying } from 'react-icons/fa6';
 import styles from './SearchPalette.module.css';
 
-const RECENT_KEY = 'virsaa_recent_searches';
+const RECENT_KEY = 'virsaa_recent_searches'; // last 5 searches, kept in this browser
+const MAX_QUERY = 100; // longest search we send
+const TIMEOUT_MS = 15000; // give up on a slow search instead of spinning forever
 const FALLBACK_IMAGE = '/images/logo.png';
 
+// Quick links shown before anything is typed
 const JUMP_LINKS = [
   { to: '/collections/ebooks', label: 'Ebooks', icon: <FaBook /> },
   { to: '/collections/audiobooks', label: 'Audiobooks', icon: <FaRegFileAudio /> },
@@ -20,10 +32,12 @@ const JUMP_LINKS = [
   { to: '/learning', label: 'Learning', icon: <FaGraduationCap /> },
 ];
 
+// Recent searches: read and save (storage may be blocked, so both are guarded)
 const readRecent = () => {
   try {
     const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-    return Array.isArray(list) ? list.slice(0, 5) : [];
+    // Only keep short strings, in case storage was edited by hand
+    return Array.isArray(list) ? list.filter((t) => typeof t === 'string' && t.length <= MAX_QUERY).slice(0, 5) : [];
   } catch {
     return [];
   }
@@ -40,7 +54,8 @@ const saveRecent = (term) => {
 };
 
 // Wraps the matching part of a title in <mark>
-const Highlight = ({ text, query }) => {
+const Highlight = ({ text: rawText, query }) => {
+  const text = String(rawText ?? '');
   const i = text.toLowerCase().indexOf(query.toLowerCase());
   if (!query || i === -1) return text;
   return (
@@ -52,10 +67,13 @@ const Highlight = ({ text, query }) => {
   );
 };
 
+// Props: onClose() closes the overlay; apiString is the API base URL
 const SearchPalette = ({ onClose, apiString }) => {
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  // What was typed, request state, results per collection, author names, recents,
+  // and which result row is highlighted
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('idle'); // idle | loading | done | error
   const [results, setResults] = useState({ ebooks: [], audiobooks: [], authors: [] });
@@ -73,9 +91,10 @@ const SearchPalette = ({ onClose, apiString }) => {
   // Author names, so ebook results can show who wrote them
   useEffect(() => {
     let cancelled = false;
-    axios.get(`${apiUrl}/collections/authors/`)
+    axios.get(`${apiUrl}/collections/authors/`, { timeout: TIMEOUT_MS })
       .then((res) => {
-        if (!cancelled) setAuthorNames(Object.fromEntries(res.data.map((a) => [a.id, a.name])));
+        const list = Array.isArray(res.data) ? res.data : res.data?.results || [];
+        if (!cancelled) setAuthorNames(Object.fromEntries(list.map((a) => [a.id, a.name])));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -93,9 +112,9 @@ const SearchPalette = ({ onClose, apiString }) => {
     const timer = setTimeout(async () => {
       const q = encodeURIComponent(term);
       const [e, a, au] = await Promise.allSettled([
-        axios.get(`${apiUrl}/collections/ebooks/?search=${q}`),
-        axios.get(`${apiUrl}/collections/audiobooks/?search=${q}`),
-        axios.get(`${apiUrl}/collections/authors/?search=${q}`),
+        axios.get(`${apiUrl}/collections/ebooks/?search=${q}`, { timeout: TIMEOUT_MS }),
+        axios.get(`${apiUrl}/collections/audiobooks/?search=${q}`, { timeout: TIMEOUT_MS }),
+        axios.get(`${apiUrl}/collections/authors/?search=${q}`, { timeout: TIMEOUT_MS }),
       ]);
       if (cancelled) return;
       const pick = (r) => (r.status === 'fulfilled' && Array.isArray(r.value.data) ? r.value.data.slice(0, 5) : []);
@@ -130,12 +149,14 @@ const SearchPalette = ({ onClose, apiString }) => {
     ];
   }, [results, authorNames]);
 
+  // Open a result: remember the search, close, navigate
   const go = (to) => {
     if (term.length >= 2) setRecent(saveRecent(term));
     onClose();
     navigate(to);
   };
 
+  // Keyboard control for the whole panel
   const onKeyDown = (e) => {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -157,10 +178,12 @@ const SearchPalette = ({ onClose, apiString }) => {
     listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [active]);
 
+  // Results grouped for display (empty groups are hidden)
   const groups = ['Books', 'Audiobooks', 'Authors']
     .map((g) => ({ name: g, items: flat.filter((r) => r.group === g) }))
     .filter((g) => g.items.length);
 
+  // Clicking the dimmed area outside the panel closes it
   return (
     <div className={styles.overlay} onMouseDown={onClose} role="presentation">
       <div
@@ -184,6 +207,7 @@ const SearchPalette = ({ onClose, apiString }) => {
             aria-controls="search-results"
             aria-activedescendant={flat[active] ? `sr-${flat[active].key}` : undefined}
             autoComplete="off"
+            maxLength={MAX_QUERY}
             enterKeyHint="search"
           />
           {query && (
@@ -197,6 +221,7 @@ const SearchPalette = ({ onClose, apiString }) => {
         </div>
 
         <div className={styles.body} id="search-results" ref={listRef}>
+          {/* Before typing: recent searches and quick links */}
           {term.length < 2 && (
             <>
               {recent.length > 0 && (
@@ -225,6 +250,7 @@ const SearchPalette = ({ onClose, apiString }) => {
             </>
           )}
 
+          {/* Loading placeholders */}
           {status === 'loading' && (
             <ul className={styles.list} aria-hidden="true">
               {[0, 1, 2, 3].map((i) => (
@@ -236,6 +262,7 @@ const SearchPalette = ({ onClose, apiString }) => {
             </ul>
           )}
 
+          {/* No results / error messages */}
           {status === 'done' && groups.length === 0 && (
             <div className={styles.empty}>
               <p className={styles.emptyTitle}>Nothing found for “{term}”</p>
@@ -250,6 +277,7 @@ const SearchPalette = ({ onClose, apiString }) => {
             </div>
           )}
 
+          {/* Results */}
           {status === 'done' && groups.map((g) => (
             <section key={g.name} className={styles.block}>
               <h3 className={styles.blockTitle}>{g.name}</h3>

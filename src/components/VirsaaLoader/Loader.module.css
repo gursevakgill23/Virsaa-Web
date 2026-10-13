@@ -1,7 +1,10 @@
 /* =========================================================================
-   Splash loader: a glass Gurdwara doorway in space.
-   The gold outline draws itself while the app starts, then the doorway
-   moves toward the viewer and the splash fades out.
+   components/VirsaaLoader/Loader.module.css
+   The Virsaa loader: a glass Gurdwara doorway in space.
+   The gold outline draws itself, then the doorway moves toward the viewer
+   and the loader fades out. Variants (see Loader.jsx):
+     .quick    shorter version played on every page change
+     .waiting  keeps tracing until the page's content is ready
    ========================================================================= */
 
 .overlay {
@@ -214,6 +217,35 @@
 
 .exiting .trace {
   stroke-width: 4;
+}
+
+/* ---------- Variant: quick (page changes) ----------
+   Everything settles faster so the page isn't held up. */
+.quick .doorway {
+  animation-duration: 0.35s, 4s;
+}
+
+.quick .glow,
+.quick .glass::after {
+  animation-duration: 0.65s;
+}
+
+.quick .logo,
+.quick .wordmark {
+  animation-duration: 0.35s;
+  animation-delay: 0s;
+}
+
+.quick.exiting,
+.quick.exiting .scene {
+  animation-duration: 0.3s;
+}
+
+/* ---------- Variant: waiting (content still loading) ----------
+   The outline draws and undraws in a loop until the loader is removed. */
+.waiting .trace {
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
 }
 
 /* ---------- Keyframes ---------- */

@@ -1,8 +1,17 @@
+/**
+ * elements/ChatWithUs/ChatButton/ChatButton.jsx
+ * -----------------------------------------------------------------------------
+ * "Ask about Sikhism": a floating chat button that opens a small helper.
+ * Answers come from the built-in list below (no server, nothing is sent
+ * anywhere). Questions are matched on whole words, longest phrase first.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './ChatButton.module.css';
 import { FaComment, FaTimes } from 'react-icons/fa';
 import { IoIosSend } from 'react-icons/io';
 
+// Answers used by more than one question
 const GREETING = 'Waheguru Ji Ka Khalsa, Waheguru Ji Ki Fateh! How can I help you today?';
 const FIVE_KS = 'The Five Ks are articles of faith: 1) Kesh (uncut hair), 2) Kara (steel bracelet), 3) Kanga (wooden comb), 4) Kachera (cotton undergarment), 5) Kirpan (ceremonial sword). They represent discipline and spirituality.';
 
@@ -60,11 +69,13 @@ const RESPONSES = {
   goodbye: 'Waheguru Ji Ka Khalsa, Waheguru Ji Ki Fateh! May you walk in the light of the Guru\'s wisdom.',
 };
 
+// Reply when nothing matches
 const FALLBACK = 'I\'m happy to help you learn about Sikhism. You could ask about:\n1) Sikh beliefs\n2) History\n3) Practices\n4) Scriptures\n5) Festivals\nor another specific topic.';
 
 // Shown as tap-to-ask chips before the first message
 const SUGGESTIONS = ['What is Sikhism', 'Five Ks', 'What is langar', 'Golden Temple', 'Main festivals'];
 
+// Makes a phrase safe to use inside a regular expression
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Pick the longest phrase that appears as whole words, so "this" no longer matches "hi"
@@ -78,6 +89,7 @@ const findAnswer = (text) => {
 };
 
 const ChatButton = () => {
+  // Chat state: open or not, the conversation, what's being typed, the typing dots
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -101,8 +113,10 @@ const ChatButton = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen]);
 
+  // Cancel a pending reply if the component goes away
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
+  // Add the question, then the answer after a short "typing" pause
   const send = (text) => {
     const question = text.trim();
     if (!question) return;
@@ -133,6 +147,7 @@ const ChatButton = () => {
         <FaComment className={styles.icon} aria-hidden="true" />
       </button>
 
+      {/* The chat window */}
       <section
         className={`${styles.chatWindow} ${isOpen ? styles.open : ''}`}
         aria-label="Ask about Sikhism"
@@ -181,6 +196,7 @@ const ChatButton = () => {
           )}
         </div>
 
+        {/* Question box (empty questions can't be sent) */}
         <form className={styles.chatFooter} onSubmit={handleSubmit}>
           <label htmlFor="chat-input" className={styles.srOnly}>Your question</label>
           <input
@@ -192,6 +208,7 @@ const ChatButton = () => {
             placeholder="Type your question…"
             className={styles.chatInput}
             autoComplete="off"
+            maxLength={300}
             tabIndex={isOpen ? 0 : -1}
           />
           <button type="submit" className={styles.sendButton} disabled={inputValue.trim() === ''} aria-label="Send" tabIndex={isOpen ? 0 : -1}>

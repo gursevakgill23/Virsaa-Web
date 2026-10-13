@@ -1,3 +1,11 @@
+/**
+ * pages/SikhHistory/SikhHistory.jsx
+ * -----------------------------------------------------------------------------
+ * The Sikh History page (/sikh-history): a strip of topics, a timeline of
+ * eras, an "Inspiring" section, recommended reading and the "Stay tuned"
+ * block. Static content for now (no API calls).
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaBookOpen } from 'react-icons/fa';
@@ -5,6 +13,7 @@ import PageHero from '../../components/PageHero/PageHero';
 import ComingSoon from '../../elements/ComingSoon/ComingSoon';
 import styles from './SikhHistory.module.css';
 
+// Pictures used on the page (files in public/images)
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
 const filter_image = '/images/sikhHistory/filter_image.jpeg';
@@ -12,10 +21,11 @@ const sikh_history = '/images/sikhHistory/sikh_history1.jpg';
 const book_image = '/images/book-image.jpg';
 const inspiring_image = '/images/sikhHistory/inspiring.jpg';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
+      return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
@@ -24,6 +34,7 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
+// Topics in the scrolling strip at the top
 const scrollableImages = [
   { id: 1, src: filter_image, text: 'Guru Nanak Dev Ji' },
   { id: 2, src: filter_image, text: 'Foundation of Sikhism' },
@@ -43,6 +54,7 @@ const scrollableImages = [
   { id: 16, src: filter_image, text: 'Youngest Guru' },
 ];
 
+// Timeline eras
 const sikhHistoryData = [
   { id: 1, image: sikh_history, title: 'Guru Nanak Dev Ji', description: 'Founder of Sikhism', date: '1469 - 1539' },
   { id: 2, image: sikh_history, title: 'Guru Angad Dev Ji', description: 'Second Sikh Guru', date: '1504 - 1552' },
@@ -58,6 +70,7 @@ const sikhHistoryData = [
   { id: 12, image: sikh_history, title: 'Khalsa Panth', description: 'Sikh Community', date: '1699 - Present' },
 ];
 
+// Recommended reading cards
 const recommendedItems = [
   { id: 1, image: book_image, title: 'Heer Ranjha' },
   { id: 2, image: book_image, title: 'Pinjar' },
@@ -78,6 +91,7 @@ const SikhHistory = ({ isDarkMode }) => {
   // Topics are static for now; clicking one highlights the matching timeline entry when there is one
   const matchesTopic = (title) => activeTopic && title.toLowerCase() === activeTopic.toLowerCase();
 
+  // Toggle a topic and scroll to its era in the timeline, if there is one
   const handleTopic = (text) => {
     const next = activeTopic === text ? null : text;
     setActiveTopic(next);

@@ -1,3 +1,12 @@
+/**
+ * src/index.js
+ * -----------------------------------------------------------------------------
+ * Entry point: the first file the browser runs.
+ *   1. starts the site translator (only loads Google's script for Punjabi/French)
+ *   2. in development, hides errors that come from browser extensions
+ *   3. renders <App /> into <div id="root"> in public/index.html
+ * -----------------------------------------------------------------------------
+ */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -38,6 +47,7 @@ if (process.env.NODE_ENV === 'development') {
   }, true);
 }
 
+// Render the app. StrictMode runs extra checks in development only.
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

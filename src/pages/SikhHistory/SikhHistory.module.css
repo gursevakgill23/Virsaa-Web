@@ -1,3 +1,11 @@
+/*
+ * pages/SikhHistory/SikhHistory.module.css
+ * -----------------------------------------------------------------------------
+ * The Sikh History page: topics strip, the timeline of eras, the Inspiring
+ * section and recommended reading.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

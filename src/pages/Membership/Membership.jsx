@@ -1,14 +1,25 @@
+/**
+ * pages/Membership/Membership.jsx
+ * -----------------------------------------------------------------------------
+ * The membership page (/premium): plan cards with a monthly/yearly switch,
+ * a comparison table, FAQs and a closing call to action.
+ * The user's current plan is marked "Current", and other plans read as
+ * Upgrade or Downgrade (useMembership). Choosing a plan opens Checkout.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCheck, FaTimes, FaStar, FaDownload, FaAd, FaHeadset, FaBookOpen, FaChevronDown, FaCrown } from 'react-icons/fa';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/notify';
 import PageHero from '../../components/PageHero/PageHero';
 import useMembership, { PLAN_RANK } from '../../hooks/useMembership';
 import styles from './Membership.module.css';
 
+// Header pictures
 const headerLight = '/images/header-image.png';
 const headerDark = '/images/header-image-dark.png';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
@@ -23,6 +34,7 @@ const getImagePath = (imagePath) => {
 
 const ANNUAL_DISCOUNT = 0.2; // matches the FAQ: 20% off yearly plans
 
+// The plans: prices, features and their rank (to compare with the current plan)
 const plans = [
   {
     id: 1,
@@ -69,6 +81,7 @@ const plans = [
 ];
 
 // true = included, false = not included, string = shown as text
+// Rows of the comparison table
 const comparison = [
   { feature: 'Access to all content', values: [false, true, true] },
   { feature: 'Ad-free experience', values: [false, true, true] },
@@ -77,6 +90,7 @@ const comparison = [
   { feature: 'Priority support', values: [false, false, true] },
 ];
 
+// Questions and answers
 const faqs = [
   { question: 'What payment methods do you accept?', answer: 'We accept all major credit cards, PayPal, and Google Pay.' },
   { question: 'Can I cancel my subscription anytime?', answer: 'Yes, you can cancel your subscription at any time.' },
@@ -86,16 +100,19 @@ const faqs = [
   { question: 'Do you offer discounts for annual subscriptions?', answer: 'Yes, we offer a 20% discount for annual subscriptions.' },
 ];
 
+// A comparison table cell: tick, cross or text
 const Cell = ({ value }) => {
   if (value === true) return <span className={styles.yes}><FaCheck aria-hidden="true" /><span className={styles.srOnly}>Included</span></span>;
   if (value === false) return <span className={styles.no}><FaTimes aria-hidden="true" /><span className={styles.srOnly}>Not included</span></span>;
   return <span className={styles.cellText}>{value}</span>;
 };
 
+// "October 12, 2026"
 const formatDate = (date) =>
   date ? date.toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
 
 const Membership = ({ isDarkMode, apiString }) => {
+  // The user's plan, the billing switch
   const membership = useMembership(apiString);
   const currentRank = membership.rank;
   const headerImage = useMemo(() => getImagePath(isDarkMode ? headerDark : headerLight), [isDarkMode]);
@@ -115,6 +132,7 @@ const Membership = ({ isDarkMode, apiString }) => {
     navigate(`/checkout?product=${planTitle.toLowerCase()}_${billing}&return=/premium`);
   };
 
+  // "Compare plans" button
   const scrollToPlans = () => document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (

@@ -1,7 +1,16 @@
+/*
+ * elements/ComingSoon/ComingSoon.module.css
+ * -----------------------------------------------------------------------------
+ * The "Stay tuned" block: list of upcoming items with progress meters on the
+ * left, a picture in an arch frame on the right.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    "Stay tuned" block: glass panel with a rotating list and an arch-framed
    picture. Each list item shows a small meter while it is on screen.
    ========================================================================= */
+/* Section and the two-column glass panel */
 .comingSoonContainer {
   max-width: 1240px;
   margin: 0 auto;
@@ -35,6 +44,7 @@
   text-wrap: balance;
 }
 
+/* Left: the list of items, each with a progress meter while it's showing */
 .textList {
   list-style: none;
   margin: 0;
@@ -145,6 +155,7 @@
   }
 }
 
+/* Column sizing */
 .leftSide {
   min-width: 0;
 }

@@ -1,3 +1,12 @@
+/*
+ * pages/PrivacyPolicy/PrivacyPolicy.module.css
+ * -----------------------------------------------------------------------------
+ * The Privacy Policy page: sticky contents list on the left and the policy
+ * text on the right.
+ * -----------------------------------------------------------------------------
+ */
+
+/* ---------- Page base ---------- */
 .page {
   background: var(--background-color);
   color: var(--text-color);

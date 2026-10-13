@@ -1,0 +1,79 @@
+/*
+ * components/ErrorBoundary/ErrorBoundary.module.css
+ * The fallback shown when a page crashes (see ErrorBoundary.jsx).
+ * A single glass card centred below the navbar, in the site's maroon theme.
+ */
+
+.wrap {
+  display: grid;
+  place-items: center;
+  min-height: 70vh;
+  padding: 120px 16px 60px;
+  background: var(--background-color);
+}
+
+.card {
+  width: min(520px, 100%);
+  padding: 32px 28px;
+  border-radius: 26px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-deep), var(--glass-highlight);
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 600;
+  color: var(--headline-color);
+}
+
+.text {
+  margin: 10px 0 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--secondary-text-color);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+/* Main action: filled maroon button */
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  border: var(--button-border);
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+.secondary {
+  border: 2px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+}
+
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}

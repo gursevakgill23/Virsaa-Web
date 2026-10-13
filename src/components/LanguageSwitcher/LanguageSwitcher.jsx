@@ -1,3 +1,10 @@
+/**
+ * components/LanguageSwitcher/LanguageSwitcher.jsx
+ * -----------------------------------------------------------------------------
+ * The globe button in the navbar that switches the whole site between
+ * English, Punjabi and French (logic in i18n/siteLanguage.js).
+ * -----------------------------------------------------------------------------
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { FaGlobe, FaCheck } from 'react-icons/fa';
 import { LANGUAGES, getLanguage, setLanguage } from '../../i18n/siteLanguage';
@@ -6,11 +13,13 @@ import styles from './LanguageSwitcher.module.css';
 /* Globe button in the navbar: English, ਪੰਜਾਬੀ, Français. Its own labels are never translated. */
 const LanguageSwitcher = ({ className = '' }) => {
   const [open, setOpen] = useState(false);
+  // The language in use, and the matching entry for the button label
   const current = getLanguage();
   const wrapRef = useRef(null);
   const active = LANGUAGES.find((l) => l.code === current) || LANGUAGES[0];
 
   useEffect(() => {
+    // While the menu is open: a click outside or Escape closes it
     if (!open) return undefined;
     const onDown = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
@@ -22,6 +31,7 @@ const LanguageSwitcher = ({ className = '' }) => {
     };
   }, [open]);
 
+  // notranslate: Google must never translate the language names themselves
   return (
     <div className={`${styles.wrap} notranslate ${className}`} translate="no" ref={wrapRef}>
       <button
@@ -36,6 +46,7 @@ const LanguageSwitcher = ({ className = '' }) => {
         <FaGlobe aria-hidden="true" />
         <span className={styles.code}>{active.short}</span>
       </button>
+      {/* The menu: choosing a language reloads the page in that language */}
       {open && (
         <ul className={styles.menu} role="menu">
           {LANGUAGES.map((lang) => (

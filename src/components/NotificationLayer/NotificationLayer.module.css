@@ -1,0 +1,354 @@
+/*
+ * components/NotificationLayer/NotificationLayer.module.css
+ * -----------------------------------------------------------------------------
+ * Styles for the two notification types (see NotificationLayer.jsx):
+ *   - .island*  success / info pill at the top centre
+ *   - .sheet*   error / warning card at the bottom
+ * Both sit above the navbar (z-index 950) and the sidebar panel.
+ * -----------------------------------------------------------------------------
+ */
+
+/* ====================================================================== Island */
+
+/* Fixed slot just below the floating navbar (navbar = 14px offset + 62px tall) */
+.islandDock {
+  position: fixed;
+  top: calc(88px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 3000;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+/* The pill itself: dark glass in both themes so it reads like a system surface */
+.island {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 10px 8px 8px;
+  border-radius: 999px;
+  background: rgba(24, 6, 12, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 18px 40px -16px rgba(20, 2, 8, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  color: #fff;
+  pointer-events: auto;
+  /* Grows out of a dot in the middle: the clip opens sideways, then the content fades in */
+  animation: islandOpen 520ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+
+.islandLeaving {
+  animation: islandClose 280ms cubic-bezier(0.5, 0, 0.75, 0) both;
+}
+
+@keyframes islandOpen {
+  0% { clip-path: inset(0 calc(50% - 26px) round 999px); transform: scale(0.6); opacity: 0; }
+  35% { clip-path: inset(0 calc(50% - 26px) round 999px); transform: scale(1); opacity: 1; }
+  100% { clip-path: inset(0 0 round 999px); transform: scale(1); opacity: 1; }
+}
+
+@keyframes islandClose {
+  0% { clip-path: inset(0 0 round 999px); opacity: 1; }
+  70% { clip-path: inset(0 calc(50% - 26px) round 999px); opacity: 1; transform: scale(1); }
+  100% { clip-path: inset(0 calc(50% - 26px) round 999px); opacity: 0; transform: scale(0.6); }
+}
+
+/* Round icon on the left, with the countdown ring around it */
+.islandIcon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.islandSuccess .islandIcon { background: rgba(60, 207, 145, 0.18); color: #6ff0b6; }
+.islandInfo .islandIcon { background: rgba(242, 179, 194, 0.2); color: #f6c9d4; }
+
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ringTrack,
+.ringTime {
+  fill: none;
+  stroke-width: 2;
+}
+
+.ringTrack { stroke: rgba(255, 255, 255, 0.12); }
+
+/* Empties clockwise over the notification's lifetime (duration set inline) */
+.ringTime {
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation-name: ringDrain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes ringDrain {
+  to { stroke-dashoffset: 1; }
+}
+
+/* The tick draws itself once the pill has opened */
+.tick {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tickDraw 420ms 260ms cubic-bezier(0.3, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes tickDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+.infoGlyph {
+  font-size: 0.85rem;
+}
+
+.islandText {
+  margin: 0;
+  max-width: 46ch;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+  animation: fadeIn 260ms 200ms ease both;
+}
+
+.islandClose {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.75rem;
+  cursor: pointer;
+  animation: fadeIn 260ms 240ms ease both;
+}
+
+.islandClose:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ====================================================================== Alert sheet */
+
+/* Bottom-right stack on desktop */
+.sheetDock {
+  position: fixed;
+  right: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(400px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+/* Phones and tablets: centred, above the section tab bar (14px + 54px) */
+@media (max-width: 991px) {
+  .sheetDock {
+    right: 50%;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    transform: translateX(50%);
+  }
+}
+
+/* Solid card (not glass) so the error text is always easy to read */
+.sheet {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 12px;
+  padding: 16px 16px 18px 18px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-left: 5px solid var(--sheet-accent);
+  box-shadow: 0 24px 50px -20px rgba(30, 2, 10, 0.55), 0 6px 14px -8px rgba(30, 2, 10, 0.3);
+  color: var(--text-color);
+  pointer-events: auto;
+  /* Slides up from below, then a short shake says "this needs attention" */
+  animation:
+    sheetIn 340ms cubic-bezier(0.2, 0.9, 0.3, 1) both,
+    sheetShake 420ms 340ms ease-in-out;
+}
+
+.sheetError { --sheet-accent: #c0392b; }
+.sheetWarning { --sheet-accent: #c98a1a; }
+
+.sheetLeaving {
+  animation: sheetOut 280ms ease-in both;
+}
+
+@keyframes sheetIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes sheetShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  45% { transform: translateX(5px); }
+  70% { transform: translateX(-3px); }
+}
+
+@keyframes sheetOut {
+  to { opacity: 0; transform: translateY(16px) scale(0.98); }
+}
+
+.sheetIcon {
+  margin-top: 1px;
+  font-size: 1.3rem;
+  color: var(--sheet-accent);
+}
+
+.sheetBody {
+  min-width: 0;
+}
+
+.sheetTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-color);
+}
+
+/* "×2" when the same error happened again */
+.repeat {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sheet-accent) 16%, transparent);
+  color: var(--sheet-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.sheetText {
+  margin: 3px 0 0;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--secondary-text-color);
+  overflow-wrap: anywhere;
+}
+
+.sheetActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sheetAction,
+.sheetDismiss {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sheetAction {
+  border: 0;
+  background: var(--sheet-accent);
+  color: #fff;
+}
+
+.sheetDismiss {
+  border: 1.5px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+}
+
+.sheetDismiss:hover {
+  border-color: var(--secondary-text-color);
+}
+
+/* Bar along the bottom edge that drains until the sheet closes by itself */
+.sheetTimer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--sheet-accent);
+  opacity: 0.55;
+  transform-origin: left;
+  animation-name: timerDrain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes timerDrain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* ====================================================================== Shared */
+
+.islandClose:focus-visible,
+.sheetAction:focus-visible,
+.sheetDismiss:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}
+
+/* Reduce motion: no morphing or shaking, just a quick fade.
+   The countdown visuals stay, because they carry information. */
+@media (prefers-reduced-motion: reduce) {
+  .island,
+  .islandLeaving,
+  .sheet,
+  .sheetLeaving {
+    animation-name: fadeIn;
+    animation-duration: 160ms;
+  }
+
+  .islandLeaving,
+  .sheetLeaving {
+    animation-direction: reverse;
+  }
+
+  .tick {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

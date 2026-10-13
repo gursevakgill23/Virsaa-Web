@@ -1,203 +1,319 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+/**
+ * context/AuthContext.jsx
+ * -----------------------------------------------------------------------------
+ * Who is signed in, for the whole app. Wraps everything in App.js and is read
+ * with `const { isLoggedIn, userData, accessToken, login, logout } = useAuth();`
+ *
+ * What it does:
+ *   - restores the session when the site opens (tokens in cookies, the user's
+ *     profile in localStorage) and checks it with /api/auth/profile/
+ *   - renews the access token with the refresh token when it has expired
+ *     (also when the access-token cookie has already gone, so "Remember me"
+ *     keeps working for its full 7 days)
+ *   - adds the Bearer token to /api/auth/ requests and, when any request comes
+ *     back 401, renews the token once and retries it
+ *   - sends signed-out visitors to /login, except on the public pages below
+ *   - "Explore as guest" (Login page): guests may browse the main sections
+ *     (GUEST_ROUTES) but opening anything (a book, lesson, game, account page…)
+ *     asks them to sign in
+ *   - login(), logout(), continueAsGuest() and updateUserData() for the pages
+ *
+ * Security notes:
+ *   - tokens are never written to the console
+ *   - cookies are SameSite=Lax (never sent with other sites' requests) and
+ *     Secure on HTTPS. JavaScript can still read them; moving the tokens to
+ *     httpOnly cookies set by Django would be the next step up.
+ *   - a failed token renewal signs the user out cleanly
+ *   - a temporary network problem doesn't sign anyone out
+ * -----------------------------------------------------------------------------
+ */
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from '../utils/notify';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
+
+// ---------------------------------------------------------------- settings
+
+// Pages signed-out visitors may open; every other page sends them to /login
+const PUBLIC_ROUTES = [
+  '/login',
+  '/signup',
+  '/forgot-password',
+  '/forgot-password/:email/:token',
+  '/about',
+  '/news',
+  '/privacy-policy',
+];
+
+// Extra pages a guest ("Explore as guest") may browse. These are the overview pages;
+// anything opened from them (book, audiobook, author, lesson, quiz, game, Gurdwara
+// details, checkout, account) needs an account.
+const GUEST_ROUTES = [
+  '/',
+  '/home',
+  '/collections',
+  '/collections/ebooks',
+  '/collections/audiobooks',
+  '/collections/authors',
+  '/sikh-history',
+  '/gurbani',
+  '/learning',
+  '/gurdwara-access',
+  '/premium',
+];
+
+// The guest choice is remembered on this device until the person signs in
+const GUEST_KEY = 'virsaa:guest';
+const readGuest = () => {
+  try { return localStorage.getItem(GUEST_KEY) === '1'; } catch { return false; }
+};
+const writeGuest = (on) => {
+  try {
+    if (on) localStorage.setItem(GUEST_KEY, '1');
+    else localStorage.removeItem(GUEST_KEY);
+  } catch { /* storage blocked: guest mode lasts until the page reloads */ }
+};
+
+// Auth endpoints that must never get a token or trigger a token renewal
+const AUTH_FREE_PATHS = ['/login/', '/signup/', '/token/refresh/', '/forget-password/', '/verify-reset-code/', '/reset-password/'];
+
+const TIMEOUT_MS = 20000; // give up on auth requests after 20 s
+const ACCESS_DAYS = 1; // access-token cookie lifetime
+const REMEMBER_DAYS = 7; // refresh-token cookie lifetime with "Remember me"
+
+// Signed-out state
+const SIGNED_OUT = {
+  isLoggedIn: false,
+  userData: null,
+  accessToken: null,
+  refreshToken: null,
+  isLoading: false,
+  isPremium: false,
+  isProfileComplete: false,
+};
+
+// ---------------------------------------------------------------- helpers
+
+/** Does this path belong to a public page? (":email/:token" match any segment) */
+const isPublicPath = (pathname) => PUBLIC_ROUTES.some((route) => (route.includes(':')
+  ? new RegExp(`^${route.replace(/:[^/]+/g, '[^/]+')}$`).test(pathname)
+  : pathname === route));
+
+/** Is this URL one of the auth endpoints that work without a token? */
+const isAuthFreeUrl = (url) => AUTH_FREE_PATHS.some((path) => String(url || '').includes(path));
+
+/** Cookie options: whole site, Lax, Secure on HTTPS, expiring after `days` */
+const cookieOptions = (days) => ({
+  expires: days,
+  path: '/',
+  sameSite: 'Lax',
+  secure: typeof window !== 'undefined' && window.location.protocol === 'https:',
+});
+
+/** Premium membership? Accepts "Premium", "premium_member", etc. */
+const isPremiumLevel = (level) => /premium/i.test(String(level || ''));
+
+/** The old completeness check: an "about me" and a date of birth */
+const checkProfileCompleteness = (userData) => {
+  if (!userData) return false;
+  const { about_me: aboutMe, dob } = userData;
+  return Boolean(aboutMe && String(aboutMe).trim() !== '' && dob);
+};
+
+/** Errors are only logged while developing, and never include tokens */
+const logError = (label, error) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.error(label, error?.response?.status || error?.message || error);
+  }
+};
+
+/** localStorage can be blocked (private mode); never let that break sign-in */
+const readStoredUser = () => {
+  try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+};
+const storeUser = (user) => {
+  try { localStorage.setItem('user', JSON.stringify(user)); } catch { /* storage blocked */ }
+};
+const forgetUser = () => {
+  try { localStorage.removeItem('user'); } catch { /* storage blocked */ }
+};
+
+// ---------------------------------------------------------------- provider
 
 export const AuthProvider = ({ children, apiString }) => {
-  const [authState, setAuthState] = useState({
-    isLoggedIn: false,
-    userData: null,
-    accessToken: null,
-    refreshToken: null,
-    isLoading: true,
-    isPremium: false,
-    isProfileComplete: false,
-  });
+  const [authState, setAuthState] = useState({ ...SIGNED_OUT, isLoading: true });
+  const [isGuest, setIsGuest] = useState(readGuest); // exploring without an account
   const navigate = useNavigate();
-  const location = useLocation();
+  const { pathname } = useLocation();
 
-  const publicRoutes = useMemo(() => [
-    '/login',
-    '/signup',
-    '/forgot-password',
-    '/forgot-password/:email/:token',
-    '/about',
-    '/news',
-  ], []); // Empty dependency array since publicRoutes is static
+  // API base address (trailing slash removed)
+  const apiUrl = useMemo(
+    () => (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, ''),
+    [apiString]
+  );
 
-  const isPublicRoute = useCallback(() => {
-    return publicRoutes.some((route) =>
-      route.includes(':')
-        ? location.pathname.match(route.replace(/:email|:token/g, '[^/]+'))
-        : location.pathname === route
-    );
-  }, [location.pathname, publicRoutes]);
+  // Latest values for code that runs outside React's render (interceptors, async calls)
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  const tokensRef = useRef({ accessToken: null, refreshToken: null });
+  tokensRef.current = { accessToken: authState.accessToken, refreshToken: authState.refreshToken };
 
-  const checkProfileCompleteness = useCallback((userData) => {
-    if (!userData) return false;
-    const { about_me, dob } = userData;
-    const isAboutMeFilled = about_me && about_me.trim() !== '';
-    const isDobFilled = !!dob;
-    return isAboutMeFilled && isDobFilled;
+  // One token renewal at a time: requests that fail together share it
+  const refreshPromiseRef = useRef(null);
+
+  /** Forget the session everywhere (cookies, storage, state). */
+  const handleCleanup = useCallback(() => {
+    Cookies.remove('accessToken', { path: '/' });
+    Cookies.remove('refreshToken', { path: '/' });
+    forgetUser();
+    tokensRef.current = { accessToken: null, refreshToken: null };
+    setAuthState(SIGNED_OUT);
   }, []);
 
+  /** Put a signed-in user into state (and remember their profile). */
+  const applyUser = useCallback((user, accessToken, refreshToken) => {
+    storeUser(user);
+    tokensRef.current = { accessToken, refreshToken };
+    setAuthState({
+      isLoggedIn: true,
+      userData: user,
+      accessToken,
+      refreshToken,
+      isLoading: false,
+      isPremium: isPremiumLevel(user?.membership_level),
+      isProfileComplete: checkProfileCompleteness(user),
+    });
+  }, []);
+
+  /** Get a new access token with the refresh token. Resolves to the new token. */
+  const refreshAccessToken = useCallback((refreshToken) => {
+    if (!refreshPromiseRef.current) {
+      refreshPromiseRef.current = axios
+        .post(`${apiUrl}/api/auth/token/refresh/`, { refresh: refreshToken }, { timeout: TIMEOUT_MS, _skipAuthRefresh: true })
+        .then((response) => {
+          const newAccessToken = response.data?.access;
+          if (!newAccessToken) throw new Error('No access token in the refresh reply');
+          Cookies.set('accessToken', newAccessToken, cookieOptions(ACCESS_DAYS));
+          tokensRef.current = { ...tokensRef.current, accessToken: newAccessToken };
+          return newAccessToken;
+        })
+        .finally(() => { refreshPromiseRef.current = null; });
+    }
+    return refreshPromiseRef.current;
+  }, [apiUrl]);
+
+  // ---------------------------------------------------------------- restore the session (once)
   useEffect(() => {
-    const initializeAuth = async () => {
+    let cancelled = false;
+
+    const fetchProfile = (token) => axios.get(`${apiUrl}/api/auth/profile/`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: TIMEOUT_MS,
+      _skipAuthRefresh: true, // handled right here instead of by the interceptor
+    });
+
+    const restore = async () => {
       const accessToken = Cookies.get('accessToken');
       const refreshToken = Cookies.get('refreshToken');
-      const user = localStorage.getItem('user');
+      const storedUser = readStoredUser();
 
-      console.log('Initial auth check:', {
-        hasAccessToken: !!accessToken,
-        hasRefreshToken: !!refreshToken,
-        hasUser: !!user,
-      });
-
-      // Skip auth check for public routes
-      if (isPublicRoute()) {
-        console.log('Public route detected, skipping auth check:', location.pathname);
-        setAuthState((prev) => ({ ...prev, isLoading: false }));
+      // No session to restore
+      if (!refreshToken || !storedUser) {
+        handleCleanup();
         return;
       }
-
-      if (!accessToken || !refreshToken || !user) {
-        console.log('Missing tokens or user data, setting unauthenticated state');
-        setAuthState({
-          isLoggedIn: false,
-          userData: null,
-          accessToken: null,
-          refreshToken: null,
-          isLoading: false,
-          isPremium: false,
-          isProfileComplete: false,
-        });
-        navigate('/login');
-        return;
-      }
-
-      const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
-      console.log('Verifying token with /api/auth/profile/ using API URL:', apiUrl);
 
       try {
-        const config = { headers: { Authorization: `Bearer ${accessToken}` } };
-        const response = await axios.get(`${apiUrl}/api/auth/profile/`, config);
-        console.log('Profile verification successful:', response.data);
-        const isPremium = response.data.membership_level === 'Premium';
-        const isProfileComplete = checkProfileCompleteness(response.data);
-        setAuthState({
-          isLoggedIn: true,
-          userData: response.data,
-          accessToken,
-          refreshToken,
-          isLoading: false,
-          isPremium,
-          isProfileComplete,
-        });
-        localStorage.setItem('user', JSON.stringify(response.data));
+        // The access cookie may have expired before the refresh cookie ("Remember me")
+        let token = accessToken || await refreshAccessToken(refreshToken);
+        let response;
+        try {
+          response = await fetchProfile(token);
+        } catch (error) {
+          if (error.response?.status !== 401) throw error;
+          token = await refreshAccessToken(refreshToken); // expired: renew once, then retry
+          response = await fetchProfile(token);
+        }
+        if (!cancelled) applyUser(response.data, token, refreshToken);
       } catch (error) {
-        console.error('Profile verification failed:', error.response?.status, error.response?.data);
-        if (error.response?.status === 401 && refreshToken) {
-          try {
-            console.log('Attempting token refresh');
-            const refreshResponse = await axios.post(`${apiUrl}/api/auth/token/refresh/`, {
-              refresh: refreshToken,
-            });
-            const newAccessToken = refreshResponse.data.access;
-            console.log('Token refresh successful, new accessToken:', newAccessToken);
-
-            Cookies.set('accessToken', newAccessToken, { expires: 1, path: '/' });
-
-            const retryConfig = { headers: { Authorization: `Bearer ${newAccessToken}` } };
-            const retryResponse = await axios.get(`${apiUrl}/api/auth/profile/`, retryConfig);
-            console.log('Retry profile verification successful:', retryResponse.data);
-            const isPremium = retryResponse.data.membership_level === 'Premium';
-            const isProfileComplete = checkProfileCompleteness(retryResponse.data);
-            setAuthState({
-              isLoggedIn: true,
-              userData: retryResponse.data,
-              accessToken: newAccessToken,
-              refreshToken,
-              isLoading: false,
-              isPremium,
-              isProfileComplete,
-            });
-            localStorage.setItem('user', JSON.stringify(retryResponse.data));
-          } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError.response?.status, refreshError.response?.data);
-            console.log('Cleaning up due to failed refresh');
-            handleCleanup();
-            navigate('/login');
-          }
+        if (cancelled) return;
+        logError('Session check failed:', error);
+        if (!error.response && accessToken) {
+          // Offline or server unreachable: keep the saved session instead of signing out
+          applyUser(storedUser, accessToken, refreshToken);
         } else {
-          console.error('Unexpected error during profile verification, cleaning up:', error);
-          handleCleanup();
-          navigate('/login');
+          handleCleanup(); // the redirect effect below sends them to /login if needed
         }
       }
     };
 
-    initializeAuth();
-  }, [navigate, apiString, location.pathname, isPublicRoute, checkProfileCompleteness]);
+    restore();
+    return () => { cancelled = true; };
+  }, [apiUrl, applyUser, handleCleanup, refreshAccessToken]);
 
+  // ---------------------------------------------------------------- sign-in guard
+  // Signed-out visitors on a non-public page go to /login (checked on every page change,
+  // without another network request). Guests may also browse GUEST_ROUTES; anything
+  // else they try to open asks them to sign in.
   useEffect(() => {
+    if (authState.isLoading || authState.isLoggedIn || isPublicPath(pathname)) return;
+    if (isGuest && GUEST_ROUTES.includes(pathname)) return;
+    if (isGuest) {
+      toast.info('Sign in or create a free account to open this. As a guest you can explore, but not open content.', { toastId: 'guest-locked' });
+    }
+    navigateRef.current('/login');
+  }, [authState.isLoading, authState.isLoggedIn, isGuest, pathname]);
+
+  // ---------------------------------------------------------------- axios interceptors (set up once)
+  useEffect(() => {
+    // Add the current token to /api/auth/ requests (except the token-free endpoints)
     const requestInterceptor = axios.interceptors.request.use(
-      async (config) => {
-        // Skip adding Authorization header for public routes or specific auth endpoints
-        if (
-          config.url.includes('/api/auth/') &&
-          !config.url.includes('/login/') &&
-          !config.url.includes('/token/refresh/') &&
-          !config.url.includes('/forget-password/') &&
-          !config.url.includes('/verify-reset-code/') &&
-          !config.url.includes('/reset-password/')
-        ) {
-          if (!authState.accessToken) {
-            console.log('No access token for protected route, skipping Authorization header');
-            return config;
-          }
-          config.headers.Authorization = `Bearer ${authState.accessToken}`;
+      (config) => {
+        const url = String(config.url || '');
+        const { accessToken } = tokensRef.current;
+        if (url.includes('/api/auth/') && !isAuthFreeUrl(url) && accessToken && !config._skipAuthRefresh) {
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${accessToken}`;
         }
         return config;
       },
       (error) => Promise.reject(error)
     );
 
+    // A 401 means the access token expired: renew it once and retry the request.
+    // If that isn't possible, sign out and go to the login page.
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,
       async (error) => {
-        const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry && authState.refreshToken) {
-          originalRequest._retry = true;
+        const original = error.config || {};
+        if (error.response?.status !== 401 || original._skipAuthRefresh || isAuthFreeUrl(original.url)) {
+          return Promise.reject(error); // not a token problem (or a wrong password on the login form)
+        }
+
+        const { refreshToken } = tokensRef.current;
+        if (refreshToken && !original._retry) {
+          original._retry = true;
           try {
-            console.log('Interceptor: Attempting token refresh');
-            const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
-            const refreshResponse = await axios.post(
-              `${apiUrl}/api/auth/token/refresh/`,
-              { refresh: authState.refreshToken }
-            );
-            const newAccessToken = refreshResponse.data.access;
-            console.log('Interceptor: Token refresh successful, new accessToken:', newAccessToken);
-
-            Cookies.set('accessToken', newAccessToken, { expires: 1, path: '/' });
+            const newAccessToken = await refreshAccessToken(refreshToken);
             setAuthState((prev) => ({ ...prev, accessToken: newAccessToken }));
-
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-            return axios(originalRequest);
+            original.headers = original.headers || {};
+            original.headers.Authorization = `Bearer ${newAccessToken}`;
+            return axios(original);
           } catch (refreshError) {
-            console.error('Interceptor: Token refresh failed:', refreshError.response?.status, refreshError.response?.data);
-            console.log('Interceptor: Cleaning up and redirecting to login');
+            logError('Token renewal failed:', refreshError);
             handleCleanup();
-            navigate('/login');
+            navigateRef.current('/login');
             return Promise.reject(refreshError);
           }
-        } else if (error.response?.status === 401) {
-          console.log('Interceptor: 401 error, but no refresh token available, redirecting to login');
-          handleCleanup();
-          navigate('/login');
-          return Promise.reject(error);
         }
+
+        // No refresh token, or the retry was also refused
+        handleCleanup();
+        navigateRef.current('/login');
         return Promise.reject(error);
       }
     );
@@ -206,122 +322,104 @@ export const AuthProvider = ({ children, apiString }) => {
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, [authState.accessToken, authState.refreshToken, navigate, apiString, isPublicRoute]);
+  }, [handleCleanup, refreshAccessToken]);
 
-  const handleCleanup = () => {
-    console.log('Cleaning up authentication state');
-    Cookies.remove('accessToken', { path: '/' });
-    Cookies.remove('refreshToken', { path: '/' });
-    localStorage.removeItem('user');
-    setAuthState({
-      isLoggedIn: false,
-      userData: null,
-      accessToken: null,
-      refreshToken: null,
-      isLoading: false,
-      isPremium: false,
-      isProfileComplete: false,
-    });
-  };
+  // ---------------------------------------------------------------- actions for the pages
 
-  const login = (accessToken, refreshToken, user, rememberMe = false) => {
-    const expires = rememberMe ? 7 : 1;
-    console.log('Logging in with:', { accessToken, refreshToken, user, rememberMe });
-    Cookies.set('accessToken', accessToken, { expires, path: '/' });
-    Cookies.set('refreshToken', refreshToken, { expires, path: '/' });
-    localStorage.setItem('user', JSON.stringify(user));
+  /** Save a new session after a successful login (Login.jsx). */
+  const login = useCallback((accessToken, refreshToken, user, rememberMe = false) => {
+    writeGuest(false); // a real account replaces guest mode
+    setIsGuest(false);
+    const days = rememberMe ? REMEMBER_DAYS : ACCESS_DAYS;
+    Cookies.set('accessToken', accessToken, cookieOptions(days));
+    Cookies.set('refreshToken', refreshToken, cookieOptions(days));
+    applyUser(user, accessToken, refreshToken);
+  }, [applyUser]);
 
-    const isPremium = user.membership_level === 'Premium';
-    const isProfileComplete = checkProfileCompleteness(user);
-    setAuthState({
-      isLoggedIn: true,
-      userData: user,
-      accessToken,
-      refreshToken,
-      isLoading: false,
-      isPremium,
-      isProfileComplete,
-    });
-  };
+  /** "Explore as guest" on the Login page: browse the main sections without an account. */
+  const continueAsGuest = useCallback(() => {
+    writeGuest(true);
+    setIsGuest(true);
+    toast.info('You’re exploring as a guest. Sign in any time to open books, lessons and games.', { toastId: 'guest-on' });
+    navigateRef.current('/');
+  }, []);
 
-  const logout = async () => {
-    const { accessToken, refreshToken } = authState;
-    console.log('Logging out with tokens:', { accessToken, refreshToken });
-
+  /** Tell the server to retire the refresh token, then forget the session locally. */
+  const logout = useCallback(async () => {
+    const { accessToken, refreshToken } = tokensRef.current;
     if (refreshToken && accessToken) {
       try {
-        const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
-        console.log('Sending logout request to backend using API URL:', apiUrl);
-        await axios.post(`${apiUrl}/api/auth/logout/`, {
-          refresh_token: refreshToken,
-        }, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        console.log('Logout request successful');
+        await axios.post(
+          `${apiUrl}/api/auth/logout/`,
+          { refresh_token: refreshToken },
+          { headers: { Authorization: `Bearer ${accessToken}` }, timeout: TIMEOUT_MS, _skipAuthRefresh: true }
+        );
       } catch (error) {
-        console.error('Logout error:', error.response?.status, error.response?.data);
+        logError('Logout request failed:', error); // signed out locally anyway
       }
-    } else {
-      console.log('No tokens available for logout request');
     }
-
     handleCleanup();
-    navigate('/login');
-  };
+    navigateRef.current('/login');
+  }, [apiUrl, handleCleanup]);
 
-  const updateUserData = async () => {
-    if (!authState.isLoggedIn || !authState.accessToken) {
-      console.log('Cannot update user data: user not logged in or no access token');
+  /**
+   * Refresh the signed-in user's profile.
+   *   updateUserData(newData)  use data the page already has (e.g. after saving the profile
+   *                            or buying a membership) — no extra request
+   *   updateUserData()         fetch the latest profile from the server
+   * A failed fetch keeps the current data; it never signs the user out.
+   */
+  const updateUserData = useCallback(async (newData) => {
+    const isPlainObject = newData && typeof newData === 'object' && !newData.nativeEvent && !Array.isArray(newData);
+    if (isPlainObject) {
+      setAuthState((prev) => {
+        if (!prev.isLoggedIn) return prev;
+        const userData = { ...(prev.userData || {}), ...newData };
+        storeUser(userData);
+        return { ...prev, userData, isPremium: isPremiumLevel(userData.membership_level), isProfileComplete: checkProfileCompleteness(userData) };
+      });
       return;
     }
 
-    const apiUrl = apiString ? apiString.replace(/\/$/, '') : 'http://localhost:8000';
+    const { accessToken } = tokensRef.current;
+    if (!accessToken) return;
     try {
-      console.log('Fetching updated user data from /api/auth/profile/');
-      const config = { headers: { Authorization: `Bearer ${authState.accessToken}` } };
-      const response = await axios.get(`${apiUrl}/api/auth/profile/`, config);
-      console.log('Updated user data fetched:', response.data);
-      const isPremium = response.data.membership_level === 'Premium';
-      const isProfileComplete = checkProfileCompleteness(response.data);
+      const response = await axios.get(`${apiUrl}/api/auth/profile/`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: TIMEOUT_MS,
+      });
+      storeUser(response.data);
       setAuthState((prev) => ({
         ...prev,
         userData: response.data,
-        isPremium,
-        isProfileComplete,
+        isPremium: isPremiumLevel(response.data?.membership_level),
+        isProfileComplete: checkProfileCompleteness(response.data),
       }));
-      localStorage.setItem('user', JSON.stringify(response.data));
     } catch (error) {
-      console.error('Failed to update user data:', error.response?.status, error.response?.data);
-      if (error.response?.status === 401) {
-        console.log('Access token expired during user data update, attempting refresh');
-      } else {
-        console.error('Unexpected error during user data update, cleaning up:', error);
-        handleCleanup();
-        navigate('/login');
-      }
+      logError('Profile refresh failed:', error); // a 401 is handled by the interceptor
     }
-  };
+  }, [apiUrl]);
 
-  return (
-    <AuthContext.Provider value={{
-      isLoggedIn: authState.isLoggedIn,
-      userData: authState.userData,
-      accessToken: authState.accessToken,
-      refreshToken: authState.refreshToken,
-      isLoading: authState.isLoading,
-      isPremium: authState.isPremium,
-      isProfileComplete: authState.isProfileComplete,
-      login,
-      logout,
-      updateUserData,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  // One value object, recreated only when something in it changes
+  const value = useMemo(() => ({
+    isLoggedIn: authState.isLoggedIn,
+    userData: authState.userData,
+    accessToken: authState.accessToken,
+    refreshToken: authState.refreshToken,
+    isLoading: authState.isLoading,
+    isPremium: authState.isPremium,
+    isProfileComplete: authState.isProfileComplete,
+    isGuest: isGuest && !authState.isLoggedIn,
+    login,
+    logout,
+    continueAsGuest,
+    updateUserData,
+  }), [authState, isGuest, login, logout, continueAsGuest, updateUserData]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+/** Read the auth state from any component inside <AuthProvider>. */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

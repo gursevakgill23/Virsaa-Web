@@ -1,3 +1,10 @@
+/**
+ * pages/GurdwaraAccess/GurdwaraAccessButton/GurdwaraAccessButton.jsx
+ * -----------------------------------------------------------------------------
+ * Floating "Gurdwara Access" button shown in the corner of every page
+ * (mounted in App.js). Opens the Gurdwara finder.
+ * -----------------------------------------------------------------------------
+ */
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaMapMarkerAlt } from 'react-icons/fa';

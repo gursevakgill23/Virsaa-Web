@@ -1,9 +1,21 @@
+/**
+ * components/Footer/Footer.jsx
+ * -----------------------------------------------------------------------------
+ * The site footer (hidden on the full-screen game pages, see App.js):
+ *   - brand blurb with the logo
+ *   - "Useful links" to the main pages, including About and Privacy Policy
+ *   - newsletter sign-up and a feedback box (checked here; see the TODO below
+ *     about connecting them to the backend)
+ *   - bottom bar with the copyright and "Follow us" social links
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaYoutube, FaPaperPlane } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import styles from './Footer.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
@@ -18,6 +30,7 @@ const useProductionImagePath = () => {
   };
 };
 
+// Links in the "Useful links" column (all are routes in App.js)
 const USEFUL_LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Collections', to: '/collections' },
@@ -28,7 +41,7 @@ const USEFUL_LINKS = [
   { label: 'Privacy Policy', to: '/privacy-policy' },
 ];
 
-// Replace these with Virsaa's real profile URLs
+// "Follow us" links. Replace these with Virsaa's real profile URLs
 const SOCIAL_LINKS = [
   { label: 'Facebook', href: 'https://facebook.com', icon: FaFacebookF },
   { label: 'X (Twitter)', href: 'https://twitter.com', icon: FaXTwitter },
@@ -37,28 +50,45 @@ const SOCIAL_LINKS = [
   { label: 'LinkedIn', href: 'https://linkedin.com', icon: FaLinkedinIn },
 ];
 
+// Form limits: a simple email shape check (the server should check again) and feedback length
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const EMAIL_MAX = 254;
+const FEEDBACK_MIN = 5;
+const FEEDBACK_MAX = 1000;
+
 const Footer = () => {
   const getImagePath = useProductionImagePath();
   const logo = '/images/logo.png';
 
+  // Form values, "done" states and validation messages for the two small forms
   const [email, setEmail] = useState('');
   const [feedback, setFeedback] = useState('');
   const [newsletterDone, setNewsletterDone] = useState(false);
   const [feedbackDone, setFeedbackDone] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [feedbackError, setFeedbackError] = useState('');
 
   // TODO: connect these to backend endpoints when they exist
   const handleSubscribe = (e) => {
     e.preventDefault();
+    const value = email.trim();
+    if (!value) { setEmailError('Enter your email address.'); return; }
+    if (!EMAIL_PATTERN.test(value)) { setEmailError('Enter an email address like name@example.com.'); return; }
+    setEmailError('');
     setNewsletterDone(true);
     setEmail('');
   };
 
   const handleFeedback = (e) => {
     e.preventDefault();
+    const value = feedback.trim();
+    if (value.length < FEEDBACK_MIN) { setFeedbackError(`Write at least ${FEEDBACK_MIN} characters.`); return; }
+    setFeedbackError('');
     setFeedbackDone(true);
     setFeedback('');
   };
 
+  // Footer links jump to the top of the new page
   const scrollTop = () => window.scrollTo({ top: 0 });
 
   return (
@@ -97,21 +127,28 @@ const Footer = () => {
             {newsletterDone ? (
               <p className={styles.thanks} role="status">Thanks for subscribing.</p>
             ) : (
-              <form className={styles.inlineForm} onSubmit={handleSubscribe}>
-                <label htmlFor="footer-email" className={styles.srOnly}>Email address</label>
-                <input
-                  id="footer-email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className={styles.input}
-                />
-                <button type="submit" className={styles.roundButton} aria-label="Subscribe">
-                  <FaPaperPlane aria-hidden="true" />
-                </button>
-              </form>
+              <>
+                <form className={styles.inlineForm} onSubmit={handleSubscribe} noValidate>
+                  <label htmlFor="footer-email" className={styles.srOnly}>Email address</label>
+                  <input
+                    id="footer-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(''); }}
+                    required
+                    maxLength={EMAIL_MAX}
+                    autoComplete="email"
+                    aria-invalid={Boolean(emailError)}
+                    aria-describedby={emailError ? 'footer-email-error' : undefined}
+                    className={styles.input}
+                  />
+                  <button type="submit" className={styles.roundButton} aria-label="Subscribe">
+                    <FaPaperPlane aria-hidden="true" />
+                  </button>
+                </form>
+                {emailError && <p id="footer-email-error" className={styles.formError} role="alert">{emailError}</p>}
+              </>
             )}
           </div>
 
@@ -121,17 +158,21 @@ const Footer = () => {
             {feedbackDone ? (
               <p className={styles.thanks} role="status">Thank you. Your feedback helps us improve Virsaa.</p>
             ) : (
-              <form className={styles.stackForm} onSubmit={handleFeedback}>
+              <form className={styles.stackForm} onSubmit={handleFeedback} noValidate>
                 <label htmlFor="footer-feedback" className={styles.srOnly}>Your feedback</label>
                 <textarea
                   id="footer-feedback"
                   placeholder="Share your feedback..."
                   rows="3"
                   value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
+                  onChange={(e) => { setFeedback(e.target.value); if (feedbackError) setFeedbackError(''); }}
                   required
+                  maxLength={FEEDBACK_MAX}
+                  aria-invalid={Boolean(feedbackError)}
+                  aria-describedby={feedbackError ? 'footer-feedback-error' : undefined}
                   className={styles.textarea}
                 />
+                {feedbackError && <p id="footer-feedback-error" className={styles.formError} role="alert">{feedbackError}</p>}
                 <button type="submit" className={styles.pillButton}>Send feedback</button>
               </form>
             )}

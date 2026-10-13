@@ -1,12 +1,22 @@
 /**
- * WordSearch.jsx
- * A cinematic Word Search game component for the Virsaa project.
- * Features a dedicated game navbar, map selection, multilingual support (Punjabi/English),
- * timer-based gameplay, achievements, top scorers, hints, coin system, and user profile management.
+ * pages/Learning/Games/WordSearch/WordSearch.jsx
+ * -----------------------------------------------------------------------------
+ * Shabd Khoj (/learning/games/shabd-khoj): a cinematic word search game.
+ *   - a game navbar, map selection (free, sign-in and premium maps),
+ *     difficulty, English/Punjabi words, a timer, hints and a coin system
+ *   - words come from the server (Admin > Learning api > Game words)
+ *   - coins, XP, badges and the player profile via useGameWallet (saved on
+ *     the server when signed in, in this browser for guests)
+ *   - top scorers, achievements and stats from /api/learning
+ * Exports:
+ *   default WordSearch          opens the game in a new tab (legacy entry)
+ *   named   WordSearchGamePlay  the game itself (the route in App.js)
+ * The screen is built from the render…() functions near the end of the file.
+ * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../../../utils/notify';
 import { useAuth } from '../../../../context/AuthContext';
 import learningApi from '../../../../api/learningApi';
 import BadgeIcon from '../../../../components/BadgeIcon/BadgeIcon';
@@ -22,10 +32,12 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { SOUND_URLS, themeBackground } from '../gameAssets';
 
+// Pictures (public/images)
 const playable1 = '/images/Learning/playables.jpg';
 const avatar = '/images/Learning/avatar.jpg';
 const userDefault = '/images/games/user-default.jpg';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
@@ -41,6 +53,7 @@ const useProductionImagePath = () => {
   };
 };
 
+// This game's key on the server (results, leaderboard, words, achievements)
 const GAME_KEY = 'word_search';
 
 // Initialize sound effects for the game
@@ -127,6 +140,7 @@ const gameMaps = [
 ];
 
 // Virsaa Playables data
+// "Virsaa Playables" cards shown on the map screen
 const virsaaPlayables = [
   {
     id: 1,
@@ -257,6 +271,7 @@ const virsaaPlayables = [
 ];
 
 // Define difficulty levels with time multipliers and colors
+// Difficulty levels (time multiplier, colour)
 const difficultyLevels = [
   { id: 'easy', name: 'Easy', timeMultiplier: 1.2, color: '#4CAF50' },
   { id: 'medium', name: 'Medium', timeMultiplier: 1.0, color: '#FF9800' },
@@ -549,6 +564,8 @@ const WordSearchGamePlay = ({ apiString }) => {
   };
 
   // Handle mouse down event on a cell to start selection
+  // ---------------------------------------------------------------- selecting words on the board
+  // Press, drag across letters, release to check the word
   const handleCellMouseDown = (row, col) => {
     setSelectionStart({ row, col });
     setSelectedCells([{ row, col }]);
@@ -629,6 +646,7 @@ const WordSearchGamePlay = ({ apiString }) => {
     if (data) setRefreshKey((k) => k + 1); // reload stats, achievements and top scorers
   };
 
+  // Stop the timers and save the result
   const handleGameEnd = (completed, finalScore = scoreRef.current, wordsFound = foundCountRef.current) => {
     clearInterval(timerRef.current);
     setGameWon(completed);
@@ -657,6 +675,7 @@ const WordSearchGamePlay = ({ apiString }) => {
   };
 
   // Handle map selection with access checks
+  // ---------------------------------------------------------------- choosing and starting a game
   const handleMapSelect = (map) => {
     if (map.loginRequired && !isLoggedIn) {
       setShowLoginModal(true);
@@ -767,6 +786,10 @@ const WordSearchGamePlay = ({ apiString }) => {
   // Handle profile updates (avatar and name)
   const handleProfileUpdate = async () => {
     if (isLoggedIn) {
+      if (!newName.trim()) {
+        toast.error('Enter a player name.');
+        return;
+      }
       setSavingProfile(true);
       const ok = await wallet.saveProfile({ name: newName.trim(), avatarFile: newAvatarFile, avatarPreview: newAvatar });
       setSavingProfile(false);
@@ -774,6 +797,7 @@ const WordSearchGamePlay = ({ apiString }) => {
         setErrorMessage('Your game profile couldn’t be saved. Try again.');
         return;
       }
+      toast.success('Game profile saved');
       setNewAvatarFile(null);
       setEditingProfile(false);
       setShowProfileDropdown(false);
@@ -783,6 +807,17 @@ const WordSearchGamePlay = ({ apiString }) => {
   // Handle avatar upload (mock for now)
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
+    // Only small JPG/PNG/WebP/GIF pictures are accepted
+    if (file && !/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
+      toast.error('Choose a JPG, PNG, WebP or GIF picture.');
+      e.target.value = '';
+      return;
+    }
+    if (file && file.size > 5 * 1024 * 1024) {
+      toast.error('The picture must be smaller than 5 MB.');
+      e.target.value = '';
+      return;
+    }
     if (file) {
       setNewAvatarFile(file);
       const reader = new FileReader();
@@ -795,6 +830,7 @@ const WordSearchGamePlay = ({ apiString }) => {
 
 
   // Handle Virsaa Playables display toggle
+  // Show more / fewer Virsaa Playables
   const handleToggleDisplay = () => {
     if (displayCount < virsaaPlayables.length) {
       setDisplayCount(prev => prev + 6);
@@ -804,6 +840,7 @@ const WordSearchGamePlay = ({ apiString }) => {
   };
 
   // Render the game board with interactive cells
+  // ---------------------------------------------------------------- screens and dialogs
   const renderBoard = () => {
     if (!selectedMap) return null;
 

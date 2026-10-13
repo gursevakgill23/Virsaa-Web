@@ -1,3 +1,11 @@
+/*
+ * pages/Collections/Collections.module.css
+ * -----------------------------------------------------------------------------
+ * The library page: section tabs and search in the header, filter chips, the
+ * card grid with placeholders, pagination and the featured rows.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

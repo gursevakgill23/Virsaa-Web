@@ -1,6 +1,18 @@
+/**
+ * pages/Profile/MyProfile/MyProfile.jsx
+ * -----------------------------------------------------------------------------
+ * My Profile (shown at /my-profile once the profile is complete):
+ *   - identity (photo, name, membership) with inline editing
+ *   - about me, personal details and content preferences (each editable)
+ *   - learning journey: XP, level, streak, lessons and games
+ *   - coins, badges and achievements (from the learning API)
+ * Profile edits are checked with the same rules as Complete profile.
+ * If the learning API is down, the rest of the profile still shows.
+ * -----------------------------------------------------------------------------
+ */
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../../utils/notify';
 import {
   FaCrown, FaBook, FaFire, FaGamepad, FaQuestionCircle, FaCoins, FaStar,
   FaEdit, FaSave, FaTimes, FaVenusMars,
@@ -14,6 +26,7 @@ import learningApi from '../../../api/learningApi';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 import useMembership from '../../../hooks/useMembership';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
@@ -26,16 +39,19 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
+// Defaults and labels
 const PLACEHOLDER_PHOTO = '/images/Login/user-placeholder.jpg';
 const CONTENT_OPTIONS = ['fiction', 'sikh_history', 'punjabi_culture', 'spirituality', 'non_fiction', 'poetry', 'audiobook', 'ebook'];
 const GENDER_LABELS = { male: 'Male', female: 'Female', other: 'Other', prefer_not_to_say: 'Prefer not to say' };
 
 // "sikh_history" -> "Sikh history"
+// "sikh_history" → "Sikh history"
 const prettify = (value = '') => {
   const text = String(value).replace(/_/g, ' ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
+// "1998-04-13" → "13 April 1998"
 const formatDob = (iso) => {
   if (!iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
@@ -43,8 +59,10 @@ const formatDob = (iso) => {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
+// How many achievements show before "Show all"
 const ACHIEVEMENTS_SHOWN = 8;
 
+// Number and date formatting
 const formatNumber = (n) => Number(n || 0).toLocaleString();
 const formatShortDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
@@ -59,6 +77,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
   navigateRef.current = navigate;
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
 
+  // Profile, loading/error, which section is being edited and its values
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -68,6 +87,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
   });
   const [saveError, setSaveError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [profileReload, setProfileReload] = useState(0); // bumped by "Try again"
 
   useEffect(() => {
     if (!accessToken) {
@@ -90,6 +110,11 @@ const MyProfile = ({ isDarkMode, apiString }) => {
           return;
         }
         if (!response.ok) throw new Error('Your profile couldn’t be loaded.');
+        // preferred_content may arrive as a list or as a JSON string
+        const toList = (value) => {
+          if (Array.isArray(value)) return value;
+          try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+        };
 
         const data = await response.json();
         setUserData({
@@ -100,18 +125,19 @@ const MyProfile = ({ isDarkMode, apiString }) => {
           bio: data.about_me || '',
           dob: data.dob || '',
           gender: data.gender || '',
-          preferredContent: data.preferred_content || [],
+          preferredContent: toList(data.preferred_content),
           profile_photo: data.profile_photo,
         });
       } catch (err) {
-        setLoadError(err.message || 'Your profile couldn’t be loaded.');
+        // A network failure throws a TypeError ("Failed to fetch"); explain it in plain words
+        setLoadError(err instanceof TypeError ? 'Virsaa couldn’t be reached. Check your internet connection.' : (err.message || 'Your profile couldn’t be loaded.'));
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProfile();
-  }, [accessToken, apiString]);
+  }, [accessToken, apiString, profileReload]);
 
   // Learning progress, XP and achievements come from the learning API.
   // If it can't be reached, the rest of the profile still shows.
@@ -159,15 +185,16 @@ const MyProfile = ({ isDarkMode, apiString }) => {
     return () => { cancelled = true; };
   }, [accessToken, apiString, learningReload]);
 
+  // Open a section for editing with the current values
   const startEditing = (section) => {
     setEditSection(section);
     setEditData({
-      first_name: userData.first_name,
-      last_name: userData.last_name,
-      bio: userData.bio,
-      dob: userData.dob,
-      gender: userData.gender,
-      preferredContent: [...userData.preferredContent],
+      first_name: userData.first_name || '',
+      last_name: userData.last_name || '',
+      bio: userData.bio || '',
+      dob: userData.dob || '',
+      gender: userData.gender || '',
+      preferredContent: Array.isArray(userData.preferredContent) ? [...userData.preferredContent] : [],
     });
     setSaveError(null);
   };
@@ -177,32 +204,60 @@ const MyProfile = ({ isDarkMode, apiString }) => {
     setSaveError(null);
   };
 
+  // The same rules as Complete profile, so a saved profile always stays complete
+  const validateEdit = () => {
+    if (!editData.first_name.trim() || !editData.last_name.trim()) return 'Enter your first and last name.';
+    if (!editData.bio.trim()) return 'Write a line or two about yourself.';
+    if (!editData.dob) return 'Add your date of birth.';
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    if (editData.dob > todayStr) return 'The date of birth can’t be in the future.';
+    if (editData.dob < '1900-01-01') return 'Check the year of your date of birth.';
+    if (!editData.gender || editData.gender === 'prefer_not_to_say') return 'Choose a gender option.';
+    if (!editData.preferredContent.length) return 'Pick at least one kind of content you like.';
+    return null;
+  };
+
   const saveChanges = async () => {
+    const problem = validateEdit();
+    if (problem) {
+      setSaveError(problem);
+      return;
+    }
     setIsSaving(true);
     setSaveError(null);
     try {
       const formData = new FormData();
-      formData.append('first_name', editData.first_name);
-      formData.append('last_name', editData.last_name);
-      formData.append('about_me', editData.bio);
+      formData.append('first_name', editData.first_name.trim());
+      formData.append('last_name', editData.last_name.trim());
+      formData.append('about_me', editData.bio.trim());
       formData.append('dob', editData.dob);
       formData.append('gender', editData.gender);
       formData.append('preferred_content', JSON.stringify(editData.preferredContent));
 
-      const response = await fetch(`${apiString}/api/auth/complete-profile/`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body: formData,
-      });
+      let response;
+      try {
+        response = await fetch(`${apiString}/api/auth/complete-profile/`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${accessToken}` },
+          body: formData,
+          signal: typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(30000) : undefined,
+        });
+      } catch {
+        throw new Error('Virsaa couldn’t be reached. Check your internet connection and try again.');
+      }
 
       if (response.status === 401) {
         logout();
         navigate('/login');
         return;
       }
+      if (response.status >= 500) throw new Error('Something went wrong on our side. Try again in a moment.');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Your changes couldn’t be saved. Try again.');
+        // DRF sends { field: ['message'] }; show the first one if there's no general error
+        const firstField = Object.values(errorData || {}).find((v) => Array.isArray(v) ? v.length : typeof v === 'string');
+        throw new Error(errorData.error || (Array.isArray(firstField) ? firstField[0] : firstField) || 'Your changes couldn’t be saved. Try again.');
       }
 
       setUserData((prev) => ({
@@ -226,8 +281,10 @@ const MyProfile = ({ isDarkMode, apiString }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditData((prev) => ({ ...prev, [name]: value }));
+    if (saveError) setSaveError(null);
   };
 
+  // Pick / unpick a content type while editing
   const handleContentToggle = (content) => {
     setEditData((prev) => ({
       ...prev,
@@ -237,6 +294,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
     }));
   };
 
+  // Save / Cancel buttons (with any error) shown under the section being edited
   const editActions = (
     <>
       {saveError && <p className={styles.errorText} role="alert">{saveError}</p>}
@@ -287,7 +345,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
         <div className={styles.stateBox}>
           <h2>{loadError || 'Profile not found'}</h2>
           <p>Check your connection and try again.</p>
-          <button type="button" className={styles.primaryButton} onClick={() => window.location.reload()}>Try again</button>
+          <button type="button" className={styles.primaryButton} onClick={() => setProfileReload((n) => n + 1)}>Try again</button>
         </div>
       </div>
     );
@@ -311,11 +369,11 @@ const MyProfile = ({ isDarkMode, apiString }) => {
               <div className={styles.nameEdit}>
                 <label className={styles.field}>
                   <span className={styles.fieldLabel}><FaUser aria-hidden="true" /> First name</span>
-                  <input type="text" name="first_name" value={editData.first_name} onChange={handleInputChange} className={styles.input} />
+                  <input type="text" name="first_name" value={editData.first_name} onChange={handleInputChange} className={styles.input} maxLength={50} autoComplete="given-name" />
                 </label>
                 <label className={styles.field}>
                   <span className={styles.fieldLabel}><FaUser aria-hidden="true" /> Last name</span>
-                  <input type="text" name="last_name" value={editData.last_name} onChange={handleInputChange} className={styles.input} />
+                  <input type="text" name="last_name" value={editData.last_name} onChange={handleInputChange} className={styles.input} maxLength={50} autoComplete="family-name" />
                 </label>
               </div>
             ) : (
@@ -376,7 +434,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
             <div className={styles.detailForm}>
               <label className={styles.field}>
                 <span className={styles.fieldLabel}><FaCalendarAlt aria-hidden="true" /> Date of birth</span>
-                <input type="date" name="dob" value={editData.dob} onChange={handleInputChange} className={styles.input} />
+                <input type="date" name="dob" value={editData.dob} onChange={handleInputChange} className={styles.input} min="1900-01-01" />
               </label>
               <label className={styles.field}>
                 <span className={styles.fieldLabel}><FaVenusMars aria-hidden="true" /> Gender</span>
@@ -566,6 +624,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
   );
 };
 
+// A small statistic tile
 const StatBox = ({ icon, title, value }) => (
   <div className={styles.stat}>
     <span className={styles.statIcon} aria-hidden="true">{icon}</span>

@@ -1,3 +1,11 @@
+/*
+ * pages/GurdwaraAccess/GurdwaraServices/GurdwaraServices.module.css
+ * -----------------------------------------------------------------------------
+ * Services at one Gurdwara: full-width photo header, breadcrumb, the
+ * Gurdwara's name and address, and a grid of service cards.
+ * -----------------------------------------------------------------------------
+ */
+
 /* Full width page container */
 .page {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -62,9 +70,9 @@
   transition: color 0.3s ease;
 }
 
-a {
+/* Breadcrumb links (scoped: a bare `a` here would restyle every link on the site) */
+.breadcrumb a {
   text-decoration: none;
-  list-style: none;
 }
 
 /* Main content container - 1400px max width */
@@ -147,7 +155,7 @@ a {
   color: var(--secondary-text-color);
 }
 
-/* Contact button */
+/* Contact button (keyboard focus is clearly visible) */
 .contactButton {
   margin-top: 15px;
   padding: 10px 15px;
@@ -157,6 +165,11 @@ a {
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+}
+
+.contactButton:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
 }
 
 .contactButton:hover {
@@ -204,6 +217,4 @@ a {
   .servicesGrid {
     grid-template-columns: 1fr;
   }
-  
-
 }

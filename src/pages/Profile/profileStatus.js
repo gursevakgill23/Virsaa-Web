@@ -1,11 +1,19 @@
-/*
+/**
+ * pages/Profile/profileStatus.js
+ * -----------------------------------------------------------------------------
+ * Helpers that decide whether a user's profile is complete. Used by
+ * ProfileRoute (CompleteProfile vs MyProfile) and the navbar.
+ * -----------------------------------------------------------------------------
+ *
  * Decides whether a user's profile is complete.
  * Matches the backend's CompleteProfileSerializer rules: every field below is
  * required, and "prefer_not_to_say" is the default (i.e. "not chosen yet").
  */
 
+// True for a non-empty string, or any other value that isn't null/undefined
 const hasText = (value) => typeof value === 'string' ? value.trim() !== '' : value != null;
 
+// preferred_content may arrive as an array or as a JSON string; always return an array
 const toList = (value) => {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string' && value.trim()) {
@@ -19,6 +27,7 @@ const toList = (value) => {
   return [];
 };
 
+// One check per required field
 export const PROFILE_CHECKS = {
   first_name: (p) => hasText(p.first_name),
   last_name: (p) => hasText(p.last_name),
@@ -37,4 +46,5 @@ export const missingProfileFields = (profile) => {
     .map(([field]) => field);
 };
 
+/** True when nothing is missing. */
 export const isProfileComplete = (profile) => missingProfileFields(profile).length === 0;

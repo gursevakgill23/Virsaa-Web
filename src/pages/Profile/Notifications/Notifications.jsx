@@ -1,6 +1,17 @@
+/**
+ * pages/Profile/Notifications/Notifications.jsx
+ * -----------------------------------------------------------------------------
+ * Notifications (/notifications): new content, updates, learning and account
+ * messages, grouped by day.
+ *   - All / Unread filter, mark one read or unread, mark all as read, delete
+ *   - refreshes every 30 s and when the tab comes back into view
+ *   - keeps the navbar badge and account tabs in step (setUnread)
+ * Data: /api/auth/notifications/ (api/accountApi.js).
+ * -----------------------------------------------------------------------------
+ */
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../../utils/notify';
 import {
   FaTrash, FaEnvelopeOpen, FaEnvelope, FaBell, FaBook,
   FaGraduationCap, FaCrown, FaCheckDouble, FaSyncAlt,
@@ -10,8 +21,11 @@ import AccountTabs from '../AccountTabs/AccountTabs';
 import { useAuth } from '../../../context/AuthContext';
 import accountApi from '../../../api/accountApi';
 import { setUnread } from '../../../hooks/useUnreadNotifications';
+import { isInternalPath } from '../../../utils/safeUrl';
+import { describeApiError } from '../../../utils/apiError';
 import styles from './Notifications.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
     return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
@@ -19,6 +33,7 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
+// Label and icon per kind of notification
 const KINDS = {
   content: { label: 'New in the library', icon: <FaBook /> },
   update: { label: 'Updated', icon: <FaSyncAlt /> },
@@ -26,8 +41,10 @@ const KINDS = {
   account: { label: 'Account', icon: <FaCrown /> },
 };
 
+// How often the list refreshes while open
 const POLL_MS = 30000;
 
+// Day grouping helpers ("Today", "Yesterday", weekday + date)
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const daysAgo = (iso) => Math.round((startOfDay(new Date()) - startOfDay(new Date(iso))) / 86400000);
 
@@ -45,27 +62,30 @@ const Notifications = ({ isDarkMode, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
   const { isLoggedIn, accessToken } = useAuth();
 
+  // Notifications, unread count, filter, loading/error
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
+  // Update the count here and everywhere else that shows it
   const applyCount = (count) => {
     setUnreadCount(count);
     setUnread(count); // navbar badge and account tabs
   };
 
+  // Load notifications. `quiet` (background refresh) keeps the list if it fails.
   const load = useCallback(async (quiet = false) => {
     if (!isLoggedIn || !accessToken) { setLoading(false); return; }
     if (!quiet) setLoading(true);
     try {
       const data = await accountApi.notifications(apiString, accessToken);
-      setNotifications(data.results || []);
-      applyCount(data.unread_count || 0);
+      setNotifications(Array.isArray(data?.results) ? data.results : []);
+      applyCount(data?.unread_count || 0);
       setLoadError(null);
     } catch (err) {
-      if (!quiet) setLoadError(err.response?.status === 401 ? 'Your session has ended. Log in again.' : 'Notifications couldn’t be loaded right now.');
+      if (!quiet) setLoadError(err.response?.status === 401 ? 'Your session has ended. Log in again.' : describeApiError(err, 'Notifications couldn’t be loaded right now.'));
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -80,6 +100,7 @@ const Notifications = ({ isDarkMode, apiString }) => {
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [load]);
 
+  // Notifications for the current filter, grouped by day
   const groups = useMemo(() => {
     const list = filter === 'unread' ? notifications.filter((n) => !n.is_read) : notifications;
     const map = new Map();
@@ -91,6 +112,7 @@ const Notifications = ({ isDarkMode, apiString }) => {
     return [...map.entries()].map(([day, items]) => ({ day, items }));
   }, [notifications, filter]);
 
+  // Mark one read/unread (changes at once, restored if the server refuses)
   const setRead = async (id, read) => {
     const before = notifications;
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: read } : n)));
@@ -103,6 +125,7 @@ const Notifications = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // Mark everything read
   const markAllRead = async () => {
     const before = notifications;
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
@@ -115,6 +138,7 @@ const Notifications = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // Delete one notification
   const deleteNotification = async (id) => {
     const before = notifications;
     setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -127,6 +151,7 @@ const Notifications = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // Opening a notification's link marks it read
   const openNotification = (n) => { if (!n.is_read) setRead(n.id, true); };
 
   const hero = (
@@ -215,7 +240,8 @@ const Notifications = ({ isDarkMode, apiString }) => {
                             <span className={styles.time}>{timeOf(n.created_at)}</span>
                             {!n.is_read && <span className={styles.unreadDot}><span className={styles.srOnly}>Unread</span></span>}
                           </div>
-                          {n.link
+                          {/* Links come from the server; only paths inside Virsaa become links */}
+                          {isInternalPath(n.link)
                             ? <Link to={n.link} className={styles.title} onClick={() => openNotification(n)}>{n.title}</Link>
                             : <span className={styles.title}>{n.title}</span>}
                           {n.message && <p className={styles.description}>{n.message}</p>}

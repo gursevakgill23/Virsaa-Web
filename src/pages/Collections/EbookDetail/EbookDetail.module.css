@@ -1,3 +1,11 @@
+/*
+ * pages/Collections/EbookDetail/EbookDetail.module.css
+ * -----------------------------------------------------------------------------
+ * One ebook: book card with actions, chapters, description, reviews (form and
+ * list) and the related/recommended rows.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Detail pages (ebook, audiobook, author) share this base.
    Layout: glass product card + sections on the left, sticky aside on the right.
@@ -562,6 +570,18 @@
   margin-left: 8px;
   font-size: 0.9rem;
   color: var(--secondary-text-color);
+}
+
+/* Message under the review form when something is missing or posting failed */
+.reviewError {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #b3261e;
+}
+
+[data-theme='dark'] .reviewError {
+  color: #ffb4a9;
 }
 
 .formActions {

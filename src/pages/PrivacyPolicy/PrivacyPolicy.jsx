@@ -1,3 +1,11 @@
+/**
+ * pages/PrivacyPolicy/PrivacyPolicy.jsx
+ * -----------------------------------------------------------------------------
+ * The Privacy Policy page (/privacy-policy). The policy text lives in SECTIONS
+ * below; a sticky "On this page" list highlights the section being read and
+ * scrolls to a section when clicked. Static content only.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PageHero from '../../components/PageHero/PageHero';
@@ -7,6 +15,7 @@ import styles from './PrivacyPolicy.module.css';
 const CONTACT_EMAIL = 'privacy@virsaa.com';
 const LAST_UPDATED = 'October 11, 2026';
 
+// The policy, one entry per section: id (for links), title and body
 const SECTIONS = [
   {
     id: 'overview',
@@ -171,10 +180,12 @@ const SECTIONS = [
 ];
 
 const PrivacyPolicy = ({ isDarkMode }) => {
+  // Which section is highlighted in the contents list
   const [active, setActive] = useState(SECTIONS[0].id);
   const headerImage = isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png';
 
   useEffect(() => {
+    // Start at the top of the policy
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -195,6 +206,7 @@ const PrivacyPolicy = ({ isDarkMode }) => {
     return () => observer.disconnect();
   }, []);
 
+  // Smooth-scroll to a section (instant when the visitor prefers less motion)
   const jumpTo = (e, id) => {
     e.preventDefault();
     const el = document.getElementById(id);
@@ -215,6 +227,7 @@ const PrivacyPolicy = ({ isDarkMode }) => {
       />
 
       <div className={styles.layout}>
+        {/* Contents list */}
         <aside className={styles.toc}>
           <nav className={styles.tocPanel} aria-label="On this page">
             <p className={styles.tocTitle}>On this page</p>
@@ -235,6 +248,7 @@ const PrivacyPolicy = ({ isDarkMode }) => {
           </nav>
         </aside>
 
+        {/* The policy text */}
         <article className={styles.article}>
           <p className={styles.updated}>Last updated {LAST_UPDATED}</p>
           {SECTIONS.map((s) => (

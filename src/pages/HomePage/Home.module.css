@@ -1,3 +1,12 @@
+/*
+ * pages/HomePage/Home.module.css
+ * -----------------------------------------------------------------------------
+ * The home page: header slideshow with arrows and the Play button, quick dock,
+ * book shelf, Hukamnama prompt and modal, experiences, authors, heritage and
+ * the closing cards.
+ * -----------------------------------------------------------------------------
+ */
+
 /* Base Styles */
 .homeContainer {
   background-color: var(--section-bg-color);

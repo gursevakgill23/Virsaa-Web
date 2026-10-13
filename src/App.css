@@ -1,3 +1,12 @@
+/*
+ * App.css
+ * -----------------------------------------------------------------------------
+ * Global styles for the whole site: fonts, the colour tokens for light and
+ * dark mode (CSS variables on :root and [data-theme='dark']), base element
+ * styles, scrollbars, and hiding Google Translate's own toolbar.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Virsaa global styles
    - Fonts used by the redesigned sections

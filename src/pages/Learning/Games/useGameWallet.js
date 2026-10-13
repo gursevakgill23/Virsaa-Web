@@ -1,4 +1,9 @@
-/*
+/**
+ * pages/Learning/Games/useGameWallet.js
+ * -----------------------------------------------------------------------------
+ * React hook shared by both games and the game profile card.
+ * -----------------------------------------------------------------------------
+ *
  * Coins, XP, welcome bonus and the player's game name/avatar.
  *
  * Signed in: everything is saved on the server (/api/learning/me/wallet/...),
@@ -8,9 +13,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import learningApi from '../../../api/learningApi';
 
+// Guest progress is stored under this localStorage key
 const GUEST_KEY = 'virsaa_game_guest';
 const GUEST_WELCOME_BONUS = 100;
 
+// Read / write the guest's saved progress (storage can be blocked, so both are guarded)
 const readGuest = () => {
   try {
     return JSON.parse(localStorage.getItem(GUEST_KEY)) || {};
@@ -40,11 +47,15 @@ const fromServer = (w) => ({
   streak: w.current_streak ?? 0,
 });
 
+// A number from storage, or the fallback if it was edited into something else
+const toCount = (value) => (Number.isFinite(Number(value)) && Number(value) >= 0 ? Math.floor(Number(value)) : 0);
+
+// Guest progress -> the same shape (level is worked out from XP: 500 XP per level)
 const fromGuest = (g) => ({
-  coins: g.coins ?? 0,
-  xp: g.xp ?? 0,
-  level: Math.floor((g.xp ?? 0) / 500) + 1,
-  xpIntoLevel: (g.xp ?? 0) % 500,
+  coins: toCount(g.coins),
+  xp: toCount(g.xp),
+  level: Math.floor(toCount(g.xp) / 500) + 1,
+  xpIntoLevel: toCount(g.xp) % 500,
   xpPerLevel: 500,
   welcomeBonusGiven: Boolean(g.welcomeBonusGiven),
   name: g.name || '',
@@ -52,18 +63,25 @@ const fromGuest = (g) => ({
   streak: 0,
 });
 
+/**
+ * @param {{ apiString, accessToken, isLoggedIn, gameKey }} options
+ * @returns the wallet values plus functions to change it (see the return value at the end)
+ */
 export default function useGameWallet({ apiString, accessToken, isLoggedIn, gameKey }) {
   const online = Boolean(isLoggedIn && accessToken);
   const [wallet, setWallet] = useState(() => fromGuest(readGuest()));
   const [loaded, setLoaded] = useState(!online);
   const [error, setError] = useState(null);
+  // Always-current copy for the async functions below (avoids stale values)
   const walletRef = useRef(wallet);
   walletRef.current = wallet;
 
+  // Replace the wallet with the server's numbers
   const applyServer = useCallback((w) => {
     if (w) setWallet(fromServer(w));
   }, []);
 
+  // Update and store the guest's wallet
   const saveGuest = useCallback((next) => {
     setWallet(next);
     writeGuest({ coins: next.coins, xp: next.xp, welcomeBonusGiven: next.welcomeBonusGiven, name: next.name, avatar: next.avatar });

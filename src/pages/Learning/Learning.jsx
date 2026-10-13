@@ -1,3 +1,14 @@
+/**
+ * pages/Learning/Learning.jsx
+ * -----------------------------------------------------------------------------
+ * The Learning hub (/learning): lessons, quizzes and games.
+ *   - tabs (All / Lessons / Quizzes / Games) and category chips
+ *   - 12 cards per page; locked cards say whether they need sign-in or Premium
+ *   - a games spotlight (both built-in games always appear) and a quizzes row
+ * Data: /api/learning/items/categorized/ (sent with the token when signed in,
+ * so the server can mark what this user can open).
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { FaChevronLeft, FaChevronRight, FaLock, FaBookOpen, FaQuestionCircle, FaGamepad, FaTimes, FaPlay } from 'react-icons/fa';
@@ -6,13 +17,15 @@ import styles from './Learning.module.css';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 
+// Picture used when an item has none
 const DEFAULT_IMAGE_PATH = '/images/Learning/learning.jpg';
 
 // Public/static images
+// Converts image paths for the production build (same helper used across pages)
 const getProductionImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
+      return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
@@ -23,15 +36,18 @@ const getProductionImagePath = (imagePath) => {
 
 // API images come back as full URLs; anything else uses the default image
 // First paragraph of a description, used on cards (the full text shows on the lesson page)
+// First paragraph of a description, for the card
 const summary = (text = '') => String(text).split(/\n\s*\n/)[0].trim();
 
 // The two games that exist in the app (see the routes in App.js)
+// Game key → page
 const GAME_ROUTES = {
   wordSearch: '/learning/games/shabd-khoj',
   memoryMatch: '/learning/games/memory-match',
 };
 
 // Shown in the Games section even when the database has no game rows yet
+// Games that always show, even before they're added in the admin
 const BUILT_IN_GAMES = [
   {
     id: 'game-word-search',
@@ -55,6 +71,7 @@ const BUILT_IN_GAMES = [
 // Uses the item's link when it points at a game route (full URL or path),
 // otherwise recognises the game from its title.
 // "Completed", "In progress", "Best 7/8" for signed-in users
+// "New", "In progress", "Completed"… from the user's progress
 const cardStatus = (item) => {
   if (item.my_progress?.status === 'completed') return 'Completed';
   if (item.my_progress) return 'In progress';
@@ -66,6 +83,7 @@ const cardStatus = (item) => {
   return '';
 };
 
+// Page for a game item from the database
 const gameRoute = (item) => {
   if (item.game_key === 'word_search') return GAME_ROUTES.wordSearch;
   if (item.game_key === 'memory_match') return GAME_ROUTES.memoryMatch;
@@ -85,6 +103,7 @@ const gameRoute = (item) => {
   return GAME_ROUTES.wordSearch;
 };
 
+// Use the item's picture only if it's a real URL or site path
 const imageUrl = (path) => (typeof path === 'string' && (path.startsWith('http') || path.startsWith('/')) ? path : DEFAULT_IMAGE_PATH);
 
 const handleImgError = (e) => {
@@ -93,6 +112,7 @@ const handleImgError = (e) => {
   e.currentTarget.src = DEFAULT_IMAGE_PATH;
 };
 
+// Tabs and the label/icon for each content type
 const TABS = [
   { id: 'all', label: 'All' },
   { id: 'learning', label: 'Lessons', icon: <FaBookOpen /> },
@@ -106,6 +126,7 @@ const TYPE_META = {
   game: { label: 'Game', icon: <FaGamepad /> },
 };
 
+// Random order for the library
 const shuffleArray = (array) => {
   const copy = [...array];
   for (let i = copy.length - 1; i > 0; i--) {
@@ -117,6 +138,7 @@ const shuffleArray = (array) => {
 
 const Learning = ({ isDarkMode, apiString }) => {
   const { isLoggedIn, isPremium, accessToken, API_STRING } = useAuth();
+  // Tab, filters, games carousel, page, loading/error state and the loaded items
   const [activeTab, setActiveTab] = useState('all');
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [gameIndex, setGameIndex] = useState(0);
@@ -126,16 +148,20 @@ const Learning = ({ isDarkMode, apiString }) => {
   const [games, setGames] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again"
   const headerImage = getProductionImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
 
   useEffect(() => {
+    let cancelled = false;
     const fetchItems = async () => {
       setIsLoading(true);
       setError(null);
       const apiUrl = (apiString || API_STRING || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
       try {
         const config = isLoggedIn && accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {};
-        const { data } = await axios.get(`${apiUrl}/api/learning/items/categorized/`, config);
+        const { data } = await axios.get(`${apiUrl}/api/learning/items/categorized/`, { ...config, timeout: 20000 });
+        if (cancelled) return;
+        const listOf = (value) => (Array.isArray(value) ? value : []);
 
         const map = (item, type, link) => ({
           id: item.id,
@@ -150,9 +176,9 @@ const Learning = ({ isDarkMode, apiString }) => {
           status: cardStatus(item),
         });
 
-        const learning = (data.learning || []).map((i) => map(i, 'learning', `/learning-material/${i.id}`));
-        const quiz = (data.quiz || []).map((i) => map(i, 'quiz', `/learning/quizzes/${i.id}`));
-        const fromDb = (data.game || []).map((i) => map(i, 'game', gameRoute(i)));
+        const learning = listOf(data?.learning).map((i) => map(i, 'learning', `/learning-material/${i.id}`));
+        const quiz = listOf(data?.quiz).map((i) => map(i, 'quiz', `/learning/quizzes/${i.id}`));
+        const fromDb = listOf(data?.game).map((i) => map(i, 'game', gameRoute(i)));
         // Add any built-in game the database doesn't have yet, so both games always show
         const missing = BUILT_IN_GAMES
           .filter((g) => !fromDb.some((d) => d.link === g.link))
@@ -163,18 +189,20 @@ const Learning = ({ isDarkMode, apiString }) => {
         setGames(game);
         setQuizzes(quiz);
       } catch (err) {
+        if (cancelled) return;
         console.error('Error fetching learning items:', err.response?.status || err.message);
-        setError('Learning items couldn’t be loaded. Check your connection and refresh the page.');
+        setError('Learning items couldn’t be loaded. Check your connection and try again.');
         const builtIns = BUILT_IN_GAMES.map((g) => ({ ...g, type: 'game', is_restricted: false, is_premium: false }));
         setAllCards(builtIns);
         setGames(builtIns);
         setQuizzes([]);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
     fetchItems();
-  }, [isLoggedIn, isPremium, accessToken, API_STRING, apiString]);
+    return () => { cancelled = true; };
+  }, [isLoggedIn, isPremium, accessToken, API_STRING, apiString, reloadKey]);
 
   // Shuffle once per tab/filter change, like before
   const shuffledCards = useMemo(() => {
@@ -197,6 +225,7 @@ const Learning = ({ isDarkMode, apiString }) => {
     [allCards, activeTab]
   );
 
+  // Tab and category chip changes (filters reset when the tab changes)
   const handleTabClick = (tab) => {
     setActiveTab(tab);
     setSelectedFilters([]);
@@ -206,6 +235,7 @@ const Learning = ({ isDarkMode, apiString }) => {
     setSelectedFilters((prev) => (prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter]));
   };
 
+  // Can this user open the card? Otherwise say why and where to go
   const isCardAccessible = (card) => {
     if (card.type === 'game') return true;
     if (!card.is_restricted) return true;
@@ -217,10 +247,12 @@ const Learning = ({ isDarkMode, apiString }) => {
   const lockLabel = (card) => (card.is_premium ? 'Premium required' : 'Sign in required');
   const lockLink = (card) => (card.is_premium ? '/premium' : '/login');
 
+  // Games spotlight: next / previous
   const nextGame = () => setGameIndex((i) => (i + 1) % games.length);
   const prevGame = () => setGameIndex((i) => (i - 1 + games.length) % games.length);
   const game = games[gameIndex];
 
+  // One card in the library grid
   const renderCard = (card) => {
     const open = isCardAccessible(card);
     const inner = (
@@ -299,7 +331,12 @@ const Learning = ({ isDarkMode, apiString }) => {
 
       {/* ---------- Library ---------- */}
       <section className={styles.gridSection} aria-label="Learning library">
-        {error && <p className={styles.emptyNote}>{error}</p>}
+        {error && (
+          <div className={styles.emptyNote} role="alert">
+            <p>{error}</p>
+            <button type="button" className={styles.textButton} onClick={() => setReloadKey((k) => k + 1)}>Try again</button>
+          </div>
+        )}
         {!error && !isLoading && shuffledCards.length === 0 && (
           <p className={styles.emptyNote}>Nothing here yet. Try another tab or clear the filters.</p>
         )}

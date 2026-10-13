@@ -1,3 +1,10 @@
+/**
+ * components/PageHero/PageHero.jsx
+ * -----------------------------------------------------------------------------
+ * The header at the top of most pages: background photo, title, subtitle,
+ * optional extra content (search bar, tabs) and a glass breadcrumb trail.
+ * -----------------------------------------------------------------------------
+ */
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './PageHero.module.css';
@@ -17,6 +24,7 @@ const FALLBACK_DARK = '/images/header-image-dark.png';
  * compact   – shorter header for detail pages
  */
 const PageHero = ({ image, imageAlt = '', title, subtitle, crumbs = [], children, compact = false }) => {
+  // If the photo fails: try the default header image once, then hide it
   const handleError = (e) => {
     const img = e.currentTarget;
     if (img.dataset.fallback) {
@@ -29,17 +37,20 @@ const PageHero = ({ image, imageAlt = '', title, subtitle, crumbs = [], children
 
   return (
     <header className={`${styles.hero} ${compact ? styles.compact : ''}`}>
+      {/* Photo + dark gradient so the white text stays readable */}
       <div className={styles.media} aria-hidden={!imageAlt}>
         {image && <img key={image} src={image} alt={imageAlt} className={styles.image} onError={handleError} />}
       </div>
       <div className={styles.scrim} aria-hidden="true" />
 
+      {/* Title, subtitle and any extra content */}
       <div className={styles.inner}>
         <h1 className={styles.title}>{title}</h1>
         {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         {children}
       </div>
 
+      {/* Breadcrumb: every crumb is a link except the current page */}
       {crumbs.length > 0 && (
         <nav className={styles.crumbs} aria-label="Breadcrumb">
           <ol>

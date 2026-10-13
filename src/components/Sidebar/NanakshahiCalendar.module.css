@@ -1,0 +1,391 @@
+/*
+ * components/Sidebar/NanakshahiCalendar.module.css
+ * -----------------------------------------------------------------------------
+ * The Nanakshahi calendar view inside the side panel: month header, day grid
+ * with dots, colour key, selected-day list and "This month" list.
+ * -----------------------------------------------------------------------------
+ */
+
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: var(--font-body);
+}
+
+.calendar p,
+.calendar li {
+  font-family: var(--font-body);
+}
+
+/* ---------- Month header ---------- */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.headTitle {
+  text-align: center;
+}
+
+.headTitle h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--headline-color);
+}
+
+.headTitle p {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.navButton {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--icon-color);
+  cursor: pointer;
+}
+
+.navButton:hover {
+  background: rgba(var(--primary-rgb), 0.12);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.todayButton {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(var(--primary-rgb), 0.35);
+  background: transparent;
+  color: var(--primary-color);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.todayButton:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.moonToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+}
+
+.moonToggle input {
+  accent-color: var(--primary-color);
+}
+
+/* ---------- Month grid ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  padding: 10px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight);
+}
+
+.weekday {
+  padding: 4px 0;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.blank {
+  min-height: 48px;
+}
+
+.day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1px;
+  min-height: 48px;
+  padding: 5px 0 4px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-color);
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.day:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.dayNumber {
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.nsDay {
+  font-size: 0.62rem;
+  line-height: 1;
+  color: var(--secondary-text-color);
+}
+
+/* First day of a Nanakshahi month (also Sangrand) */
+.dayMonthStart .nsDay {
+  font-weight: 800;
+  color: var(--primary-color);
+}
+
+.dayToday .dayNumber {
+  color: var(--primary-color);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.daySelected,
+.daySelected:hover {
+  color: #fff;
+  background: linear-gradient(150deg, var(--maroon-bright), var(--maroon) 60%, var(--maroon-deep));
+  box-shadow: 0 8px 16px -10px rgba(63, 2, 18, 0.8);
+}
+
+.daySelected .nsDay,
+.daySelected.dayToday .dayNumber,
+.daySelected.dayMonthStart .nsDay {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+[data-theme='dark'] .daySelected,
+[data-theme='dark'] .daySelected:hover {
+  color: #2b0f16;
+  background: #f2b3c2;
+}
+
+[data-theme='dark'] .daySelected .nsDay,
+[data-theme='dark'] .daySelected.dayToday .dayNumber {
+  color: rgba(43, 15, 22, 0.8);
+}
+
+.dots {
+  display: flex;
+  gap: 3px;
+  min-height: 6px;
+  margin-top: 2px;
+}
+
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.dotGurpurab { background: #8c1232; }
+.dotShaheedi { background: #2d6cdf; }
+.dotFestival { background: #c9a24a; }
+.dotSangrand { background: #2f8f5b; }
+.dotMoon { background: #9aa0a6; }
+.dotEvent { background: #e07a2f; }
+
+[data-theme='dark'] .dotGurpurab { background: #f2b3c2; }
+
+.daySelected .dot {
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
+}
+
+/* ---------- Legend ---------- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.76rem;
+  color: var(--secondary-text-color);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ---------- Selected day ---------- */
+.dayPanel,
+.monthList {
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight);
+}
+
+.dayPanel h4,
+.monthList h4 {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--headline-color);
+}
+
+.dayPanel h4 span {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.items {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.item > .dot {
+  margin-top: 6px;
+}
+
+.itemKind {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.lunar {
+  font-weight: 500;
+}
+
+.itemTitle {
+  margin: 1px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.itemMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 3px 0 0;
+  font-size: 0.82rem;
+  color: var(--secondary-text-color);
+}
+
+.itemText {
+  margin: 3px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--secondary-text-color);
+}
+
+.muted {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--secondary-text-color);
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- This month ---------- */
+.monthList ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monthList button {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-color);
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.monthList button:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.monthDate {
+  font-weight: 800;
+  color: var(--primary-color);
+  text-align: center;
+}
+
+.footnote {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+}
+
+.navButton:focus-visible,
+.todayButton:focus-visible,
+.day:focus-visible,
+.monthList button:focus-visible,
+.linkButton:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}

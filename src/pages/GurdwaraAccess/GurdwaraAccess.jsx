@@ -1,3 +1,16 @@
+/**
+ * pages/GurdwaraAccess/GurdwaraAccess.jsx
+ * -----------------------------------------------------------------------------
+ * The Gurdwara finder (/gurdwara-access):
+ *   - search an address (with suggestions) or use the browser's location
+ *   - lists Gurdwaras within 10 km with distance and walk/bus/car times, and
+ *     shows them on a Leaflet map (OpenStreetMap tiles)
+ *   - links to directions, services and history for each Gurdwara
+ *   - history of the nearest Gurdwara and the services Gurdwaras offer
+ * Addresses are looked up with OpenStreetMap's Nominatim service (Canada only).
+ * The Gurdwara list itself is local data for now.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -9,19 +22,22 @@ import {
   FaHandsHelping, FaBook, FaUtensils, FaBed, FaHeartbeat, FaChevronDown, FaHistory, FaMapMarkerAlt,
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
+import { safeExternalUrl } from '../../utils/safeUrl';
 
-const gurdwaraHistoryImage = '../../images/gurdwaraAccess/gurdwara-history.jpg';
+// Pictures and Leaflet marker icons (files in public/images)
+const gurdwaraHistoryImage = '/images/gurdwaraAccess/gurdwara-history.jpg';
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
-const iconRetinaUrl = '../../images/gurdwaraAccess/marker-icon-2x.png';
-const iconUrl = '../../images/gurdwaraAccess/marker-icon.png';
-const iconShadowUrl = '../../images/gurdwaraAccess/marker-shadow.png';
+const iconRetinaUrl = '/images/gurdwaraAccess/marker-icon-2x.png';
+const iconUrl = '/images/gurdwaraAccess/marker-icon.png';
+const iconShadowUrl = '/images/gurdwaraAccess/marker-shadow.png';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -90,6 +106,7 @@ const gurdwaraDatabase = [
 ];
 
 // Distance between two coordinates in km
+// Straight-line distance in km between two coordinates (haversine formula)
 function deg2rad(deg) {
   return deg * (Math.PI / 180);
 }
@@ -102,6 +119,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Services described at the bottom of the page
 const servicesList = [
   { id: 1, icon: <FaUtensils />, name: 'Langar (Free Community Kitchen)', description: 'Experience the warmth of community through our free langar service. Everyone is welcome to join and share a meal.' },
   { id: 2, icon: <FaBed />, name: 'Accommodation (Stay Facilities)', description: 'We provide comfortable accommodation facilities for visitors. Stay with us and feel at home.' },
@@ -112,6 +130,7 @@ const servicesList = [
 
 const GurdwaraAccess = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
+  // Search box, location, results, loading/error and suggestions state
   const [selectedService, setSelectedService] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -125,6 +144,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
   const mapRef = useRef(null);
   const searchInputRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
+  const suggestionRequest = useRef(0); // only the newest suggestions request may update the list
 
   // Travel time estimate from distance and mode
   const calculateTravelTime = useCallback((distanceKm, mode) => {
@@ -159,6 +179,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
   }, [calculateTravelTime]);
 
   // Reverse geocode coordinates to an address
+  // Coordinates → a readable address for the search box (best effort)
   const reverseGeocode = async (lat, lng) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
@@ -173,6 +194,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
     }
   };
 
+  // "Use my location": ask the browser, then list nearby Gurdwaras
   const getUserLocation = () => {
     setIsLoading(true);
     setLocationError(null);
@@ -190,10 +212,17 @@ const GurdwaraAccess = ({ isDarkMode }) => {
         reverseGeocode(latitude, longitude);
       },
       (error) => {
-        setLocationError('Your location couldn’t be found. Allow location access, or type an address instead.');
+        // 1 = permission denied, 2 = position unavailable, 3 = timed out
+        const messages = {
+          1: 'Location access is turned off for this site. Allow it in your browser, or type an address instead.',
+          2: 'Your location isn’t available right now. Type an address instead.',
+          3: 'Finding your location took too long. Try again, or type an address instead.',
+        };
+        setLocationError(messages[error.code] || 'Your location couldn’t be found. Allow location access, or type an address instead.');
         setIsLoading(false);
         console.error('Geolocation error:', error.message);
-      }
+      },
+      { timeout: 15000, maximumAge: 60000 }
     );
   };
 
@@ -205,11 +234,14 @@ const GurdwaraAccess = ({ isDarkMode }) => {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=5&countrycodes=ca&addressdetails=1`);
       if (!response.ok) throw new Error('Geocoding request failed');
       const data = await response.json();
-      if (data.length === 0) {
+      const first = Array.isArray(data) ? data[0] : null;
+      const lat = parseFloat(first?.lat);
+      const lng = parseFloat(first?.lon);
+      if (!first || Number.isNaN(lat) || Number.isNaN(lng)) {
         setLocationError('That address wasn’t found. Try adding the city, e.g. “Main St, Brampton”.');
         return null;
       }
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), address: data[0].display_name };
+      return { lat, lng, address: String(first.display_name || address) };
     } catch (error) {
       console.error('Geocoding error:', error.message);
       setLocationError('Search isn’t available right now. Try again in a moment.');
@@ -219,35 +251,45 @@ const GurdwaraAccess = ({ isDarkMode }) => {
     }
   };
 
+  // Use a found location: remember it and list nearby Gurdwaras
   const applyLocation = (location) => {
     setUserLocation({ lat: location.lat, lng: location.lng });
     setSearchAddress(location.address);
     findNearbyGurdwaras(location.lat, location.lng);
   };
 
+  // Search button / Enter
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      setLocationError('Type an address or area first, or use your location.');
+      searchInputRef.current?.focus();
+      return;
+    }
     setShowSuggestions(false);
     const location = await geocodeAddress(searchQuery);
     if (location) applyLocation(location);
   };
 
   const fetchLocationSuggestions = async (query) => {
+    const request = ++suggestionRequest.current;
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ca&addressdetails=1`);
       if (!response.ok) throw new Error('Failed to fetch suggestions');
       const data = await response.json();
-      setFilteredSuggestions(data.map((item) => item.display_name));
+      if (request !== suggestionRequest.current) return; // a newer search has started
+      setFilteredSuggestions(Array.isArray(data) ? data.map((item) => String(item.display_name || '')).filter(Boolean) : []);
     } catch (error) {
       console.error('Suggestions error:', error.message);
-      setFilteredSuggestions([]);
+      if (request === suggestionRequest.current) setFilteredSuggestions([]);
     }
   };
 
+  // Typing: suggestions after 3 letters, with a 300 ms pause
   const handleInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
+    if (locationError) setLocationError(null);
     setShowSuggestions(value.length > 2);
     clearTimeout(debounceTimeoutRef.current);
     debounceTimeoutRef.current = setTimeout(() => {
@@ -256,6 +298,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
     }, 300);
   };
 
+  // Pick a suggestion
   const handleSuggestionClick = async (suggestion) => {
     setSearchQuery(suggestion);
     setShowSuggestions(false);
@@ -264,11 +307,13 @@ const GurdwaraAccess = ({ isDarkMode }) => {
   };
 
   useEffect(() => {
+    // Start with Brampton so the page isn't empty
     findNearbyGurdwaras(43.7315, -79.7624); // Brampton by default
   }, [findNearbyGurdwaras]);
 
   useEffect(() => () => clearTimeout(debounceTimeoutRef.current), []);
 
+  // "Show on map": fly the map to a Gurdwara
   const focusOnMap = (gurdwara) => {
     mapRef.current?.flyTo?.(gurdwara.coordinates, 15);
   };
@@ -294,6 +339,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
                 role="combobox"
                 aria-controls="address-suggestions"
                 placeholder="Enter an address or area, e.g. 123 Main St, Brampton"
+                maxLength={200}
                 className={styles.input}
                 value={searchQuery}
                 onChange={handleInputChange}
@@ -370,7 +416,10 @@ const GurdwaraAccess = ({ isDarkMode }) => {
               </div>
 
               <div className={styles.contact}>
-                <a href={gurdwara.website} target="_blank" rel="noopener noreferrer"><FaGlobe aria-hidden="true" /> Website</a>
+                {/* Only real http(s) links are shown (see utils/safeUrl.js) */}
+                {safeExternalUrl(gurdwara.website) && (
+                  <a href={safeExternalUrl(gurdwara.website)} target="_blank" rel="noopener noreferrer"><FaGlobe aria-hidden="true" /> Website</a>
+                )}
                 <a href={`tel:${gurdwara.phone}`}><FaPhoneAlt aria-hidden="true" /> {gurdwara.phone}</a>
               </div>
             </li>

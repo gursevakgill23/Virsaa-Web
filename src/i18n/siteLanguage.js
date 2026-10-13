@@ -1,4 +1,10 @@
-/*
+/**
+ * i18n/siteLanguage.js
+ * -----------------------------------------------------------------------------
+ * Whole-site translation (English, Punjabi, French) with Google's website
+ * translator. Used by components/LanguageSwitcher and started from index.js.
+ * -----------------------------------------------------------------------------
+ *
  * Whole-site translation with Google's website translator.
  * No translation files: the page is translated in the browser when someone picks a language.
  *
@@ -8,15 +14,17 @@
  *   e.g. Gurbani, game boards and the Virsaa name.
  */
 
+// Languages offered in the switcher (code, name in its own script, short label)
 export const LANGUAGES = [
   { code: 'en', label: 'English', short: 'EN' },
   { code: 'pa', label: 'ਪੰਜਾਬੀ', short: 'ਪੰ' },
   { code: 'fr', label: 'Français', short: 'FR' },
 ];
 
-const STORAGE_KEY = 'virsaa:language';
-const SOURCE = 'en';
+const STORAGE_KEY = 'virsaa:language'; // localStorage key for the chosen language
+const SOURCE = 'en'; // the language the site is written in
 
+// Language from Google's "googtrans" cookie (value looks like "/en/pa"); null if unset or unknown
 const readCookie = () => {
   const match = document.cookie.match(/(?:^|;\s*)googtrans=([^;]+)/);
   if (!match) return null;
@@ -24,21 +32,25 @@ const readCookie = () => {
   return LANGUAGES.some((l) => l.code === code) ? code : null;
 };
 
+// The language in use: cookie first, then the saved choice, then English
 export const getLanguage = () => {
   let saved = null;
   try { saved = localStorage.getItem(STORAGE_KEY); } catch { /* storage blocked */ }
   return readCookie() || (LANGUAGES.some((l) => l.code === saved) ? saved : SOURCE);
 };
 
+// Write (or clear, with a past expiry) the googtrans cookie
 const writeCookie = (value, expires) => {
   const host = window.location.hostname;
-  const base = `googtrans=${value}; path=/; expires=${expires}`;
+  // SameSite=Lax: the cookie is only needed on this site, never in cross-site requests
+  const base = `googtrans=${value}; path=/; expires=${expires}; SameSite=Lax`;
   document.cookie = base;
   // Google sometimes sets it on the domain as well, so clear/set both
   if (host.includes('.')) document.cookie = `${base}; domain=${host}`;
   if (host.split('.').length > 2) document.cookie = `${base}; domain=.${host.split('.').slice(-2).join('.')}`;
 };
 
+// Switch language (called by the LanguageSwitcher). Unknown codes are ignored.
 export const setLanguage = (code) => {
   if (!LANGUAGES.some((l) => l.code === code) || code === getLanguage()) return;
   try { localStorage.setItem(STORAGE_KEY, code); } catch { /* storage blocked */ }
@@ -70,6 +82,7 @@ const patchDomForTranslation = () => {
   Node.prototype.__virsaaPatched = true;
 };
 
+// Add Google's translator script to the page (once). It reads the cookie and translates.
 const loadGoogleTranslate = () => {
   if (document.getElementById('google-translate-script')) return;
   const holder = document.createElement('div');

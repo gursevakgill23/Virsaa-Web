@@ -1,3 +1,11 @@
+/*
+ * pages/Membership/Membership.module.css
+ * -----------------------------------------------------------------------------
+ * The membership page: billing switch, plan cards (with Current / Upgrade /
+ * Downgrade), comparison table, FAQs and call to action.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

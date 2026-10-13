@@ -1,3 +1,11 @@
+/*
+ * pages/Learning/Learning.module.css
+ * -----------------------------------------------------------------------------
+ * The Learning hub: tabs and category chips, the card grid with lock labels,
+ * pagination, games spotlight and quizzes row.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);
@@ -338,6 +346,19 @@
 @keyframes shimmer {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
+}
+
+/* Text-style button used for "Try again" */
+.textButton {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .emptyNote {

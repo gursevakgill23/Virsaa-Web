@@ -1,3 +1,11 @@
+/*
+ * components/Navbar/SearchPalette.module.css
+ * -----------------------------------------------------------------------------
+ * The search overlay: dimmed backdrop, the search panel, recent searches,
+ * quick links, grouped results, loading placeholders and the keyboard hints.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Search palette: a floating glass panel over a blurred page.
    Desktop: drops from the top. Phones: rises as a sheet above the bottom bar.

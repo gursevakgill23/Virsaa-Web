@@ -1,3 +1,11 @@
+/*
+ * pages/Profile/History/History.module.css
+ * -----------------------------------------------------------------------------
+ * The History page: toolbar (search, grouping, select, clear), day/type groups
+ * and the entries with progress bars.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

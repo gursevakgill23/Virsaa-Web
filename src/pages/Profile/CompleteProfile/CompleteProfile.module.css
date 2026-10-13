@@ -1,3 +1,11 @@
+/*
+ * pages/Profile/CompleteProfile/CompleteProfile.module.css
+ * -----------------------------------------------------------------------------
+ * "Complete your profile": photo picker, progress, form fields, content chips
+ * and error messages.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

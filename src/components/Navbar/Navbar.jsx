@@ -1,6 +1,19 @@
+/**
+ * components/Navbar/Navbar.jsx
+ * -----------------------------------------------------------------------------
+ * The floating glass navbar at the top of every page.
+ *   - left: Virsaa logo
+ *   - centre: main page links (Collections opens a small dropdown on hover)
+ *   - right: search (also Ctrl/Cmd+K or "/"), language, light/dark, the side
+ *     panel button, and either Login/Premium or the user's avatar
+ *   - the avatar opens the account panel (profile, settings, favourites,
+ *     history, notifications with the unread count, plan card, log out)
+ * On phones, swiping left on the navbar opens the side panel.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/notify';
 import styles from './Navbar.module.css';
 import { 
   FaBars, 
@@ -23,6 +36,7 @@ import useMembership from '../../hooks/useMembership';
 import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
 import useUnreadNotifications, { refreshUnread } from '../../hooks/useUnreadNotifications';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
@@ -38,11 +52,13 @@ const useProductionImagePath = () => {
   };
 };
 
+// Shown when the user has no profile photo
 const userImage = '/images/Login/user-placeholder.jpg';
 
 const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const logo_virsaa = '/images/logo.png';
   const getImagePath = useProductionImagePath();
+  // What's open: Collections dropdown, search, account panel; and swipe tracking
   const [showDropdown, setShowDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
@@ -50,6 +66,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const [profileData, setProfileData] = useState(null);
   const navbarRef = useRef(null);
   const navigate = useNavigate();
+  // Signed-in user, their plan and their unread notification count
   const { isLoggedIn, userData, accessToken, logout } = useAuth();
   const membership = useMembership(apiString);
   const refreshMembership = membership.refresh;
@@ -137,6 +154,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
     }
   }, [showProfileSidebar, accessToken, apiString]);
 
+  // ---------------------------------------------------------------- open / close helpers
   const handleDropdown = () => {
     setShowDropdown(!showDropdown);
   };
@@ -178,6 +196,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
     return () => window.removeEventListener('keydown', onKey);
   }, [showProfileSidebar]);
 
+  // Log out, then go to the login page. A failure leaves the user signed in and says so.
   const handleLogout = async () => {
     try {
       await logout();
@@ -199,6 +218,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   };
 
   useEffect(() => {
+    // Stop the page behind from scrolling while search or the account panel is open
     if (showSearch || showProfileSidebar) {
       document.body.classList.add(styles.noScroll);
     } else {
@@ -210,6 +230,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
     };
   }, [showSearch, showProfileSidebar]);
 
+  // Phones only: a swipe left of 50px or more on the navbar opens the side panel
   const handleTouchStart = (e) => {
     if (window.innerWidth > 480) return;
     setTouchStart(e.touches[0].clientX);
@@ -238,6 +259,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
+        {/* Logo (never translated) */}
         <div className={styles.leftSection}>
           <div className={`${styles.logoContainer} notranslate`} translate="no">
             <img 
@@ -248,6 +270,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
           </div>
         </div>
 
+        {/* Main links (desktop) */}
         <div className={styles.navLinks}>
           <Link to="/home">Home</Link>
           <div className={styles.dropdown} onMouseEnter={handleDropdown} onMouseLeave={handleDropdown}>
@@ -267,15 +290,16 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
           <Link to="/about">About</Link>
         </div>
 
+        {/* Tools and the account button */}
         <div className={styles.navRight}>
-          <button className={styles.searchIcon} onClick={toggleSearch} aria-label="Search (Ctrl+K)">
+          <button type="button" className={styles.searchIcon} onClick={toggleSearch} aria-label="Search (Ctrl+K)">
             <FaSearch />
           </button>
           <LanguageSwitcher />
-          <button className={styles.themeToggle} onClick={toggleTheme}>
+          <button type="button" className={styles.themeToggle} onClick={toggleTheme} aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
             {isDarkMode ? <FaSun /> : <FaMoon />}
           </button>
-          <button className={styles.menuIcon} onClick={toggleSidebar}>
+          <button type="button" className={styles.menuIcon} onClick={toggleSidebar} aria-label="Open the Virsaa panel">
             <FaBars />
           </button>
           
@@ -296,10 +320,10 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
             </button>
           ) : (
             <>
-              <button onClick={() => navigate('/login')} className={styles.loginButton}>
+              <button type="button" onClick={() => navigate('/login')} className={styles.loginButton}>
                 Login
               </button>
-              <button onClick={() => navigate('/premium')} className={styles.getPremiumButton}>
+              <button type="button" onClick={() => navigate('/premium')} className={styles.getPremiumButton}>
                 Premium
               </button>
             </>
@@ -307,6 +331,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
         </div>
       </nav>
 
+      {/* Search overlay */}
       {showSearch && <SearchPalette onClose={closeSearch} apiString={apiString} />}
 
       {/* Account panel: floating glass that slides in from the right, mirroring the events sidebar */}
@@ -330,6 +355,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
             </header>
 
             <div className={styles.accountBody}>
+              {/* Who is signed in, and their plan */}
               <section className={styles.accountCard}>
                 <img
                   src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)}
@@ -351,6 +377,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
                 </div>
               </section>
 
+              {/* The five account pages */}
               <nav className={styles.accountLinks} aria-label="Account pages">
               <Link to="/my-profile" className={styles.accountLink} onClick={closeProfileSidebar}>
                 <span className={styles.accountLinkIcon}><FaUser /></span>
@@ -384,10 +411,12 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
               </Link>
               </nav>
 
+              {/* Plan card: Get Premium / Upgrade / Change plan, depending on the current plan */}
               <Link to="/premium" className={styles.premiumCard} onClick={closeProfileSidebar}>
                 <span className={styles.premiumIcon} aria-hidden="true"><FaCrown /></span>
                 <span>
                   <strong>{planCard.title}</strong>
+                  {membership.isMember && <em className={styles.premiumCurrent}>Current plan: {membership.planName}</em>}
                   <small>{planCard.text}</small>
                 </span>
               </Link>

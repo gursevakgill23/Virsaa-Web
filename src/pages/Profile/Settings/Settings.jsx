@@ -1,6 +1,19 @@
+/**
+ * pages/Profile/Settings/Settings.jsx
+ * -----------------------------------------------------------------------------
+ * Account Settings (/account-settings), in sections:
+ *   - General: theme (light / dark / match the device) and language
+ *   - Notifications: which kinds of notification to receive
+ *   - Privacy: save history on/off, clear history, delete the account
+ *   - Security: change password
+ *   - Storage: how much this site stores on the device, and clearing it
+ * Switches save straight away (and switch back if the server refuses).
+ * Data: /api/auth/settings/, change-password/, delete-account/ (api/accountApi.js).
+ * -----------------------------------------------------------------------------
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../../utils/notify';
 import {
   FaMoon, FaSun, FaLanguage, FaBell, FaLock,
   FaDatabase, FaTrash, FaPalette, FaUserShield, FaDesktop, FaKey, FaCheck, FaHistory,
@@ -9,10 +22,12 @@ import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
 import { useAuth } from '../../../context/AuthContext';
 import accountApi from '../../../api/accountApi';
+import { describeApiError } from '../../../utils/apiError';
 import { refreshUnread } from '../../../hooks/useUnreadNotifications';
 import { LANGUAGES, getLanguage, setLanguage as setSiteLanguage } from '../../../i18n/siteLanguage';
 import styles from './Settings.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
     return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
@@ -20,6 +35,7 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
+// Theme choices, sections, and the notification switches
 const THEMES = [
   { value: 'light', name: 'Light', icon: <FaSun /> },
   { value: 'dark', name: 'Dark', icon: <FaMoon /> },
@@ -41,7 +57,9 @@ const NOTIFICATION_ROWS = [
   { key: 'notify_account', title: 'Account', description: 'Membership, password changes and other account messages.' },
 ];
 
+// Remembers "match the device" on this device
 const THEME_KEY = 'virsaa:theme-choice';
+// 1536 → "1.5 KB"
 const formatBytes = (n) => {
   if (!n) return '0 MB';
   const mb = n / (1024 * 1024);
@@ -67,8 +85,10 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
   const { isLoggedIn, accessToken, logout } = useAuth();
   const navigate = useNavigate();
   const toastTheme = isDarkMode ? 'dark' : 'light';
+  // Show a success / error message
   const say = (type, text) => toast[type](text, { position: 'top-center', autoClose: 3000, theme: toastTheme });
 
+  // Open section, theme choice, saved settings and their error
   const [activeTab, setActiveTab] = useState('general');
   const [selectedTheme, setSelectedTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || (isDarkMode ? 'dark' : 'light'); } catch { return isDarkMode ? 'dark' : 'light'; }
@@ -77,32 +97,37 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
   const [prefsError, setPrefsError] = useState(null);
 
   // Security
+  // Password form
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [pwErrors, setPwErrors] = useState({});
   const [pwSaving, setPwSaving] = useState(false);
 
   // Storage
+  // Storage estimate
   const [storage, setStorage] = useState(null);
 
   // Privacy
+  // Clear-history confirmation and the delete-account form
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Load saved settings
   const loadPrefs = useCallback(async () => {
     if (!isLoggedIn || !accessToken) return;
     try {
       setPrefs(await accountApi.settings(apiString, accessToken));
       setPrefsError(null);
-    } catch {
-      setPrefsError('Your settings couldn’t be loaded right now.');
+    } catch (err) {
+      setPrefsError(err.response?.status === 401 ? 'Your session has ended. Log in again.' : describeApiError(err, 'Your settings couldn’t be loaded right now.'));
     }
   }, [apiString, accessToken, isLoggedIn]);
 
   useEffect(() => { loadPrefs(); }, [loadPrefs]);
 
+  // How much this site stores on the device (browser estimate)
   const measureStorage = useCallback(async () => {
     try {
       if (navigator.storage?.estimate) {
@@ -150,7 +175,9 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
     e.preventDefault();
     const errors = {};
     if (!pw.current) errors.current = 'Enter your current password.';
-    if (pw.next.length < 8) errors.next = 'Use at least 8 characters.';
+    // Same rules as sign-up: 8+ characters with upper case, lower case and a number
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(pw.next)) errors.next = 'Use 8+ characters with upper case, lower case and a number.';
+    else if (pw.next === pw.current) errors.next = 'Choose a password different from your current one.';
     if (pw.next !== pw.confirm) errors.confirm = 'The passwords don’t match.';
     setPwErrors(errors);
     if (Object.keys(errors).length) return;
@@ -164,8 +191,9 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
       const d = err.response?.data || {};
       const first = (v) => (Array.isArray(v) ? v[0] : v);
       setPwErrors({
-        current: first(d.current_password),
-        next: first(d.new_password) || (!d.current_password && !d.new_password ? 'The password couldn’t be changed. Try again.' : undefined),
+        current: first(d.current_password) || (err.response?.status === 401 ? 'Your session has ended. Log in again.' : undefined),
+        next: first(d.new_password) || (!d.current_password && !d.new_password && err.response?.status !== 401
+          ? describeApiError(err, 'The password couldn’t be changed. Try again.') : undefined),
       });
     } finally {
       setPwSaving(false);
@@ -193,8 +221,8 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
     try {
       await accountApi.clearHistory(apiString, accessToken);
       say('success', 'History cleared');
-    } catch {
-      say('error', 'History couldn’t be cleared. Try again.');
+    } catch (err) {
+      say('error', describeApiError(err, 'History couldn’t be cleared. Try again.'));
     }
   };
 
@@ -210,7 +238,8 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
       navigate('/');
     } catch (err) {
       const d = err.response?.data || {};
-      setDeleteError((Array.isArray(d.password) ? d.password[0] : d.password) || 'The account couldn’t be deleted. Try again.');
+      setDeleteError((Array.isArray(d.password) ? d.password[0] : d.password)
+        || (err.response?.status === 401 ? 'Your session has ended. Log in again first.' : describeApiError(err, 'The account couldn’t be deleted. Try again.')));
       setDeleting(false);
     }
   };
@@ -218,6 +247,7 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
   const tab = TABS.find((t) => t.id === activeTab);
   const currentLanguage = getLanguage();
 
+  // Shown instead of server settings when signed out, or while they load
   const needLogin = (
     <p className={styles.emptyNote}><Link to="/login">Log in</Link> to change this setting.</p>
   );
@@ -343,7 +373,8 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
                       type="password"
                       autoComplete={f.auto}
                       value={pw[f.key]}
-                      onChange={(e) => setPw((p) => ({ ...p, [f.key]: e.target.value }))}
+                      maxLength={128}
+                      onChange={(e) => { setPw((p) => ({ ...p, [f.key]: e.target.value })); if (pwErrors[f.key]) setPwErrors((er) => ({ ...er, [f.key]: undefined })); }}
                       className={`${styles.input} ${pwErrors[f.key] ? styles.inputError : ''}`}
                       aria-invalid={Boolean(pwErrors[f.key])}
                       aria-describedby={pwErrors[f.key] ? `pw-${f.key}-err` : undefined}
@@ -437,7 +468,8 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
                         type="password"
                         autoComplete="current-password"
                         value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
+                        maxLength={128}
+                        onChange={(e) => { setDeletePassword(e.target.value); if (deleteError) setDeleteError(''); }}
                         className={`${styles.input} ${deleteError ? styles.inputError : ''}`}
                         aria-invalid={Boolean(deleteError)}
                         aria-describedby={deleteError ? 'delete-err' : undefined}

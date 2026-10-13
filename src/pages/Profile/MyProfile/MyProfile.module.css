@@ -1,3 +1,11 @@
+/*
+ * pages/Profile/MyProfile/MyProfile.module.css
+ * -----------------------------------------------------------------------------
+ * My Profile: identity card, editable panels, learning journey stats, coins,
+ * badges and achievements, loading placeholders.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

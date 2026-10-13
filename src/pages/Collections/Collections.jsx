@@ -1,3 +1,14 @@
+/**
+ * pages/Collections/Collections.jsx
+ * -----------------------------------------------------------------------------
+ * The library (/collections, /collections/ebooks, /audiobooks, /authors).
+ *   - tabs switch between Ebooks, Audiobooks and Authors (the URL decides which)
+ *   - search by title/author, rating and genre filters, 12 cards per page
+ *   - featured rows underneath: trending ebooks, featured authors, latest audiobooks
+ * Data: the three public /collections/ lists, loaded together; if all three
+ * fail, a message with "Try again" is shown.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaSearch, FaTimes, FaBook, FaRegFileAudio, FaFeatherAlt, FaStar, FaClock } from 'react-icons/fa';
@@ -5,13 +16,15 @@ import axios from 'axios';
 import PageHero from '../../components/PageHero/PageHero';
 import styles from './Collections.module.css';
 
+// Cover shown when an item has no picture or it fails to load
 const DEFAULT_IMAGE_PATH = '/images/Collections/book-image.jpg';
 
 // Public/static images
+// Converts image paths for the production build (same helper used across pages)
 const getProductionImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
-      return imagePath.startsWith('/')
+      return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
         ? imagePath
         : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
     }
@@ -26,12 +39,14 @@ const fileUrl = (path) => {
   return DEFAULT_IMAGE_PATH;
 };
 
+// onError handler: switch a broken cover to the default one (once)
 const handleImgError = (e) => {
   if (e.currentTarget.dataset.fallback) return;
   e.currentTarget.dataset.fallback = '1';
   e.currentTarget.src = DEFAULT_IMAGE_PATH;
 };
 
+// The three tabs (ids match the URL: /collections/<id>)
 const SECTIONS = [
   { id: 'ebooks', label: 'Ebooks', icon: <FaBook /> },
   { id: 'audiobooks', label: 'Audiobooks', icon: <FaRegFileAudio /> },
@@ -53,12 +68,14 @@ const GENRE_FILTERS = [
 
 const Collections = ({ isDarkMode, apiString }) => {
   const location = useLocation();
+  // Which tab is open, from the URL
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const currentSection = SECTIONS.some((s) => s.id === pathSegments[1]) ? pathSegments[1] : 'ebooks';
   const sectionLabel = SECTIONS.find((s) => s.id === currentSection).label;
 
   const headerImage = getProductionImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
 
+  // Loaded lists, loading/error state, active filters, search text and page
   const [ebooks, setEbooks] = useState([]);
   const [authors, setAuthors] = useState([]);
   const [audiobooks, setAudiobooks] = useState([]);
@@ -67,21 +84,27 @@ const Collections = ({ isDarkMode, apiString }) => {
   const [filters, setFilters] = useState([]);
   const [query, setQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again" to load again
   const cardsPerPage = 12;
 
   // Collections are public, so no token is sent (an expired one would cause a 401)
   useEffect(() => {
     let cancelled = false;
-    const base = (apiString || '').replace(/\/$/, '');
+    const base = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
     const load = async () => {
       setIsLoading(true);
       const [e, a, au] = await Promise.allSettled([
-        axios.get(`${base}/collections/ebooks/`),
-        axios.get(`${base}/collections/authors/`),
-        axios.get(`${base}/collections/audiobooks/`),
+        axios.get(`${base}/collections/ebooks/`, { timeout: 20000 }),
+        axios.get(`${base}/collections/authors/`, { timeout: 20000 }),
+        axios.get(`${base}/collections/audiobooks/`, { timeout: 20000 }),
       ]);
       if (cancelled) return;
-      const data = (r) => (r.status === 'fulfilled' && Array.isArray(r.value.data) ? r.value.data : []);
+      // A list from a successful request (plain or paginated); [] for a failed one
+      const data = (r) => {
+        if (r.status !== 'fulfilled') return [];
+        const body = r.value.data;
+        return Array.isArray(body) ? body : (Array.isArray(body?.results) ? body.results : []);
+      };
       setEbooks(data(e));
       setAuthors(data(a));
       setAudiobooks(data(au));
@@ -90,13 +113,15 @@ const Collections = ({ isDarkMode, apiString }) => {
     };
     load();
     return () => { cancelled = true; };
-  }, [apiString]);
+  }, [apiString, reloadKey]);
 
   // New section, search or filter: back to page 1
   useEffect(() => setCurrentPage(1), [currentSection, query, filters]);
 
+  // Author id → name, so ebooks can be searched and shown by author
   const authorNames = useMemo(() => Object.fromEntries(authors.map((a) => [a.id, a.name])), [authors]);
 
+  // Turn a filter chip on/off; Clear resets search and filters
   const toggleFilter = (id) => {
     setFilters((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
   };
@@ -106,6 +131,7 @@ const Collections = ({ isDarkMode, apiString }) => {
     setQuery('');
   };
 
+  // The current tab's items after filters and search
   const displayData = useMemo(() => {
     const source = currentSection === 'authors' ? authors : currentSection === 'audiobooks' ? audiobooks : ebooks;
     const q = query.trim().toLowerCase();
@@ -130,6 +156,7 @@ const Collections = ({ isDarkMode, apiString }) => {
     });
   }, [currentSection, authors, audiobooks, ebooks, filters, query, authorNames]);
 
+  // This page's cards and the featured rows
   const totalPages = Math.ceil(displayData.length / cardsPerPage);
   const currentCards = displayData.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
   const trendingEbooks = ebooks.filter((e) => e.rating >= 4.7).slice(0, 8);
@@ -137,12 +164,14 @@ const Collections = ({ isDarkMode, apiString }) => {
   const latestAudiobooks = audiobooks.slice(0, 8);
   const isFiltering = filters.length > 0 || query.trim();
 
+  // Go to a page of results
   const paginate = (page) => {
     setCurrentPage(page);
     document.getElementById('collection-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   // ---------- Card renderers ----------
+  // Card layouts for each kind of item
   const BookCard = ({ item }) => (
     <Link to={`/collections/ebooks/ebook/${item.id}`} className={styles.bookCard}>
       <span className={styles.bookCover}>
@@ -214,6 +243,7 @@ const Collections = ({ isDarkMode, apiString }) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={currentSection === 'authors' ? 'Search authors by name' : 'Search by title or author'}
+              maxLength={100}
               aria-label={`Search ${sectionLabel.toLowerCase()}`}
             />
           </form>
@@ -262,7 +292,10 @@ const Collections = ({ isDarkMode, apiString }) => {
       {/* ---------- Grid ---------- */}
       <section className={styles.gridSection} id="collection-grid" aria-label={sectionLabel}>
         {loadError && (
-          <p className={styles.emptyNote}>The collection couldn’t be loaded. Check your connection and refresh the page.</p>
+          <div className={styles.emptyNote} role="alert">
+            <p>The collection couldn’t be loaded. Check your connection and try again.</p>
+            <button type="button" className={styles.textButton} onClick={() => setReloadKey((k) => k + 1)}>Try again</button>
+          </div>
         )}
         {!loadError && !isLoading && displayData.length === 0 && (
           <div className={styles.emptyNote}>

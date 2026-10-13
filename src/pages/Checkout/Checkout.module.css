@@ -1,3 +1,12 @@
+/*
+ * pages/Checkout/Checkout.module.css
+ * -----------------------------------------------------------------------------
+ * Checkout and Payment pages (Payment reuses this file): steps, order summary,
+ * billing form, payment methods, card form, test-mode banner and the
+ * confirmation screen.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Checkout and Payment (shared). Spatial glass theme, light and dark.
    The order summary is drawn as a ticket with punched edges.

@@ -1,16 +1,30 @@
+/**
+ * pages/Profile/History/History.jsx
+ * -----------------------------------------------------------------------------
+ * History (/history): what the user has read, listened to, watched and
+ * played, grouped by day or by type, with progress where known.
+ *   - search, select several and delete, remove one, or clear everything
+ *   - refreshes every minute and when the tab comes back into view
+ *   - shows a note when saving history is turned off in Settings
+ * Data: /api/auth/history/ (api/accountApi.js).
+ * -----------------------------------------------------------------------------
+ */
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FaTrash, FaSearch, FaTimes, FaBook, FaHeadphones, FaGraduationCap,
   FaQuestionCircle, FaHandsHelping, FaHistory, FaCheck, FaPlayCircle,
 } from 'react-icons/fa';
-import { toast } from 'react-toastify';
+import { toast } from '../../../utils/notify';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
 import { useAuth } from '../../../context/AuthContext';
 import accountApi from '../../../api/accountApi';
+import { describeApiError } from '../../../utils/apiError';
+import { isInternalPath } from '../../../utils/safeUrl';
 import styles from './History.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
     return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
@@ -18,6 +32,7 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
+// Label and icon per content type
 const TYPES = {
   ebook: { label: 'Ebook', icon: <FaBook />, verb: 'read' },
   audiobook: { label: 'Audiobook', icon: <FaHeadphones />, verb: 'listened' },
@@ -28,8 +43,10 @@ const TYPES = {
 };
 const typeOf = (t) => TYPES[t] || TYPES.lesson;
 
+// How often the list refreshes while open
 const POLL_MS = 60000;
 
+// Day grouping helpers ("Today", "Yesterday", weekday + date)
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const daysAgo = (iso) => Math.round((startOfDay(new Date()) - startOfDay(new Date(iso))) / 86400000);
 const timeOf = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -46,6 +63,7 @@ const History = ({ isDarkMode, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
   const { isLoggedIn, accessToken } = useAuth();
 
+  // Entries, loading/error, the history setting, selection, search, grouping, clear confirmation
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -55,16 +73,18 @@ const History = ({ isDarkMode, apiString }) => {
   const [viewMode, setViewMode] = useState('byDate'); // 'byDate' | 'byType'
   const [confirmClear, setConfirmClear] = useState(false);
 
+  // Load the history. `quiet` (background refresh) keeps the list if it fails.
   const load = useCallback(async (quiet = false) => {
     if (!isLoggedIn || !accessToken) { setLoading(false); return; }
     if (!quiet) setLoading(true);
     try {
       const data = await accountApi.history(apiString, accessToken);
-      setItems((data.results || []).map((r) => ({ ...r, type: r.content_type, day: daysAgo(r.accessed_at), time: timeOf(r.accessed_at) })));
-      setHistoryOn(data.save_history !== false);
+      const rows = Array.isArray(data?.results) ? data.results : [];
+      setItems(rows.map((r) => ({ ...r, type: r.content_type, day: daysAgo(r.accessed_at), time: timeOf(r.accessed_at) })));
+      setHistoryOn(data?.save_history !== false);
       setLoadError(null);
     } catch (err) {
-      if (!quiet) setLoadError(err.response?.status === 401 ? 'Your session has ended. Log in again.' : 'Your history couldn’t be loaded right now.');
+      if (!quiet) setLoadError(err.response?.status === 401 ? 'Your session has ended. Log in again.' : describeApiError(err, 'Your history couldn’t be loaded right now.'));
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -79,11 +99,13 @@ const History = ({ isDarkMode, apiString }) => {
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [load]);
 
+  // Put the list back and say so when a delete fails
   const failed = (before) => {
     setItems(before);
     toast.error('That couldn’t be removed. Try again.', { position: 'top-right', autoClose: 2500 });
   };
 
+  // Entries matching the search, then grouped by day or type
   const visible = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return q
@@ -109,6 +131,7 @@ const History = ({ isDarkMode, apiString }) => {
   const selectedCount = selected.size;
   const allVisibleSelected = visible.length > 0 && visible.every((i) => selected.has(i.id));
 
+  // Selection: one entry, or every visible entry
   const toggleItem = (id) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -121,6 +144,7 @@ const History = ({ isDarkMode, apiString }) => {
     setSelected(allVisibleSelected ? new Set() : new Set(visible.map((i) => i.id)));
   };
 
+  // Delete the selected entries (removed at once, restored if the server refuses)
   const deleteSelected = async () => {
     const before = items;
     const ids = [...selected];
@@ -129,6 +153,7 @@ const History = ({ isDarkMode, apiString }) => {
     try { await accountApi.deleteHistoryMany(apiString, accessToken, ids); } catch { failed(before); }
   };
 
+  // Delete one entry
   const removeItem = async (id) => {
     const before = items;
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -140,6 +165,7 @@ const History = ({ isDarkMode, apiString }) => {
     try { await accountApi.deleteHistory(apiString, accessToken, id); } catch { failed(before); }
   };
 
+  // Clear the whole history (after confirming)
   const clearAll = async () => {
     const before = items;
     setItems([]);
@@ -171,6 +197,7 @@ const History = ({ isDarkMode, apiString }) => {
                 id="history-search"
                 type="search"
                 placeholder="Search history"
+                maxLength={100}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={styles.searchInput}
@@ -267,7 +294,10 @@ const History = ({ isDarkMode, apiString }) => {
                         </label>
                         <span className={`${styles.typeIcon} ${styles[item.type] || ''}`} aria-hidden="true">{type.icon}</span>
                         <div className={styles.itemBody}>
-                          <Link to={item.path} className={styles.itemTitle}>{item.title}</Link>
+                          {/* The path comes from the server; only paths inside Virsaa become links */}
+                          {isInternalPath(item.path)
+                            ? <Link to={item.path} className={styles.itemTitle}>{item.title}</Link>
+                            : <span className={styles.itemTitle}>{item.title}</span>}
                           <span className={styles.itemMeta}>
                             {type.label}
                             <span aria-hidden="true" className={styles.dot} />

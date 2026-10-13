@@ -1,3 +1,11 @@
+/*
+ * pages/Profile/MyFavorites/MyFavorites.module.css
+ * -----------------------------------------------------------------------------
+ * My Favorites: toolbar (search, tabs, grid/list), scrolling rows, cards and
+ * rows with remove buttons, undo bar and downloads.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

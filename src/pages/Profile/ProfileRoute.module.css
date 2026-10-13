@@ -1,4 +1,12 @@
+/*
+ * pages/Profile/ProfileRoute.module.css
+ * -----------------------------------------------------------------------------
+ * Loading / error screen shown by ProfileRoute before the profile appears.
+ * -----------------------------------------------------------------------------
+ */
+
 /* Loading / error state while /my-profile works out which page to show */
+/* Centred message box (error state) */
 .state {
   min-height: 60vh;
   display: flex;
@@ -33,6 +41,7 @@
   animation: spin 0.8s linear infinite;
 }
 
+/* Try again / Go home buttons */
 .actions {
   display: flex;
   flex-wrap: wrap;

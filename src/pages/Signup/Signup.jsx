@@ -1,6 +1,15 @@
+/**
+ * pages/Signup/Signup.jsx
+ * -----------------------------------------------------------------------------
+ * The sign-up page (/signup): a glass form (name, username, email, password
+ * with a strength meter and rules, confirmation, reCAPTCHA), what happens next,
+ * features and FAQs. After signing up the user verifies their email, then
+ * signs in. Server field errors are shown next to the matching input.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/notify';
 import ReCAPTCHA from 'react-google-recaptcha';
 import styles from './Signup.module.css';
 import {
@@ -9,11 +18,12 @@ import {
 } from 'react-icons/fa';
 import { FaHandsPraying } from 'react-icons/fa6';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {
@@ -25,6 +35,7 @@ const useProductionImagePath = () => {
 };
 
 // Backend field names -> form field ids
+// Server field names → form field ids, for showing server errors in the right place
 const FIELD_MAP = {
   first_name: 'firstName',
   last_name: 'lastName',
@@ -35,6 +46,7 @@ const FIELD_MAP = {
   captcha: 'captcha',
 };
 
+// Content for the side panel and the sections below the form
 const PERKS = [
   { icon: <FaBook />, title: 'A Punjabi library', text: 'Ebooks on Sikh history, poetry and culture.' },
   { icon: <FaRegFileAudio />, title: 'Audiobooks and kirtan', text: 'Listen at home, on the road, anywhere.' },
@@ -91,13 +103,16 @@ const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 const Signup = ({ isDarkMode, apiString }) => {
   const getImagePath = useProductionImagePath();
   const navigate = useNavigate();
+  // The reCAPTCHA widget (its token is sent with the form)
   const recaptchaRef = useRef(null);
 
+  // Pictures
   const formSideImage = '/images/Login/right_section.png';
   const headerImageLight = '/images/Login/background.jpeg';
   const headerImageDark = '/images/Login/background-dark.jpeg';
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
+  // Form values, field errors, sending state, show/hide password
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -110,6 +125,7 @@ const Signup = ({ isDarkMode, apiString }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Live password strength and the rule checklist
   const score = passwordScore(formData.password);
 
   const passwordRules = [
@@ -118,6 +134,7 @@ const Signup = ({ isDarkMode, apiString }) => {
     { ok: /\d/.test(formData.password), label: 'At least one number' },
   ];
 
+  // Keep the typed value and clear that field's error
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
@@ -126,6 +143,7 @@ const Signup = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // Every rule the server also checks, so most mistakes are caught before sending
   const validateForm = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -150,6 +168,7 @@ const Signup = ({ isDarkMode, apiString }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Create the account; the reCAPTCHA is reset afterwards either way
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -163,9 +182,13 @@ const Signup = ({ isDarkMode, apiString }) => {
         throw new Error('Tick the reCAPTCHA box to continue');
       }
 
-      const response = await fetch(`${apiString}/api/auth/signup/`, {
+      // Network failures (offline, timeout) get a clear message instead of "Failed to fetch"
+      let response;
+      try {
+        response = await fetch(`${apiString}/api/auth/signup/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(20000) : undefined,
         body: JSON.stringify({
           first_name: formData.firstName.trim(),
           last_name: formData.lastName.trim(),
@@ -175,9 +198,15 @@ const Signup = ({ isDarkMode, apiString }) => {
           confirm_password: formData.confirmPassword,
           captcha: captchaToken,
         }),
-      });
+        });
+      } catch {
+        throw new Error('Virsaa couldn’t be reached. Check your internet connection and try again.');
+      }
 
       const data = await response.json().catch(() => ({}));
+
+      if (response.status === 429) throw new Error('Too many attempts. Wait a minute, then try again.');
+      if (response.status >= 500) throw new Error('Something went wrong on our side. Try again in a moment.');
 
       if (!response.ok) {
         // Show field errors from the API next to the matching input
@@ -212,6 +241,7 @@ const Signup = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // One labelled input with its error message
   const field = (id, label, props = {}) => (
     <div className={styles.inputGroup}>
       <label htmlFor={id} className={styles.label}>{label}</label>
@@ -223,7 +253,7 @@ const Signup = ({ isDarkMode, apiString }) => {
         aria-invalid={!!errors[id]}
         {...props}
       />
-      {errors[id] && <div className={styles.errorMessage}>{errors[id]}</div>}
+      {errors[id] && <div className={styles.errorMessage} role="alert">{errors[id]}</div>}
     </div>
   );
 
@@ -246,11 +276,11 @@ const Signup = ({ isDarkMode, apiString }) => {
 
             <form className={styles.form} onSubmit={handleSubmit} noValidate>
               <div className={styles.row}>
-                {field('firstName', 'First name', { type: 'text', autoComplete: 'given-name', placeholder: 'Gurpreet' })}
-                {field('lastName', 'Last name', { type: 'text', autoComplete: 'family-name', placeholder: 'Singh' })}
+                {field('firstName', 'First name', { type: 'text', autoComplete: 'given-name', placeholder: 'Gurpreet', maxLength: 50 })}
+                {field('lastName', 'Last name', { type: 'text', autoComplete: 'family-name', placeholder: 'Singh', maxLength: 50 })}
               </div>
-              {field('username', 'Username', { type: 'text', autoComplete: 'username', placeholder: 'gurpreet_singh' })}
-              {field('email', 'Email', { type: 'email', autoComplete: 'email', placeholder: 'you@example.com' })}
+              {field('username', 'Username', { type: 'text', autoComplete: 'username', placeholder: 'gurpreet_singh', maxLength: 30 })}
+              {field('email', 'Email', { type: 'email', autoComplete: 'email', placeholder: 'you@example.com', maxLength: 254 })}
 
               <div className={styles.inputGroup}>
                 <label htmlFor="password" className={styles.label}>Password</label>
@@ -263,6 +293,7 @@ const Signup = ({ isDarkMode, apiString }) => {
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={handleChange}
+                    maxLength={128}
                     aria-invalid={!!errors.password}
                     aria-describedby="password-rules"
                   />
@@ -288,13 +319,14 @@ const Signup = ({ isDarkMode, apiString }) => {
                     </li>
                   ))}
                 </ul>
-                {errors.password && <div className={styles.errorMessage}>{errors.password}</div>}
+                {errors.password && <div className={styles.errorMessage} role="alert">{errors.password}</div>}
               </div>
 
               {field('confirmPassword', 'Confirm password', {
                 type: showPassword ? 'text' : 'password',
                 autoComplete: 'new-password',
                 placeholder: 'Type it again',
+                maxLength: 128,
               })}
 
               <div className={styles.captcha}>
@@ -303,8 +335,11 @@ const Signup = ({ isDarkMode, apiString }) => {
                   size="normal"
                   theme={isDarkMode ? 'dark' : 'light'}
                   sitekey={process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY}
+                  onChange={() => errors.captcha && setErrors((prev) => ({ ...prev, captcha: '' }))}
+                  onExpired={() => setErrors((prev) => ({ ...prev, captcha: 'The reCAPTCHA expired. Tick the box again.' }))}
+                  onErrored={() => setErrors((prev) => ({ ...prev, captcha: 'The reCAPTCHA couldn’t load. Check your connection and reload the page.' }))}
                 />
-                {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
+                {errors.captcha && <div className={styles.errorMessage} role="alert">{errors.captcha}</div>}
               </div>
 
               <button type="submit" className={styles.primaryButton} disabled={isSubmitting}>
@@ -314,10 +349,11 @@ const Signup = ({ isDarkMode, apiString }) => {
               <div className={styles.divider}><span>or</span></div>
 
               <div className={styles.socialLogin}>
-                <button type="button" className={styles.socialButton}>
+                {/* Social sign-up isn't connected yet; say so instead of doing nothing */}
+                <button type="button" className={styles.socialButton} onClick={() => toast.info('Google sign-up is coming soon. Use the form for now.')}>
                   <FaGoogle /> Google
                 </button>
-                <button type="button" className={styles.socialButton}>
+                <button type="button" className={styles.socialButton} onClick={() => toast.info('Facebook sign-up is coming soon. Use the form for now.')}>
                   <FaFacebook /> Facebook
                 </button>
               </div>

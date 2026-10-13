@@ -1,3 +1,11 @@
+/*
+ * pages/News/News.module.css
+ * -----------------------------------------------------------------------------
+ * News & Events: featured stories, the upcoming events slider with date tiles,
+ * and the latest news grid.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

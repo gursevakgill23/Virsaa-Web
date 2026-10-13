@@ -1,7 +1,16 @@
+/**
+ * pages/Learning/Games/GameProfileCard.jsx
+ * -----------------------------------------------------------------------------
+ * The "Game Profile" card shared by Shabd Khoj and Memory Match: player
+ * picture and name (editable), level, coins, XP bar, game stats, Buy coins
+ * and Log out. All data and actions come in as props from the game.
+ * -----------------------------------------------------------------------------
+ */
 import React, { forwardRef } from 'react';
 import { FaCoins, FaEdit, FaSignOutAlt, FaShoppingCart, FaCamera, FaTimes } from 'react-icons/fa';
 import styles from './GameProfileCard.module.css';
 
+// Text in English and Punjabi
 const T = {
   english: {
     title: 'Game Profile', close: 'Close', level: 'Level', xp: 'XP', toNext: 'to next level',
@@ -46,6 +55,7 @@ const GameProfileCard = forwardRef(({
   onClose,
   idPrefix = 'game',
 }, ref) => {
+  // Text for the chosen language, XP progress and the stats rows
   const t = T[language] || T.english;
   const progress = Math.min(100, Math.round((xpIntoLevel / (xpPerLevel || 500)) * 100));
   const rows = stats ? [
@@ -65,6 +75,7 @@ const GameProfileCard = forwardRef(({
         </button>
       </div>
 
+      {/* Editing: change picture and name */}
       {editing ? (
         <div className={styles.identity}>
           <div className={styles.avatarWrap}>
@@ -73,7 +84,7 @@ const GameProfileCard = forwardRef(({
               <FaCamera aria-hidden="true" />
               <span className={styles.srOnly}>{t.changePhoto}</span>
             </label>
-            <input id={`${idPrefix}-avatar-upload`} type="file" accept="image/*" onChange={onAvatarChange} className={styles.fileInput} />
+            <input id={`${idPrefix}-avatar-upload`} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onAvatarChange} className={styles.fileInput} />
           </div>
           <label htmlFor={`${idPrefix}-player-name`} className={styles.fieldLabel}>{t.name}</label>
           <input
@@ -112,6 +123,7 @@ const GameProfileCard = forwardRef(({
         </div>
       )}
 
+      {/* Game stats */}
       <div className={styles.section}>
         <h4 className={styles.sectionTitle}>{t.stats}</h4>
         {stats ? (
@@ -128,6 +140,7 @@ const GameProfileCard = forwardRef(({
         )}
       </div>
 
+      {/* Buy coins / Log out */}
       <div className={styles.actions}>
         <button type="button" className={styles.primaryButton} onClick={onBuyCoins}>
           <FaShoppingCart aria-hidden="true" /> {t.buy}

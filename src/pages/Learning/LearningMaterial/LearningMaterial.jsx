@@ -1,3 +1,13 @@
+/**
+ * pages/Learning/LearningMaterial/LearningMaterial.jsx
+ * -----------------------------------------------------------------------------
+ * One lesson (/learning-material/:id): video (YouTube), lesson text,
+ * "Mark as complete" (earns XP, coins and badges) and a discussion where
+ * signed-in users can post and reply.
+ * Locked lessons explain whether they need sign-in or Premium. Opening a
+ * lesson records it in History and marks it "in progress".
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { FaLock, FaPlay, FaCrown, FaSignInAlt, FaCheckCircle, FaClock, FaStar } from 'react-icons/fa';
@@ -8,7 +18,10 @@ import axios from 'axios';
 import learningApi from '../../../api/learningApi';
 import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
+import Loader from '../../../components/VirsaaLoader/Loader';
+import { describeApiError } from '../../../utils/apiError';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
@@ -36,6 +49,7 @@ const splitDescription = (text = '') => {
   return { intro: parts[0] || '', body: parts.slice(1) };
 };
 
+// Date and time of a post in the visitor's locale
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : '');
 
 const LearningMaterial = ({ isDarkMode, apiString }) => {
@@ -49,6 +63,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
   const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
   const recordHistory = useHistoryRecorder(apiString);
 
+  // Lesson, discussion, form text, loading/error state, progress and reward
   const [item, setItem] = useState(null);
   const [discussionPosts, setDiscussionPosts] = useState([]);
   const [newPostContent, setNewPostContent] = useState('');
@@ -60,29 +75,37 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
   const [progress, setProgress] = useState(null);     // { status, percent }
   const [reward, setReward] = useState(null);         // shown after "Mark as complete"
   const [savingProgress, setSavingProgress] = useState(false);
+  const [posting, setPosting] = useState(false); // a post or reply is being sent
+  const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again"
+  const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
 
   useEffect(() => {
     const headers = isLoggedIn && accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+    let cancelled = false;
 
     const fetchItem = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(`${apiUrl}/api/learning/learning-material/${id}/`, { headers });
+        const response = await axios.get(`${apiUrl}/api/learning/learning-material/${safeId}/`, { headers, timeout: 20000 });
+        if (cancelled) return;
         setItem(response.data);
         setProgress(response.data.my_progress || null);
         setError(null);
       } catch (err) {
+        if (cancelled) return;
         console.error('Error fetching learning item:', err.response?.status || err.message);
-        setError('This lesson couldn’t be loaded.');
+        setError(err.response?.status === 404 ? 'Lesson not found' : 'This lesson couldn’t be loaded.');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     const fetchDiscussions = async () => {
       try {
-        const response = await axios.get(`${apiUrl}/api/learning/learning-material/${id}/discussions/`, { headers });
-        setDiscussionPosts((response.data || []).map((p) => ({ ...p, replies: p.replies || [] })));
+        const response = await axios.get(`${apiUrl}/api/learning/learning-material/${safeId}/discussions/`, { headers, timeout: 20000 });
+        if (cancelled) return;
+        const list = Array.isArray(response.data) ? response.data : response.data?.results || [];
+        setDiscussionPosts(list.map((p) => ({ ...p, replies: Array.isArray(p.replies) ? p.replies : [] })));
       } catch (err) {
         console.error('Error fetching discussions:', err.response?.status || err.message);
       }
@@ -90,7 +113,8 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
 
     fetchItem();
     fetchDiscussions();
-  }, [id, isLoggedIn, accessToken, apiUrl]);
+    return () => { cancelled = true; };
+  }, [id, safeId, isLoggedIn, accessToken, apiUrl, reloadKey]);
 
   // Opening a lesson adds it to History
   useEffect(() => {
@@ -105,6 +129,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
     });
   }, [item, id, recordHistory]);
 
+  // Can this user open the lesson?
   const isAccessible = () => {
     if (!item) return false;
     if (!item.is_restricted) return true;
@@ -123,6 +148,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item, isLoggedIn, accessToken]);
 
+  // Mark as complete: save progress and show the reward
   const markComplete = async () => {
     if (!isLoggedIn) {
       setFormError('Sign in to track your progress.');
@@ -135,12 +161,13 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       setReward({ xp: data.xp_earned, coins: data.coins_earned, badges: data.new_badges || [] });
     } catch (err) {
       console.error('Error completing lesson:', err.response?.status || err.message);
-      setFormError('Your progress couldn’t be saved. Try again.');
+      setFormError(describeApiError(err, 'Your progress couldn’t be saved. Try again.'));
     } finally {
       setSavingProgress(false);
     }
   };
 
+  // Start a discussion (signed-in, not empty, one send at a time)
   const handlePostSubmit = async (e) => {
     e.preventDefault();
     setFormError(null);
@@ -152,20 +179,27 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       setFormError('Write something before posting.');
       return;
     }
+    if (posting) return; // already sending
+    setPosting(true);
     try {
       const response = await axios.post(
-        `${apiUrl}/api/learning/learning-material/${id}/add_discussion/`,
-        { content: newPostContent, learning_item: id },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        `${apiUrl}/api/learning/learning-material/${safeId}/add_discussion/`,
+        { content: newPostContent.trim(), learning_item: id },
+        { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 20000 }
       );
       setDiscussionPosts([...discussionPosts, { ...response.data, replies: response.data.replies || [] }]);
       setNewPostContent('');
     } catch (err) {
       console.error('Post error:', err.response?.status || err.message);
-      setFormError('Your post couldn’t be published. Try again.');
+      setFormError(err.response?.status === 401
+        ? 'Your session has ended. Log in again to post.'
+        : describeApiError(err, 'Your post couldn’t be published. Try again.'));
+    } finally {
+      setPosting(false);
     }
   };
 
+  // Reply to a discussion post
   const handleReplySubmit = async (postId, e) => {
     e.preventDefault();
     setFormError(null);
@@ -173,12 +207,17 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       setFormError('Sign in to reply.');
       return;
     }
-    if (!replyContent[postId]?.trim()) return;
+    if (!replyContent[postId]?.trim()) {
+      setFormError('Write a reply before sending.');
+      return;
+    }
+    if (posting) return; // already sending
+    setPosting(true);
     try {
       const response = await axios.post(
-        `${apiUrl}/api/learning/learning-material/${id}/add_reply/`,
-        { content: replyContent[postId], post_id: postId },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        `${apiUrl}/api/learning/learning-material/${safeId}/add_reply/`,
+        { content: replyContent[postId].trim(), post_id: postId },
+        { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 20000 }
       );
       setDiscussionPosts(discussionPosts.map((post) =>
         post.id === postId ? { ...post, replies: [...(post.replies || []), response.data] } : post
@@ -186,16 +225,23 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       setReplyContent({ ...replyContent, [postId]: '' });
     } catch (err) {
       console.error('Reply error:', err.response?.status || err.message);
-      setFormError('Your reply couldn’t be published. Try again.');
+      setFormError(err.response?.status === 401
+        ? 'Your session has ended. Log in again to reply.'
+        : describeApiError(err, 'Your reply couldn’t be published. Try again.'));
+    } finally {
+      setPosting(false);
     }
   };
 
+  // Show all replies / fewer replies
   const toggleShowReplies = (postId) => setShowAllReplies((prev) => ({ ...prev, [postId]: !prev[postId] }));
 
+  // ---------------------------------------------------------------- render
+  // While loading, the Virsaa loader covers the page
   if (isLoading) {
     return (
       <div className={styles.page}>
-        <div className={styles.stateBox}><p>Loading lesson…</p></div>
+        <Loader />
       </div>
     );
   }
@@ -206,12 +252,18 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
         <div className={styles.stateBox}>
           <h2>{error || 'Lesson not found'}</h2>
           <p>Check your connection, or go back to the Learning hub.</p>
-          <Link to="/learning" className={styles.primaryButton}>Back to Learning</Link>
+          <div className={styles.stateActions}>
+            {error && error !== 'Lesson not found' && (
+              <button type="button" className={styles.primaryButton} onClick={() => setReloadKey((k) => k + 1)}>Try again</button>
+            )}
+            <Link to="/learning" className={styles.primaryButton}>Back to Learning</Link>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Pieces of the lesson to show
   const embedUrl = getYouTubeEmbedUrl(item.video_file);
   // Newer lessons keep the lesson text in `content`; older ones put it all in `description`
   const split = splitDescription(item.description);
@@ -325,9 +377,10 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
               onChange={(e) => setNewPostContent(e.target.value)}
               placeholder="Start a new discussion…"
               disabled={!isLoggedIn}
+              maxLength={2000}
             />
             <div className={styles.composerActions}>
-              <button type="submit" className={styles.primaryButton} disabled={!isLoggedIn}>Post</button>
+              <button type="submit" className={styles.primaryButton} disabled={!isLoggedIn || posting}>{posting ? 'Posting…' : 'Post'}</button>
             </div>
           </form>
 
@@ -379,8 +432,9 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
                         placeholder="Write a reply…"
                         aria-label={`Reply to ${post.author}`}
                         disabled={!isLoggedIn}
+                        maxLength={2000}
                       />
-                      <button type="submit" className={styles.smallButton} disabled={!isLoggedIn}>Reply</button>
+                      <button type="submit" className={styles.smallButton} disabled={!isLoggedIn || posting}>Reply</button>
                     </form>
                   </li>
                 );

@@ -1,12 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import MyProfile from './MyProfile/MyProfile';
-import CompleteProfile from './CompleteProfile/CompleteProfile';
-import { isProfileComplete } from './profileStatus';
-import styles from './ProfileRoute.module.css';
-
 /**
+ * pages/Profile/ProfileRoute.jsx
+ * -----------------------------------------------------------------------------
+ * The page behind /my-profile (see App.js).
+ * -----------------------------------------------------------------------------
+ *
  * /my-profile
  * Loads the signed-in user's profile from the server, then shows
  *  - CompleteProfile while any required detail is still empty
@@ -14,6 +11,15 @@ import styles from './ProfileRoute.module.css';
  * It always asks the server, so a profile saved on another device (or data
  * missing from the login response) is judged correctly.
  */
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import MyProfile from './MyProfile/MyProfile';
+import CompleteProfile from './CompleteProfile/CompleteProfile';
+import { isProfileComplete } from './profileStatus';
+import Loader from '../../components/VirsaaLoader/Loader';
+import styles from './ProfileRoute.module.css';
+
 const ProfileRoute = ({ isDarkMode, apiString }) => {
   const { accessToken, logout, updateUserData } = useAuth();
   const navigate = useNavigate();
@@ -25,6 +31,7 @@ const ProfileRoute = ({ isDarkMode, apiString }) => {
   const latest = useRef({ logout, navigate, updateUserData });
   latest.current = { logout, navigate, updateUserData };
 
+  // Load the profile; signed out (or a 401) goes to the login page
   const loadProfile = useCallback(async () => {
     if (!accessToken) {
       latest.current.navigate('/login', { replace: true });
@@ -34,6 +41,8 @@ const ProfileRoute = ({ isDarkMode, apiString }) => {
     try {
       const response = await fetch(`${apiString}/api/auth/profile/`, {
         headers: { Authorization: `Bearer ${accessToken}` },
+        // Give up after 20 s so a stalled connection shows "Try again" instead of loading forever
+        signal: typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(20000) : undefined,
       });
       if (response.status === 401) {
         latest.current.logout?.();
@@ -62,13 +71,9 @@ const ProfileRoute = ({ isDarkMode, apiString }) => {
     if (!isProfileComplete(merged)) loadProfile(); // let the server have the final say
   }, [profile, loadProfile]);
 
+  // While the profile loads, the Virsaa loader covers the page
   if (status === 'loading') {
-    return (
-      <div className={styles.state} role="status">
-        <span className={styles.spinner} aria-hidden="true" />
-        <p>Loading your profile…</p>
-      </div>
-    );
+    return <Loader />;
   }
 
   if (status === 'error') {

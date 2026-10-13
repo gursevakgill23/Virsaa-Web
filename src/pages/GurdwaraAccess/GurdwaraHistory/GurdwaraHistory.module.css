@@ -1,3 +1,11 @@
+/*
+ * pages/GurdwaraAccess/GurdwaraHistory/GurdwaraHistory.module.css
+ * -----------------------------------------------------------------------------
+ * History of one Gurdwara: photo gallery with facts, the timeline and notable
+ * figures.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

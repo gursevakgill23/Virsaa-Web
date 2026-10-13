@@ -1,3 +1,11 @@
+/*
+ * pages/GurdwaraAccess/GurdwaraLocate/GurdwaraLocate.module.css
+ * -----------------------------------------------------------------------------
+ * Directions to one Gurdwara: travel mode buttons, the route map with a
+ * floating summary, and the numbered directions.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

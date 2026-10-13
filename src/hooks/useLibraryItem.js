@@ -1,9 +1,18 @@
+/**
+ * hooks/useLibraryItem.js
+ * -----------------------------------------------------------------------------
+ * React hook behind the Like, Save for later and Download buttons on the
+ * Ebook, Audiobook and Author detail pages. Talks to api/libraryApi.js and
+ * reports the result with toast messages (utils/notify.js).
+ * -----------------------------------------------------------------------------
+ */
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../utils/notify';
 import { useAuth } from '../context/AuthContext';
 import libraryApi, { startDownload } from '../api/libraryApi';
 
+// Words used in messages for each item type
 const LABELS = { ebook: 'book', audiobook: 'audiobook', author: 'author' };
 
 /*
@@ -15,6 +24,7 @@ const LABELS = { ebook: 'book', audiobook: 'audiobook', author: 'author' };
 const useLibraryItem = (apiString, type, id) => {
   const { isLoggedIn, accessToken } = useAuth();
   const navigate = useNavigate();
+  // Current status from the server, and which button is waiting for a reply
   const [state, setState] = useState({ liked: false, saved: false, like_count: 0 });
   const [busy, setBusy] = useState(null); // 'like' | 'save' | null
   const [downloading, setDownloading] = useState(false);
@@ -22,12 +32,14 @@ const useLibraryItem = (apiString, type, id) => {
   useEffect(() => {
     if (!id) return undefined;
     let cancelled = false;
+    // Load whether this item is already liked/saved (and its like count)
     libraryApi.status(apiString, isLoggedIn ? accessToken : null, type, id)
       .then((data) => { if (!cancelled) setState(data); })
       .catch(() => { /* the buttons still work; they start unselected */ });
     return () => { cancelled = true; };
   }, [apiString, accessToken, isLoggedIn, type, id]);
 
+  // Signed-out visitors get a message and go to the login page
   const requireLogin = useCallback((action) => {
     if (isLoggedIn) return true;
     toast.info(`Log in to ${action}.`, { position: 'top-center', autoClose: 2500, toastId: 'library-login' });
@@ -35,6 +47,8 @@ const useLibraryItem = (apiString, type, id) => {
     return false;
   }, [isLoggedIn, navigate]);
 
+  // Like or save (or undo it). The button changes at once; if the server
+  // refuses, it changes back and an error is shown.
   const toggle = useCallback(async (kind) => {
     const field = kind === 'like' ? 'liked' : 'saved';
     if (!requireLogin(kind === 'like' ? `like this ${LABELS[type]}` : 'save things for later')) return;
@@ -56,6 +70,8 @@ const useLibraryItem = (apiString, type, id) => {
     }
   }, [apiString, accessToken, type, id, state, requireLogin]);
 
+  // Ebook download: the server checks the membership and the monthly limit,
+  // then returns a temporary link. Out of downloads → the membership page.
   const download = useCallback(async () => {
     if (type !== 'ebook' || !requireLogin('download books')) return;
     setDownloading(true);

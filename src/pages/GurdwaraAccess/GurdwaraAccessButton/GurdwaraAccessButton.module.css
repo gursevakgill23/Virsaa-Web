@@ -1,5 +1,13 @@
+/*
+ * pages/GurdwaraAccess/GurdwaraAccessButton/GurdwaraAccessButton.module.css
+ * -----------------------------------------------------------------------------
+ * The floating "Gurdwara Access" button in the corner of every page.
+ * -----------------------------------------------------------------------------
+ */
+
 /* Floating glass pill, bottom-left. Hidden on tablets and phones, where the
    sidebar "Go to" grid and the bottom navbar already link to Gurdwara Access. */
+/* Fixed to the bottom-left corner (moved above the tab bar on phones) */
 .container {
   position: fixed;
   left: 24px;
@@ -7,6 +15,7 @@
   z-index: 900;
 }
 
+/* The glass pill button with its round icon */
 .button {
   display: inline-flex;
   align-items: center;

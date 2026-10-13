@@ -1,3 +1,11 @@
+/**
+ * hooks/useUnreadNotifications.js
+ * -----------------------------------------------------------------------------
+ * React hook for the number of unread notifications (navbar badge, account
+ * tabs, Notifications page). A single shared poller keeps every screen in step;
+ * see the comment below the imports.
+ * -----------------------------------------------------------------------------
+ */
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import accountApi from '../api/accountApi';
@@ -10,8 +18,10 @@ import accountApi from '../api/accountApi';
  * straight away when the tab comes back into view, and whenever a page calls
  * refreshUnread() or setUnread() (e.g. after marking something read).
  */
+// How often to check while the tab is visible
 const POLL_MS = 30000;
 
+// Shared state for the whole app (lives outside React, so there is one poller)
 const store = {
   count: 0,
   listeners: new Set(),
@@ -21,8 +31,10 @@ const store = {
   inflight: null,
 };
 
+// Tell every mounted hook about a new count
 const emit = () => store.listeners.forEach((fn) => fn(store.count));
 
+// Pages call this when they already know the new count (e.g. after marking read)
 export const setUnread = (count) => {
   const next = Math.max(0, Number(count) || 0);
   if (next !== store.count) {
@@ -31,6 +43,7 @@ export const setUnread = (count) => {
   }
 };
 
+// Ask the server for the count. Calls that overlap share one request.
 export const refreshUnread = () => {
   if (!store.token) return Promise.resolve(0);
   if (store.inflight) return store.inflight;
@@ -41,8 +54,10 @@ export const refreshUnread = () => {
   return store.inflight;
 };
 
+// Check again when the tab comes back into view
 const onVisible = () => { if (document.visibilityState === 'visible') refreshUnread(); };
 
+// Start polling (once)
 const start = () => {
   if (store.timer) return;
   refreshUnread();
@@ -51,6 +66,7 @@ const start = () => {
   window.addEventListener('focus', refreshUnread);
 };
 
+// Stop polling and remove the listeners
 const stop = () => {
   clearInterval(store.timer);
   store.timer = null;
@@ -58,6 +74,7 @@ const stop = () => {
   window.removeEventListener('focus', refreshUnread);
 };
 
+// The hook: subscribe to the store, and start/stop polling as the user signs in or out
 const useUnreadNotifications = (apiString) => {
   const { isLoggedIn, accessToken } = useAuth();
   const [count, setCount] = useState(store.count);

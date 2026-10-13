@@ -1,14 +1,23 @@
+/**
+ * pages/GurdwaraAccess/GurdwaraHistory/GurdwaraHistory.jsx
+ * -----------------------------------------------------------------------------
+ * History of one Gurdwara (/gurdwara-access/history/:id): photo gallery with
+ * key facts, a timeline and notable figures. Sample content for now; an
+ * unknown id shows the first Gurdwara.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { FaMapMarkerAlt, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaMapMarkedAlt, FaUserAlt } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import styles from './GurdwaraHistory.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -23,6 +32,7 @@ const GurdwaraHistory = ({ isDarkMode }) => {
   const { id } = useParams();
   const [mainImage, setMainImage] = useState(0);
 
+  // Header and gallery pictures
   const header_image_light = '/images/header-image.png';
   const header_image_dark = '/images/header-image-dark.png';
   const history_images = [
@@ -82,10 +92,12 @@ const GurdwaraHistory = ({ isDarkMode }) => {
     },
   ];
 
+  // The Gurdwara for this URL, and gallery previous/next
   const selectedGurdwara = gurdwaras.find((g) => g.id === parseInt(id, 10)) || gurdwaras[0];
   const count = selectedGurdwara.images.length;
   const step = (dir) => setMainImage((i) => (i + dir + count) % count);
 
+  // Notable figures (placeholder text)
   const figures = [
     { title: 'Founder Name', text: 'Description of their contribution to the Gurdwara' },
     { title: 'Prominent Leader', text: 'Description of their role in the Gurdwara’s development' },

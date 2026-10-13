@@ -1,3 +1,11 @@
+/*
+ * pages/About/About.module.css
+ * -----------------------------------------------------------------------------
+ * The About page: story and timeline, mission and community, values grid, team
+ * cards, digitisation section and the closing call to action.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);

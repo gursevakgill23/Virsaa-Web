@@ -1,3 +1,11 @@
+/*
+ * components/Footer/Footer.module.css
+ * -----------------------------------------------------------------------------
+ * The site footer: a floating glass slab with the brand, useful links,
+ * newsletter and feedback forms, and the bottom bar with social links.
+ * -----------------------------------------------------------------------------
+ */
+
 /* Footer: a floating glass slab, matching the spatial Navbar and panels */
 
 .footer {
@@ -229,6 +237,23 @@
 
 .pillButton:hover {
   transform: translateY(-1px);
+}
+
+/* Validation message under a footer form field */
+.formError {
+  margin: 8px 0 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #b3261e;
+}
+
+[data-theme='dark'] .formError {
+  color: #ffb4a9;
+}
+
+.input[aria-invalid='true'],
+.textarea[aria-invalid='true'] {
+  border-color: #b3261e;
 }
 
 .thanks {

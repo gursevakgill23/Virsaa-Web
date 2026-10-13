@@ -1,3 +1,11 @@
+/*
+ * pages/Login/Login.module.css
+ * -----------------------------------------------------------------------------
+ * The sign-in page: photo background with the glass form, perks panel,
+ * features grid and FAQs.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Auth pages (identical copy in Login.module.css and Signup.module.css)
    Spatial layout: a glass form card floating over the header photo,
@@ -306,6 +314,51 @@
   text-align: center;
   margin: 22px 0 0;
   font-family: var(--font-body);
+  color: var(--secondary-text-color);
+}
+
+/* ---------- Explore as guest ----------
+   A quieter, dashed button under the form, so signing in stays the main action */
+.guestBox {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.guestButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1.5px dashed rgba(var(--primary-rgb), 0.45);
+  background: transparent;
+  color: var(--primary-color);
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.guestButton:hover {
+  background: rgba(var(--primary-rgb), 0.07);
+  border-style: solid;
+}
+
+.guestButton:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}
+
+.guestHint {
+  margin: 8px 0 0;
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  line-height: 1.45;
   color: var(--secondary-text-color);
 }
 

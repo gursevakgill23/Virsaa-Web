@@ -1,6 +1,16 @@
+/**
+ * pages/Profile/MyFavorites/MyFavorites.jsx
+ * -----------------------------------------------------------------------------
+ * My Favorites (/my-favorites): everything the user has liked (ebooks,
+ * audiobooks, authors), saved for later and downloaded.
+ *   - tabs, search, grid or list view
+ *   - remove with Undo; download an ebook again (monthly allowance shown)
+ * Data: /api/library/ (api/libraryApi.js).
+ * -----------------------------------------------------------------------------
+ */
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../../utils/notify';
 import {
   FiSearch, FiX, FiChevronLeft, FiChevronRight, FiGrid, FiList,
   FiBook, FiHeadphones, FiUser, FiClock, FiHeart, FiTrash2, FiDownload, FiBookmark,
@@ -9,8 +19,10 @@ import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
 import { useAuth } from '../../../context/AuthContext';
 import libraryApi, { startDownload } from '../../../api/libraryApi';
+import { describeApiError } from '../../../utils/apiError';
 import styles from './MyFavorites.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
     return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
@@ -18,6 +30,7 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
+// Default pictures, and an onError handler that uses them
 const bookImage = '/images/book-image.jpg';
 const authorImage = '/images/author-image.jpg';
 const fallbackImage = (item) => item.image || (item.type === 'author' ? authorImage : bookImage);
@@ -32,6 +45,7 @@ const onImgError = (e) => {
   img.src = isPerson ? authorImage : bookImage;
 };
 
+// Tabs, labels and the empty state
 const TABS = [
   { id: 'ebooks', label: 'Ebooks', icon: <FiBook />, path: '/collections/ebooks' },
   { id: 'audiobooks', label: 'Audiobooks', icon: <FiHeadphones />, path: '/collections/audiobooks' },
@@ -42,6 +56,7 @@ const TYPE_LABELS = { ebook: 'Ebook', audiobook: 'Audiobook', author: 'Author' }
 
 const EMPTY = { ebooks: [], audiobooks: [], authors: [], saved: [], downloads: [] };
 
+// Does an item match the search text (title, author, genre)?
 const matches = (item, q) => {
   if (!q) return true;
   const text = `${item.title || ''} ${item.name || ''} ${item.author || ''} ${item.genre || ''} ${TYPE_LABELS[item.type] || ''}`.toLowerCase();
@@ -49,6 +64,7 @@ const matches = (item, q) => {
 };
 
 // "3 days ago", "just now"
+// "3 days ago" style time
 const timeAgo = (iso) => {
   if (!iso) return '';
   const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -80,6 +96,7 @@ const ScrollRow = ({ label, children }) => {
   );
 };
 
+// Star rating display
 const Stars = ({ rating }) => {
   const value = Number(rating || 0).toFixed(1);
   return (
@@ -91,6 +108,7 @@ const Stars = ({ rating }) => {
   );
 };
 
+// The remove (heart/bookmark) button on a card or row
 const RemoveButton = ({ label, onClick, variant = 'card' }) => (
   <button
     type="button"
@@ -103,6 +121,7 @@ const RemoveButton = ({ label, onClick, variant = 'card' }) => (
   </button>
 );
 
+// "3 of 5 downloads left this month"
 const allowanceText = (a) => {
   if (!a) return '';
   if (a.limit === null) return 'Unlimited downloads on your plan.';
@@ -114,6 +133,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
   const { isLoggedIn, accessToken } = useAuth();
 
+  // Search, view, tab, the loaded lists, allowance, loading/error, undo and download state
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [activeTab, setActiveTab] = useState('ebooks');
@@ -124,6 +144,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
   const [lastRemoved, setLastRemoved] = useState(null); // { key, item, index }
   const [downloadingId, setDownloadingId] = useState(null);
 
+  // Load every list at once
   const load = useCallback(async () => {
     if (!isLoggedIn || !accessToken) {
       setLoading(false);
@@ -133,18 +154,19 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
     setLoadError(null);
     try {
       const data = await libraryApi.all(apiString, accessToken);
+      const listOf = (value) => (Array.isArray(value) ? value : []); // never trust the shape blindly
       setLists({
-        ebooks: data.likes?.ebooks || [],
-        audiobooks: data.likes?.audiobooks || [],
-        authors: data.likes?.authors || [],
-        saved: data.saved || [],
-        downloads: data.downloads || [],
+        ebooks: listOf(data?.likes?.ebooks),
+        audiobooks: listOf(data?.likes?.audiobooks),
+        authors: listOf(data?.likes?.authors),
+        saved: listOf(data?.saved),
+        downloads: listOf(data?.downloads),
       });
-      setAllowance(data.download_allowance || null);
+      setAllowance(data?.download_allowance || null);
     } catch (err) {
       setLoadError(err.response?.status === 401
         ? 'Your session has ended. Log in again to see your favorites.'
-        : 'Your favorites couldn’t be loaded right now.');
+        : describeApiError(err, 'Your favorites couldn’t be loaded right now.'));
     } finally {
       setLoading(false);
     }
@@ -172,6 +194,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // Undo the last removal (adds it back on the server)
   const undo = async () => {
     if (!lastRemoved) return;
     const { key, item, index } = lastRemoved;
@@ -189,6 +212,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // Download an ebook again (counts toward the monthly allowance)
   const downloadAgain = async (item) => {
     setDownloadingId(item.id);
     try {
@@ -196,12 +220,13 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
       startDownload(data.download_url, data.filename);
       setAllowance(data.download_allowance || allowance);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'The download couldn’t start. Try again.', { position: 'top-right', autoClose: 3500 });
+      toast.error(describeApiError(err, 'The download couldn’t start. Try again.'), { position: 'top-right', autoClose: 3500 });
     } finally {
       setDownloadingId(null);
     }
   };
 
+  // Every list filtered by the search text
   const filtered = useMemo(() => ({
     ebooks: lists.ebooks.filter((x) => matches(x, searchQuery)),
     audiobooks: lists.audiobooks.filter((x) => matches(x, searchQuery)),
@@ -213,6 +238,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
   const current = filtered[activeTab];
   const tab = TABS.find((t) => t.id === activeTab);
 
+  // Empty state with a link to find something
   const empty = (what, path) => (
     <p className={styles.emptyNote}>
       {searchQuery
@@ -222,6 +248,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
   );
 
   /* ---------- Section renderers ---------- */
+  // Grid and list layouts of the current tab
   const renderGrid = () => {
     if (current.length === 0) return empty(tab.label.toLowerCase(), tab.path);
     return (
@@ -381,6 +408,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
               id="fav-search"
               type="search"
               placeholder="Search your favorites"
+              maxLength={100}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={styles.searchInput}

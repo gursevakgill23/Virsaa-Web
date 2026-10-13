@@ -1,13 +1,23 @@
+/**
+ * elements/ComingSoon/ComingSoon.jsx
+ * -----------------------------------------------------------------------------
+ * "Stay tuned" block: a list of upcoming items on the left and a matching
+ * picture on the right. Moves to the next item every 5 seconds; hovering or
+ * focusing pauses it, and any item can be picked directly.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect } from 'react';
 import styles from './ComingSoon.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
-    return imagePath.startsWith('/') ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
+    return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
   }
   return imagePath;
 };
 
+// The items and their pictures (in public/images)
 const CONTENT = [
   { text: 'Content coming soon', image: '/images/comingsoon1.jpeg' },
   { text: 'New features arriving', image: '/images/comingsoon2.jpg' },
@@ -15,6 +25,7 @@ const CONTENT = [
   { text: 'Exciting news ahead', image: '/images/comingsoon4.jpg' },
 ];
 
+// Time each item stays (ms)
 const INTERVAL = 5000;
 
 const ComingSoon = () => {

@@ -1,3 +1,11 @@
+/*
+ * pages/Learning/Games/GameProfileCard.module.css
+ * -----------------------------------------------------------------------------
+ * The Game Profile card shared by both games: picture, name, level and coins,
+ * XP bar, stats and actions.
+ * -----------------------------------------------------------------------------
+ */
+
 /* Game Profile card, shared by Word Search and Memory Match. Solid surface so it reads clearly over the game. */
 
 .card {

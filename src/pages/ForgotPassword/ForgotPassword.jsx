@@ -1,11 +1,22 @@
+/**
+ * pages/ForgotPassword/ForgotPassword.jsx
+ * -----------------------------------------------------------------------------
+ * Password reset (/forgot-password) in three steps:
+ *   1. enter your email (+ reCAPTCHA) → a 6-digit code is emailed
+ *   2. enter the code (can be re-sent after 30 s)
+ *   3. choose a new password → back to the login page
+ * Each step validates before sending and explains any server or connection error.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/notify';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { FaEye, FaEyeSlash, FaEnvelope, FaKey, FaLock, FaCheck, FaArrowLeft } from 'react-icons/fa';
 import axios from 'axios';
 import styles from './ForgotPassword.module.css';
 
+// The three steps shown in the progress indicator
 const STEPS = [
   { title: 'Your email', icon: <FaEnvelope /> },
   { title: 'Enter code', icon: <FaKey /> },
@@ -19,6 +30,8 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
   // Use the API address exactly as the app passes it (it may be a relative proxy path)
   const apiUrl = (apiString || '').trim().replace(/\/+$/, '');
 
+  // Current step, form values, errors, sending state, password visibility,
+  // resend countdown and the email the code was sent to
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({ email: '', code: '', newPassword: '', confirmNewPassword: '' });
   const [errors, setErrors] = useState({});
@@ -38,6 +51,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  // Keep the typed value (the code accepts digits only, max 6) and clear its error
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: id === 'code' ? value.replace(/\D/g, '').slice(0, 6) : value }));
@@ -74,11 +88,13 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     return Object.keys(newErrors).length === 0;
   };
 
+  // A readable message for a failed request
   const errorMessageFrom = (error, fallback) => {
     if (error.code === 'ECONNABORTED') return 'The request timed out. Check your connection and try again.';
     if (error.response) {
       const d = error.response.data || {};
-      if (error.response.status === 429) return d.captcha || 'Too many attempts. Wait a few minutes and try again.';
+      if (error.response.status === 429) return (Array.isArray(d.captcha) ? d.captcha.join(', ') : d.captcha) || 'Too many attempts. Wait a few minutes and try again.';
+      if (error.response.status >= 500) return 'Something went wrong on our side. Try again in a moment.';
       return (Array.isArray(d.captcha) && d.captcha.join(', '))
         || (Array.isArray(d.email) && d.email.join(', '))
         || d.error || d.message || fallback;
@@ -87,6 +103,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     return error.message || fallback;
   };
 
+  // POST helper with a 10 s timeout
   const post = (path, payload) => axios.post(`${apiUrl}${path}`, payload, {
     timeout: 10000,
     headers: { 'Content-Type': 'application/json' },
@@ -102,12 +119,11 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
         email: formData.email.trim(),
         captcha: recaptchaRef.current.getValue(),
       });
-      if (response.data.message) {
-        toast.success(response.data.message, { position: 'top-center', autoClose: 3000, theme: toastTheme });
-        setEmailSent(formData.email.trim());
-        setCountdown(30);
-        setStep(2);
-      }
+      // Any 2xx reply means the code was sent; the server's message is shown when it has one
+      toast.success(response.data?.message || 'We’ve emailed you a 6-digit code.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
+      setEmailSent(formData.email.trim());
+      setCountdown(30);
+      setStep(2);
     } catch (error) {
       console.error('Forgot password error:', error.response?.status || error.message);
       toast.error(errorMessageFrom(error, 'The code couldn’t be sent'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
@@ -124,10 +140,8 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     setIsSubmitting(true);
     try {
       const response = await post('/api/auth/verify-reset-code/', { email: emailSent, code: formData.code });
-      if (response.data.message) {
-        toast.success(response.data.message, { position: 'top-center', autoClose: 3000, theme: toastTheme });
-        setStep(3);
-      }
+      toast.success(response.data?.message || 'Code accepted. Now choose a new password.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
+      setStep(3);
     } catch (error) {
       console.error('Verify code error:', error.response?.status || error.message);
       toast.error(errorMessageFrom(error, 'That code is wrong or has expired'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
@@ -148,10 +162,8 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
         new_password: formData.newPassword,
         confirm_new_password: formData.confirmNewPassword,
       });
-      if (response.data.message) {
-        toast.success(response.data.message, { position: 'top-center', autoClose: 3000, theme: toastTheme });
-        setTimeout(() => navigate('/login'), 3000);
-      }
+      toast.success(response.data?.message || 'Your password has been changed. You can sign in now.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
+      setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
       console.error('Reset password error:', error.response?.status || error.message);
       toast.error(errorMessageFrom(error, 'Your password couldn’t be reset'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
@@ -171,11 +183,9 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     setIsSubmitting(true);
     try {
       const response = await post('/api/auth/forget-password/', { email: emailSent, captcha: token });
-      if (response.data.message) {
-        toast.success(response.data.message, { position: 'top-center', autoClose: 3000, theme: toastTheme });
-        setCountdown(30);
-        setErrors((prev) => ({ ...prev, captcha: '' }));
-      }
+      toast.success(response.data?.message || 'A new code is on its way.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
+      setCountdown(30);
+      setErrors((prev) => ({ ...prev, captcha: '' }));
     } catch (error) {
       console.error('Resend code error:', error.response?.status || error.message);
       toast.error(errorMessageFrom(error, 'The code couldn’t be re-sent'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
@@ -185,6 +195,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     }
   };
 
+  // The reCAPTCHA block, reused on steps 1 and 2
   const recaptcha = (
     <div className={styles.captcha}>
       <ReCAPTCHA
@@ -195,7 +206,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
         onErrored={() => toast.error('Security check failed to load. Refresh the page.', { position: 'top-center', autoClose: 5000, theme: toastTheme })}
         onExpired={() => recaptchaRef.current?.reset()}
       />
-      {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
+      {errors.captcha && <div className={styles.errorMessage} role="alert">{errors.captcha}</div>}
     </div>
   );
 
@@ -252,7 +263,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
                   disabled={isSubmitting}
                   aria-invalid={!!errors.email}
                 />
-                {errors.email && <div className={styles.errorMessage}>{errors.email}</div>}
+                {errors.email && <div className={styles.errorMessage} role="alert">{errors.email}</div>}
               </div>
               {recaptcha}
               <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
@@ -278,7 +289,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
                   disabled={isSubmitting}
                   aria-invalid={!!errors.code}
                 />
-                {errors.code && <div className={styles.errorMessage}>{errors.code}</div>}
+                {errors.code && <div className={styles.errorMessage} role="alert">{errors.code}</div>}
               </div>
 
               <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
@@ -337,7 +348,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
                     </li>
                   ))}
                 </ul>
-                {errors.newPassword && <div className={styles.errorMessage}>{errors.newPassword}</div>}
+                {errors.newPassword && <div className={styles.errorMessage} role="alert">{errors.newPassword}</div>}
               </div>
 
               <div className={styles.inputGroup}>
@@ -363,7 +374,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
                     {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.confirmNewPassword && <div className={styles.errorMessage}>{errors.confirmNewPassword}</div>}
+                {errors.confirmNewPassword && <div className={styles.errorMessage} role="alert">{errors.confirmNewPassword}</div>}
               </div>
 
               <button type="submit" className={styles.submitButton} disabled={isSubmitting}>

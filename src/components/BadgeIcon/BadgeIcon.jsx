@@ -1,3 +1,10 @@
+/**
+ * components/BadgeIcon/BadgeIcon.jsx
+ * -----------------------------------------------------------------------------
+ * Shows a learning badge's icon (My Profile, game profile card, results).
+ * A badge either has its own uploaded image, or an icon name from the list below.
+ * -----------------------------------------------------------------------------
+ */
 import React from 'react';
 import {
   FaBookOpen, FaGraduationCap, FaUniversity, FaQuestionCircle, FaCompass, FaCrown, FaStar, FaGem,
@@ -16,6 +23,8 @@ const ICONS = {
   FaCalendarCheck, FaChartLine, FaCoins, FaAward,
 };
 
+// Props: name (icon name from the database), image (optional picture URL),
+// plus any other props (className, title…) passed to the icon
 const BadgeIcon = ({ name, image, ...rest }) => {
   if (image) return <img src={image} alt="" style={{ width: '1em', height: '1em', objectFit: 'contain' }} {...rest} />;
   const Icon = ICONS[name] || FaMedal;

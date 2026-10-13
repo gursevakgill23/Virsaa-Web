@@ -1,13 +1,28 @@
-/*
- * Calls to the Django learning API (/api/learning/...).
- * Every function takes the API base address and the signed-in user's access token.
+/**
+ * api/learningApi.js
+ * -----------------------------------------------------------------------------
+ * Calls to the Django learning API (/api/learning/...): lessons, quizzes,
+ * tournaments, the word games, the coin wallet, badges and leaderboards.
+ *
+ * Every function takes the API base address and (where needed) the signed-in
+ * user's access token, and returns a Promise with the response body.
+ * Callers handle errors and show a message.
+ * -----------------------------------------------------------------------------
  */
 import axios from 'axios';
 
+// ---------------------------------------------------------------- helpers
 const base = (apiString) =>
   `${(apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '')}/api/learning`;
 
-const auth = (token) => (token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+// Give up after 20 s so a stalled connection shows an error instead of loading forever
+const TIMEOUT_MS = 20000;
+
+// Request options: the timeout, plus the Bearer token when signed in
+const auth = (token) => ({ timeout: TIMEOUT_MS, ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) });
+
+// Ids and game keys go into the URL path, so encode them
+const seg = (value) => encodeURIComponent(String(value));
 
 const get = (apiString, token, path, params) =>
   axios.get(`${base(apiString)}${path}`, { ...auth(token), params }).then((r) => r.data);
@@ -15,22 +30,23 @@ const get = (apiString, token, path, params) =>
 const post = (apiString, token, path, body = {}) =>
   axios.post(`${base(apiString)}${path}`, body, auth(token)).then((r) => r.data);
 
+// ---------------------------------------------------------------- endpoints
 const learningApi = {
   // Content
   categorized: (api, token) => get(api, token, '/items/categorized/'),
-  item: (api, token, id) => get(api, token, `/learning-material/${id}/`),
-  itemLeaderboard: (api, id, limit = 10) => get(api, null, `/items/${id}/leaderboard/`, { limit }),
+  item: (api, token, id) => get(api, token, `/learning-material/${seg(id)}/`),
+  itemLeaderboard: (api, id, limit = 10) => get(api, null, `/items/${seg(id)}/leaderboard/`, { limit }),
   // Random words for a word game: params { level: '1-10', difficulty: 'easy', count: 10 }
-  gameWords: (api, gameKey, params) => get(api, null, `/items/games/${gameKey}/words/`, params),
+  gameWords: (api, gameKey, params) => get(api, null, `/items/games/${seg(gameKey)}/words/`, params),
 
   // Results
-  submitQuiz: (api, token, id, result) => post(api, token, `/items/${id}/submit_score/`, result),
+  submitQuiz: (api, token, id, result) => post(api, token, `/items/${seg(id)}/submit_score/`, result),
   submitTournament: (api, token, tournamentId, result) =>
-    post(api, token, `/tournaments/${tournamentId}/submit_score/`, result),
-  joinTournament: (api, token, tournamentId) => post(api, token, `/tournaments/${tournamentId}/join/`),
-  tournamentLeaderboard: (api, tournamentId) => get(api, null, `/tournaments/${tournamentId}/leaderboard/`),
-  submitGame: (api, token, gameKey, result) => post(api, token, `/items/games/${gameKey}/submit/`, result),
-  saveProgress: (api, token, id, progress) => post(api, token, `/items/${id}/progress/`, progress),
+    post(api, token, `/tournaments/${seg(tournamentId)}/submit_score/`, result),
+  joinTournament: (api, token, tournamentId) => post(api, token, `/tournaments/${seg(tournamentId)}/join/`),
+  tournamentLeaderboard: (api, tournamentId) => get(api, null, `/tournaments/${seg(tournamentId)}/leaderboard/`),
+  submitGame: (api, token, gameKey, result) => post(api, token, `/items/games/${seg(gameKey)}/submit/`, result),
+  saveProgress: (api, token, id, progress) => post(api, token, `/items/${seg(id)}/progress/`, progress),
 
   // The signed-in player
   summary: (api, token) => get(api, token, '/me/summary/'),

@@ -1,3 +1,14 @@
+/**
+ * pages/News/News.jsx
+ * -----------------------------------------------------------------------------
+ * The News & Events page (/news):
+ *   - Featured: stories marked "featured" in Django admin (else the two newest)
+ *   - Upcoming events: a swipeable row, refreshed every minute so events added
+ *     from the side panel appear without reloading
+ *   - Latest news: newest first, with a link to the source or a "Read more"
+ * Data: /collections/news/ and /collections/events/ (api/newsApi.js).
+ * -----------------------------------------------------------------------------
+ */
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
@@ -6,8 +17,10 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import PageHero from '../../components/PageHero/PageHero';
 import newsApi from '../../api/newsApi';
+import { safeExternalUrl } from '../../utils/safeUrl';
 import styles from './News.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
   if (process.env.NODE_ENV === 'production') {
     if (typeof imagePath === 'string') {
@@ -20,6 +33,7 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
+// Header pictures
 const headerLight = '/images/header-image.png';
 const headerDark = '/images/header-image-dark.png';
 // Shown when a story or event has no picture of its own
@@ -34,6 +48,7 @@ const toDate = (iso) => {
   const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
   return new Date(y, m - 1, d);
 };
+// Date / time formatting in the visitor's locale
 const longDate = (value) => new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 const shortDate = (iso) => toDate(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 const formatTime = (hhmm) => {
@@ -42,6 +57,7 @@ const formatTime = (hhmm) => {
   return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 };
 
+// onError handler: swap a broken picture for the default one (once)
 const useFallbackImage = (fallback) => (e) => {
   const img = e.currentTarget;
   if (img.dataset.fallback) return;
@@ -51,10 +67,12 @@ const useFallbackImage = (fallback) => (e) => {
 
 const News = ({ isDarkMode, apiString }) => {
   const headerImage = useMemo(() => getImagePath(isDarkMode ? headerDark : headerLight), [isDarkMode]);
+  // Loaded items and the loading state of each list
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
   const [status, setStatus] = useState({ news: 'loading', events: 'loading' });
 
+  // Load upcoming events. `quiet` (background refresh) keeps the list if it fails.
   const loadEvents = useCallback(async (quiet = false) => {
     try {
       setEvents(await newsApi.events(apiString));
@@ -64,6 +82,7 @@ const News = ({ isDarkMode, apiString }) => {
     }
   }, [apiString]);
 
+  // Load news stories
   const loadNews = useCallback(async () => {
     try {
       setNews(await newsApi.news(apiString));
@@ -90,6 +109,7 @@ const News = ({ isDarkMode, apiString }) => {
   const onEventImageError = useFallbackImage(upcomingEventsImage);
   const onFeaturedImageError = useFallbackImage(featuredNewsImage);
 
+  // Message shown instead of a list: loading, error (with Try again) or empty
   const stateNote = (state, emptyText, retry) => {
     if (state === 'loading') return <p className={styles.note} role="status">Loading…</p>;
     if (state === 'error') {
@@ -200,8 +220,9 @@ const News = ({ isDarkMode, apiString }) => {
                   <time className={styles.newsDate} dateTime={item.published_at}>{longDate(item.published_at)}</time>
                   <h3>{item.title}</h3>
                   <p>{item.excerpt}</p>
-                  {item.source_url ? (
-                    <a href={item.source_url} target="_blank" rel="noopener noreferrer" className={styles.readMore}>
+                  {/* The source link comes from the API, so only real http(s) links are used */}
+                  {safeExternalUrl(item.source_url) ? (
+                    <a href={safeExternalUrl(item.source_url)} target="_blank" rel="noopener noreferrer" className={styles.readMore}>
                       Read the full story <FaExternalLinkAlt aria-hidden="true" />
                     </a>
                   ) : item.body && item.body !== item.excerpt && (

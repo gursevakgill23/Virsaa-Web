@@ -1,6 +1,19 @@
+/**
+ * pages/Learning/Games/MemoryMatch/MemoryMatch.jsx
+ * -----------------------------------------------------------------------------
+ * Memory Match (/learning/games/memory-match): a full-screen card-matching
+ * game with Punjabi festival / Five Ks / culture card sets.
+ *   - modes and difficulty levels; optional "memorise first" phase
+ *   - coins, XP, badges and the player profile via useGameWallet (saved on the
+ *     server when signed in, in this browser for guests)
+ *   - top scorers, achievements and stats from /api/learning
+ *   - sound effects (switchable, remembered on this device), English/Punjabi
+ * The screen is built from the render…() functions near the end of the file.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../../../utils/notify';
 import { useAuth } from '../../../../context/AuthContext';
 import learningApi from '../../../../api/learningApi';
 import BadgeIcon from '../../../../components/BadgeIcon/BadgeIcon';
@@ -15,6 +28,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import { SOUND_URLS, HOW_TO_PLAY_VIDEO } from '../gameAssets';
 
 
+// Pictures for the cards and the default player avatar (public/images/games)
 const userDefault = '/images/games/user-default.jpg';
 const vaisakhi = '/images/games/vaisakhi.jpg';
 const bhangra = '/images/games/bhangra.jpg';
@@ -31,6 +45,7 @@ const ik_onkar = '/images/games/ik-onkar.jpg';
 const khanda = '/images/games/khanda.jpg';
 const kirpan = '/images/games/kirpan.jpg';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   
   return (imagePath) => {
@@ -51,6 +66,7 @@ const useProductionImagePath = () => {
   };
 };
 
+// This game's key on the server (results, leaderboard, achievements)
 const GAME_KEY = 'memory_match';
 
 // Initialize sound effects
@@ -131,6 +147,7 @@ const fetchUserGameStats = async (apiString, token) => {
   };
 };
 
+// Difficulty levels (number of cards, time limit) and game modes
 const difficultyLevels = [
   { id: 'easy', name: 'Easy', cardCount: 8, timeLimit: 75 },
   { id: 'medium', name: 'Medium', cardCount: 10, timeLimit: 60 },
@@ -144,6 +161,7 @@ const gameModes = [
   { id: 'puzzle', name: 'Puzzle', description: 'Match partial images' },
 ];
 
+// ---------------------------------------------------------------- component
 const MemoryMatch = ({ apiString }) => {
   const getImagePath = useProductionImagePath();
 
@@ -188,6 +206,7 @@ const MemoryMatch = ({ apiString }) => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [lastResult, setLastResult] = useState(null);   // server reply: XP, badges, best score
   const [refreshKey, setRefreshKey] = useState(0);
+  // Latest score / matches / time for the timers (which run outside React)
   const scoreRef = useRef(0);
   const matchedRef = useRef(0);
   const timeLeftRef = useRef(0);
@@ -227,6 +246,8 @@ const MemoryMatch = ({ apiString }) => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   // Initialize cards (for playing phase)
+  // ---------------------------------------------------------------- game setup
+  // Shuffle the chosen card set into pairs
   const initializeCards = () => {
     const cardCount = selectedDifficulty.cardCount;
     const selectedCards = cardSets[selectedCardSet].slice(0, cardCount / 2);
@@ -484,6 +505,10 @@ const MemoryMatch = ({ apiString }) => {
   // Handle profile update
   const handleProfileUpdate = async () => {
     if (isLoggedIn) {
+      if (!newName.trim()) {
+        toast.error('Enter a player name.');
+        return;
+      }
       setSavingProfile(true);
       const ok = await wallet.saveProfile({ name: newName.trim(), avatarFile: newAvatarFile, avatarPreview: newAvatar });
       setSavingProfile(false);
@@ -491,6 +516,7 @@ const MemoryMatch = ({ apiString }) => {
         toast.error('Your game profile couldn’t be saved. Try again.');
         return;
       }
+      toast.success('Game profile saved');
       setNewAvatarFile(null);
       setEditingProfile(false);
     }
@@ -499,6 +525,17 @@ const MemoryMatch = ({ apiString }) => {
   // Handle avatar change
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
+    // Only small JPG/PNG/WebP/GIF pictures are accepted
+    if (file && !/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
+      toast.error('Choose a JPG, PNG, WebP or GIF picture.');
+      e.target.value = '';
+      return;
+    }
+    if (file && file.size > 5 * 1024 * 1024) {
+      toast.error('The picture must be smaller than 5 MB.');
+      e.target.value = '';
+      return;
+    }
     if (file) {
       setNewAvatarFile(file);
       const reader = new FileReader();
@@ -509,6 +546,7 @@ const MemoryMatch = ({ apiString }) => {
 
   // Handle buy coins
   // Buying coins: go to checkout, then come back to this game afterwards
+  // Coin shop
   const handleBuyCoins = (amount) => {
     setShowCoinShop(false);
     if (isLoggedIn) {
@@ -519,6 +557,7 @@ const MemoryMatch = ({ apiString }) => {
   };
 
   // Handle play as guest
+  // Play without signing in (progress stays in this browser)
   const handlePlayAsGuest = () => {
     setPlayAsGuest(true);
     setShowLoginModal(false);
@@ -526,6 +565,7 @@ const MemoryMatch = ({ apiString }) => {
   };
 
   // Render navbar
+  // ---------------------------------------------------------------- screens and dialogs
   const renderNavbar = () => (
     <nav className={styles.navbar}>
       <h1 className={styles.navbarBrand}>{language === 'punjabi' ? 'ਵਿਰਸਾ ਵਿੱਚ ਯਾਦ' : 'Virsaa Vich Yaad'}</h1>

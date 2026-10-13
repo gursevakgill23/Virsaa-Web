@@ -1,3 +1,15 @@
+/**
+ * pages/Gurbani/Gurbani.jsx
+ * -----------------------------------------------------------------------------
+ * The Gurbani page (/gurbani): shabads, audio kirtan and video kirtan.
+ *   - search (typed, or by voice where the browser supports it) and filters
+ *   - 10 items per page, shown as rows; premium items have an "Unlock" button
+ *     (no Premium label) that leads to the membership page
+ *   - audio/video open in a player with play/pause, previous/next, seek,
+ *     volume and full screen; plays are recorded in History
+ * The list is sample content for now (gurbaniData below).
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -6,10 +18,14 @@ import {
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
 import useHistoryRecorder from '../../hooks/useHistoryRecorder';
+import { safeUrl } from '../../utils/safeUrl';
+import { toast } from '../../utils/notify';
+import { useAuth } from '../../context/AuthContext';
 import styles from './Gurbani.module.css';
 import audioFile from './assets/Nitnem.mp3';
 import videoFile from './assets/Aarti.mp4';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
@@ -26,6 +42,7 @@ const useProductionImagePath = () => {
 
 // Only filters that actually narrow the list. Language and raag filters can be
 // added back here once the data has those fields.
+// Filter chips
 const FILTERS = [
   { id: 'shabad', label: 'Shabad', icon: <FaBookOpen /> },
   { id: 'audio', label: 'Audio kirtan', icon: <FaHeadphones /> },
@@ -33,12 +50,14 @@ const FILTERS = [
   { id: 'premium', label: 'Premium', icon: <FaCrown /> },
 ];
 
+// Label and icon per content type
 const TYPE_META = {
   shabad: { label: 'Shabad', icon: <FaBookOpen /> },
   audio: { label: 'Audio kirtan', icon: <FaHeadphones /> },
   video: { label: 'Video kirtan', icon: <FaVideo /> },
 };
 
+// Button text for a card (premium, listen, watch, read)
 const actionLabel = (item) => {
   if (item.type === 'shabad') return item.isPremium ? 'Unlock to read' : 'Read now';
   if (item.type === 'audio') return item.isPremium ? 'Unlock to listen' : 'Listen now';
@@ -57,6 +76,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   const sectionImage = '/images/Gurbani/section-image.jpg';
   const bookImage = '/images/Collections/book-image.jpg';
 
+  // Search, filters, paging, voice search and the media player's state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,12 +91,15 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
 
+  // Voice recogniser, media element, player modal and the results grid
   const recognitionRef = useRef(null);
   const mediaRef = useRef(null);
   const modalRef = useRef(null);
   const gridRef = useRef(null);
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
 
+  // Sample content shown on the page
   const gurbaniData = useMemo(() => [
     { id: 1, type: 'shabad', image: gurbaniImage, title: 'Shabad 1', description: 'This is a description of the first shabad.', isPremium: true },
     { id: 2, type: 'audio', image: audioKirtanImage, title: 'Anand Sahib', description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.', isPremium: false },
@@ -101,6 +124,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   ], [gurbaniImage, audioKirtanImage, videoKirtanImage]);
 
   // ---------- Media player ----------
+  // Play / pause; a failed play is reported
   const togglePlayPause = () => {
     const el = mediaRef.current;
     if (!el) return;
@@ -111,6 +135,8 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       el.play().then(() => setIsPlaying(true)).catch((error) => {
         console.error('Playback failed:', error.message);
         setIsPlaying(false);
+        // AbortError just means another play/pause interrupted it; anything else is a real failure
+        if (error.name !== 'AbortError') toast.error('This recording couldn’t be played. Try again.');
       });
     }
   };
@@ -133,6 +159,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
     if (mediaRef.current) mediaRef.current.volume = newVolume;
   };
 
+  // Seconds → "m:ss"
   const formatTime = (time) => {
     if (!Number.isFinite(time)) return '0:00';
     const minutes = Math.floor(time / 60);
@@ -140,6 +167,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  // Open the player for an item, and close it again
   const playMedia = (item, type) => {
     recordHistory({ type: type === 'video' ? 'video' : 'gurbani', item_id: `gurbani-${item.id}`, title: item.title, path: '/gurbani' });
     setCurrentMedia(item);
@@ -157,6 +185,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
     document.body.style.overflow = 'auto';
   };
 
+  // Next / previous item of the same type
   const playNext = () => {
     const currentIndex = gurbaniData.findIndex((item) => item.id === currentMedia.id);
     playMedia(gurbaniData[(currentIndex + 1) % gurbaniData.length], mediaType);
@@ -167,6 +196,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
     playMedia(gurbaniData[(currentIndex - 1 + gurbaniData.length) % gurbaniData.length], mediaType);
   };
 
+  // Player full screen on/off
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       modalRef.current?.requestFullscreen().catch((err) => console.error('Fullscreen failed:', err.message));
@@ -177,12 +207,19 @@ const Gurbani = ({ isDarkMode, apiString }) => {
 
   // Item action: premium goes to /premium, media opens the player
   const openItem = (item) => {
+    // Guests can explore the list, but opening anything needs an account
+    if (!isLoggedIn) {
+      toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'guest-locked' });
+      navigate('/login');
+      return;
+    }
     if (item.isPremium) {
       navigate('/premium');
     } else if (item.type === 'audio' || item.type === 'video') {
       playMedia(item, item.type);
-    } else if (item.fileUrl) {
-      window.open(item.fileUrl, '_blank', 'noopener');
+    } else if (safeUrl(item.fileUrl)) {
+      // Opened in a new tab without access back to this page (noopener)
+      window.open(safeUrl(item.fileUrl), '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -198,6 +235,11 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       recognitionRef.current.onerror = (event) => {
         console.error('Speech recognition error', event.error);
         setIsListening(false);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          toast.error('Allow microphone access in your browser to search by voice.');
+        } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          toast.error('Voice search stopped. Try again or type your search.');
+        }
       };
       recognitionRef.current.onend = () => setIsListening(false);
     }
@@ -218,6 +260,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
     return () => window.removeEventListener('keydown', onKey);
   });
 
+  // Items after search and filters
   const filteredData = useMemo(() => {
     let results = gurbaniData;
     const q = searchQuery.trim().toLowerCase();
@@ -237,6 +280,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
 
   useEffect(() => setCurrentPage(1), [searchQuery, selectedFilters]);
 
+  // This page of results
   const totalPages = Math.max(1, Math.ceil(filteredData.length / cardsPerPage));
   const currentCards = filteredData.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
   const isFiltering = searchQuery.trim() || selectedFilters.length > 0;
@@ -246,20 +290,26 @@ const Gurbani = ({ isDarkMode, apiString }) => {
     gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // Start / stop voice search (unsupported browsers get a message)
   const toggleVoiceSearch = () => {
     if (!recognitionRef.current) {
-      alert('Voice search isn’t supported in this browser. Try Chrome or Edge.');
+      toast.warn('Voice search isn’t supported in this browser. Try Chrome or Edge.');
       return;
     }
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      setIsListening(true);
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start(); // throws if it is already running
+        setIsListening(true);
+      } catch {
+        setIsListening(false);
+      }
     }
   };
 
+  // Filter chips on/off, and clear all
   const handleFilterClick = (filter) => {
     setSelectedFilters((prev) => (prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter]));
   };
@@ -296,6 +346,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
               <input
                 type="search"
                 placeholder="Search shabads and kirtan"
+                maxLength={100}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search Gurbani"
@@ -343,43 +394,42 @@ const Gurbani = ({ isDarkMode, apiString }) => {
           </p>
         )}
 
-        <div className={styles.cardGrid}>
+        {/* The library as a list of rows: arch-shaped picture, type, title, text and one action.
+            Premium items aren't labelled; their button simply says "Unlock to …". */}
+        <ul className={styles.list}>
           {isLoading
             ? Array.from({ length: cardsPerPage }).map((_, i) => (
-                <div key={`s-${i}`} className={styles.card} aria-hidden="true">
-                  <div className={`${styles.cardMedia} ${styles.skeleton}`} />
-                  <div className={styles.cardBody}>
+                <li key={`s-${i}`} className={styles.row} aria-hidden="true">
+                  <div className={`${styles.rowThumb} ${styles.skeleton}`} />
+                  <div className={styles.rowBody}>
                     <span className={`${styles.skeleton} ${styles.skeletonLine}`} />
                     <span className={`${styles.skeleton} ${styles.skeletonLine} ${styles.skeletonShort}`} />
                   </div>
-                </div>
+                </li>
               ))
             : currentCards.map((item) => (
-                <article key={item.id} className={`${styles.card} ${item.isPremium ? styles.premiumCard : ''}`}>
-                  <div className={styles.cardMedia}>
-                    <img src={getImagePath(item.image)} alt="" className={styles.cardImage} loading="lazy" />
-                    <span className={styles.typeBadge}>
+                <li key={item.id} className={`${styles.row} ${styles[`row_${item.type}`] || ''}`}>
+                  <div className={styles.rowThumb}>
+                    <img src={getImagePath(item.image)} alt="" loading="lazy" />
+                  </div>
+                  <div className={styles.rowBody}>
+                    <p className={styles.rowType}>
                       <span aria-hidden="true">{TYPE_META[item.type].icon}</span> {TYPE_META[item.type].label}
-                    </span>
-                    {item.isPremium && (
-                      <span className={styles.premiumBadge}><FaCrown aria-hidden="true" /> Premium</span>
-                    )}
+                    </p>
+                    <h3 className={styles.rowTitle}>{item.title}</h3>
+                    <p className={styles.rowText}>{item.description}</p>
                   </div>
-                  <div className={styles.cardBody}>
-                    <h3 className={styles.cardTitle}>{item.title}</h3>
-                    <p className={styles.cardText}>{item.description}</p>
-                    <button
-                      type="button"
-                      className={`${styles.actionButton} ${item.isPremium ? styles.premiumButton : ''}`}
-                      onClick={() => openItem(item)}
-                    >
-                      {item.isPremium ? <FaLock aria-hidden="true" /> : TYPE_META[item.type].icon}
-                      {actionLabel(item)}
-                    </button>
-                  </div>
-                </article>
+                  <button
+                    type="button"
+                    className={`${styles.actionButton} ${styles.rowAction} ${item.isPremium ? styles.premiumButton : ''}`}
+                    onClick={() => openItem(item)}
+                  >
+                    {item.isPremium ? <FaLock aria-hidden="true" /> : TYPE_META[item.type].icon}
+                    {actionLabel(item)}
+                  </button>
+                </li>
               ))}
-        </div>
+        </ul>
 
         {!isLoading && totalPages > 1 && (
           <nav className={styles.pagination} aria-label="Pages">
@@ -427,7 +477,6 @@ const Gurbani = ({ isDarkMode, apiString }) => {
             ? Array.from({ length: 6 }).map((_, i) => <div key={`a-${i}`} className={`${styles.arch} ${styles.skeleton}`} aria-hidden="true" />)
             : gurbaniData.slice(0, 6).map((item, index) => (
                 <article key={item.id} className={`${styles.arch} ${styles[`archTone${index % 3}`]}`}>
-                  {item.isPremium && <span className={styles.archCrown} aria-label="Premium"><FaCrown /></span>}
                   <span className={styles.archIcon} aria-hidden="true">{TYPE_META[item.type].icon}</span>
                   <h3 className={styles.archTitle}>{item.title}</h3>
                   <p className={styles.archText}>{item.description}</p>

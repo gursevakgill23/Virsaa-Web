@@ -1,3 +1,11 @@
+/*
+ * components/Navbar/Navbar.module.css
+ * -----------------------------------------------------------------------------
+ * The floating glass navbar, its Collections dropdown, the avatar with the
+ * unread badge, and the account panel that slides in from the right.
+ * -----------------------------------------------------------------------------
+ */
+
 /* Navbar Styles */
 .navbar {
   display: flex;

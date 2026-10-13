@@ -1,3 +1,11 @@
+/**
+ * pages/GurdwaraAccess/GurdwaraLocate/GurdwaraLocate.jsx
+ * -----------------------------------------------------------------------------
+ * Directions to one Gurdwara (/gurdwara-access/locate/:id): travel mode
+ * (walk, drive, transit), a map with the route, travel time and step-by-step
+ * directions. Uses sample data for now; a routing API will replace it.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
@@ -7,11 +15,12 @@ import { FaWalking, FaCar, FaBus, FaMapMarkerAlt, FaHistory } from 'react-icons/
 import PageHero from '../../../components/PageHero/PageHero';
 import styles from './GurdwaraLocate.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       }
@@ -22,6 +31,7 @@ const useProductionImagePath = () => {
 };
 
 // Route colours per travel mode, picked to sit well with the maroon theme
+// Travel modes and their route colours
 const MODES = [
   { id: 'walk', label: 'Walk', icon: <FaWalking />, color: '#2f8a4e' },
   { id: 'car', label: 'Drive', icon: <FaCar />, color: '#65041d' },
@@ -33,6 +43,7 @@ const GurdwaraLocate = ({ isDarkMode }) => {
   const { id } = useParams();
   const [transportMode, setTransportMode] = useState('car');
 
+  // Pictures and Leaflet marker icons
   const header_image_light = '/images/header-image.png';
   const header_image_dark = '/images/header-image-dark.png';
   const marker_icon = '/images/gurdwaraAccess/marker-icon.png';
@@ -70,6 +81,7 @@ const GurdwaraLocate = ({ isDarkMode }) => {
     'Destination will be on your right',
   ];
 
+  // The selected travel mode
   const activeMode = MODES.find((m) => m.id === transportMode);
 
   return (

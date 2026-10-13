@@ -1,3 +1,11 @@
+/*
+ * elements/ChatWithUs/ChatButton/ChatButton.module.css
+ * -----------------------------------------------------------------------------
+ * The floating "Ask about Sikhism" chat button and its chat window (messages,
+ * suggestions, typing dots, question box).
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    "Ask about Sikhism" chat: a floating maroon button that opens a glass
    panel. Follows the site's light / dark theme through the CSS variables.

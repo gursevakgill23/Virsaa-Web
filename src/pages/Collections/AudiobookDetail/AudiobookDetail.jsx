@@ -1,3 +1,14 @@
+/**
+ * pages/Collections/AudiobookDetail/AudiobookDetail.jsx
+ * -----------------------------------------------------------------------------
+ * One audiobook (/collections/audiobooks/audiobook/:id):
+ *   - cover, details, the audio player (play/pause, skip ±15 s, seek bar)
+ *   - Like / Save for later (useLibraryItem), Share
+ *   - chapters, description, reviews, related audiobooks
+ * Listening progress is saved to History. The audio file is private on S3;
+ * the API returns a temporary link. While loading, the Virsaa loader is shown.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
@@ -11,7 +22,9 @@ import Loader from '../../../components/VirsaaLoader/Loader';
 import axios from 'axios';
 import useLibraryItem from '../../../hooks/useLibraryItem';
 import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
+import { safeUrl } from '../../../utils/safeUrl';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
@@ -26,6 +39,7 @@ const useProductionImagePath = () => {
   };
 };
 
+// Five stars, filled up to `value`
 const Stars = ({ value }) => (
   <span className={styles.stars} aria-label={`${value} out of 5`}>
     {[1, 2, 3, 4, 5].map((i) =>
@@ -34,6 +48,7 @@ const Stars = ({ value }) => (
   </span>
 );
 
+// Placeholder cards while related audiobooks load
 const RelatedSkeleton = () => (
   <div className={styles.relatedCard} aria-hidden="true">
     <span className={`${styles.relatedThumb} ${styles.relatedThumbSquare} ${styles.skeleton}`} />
@@ -47,6 +62,7 @@ const RelatedSkeleton = () => (
 const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const getImagePath = useProductionImagePath();
   const { id } = useParams();
+  // Audiobook data, loading/error state and the audio link
   const [audiobook, setAudiobook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relatedLoading, setRelatedLoading] = useState(true);
@@ -57,7 +73,11 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const [loadError, setLoadError] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
   const [related, setRelated] = useState([]);
-  const apiUrl = (apiString || '').replace(/\/$/, '');
+  const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
+  const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
+  const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again"
+  const [reviewErrors, setReviewErrors] = useState({}); // field → message for the review form
+  // Chapter/description toggles and the player's state
   const [expandedChapter, setExpandedChapter] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -72,6 +92,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const header_image_light = '/images/header-image.png';
   const bookImage = '/images/book-image.jpg';
 
+  // Review form and list
   const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, review: '' });
   const [reviews, setReviews] = useState([]);
   const [visibleReviews, setVisibleReviews] = useState(5);
@@ -79,6 +100,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ---------- History ----------
+  // What gets saved to History for this audiobook
   const historyEntry = (extra = {}) => ({
     type: 'audiobook',
     item_id: id,
@@ -108,6 +130,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   };
 
   // ---------- Player ----------
+  // ---------------------------------------------------------------- player controls
   const togglePlayPause = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -138,6 +161,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
     setCurrentTime(seekTime);
   };
 
+  // Seconds → "m:ss"
   const formatTime = (time) => {
     if (!Number.isFinite(time)) return '0:00';
     const minutes = Math.floor(time / 60);
@@ -157,13 +181,13 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
     const load = async () => {
       try {
-        const { data } = await axios.get(`${apiUrl}/collections/audiobooks/${id}/`);
+        const { data } = await axios.get(`${apiUrl}/collections/audiobooks/${safeId}/`, { timeout: 20000 });
         let authorName = '';
         if (data.author) {
-          authorName = await axios.get(`${apiUrl}/collections/authors/${data.author}/`)
-            .then((r) => r.data.name).catch(() => '');
+          authorName = await axios.get(`${apiUrl}/collections/authors/${encodeURIComponent(data.author)}/`, { timeout: 20000 })
+            .then((r) => r.data?.name || '').catch(() => '');
         }
-        const reviewRes = await axios.get(`${apiUrl}/collections/audiobooks/${id}/reviews/`).catch(() => ({ data: [] }));
+        const reviewRes = await axios.get(`${apiUrl}/collections/audiobooks/${safeId}/reviews/`, { timeout: 20000 }).catch(() => ({ data: [] }));
         if (cancelled) return;
         setAudiobook({
           id: data.id,
@@ -176,15 +200,15 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
           format: data.format || 'MP3',
           genre: data.genre || 'Audiobook',
           description: data.description || '',
-          chapters: data.chapters || [],
+          chapters: Array.isArray(data.chapters) ? data.chapters : [],
         });
         const rows = Array.isArray(reviewRes.data) ? reviewRes.data : [];
         setReviews(rows.map((r) => ({
           id: r.id,
-          name: r.user,
-          date: new Date(r.date).toLocaleDateString(),
+          name: r.user || 'Anonymous',
+          date: r.date ? new Date(r.date).toLocaleDateString() : '',
           rating: r.rating,
-          review: r.review,
+          review: r.review || '',
           helpful: r.helpful || 0,
         })));
       } catch (err) {
@@ -194,11 +218,11 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
       }
 
       // Audio files are private on S3; stream_audio returns a temporary link
-      axios.get(`${apiUrl}/collections/audiobooks/${id}/stream_audio/`)
-        .then((r) => { if (!cancelled) setAudioUrl(r.data.audio_url || null); })
+      axios.get(`${apiUrl}/collections/audiobooks/${safeId}/stream_audio/`, { timeout: 20000 })
+        .then((r) => { if (!cancelled) setAudioUrl(safeUrl(r.data?.audio_url) || null); })
         .catch(() => { if (!cancelled) setAudioUrl(null); });
 
-      const all = await axios.get(`${apiUrl}/collections/audiobooks/`).catch(() => ({ data: [] }));
+      const all = await axios.get(`${apiUrl}/collections/audiobooks/`, { timeout: 20000 }).catch(() => ({ data: [] }));
       if (cancelled) return;
       const list = Array.isArray(all.data) ? all.data : all.data?.results || [];
       setRelated(list.filter((a) => String(a.id) !== String(id)).slice(0, 10).map((a) => ({
@@ -209,8 +233,9 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
     load();
     return () => { cancelled = true; };
-  }, [id, apiUrl]);
+  }, [id, safeId, apiUrl, reloadKey]);
 
+  // Share sheet on phones, otherwise copy the link
   const handleShare = async () => {
     const url = window.location.href;
     try {
@@ -223,6 +248,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
   const toggleChapter = (chapterId) => setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
 
+  // Play from the start
   const handleListenChapter = () => {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
@@ -233,24 +259,43 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
     ref.current?.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
   };
 
-  const handleRatingChange = (rating) => setReviewForm({ ...reviewForm, rating });
+  const handleRatingChange = (rating) => {
+    setReviewForm({ ...reviewForm, rating });
+    if (reviewErrors.rating) setReviewErrors((prev) => ({ ...prev, rating: '' }));
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setReviewForm({ ...reviewForm, [name]: value });
+    if (reviewErrors[name]) setReviewErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
+  // Check every field and return the messages (empty object = all good)
+  const validateReview = () => {
+    const errs = {};
+    if (!reviewForm.name.trim()) errs.name = 'Enter your name.';
+    if (!reviewForm.email.trim()) errs.email = 'Enter your email address.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(reviewForm.email.trim())) errs.email = 'Enter an email address like name@example.com.';
+    if (!reviewForm.rating) errs.rating = 'Choose a star rating.';
+    if (reviewForm.review.trim().length < 10) errs.review = 'Write at least 10 characters.';
+    return errs;
+  };
+
+  // Note: audiobook reviews are only shown on this page for now; they are not sent to the server yet.
   const handleSubmitReview = (e) => {
     e.preventDefault();
+    const errs = validateReview();
+    setReviewErrors(errs);
+    if (Object.keys(errs).length) return;
     setIsSubmitting(true);
     setTimeout(() => {
       setReviews((prev) => [
         {
           id: prev.length + 1,
-          name: reviewForm.name,
+          name: reviewForm.name.trim(),
           date: new Date().toLocaleDateString(),
           rating: reviewForm.rating,
-          review: reviewForm.review,
+          review: reviewForm.review.trim(),
           helpful: 0,
         },
         ...prev,
@@ -270,6 +315,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   );
   const displayedReviews = sortedReviews.slice(0, visibleReviews);
 
+  // ---------------------------------------------------------------- render
   if (isLoading) {
     return <div className={styles.page}><Loader /></div>;
   }
@@ -279,7 +325,11 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
       <div className={styles.page}>
         <div className={styles.layout}>
           <p className={styles.sectionNote}>
-            {loadError || 'This audiobook could not be found.'} <Link to="/collections/audiobooks">Browse audiobooks</Link>
+            {loadError || 'This audiobook could not be found.'}{' '}
+            {loadError && loadError !== 'This audiobook could not be found.' && (
+              <><button type="button" className={styles.linkButton} onClick={() => setReloadKey((k) => k + 1)}>Try again</button> or </>
+            )}
+            <Link to="/collections/audiobooks">Browse audiobooks</Link>
           </p>
         </div>
       </div>
@@ -290,6 +340,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const progress = duration ? (currentTime / duration) * 100 : 0;
   const hasMoreDescription = audiobook.description.length > firstParagraph.length;
 
+  // A scrolling row of related audiobooks
   const renderRelated = (items, ref, label) => (
     <section className={`${styles.asideBlock} ${styles.glass}`}>
       <div className={styles.asideHead}>
@@ -500,16 +551,18 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
               <h3 id="reviews-title" className={styles.sectionTitle}>Ratings and reviews</h3>
             </div>
 
-            <form className={`${styles.reviewForm} ${styles.glass}`} onSubmit={handleSubmitReview}>
+            <form className={`${styles.reviewForm} ${styles.glass}`} onSubmit={handleSubmitReview} noValidate>
               <h4 className={styles.formTitle}>Write a review</h4>
               <div className={styles.formRow}>
                 <div className={styles.field}>
                   <label htmlFor="name" className={styles.label}>Name</label>
-                  <input id="name" name="name" type="text" className={styles.input} value={reviewForm.name} onChange={handleInputChange} required />
+                  <input id="name" name="name" type="text" className={styles.input} value={reviewForm.name} onChange={handleInputChange} required maxLength={100} autoComplete="name" aria-invalid={Boolean(reviewErrors.name)} />
+                  {reviewErrors.name && <small className={styles.fieldError} role="alert">{reviewErrors.name}</small>}
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="email" className={styles.label}>Email</label>
-                  <input id="email" name="email" type="email" className={styles.input} value={reviewForm.email} onChange={handleInputChange} required />
+                  <input id="email" name="email" type="email" className={styles.input} value={reviewForm.email} onChange={handleInputChange} required maxLength={254} autoComplete="email" aria-invalid={Boolean(reviewErrors.email)} />
+                  {reviewErrors.email && <small className={styles.fieldError} role="alert">{reviewErrors.email}</small>}
                 </div>
               </div>
               <div className={styles.field}>
@@ -529,10 +582,12 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                   ))}
                   <span className={styles.ratingHint}>{reviewForm.rating > 0 ? `${reviewForm.rating} of 5` : 'Tap a star'}</span>
                 </div>
+                {reviewErrors.rating && <small className={styles.fieldError} role="alert">{reviewErrors.rating}</small>}
               </div>
               <div className={styles.field}>
                 <label htmlFor="review" className={styles.label}>Your review</label>
-                <textarea id="review" name="review" className={styles.textarea} value={reviewForm.review} onChange={handleInputChange} required />
+                <textarea id="review" name="review" className={styles.textarea} value={reviewForm.review} onChange={handleInputChange} required maxLength={2000} aria-invalid={Boolean(reviewErrors.review)} />
+                {reviewErrors.review && <small className={styles.fieldError} role="alert">{reviewErrors.review}</small>}
               </div>
               <div className={styles.formActions}>
                 <button type="submit" className={styles.primaryButton} disabled={isSubmitting || reviewForm.rating === 0}>

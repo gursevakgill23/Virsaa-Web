@@ -1,3 +1,11 @@
+/*
+ * pages/Signup/Signup.module.css
+ * -----------------------------------------------------------------------------
+ * The sign-up page: photo background with the glass form, password strength
+ * meter and rules, steps, features and FAQs.
+ * -----------------------------------------------------------------------------
+ */
+
 /* =========================================================================
    Auth pages (identical copy in Login.module.css and Signup.module.css)
    Spatial layout: a glass form card floating over the header photo,

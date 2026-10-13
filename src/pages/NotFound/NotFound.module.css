@@ -1,0 +1,70 @@
+/*
+ * pages/NotFound/NotFound.module.css
+ * Layout for the "Page not found" screen: the shared PageHero header, then a
+ * home button and a row of section links.
+ */
+
+.page {
+  min-height: 70vh;
+  background: var(--background-color);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 16px 80px;
+  text-align: center;
+}
+
+/* Filled maroon button back to the home page */
+.homeButton {
+  display: inline-flex;
+  padding: 12px 26px;
+  border-radius: 999px;
+  border: var(--button-border);
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  font-family: var(--font-body);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.lede {
+  margin: 10px 0 0;
+  font-family: var(--font-body);
+  color: var(--secondary-text-color);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* Glass pills for each section */
+.link {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-highlight);
+  color: var(--primary-color);
+  font-family: var(--font-body);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.homeButton:focus-visible,
+.link:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}

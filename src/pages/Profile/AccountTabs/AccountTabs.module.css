@@ -1,4 +1,12 @@
+/*
+ * pages/Profile/AccountTabs/AccountTabs.module.css
+ * -----------------------------------------------------------------------------
+ * The glass tab bar shared by the five account pages, with the unread badge.
+ * -----------------------------------------------------------------------------
+ */
+
 /* Glass tab bar inside the page header (white on the maroon photo) */
+/* The bar: scrolls sideways on small screens */
 .tabs {
   margin-top: 22px;
   display: inline-flex;
@@ -19,6 +27,7 @@
   display: none;
 }
 
+/* One tab; the current page is filled */
 .tab {
   display: inline-flex;
   align-items: center;
@@ -46,6 +55,7 @@
   background: #fff;
 }
 
+/* Unread count bubble */
 .badge {
   display: grid;
   place-items: center;

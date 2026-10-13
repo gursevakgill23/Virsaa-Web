@@ -1,21 +1,34 @@
+/**
+ * pages/Login/Login.jsx
+ * -----------------------------------------------------------------------------
+ * The sign-in page (/login): a glass form over a photo (email or username,
+ * password, Remember me, reCAPTCHA), the perks of an account, what an account
+ * opens up, and sign-in FAQs.
+ * On success the tokens go to AuthContext.login() and the user is sent home.
+ * Every problem is explained: field messages under the inputs, and an alert
+ * for server/connection errors (see utils/apiError.js).
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/notify';
 import ReCAPTCHA from 'react-google-recaptcha';
 import styles from './Login.module.css';
 import {
   FaGoogle, FaFacebook, FaEye, FaEyeSlash, FaBook, FaRegFileAudio,
-  FaHeart, FaHistory, FaGamepad,
+  FaHeart, FaHistory, FaGamepad, FaCompass,
 } from 'react-icons/fa';
 import { FaHandsPraying } from 'react-icons/fa6';
 import { useAuth } from '../../context/AuthContext';
+import { describeApiError } from '../../utils/apiError';
 import axios from 'axios';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
       if (typeof imagePath === 'string') {
-        return imagePath.startsWith('/')
+        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
           ? imagePath
           : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
       } else {
@@ -26,6 +39,7 @@ const useProductionImagePath = () => {
   };
 };
 
+// Content for the side panel and the sections below the form
 const PERKS = [
   { icon: <FaBook />, title: 'Your reading, saved', text: 'Pick up any ebook where you left off.' },
   { icon: <FaHeart />, title: 'Favourites in one place', text: 'Save books, audiobooks and shabads to come back to.' },
@@ -62,14 +76,17 @@ const FAQS = [
 
 const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
   const getImagePath = useProductionImagePath();
-  const { login } = useAuth();
+  const { login, continueAsGuest } = useAuth();
   const navigate = useNavigate();
+  // The reCAPTCHA widget (its token is sent with the form)
   const recaptchaRef = useRef(null);
 
+  // Pictures
   const formSideImage = '/images/Login/right_section.png';
   const headerImageLight = '/images/Login/background.jpeg';
   const headerImageDark = '/images/Login/background-dark.jpeg';
 
+  // Form values, field errors, sending state, show/hide password
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -80,6 +97,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
   const [showPassword, setShowPassword] = useState(false);
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
+  // Keep the typed value and clear that field's error
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -95,6 +113,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
     setShowPassword((prev) => !prev);
   };
 
+  // Required fields and the reCAPTCHA tick
   const validateForm = () => {
     const newErrors = {};
 
@@ -115,6 +134,8 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Send the sign-in request. The reCAPTCHA is reset afterwards either way,
+  // because each token can only be used once.
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -133,7 +154,8 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
         captcha: captchaToken,
       };
 
-      const response = await axios.post(`${apiString}/api/auth/login/`, payload);
+      const response = await axios.post(`${apiString}/api/auth/login/`, payload, { timeout: 20000 });
+      if (!response.data?.access || !response.data?.user) throw new Error('Unexpected sign-in reply');
 
       login(
         response.data.access,
@@ -161,12 +183,12 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
 
       setTimeout(() => navigate('/'), 2000);
     } catch (error) {
+      // Server reasons first (wrong details, captcha), then a clear general message
       const errorMessage =
         error.response?.data?.login?.[0] ||
         error.response?.data?.error ||
         error.response?.data?.captcha?.[0] ||
-        error.message ||
-        'Sign in failed. Check your details and try again.';
+        describeApiError(error, 'Sign in failed. Check your details and try again.');
       console.error('Login error:', error.response?.status || error.message);
       toast.error(errorMessage, {
         position: 'top-center',
@@ -207,9 +229,10 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleChange}
+                  maxLength={254}
                   aria-invalid={!!errors.email}
                 />
-                {errors.email && <div className={styles.errorMessage}>{errors.email}</div>}
+                {errors.email && <div className={styles.errorMessage} role="alert">{errors.email}</div>}
               </div>
 
               <div className={styles.inputGroup}>
@@ -234,7 +257,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.password && <div className={styles.errorMessage}>{errors.password}</div>}
+                {errors.password && <div className={styles.errorMessage} role="alert">{errors.password}</div>}
               </div>
 
               <div className={styles.rememberForgot}>
@@ -257,9 +280,14 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
                   size="normal"
                   theme={isDarkMode ? 'dark' : 'light'}
                   sitekey={process.env.REACT_APP_RECAPTCHA_PUBLIC_KEY}
-                  onErrored={() => console.error('reCAPTCHA failed to load')}
+                  onChange={() => errors.captcha && setErrors((prev) => ({ ...prev, captcha: '' }))}
+                  onExpired={() => setErrors((prev) => ({ ...prev, captcha: 'The reCAPTCHA expired. Tick the box again.' }))}
+                  onErrored={() => {
+                    console.error('reCAPTCHA failed to load');
+                    setErrors((prev) => ({ ...prev, captcha: 'The reCAPTCHA couldn’t load. Check your connection and reload the page.' }));
+                  }}
                 />
-                {errors.captcha && <div className={styles.errorMessage}>{errors.captcha}</div>}
+                {errors.captcha && <div className={styles.errorMessage} role="alert">{errors.captcha}</div>}
               </div>
 
               <button type="submit" className={styles.primaryButton} disabled={isSubmitting}>
@@ -269,10 +297,11 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
               <div className={styles.divider}><span>or</span></div>
 
               <div className={styles.socialLogin}>
-                <button type="button" className={styles.socialButton}>
+                {/* Social sign-in isn't connected yet; say so instead of doing nothing */}
+                <button type="button" className={styles.socialButton} onClick={() => toast.info('Google sign-in is coming soon. Use your email or username for now.')}>
                   <FaGoogle /> Google
                 </button>
-                <button type="button" className={styles.socialButton}>
+                <button type="button" className={styles.socialButton} onClick={() => toast.info('Facebook sign-in is coming soon. Use your email or username for now.')}>
                   <FaFacebook /> Facebook
                 </button>
               </div>
@@ -281,6 +310,14 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
             <p className={styles.switchText}>
               New to Virsaa? <Link to="/signup" className={styles.inlineLink}>Create an account</Link>
             </p>
+
+            {/* Explore as guest: browse the main sections without an account (see AuthContext) */}
+            <div className={styles.guestBox}>
+              <button type="button" className={styles.guestButton} onClick={continueAsGuest}>
+                <FaCompass aria-hidden="true" /> Explore as guest
+              </button>
+              <p className={styles.guestHint}>Look around the library, Gurbani and learning. Sign in when you want to open something.</p>
+            </div>
           </div>
 
           <aside className={styles.perksPanel}>

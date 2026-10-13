@@ -1,3 +1,14 @@
+/**
+ * pages/Collections/AuthorDetail/AuthorDetail.jsx
+ * -----------------------------------------------------------------------------
+ * One author (/collections/authors/author/:id):
+ *   - portrait, life dates, genre, rating, Like / Save for later, Share
+ *   - tabs: Biography, Works (their ebooks), Awards, Reviews
+ *   - related authors (same genre first)
+ * While loading, the Virsaa loader is shown; "not found" and "couldn't load"
+ * (with Try again) are told apart.
+ * -----------------------------------------------------------------------------
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
@@ -10,6 +21,7 @@ import useLibraryItem from '../../../hooks/useLibraryItem';
 import PageHero from '../../../components/PageHero/PageHero';
 import styles from './AuthorDetail.module.css';
 
+// Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
   return (imagePath) => {
     if (process.env.NODE_ENV === 'production') {
@@ -24,6 +36,7 @@ const useProductionImagePath = () => {
   };
 };
 
+// The tabs under the author card
 const TABS = [
   { id: 'biography', label: 'Biography' },
   { id: 'works', label: 'Major works' },
@@ -31,6 +44,7 @@ const TABS = [
   { id: 'reviews', label: 'Reviews' },
 ];
 
+// Five stars, filled up to `value`
 const Stars = ({ value }) => (
   <span className={styles.stars} aria-label={`${value} out of 5`}>
     {[1, 2, 3, 4, 5].map((i) =>
@@ -39,6 +53,7 @@ const Stars = ({ value }) => (
   </span>
 );
 
+// Placeholder cards while related authors load
 const RelatedAuthorSkeleton = () => (
   <div className={styles.relatedCard} aria-hidden="true">
     <span className={`${styles.relatedThumb} ${styles.relatedThumbRound} ${styles.skeleton}`} />
@@ -50,6 +65,7 @@ const RelatedAuthorSkeleton = () => (
 );
 
 // "1722-03-05" -> "5 March 1722"
+// "1906-03-07" → a readable date; a year alone stays a year
 const formatDate = (iso) => {
   if (!iso) return '';
   const [y, m, d] = String(iso).split('-').map(Number);
@@ -59,6 +75,7 @@ const formatDate = (iso) => {
 };
 
 // Awards are stored as text, one per line (or comma separated): "Sahitya Akademi Award 1956"
+// Awards are stored as text, one per line ("Year - Award"); turn them into a list
 const parseAwards = (text) => String(text || '')
   .split(/\n|,/)
   .map((line) => line.trim())
@@ -72,13 +89,18 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
   const getImagePath = useProductionImagePath();
   const { id } = useParams();
   const relatedRef = useRef(null);
+  // Author data and loading/error state
   const [author, setAuthor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relatedLoading, setRelatedLoading] = useState(true);
   const library = useLibraryItem(apiString, 'author', id);
   const { liked, saved } = library;
   const [loadError, setLoadError] = useState(null);
-  const apiUrl = (apiString || '').replace(/\/$/, '');
+  const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
+  const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
+  const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again"
+  const [reviewErrors, setReviewErrors] = useState({}); // field → message for the review form
+  // Open tab, review form and list
   const [activeTab, setActiveTab] = useState('biography');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const header_image_dark = '/images/header-image-dark.png';
@@ -98,10 +120,10 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
 
     const load = async () => {
       try {
-        const { data } = await axios.get(`${apiUrl}/collections/authors/${id}/`);
+        const { data } = await axios.get(`${apiUrl}/collections/authors/${safeId}/`, { timeout: 20000 });
         const [booksRes, reviewRes] = await Promise.all([
-          axios.get(`${apiUrl}/collections/ebooks/`, { params: { author__name: data.name } }).catch(() => ({ data: [] })),
-          axios.get(`${apiUrl}/collections/authors/${id}/reviews/`).catch(() => ({ data: [] })),
+          axios.get(`${apiUrl}/collections/ebooks/`, { params: { author__name: data.name }, timeout: 20000 }).catch(() => ({ data: [] })),
+          axios.get(`${apiUrl}/collections/authors/${safeId}/reviews/`, { timeout: 20000 }).catch(() => ({ data: [] })),
         ]);
         if (cancelled) return;
         const books = asList(booksRes.data)
@@ -124,14 +146,14 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
         });
         setReviews(asList(reviewRes.data).map((r) => ({
           id: r.id,
-          name: r.user,
-          date: new Date(r.date).toLocaleDateString(),
+          name: r.user || 'Anonymous',
+          date: r.date ? new Date(r.date).toLocaleDateString() : '',
           rating: r.rating,
-          review: r.review,
+          review: r.review || '',
           helpful: r.helpful || 0,
         })));
 
-        const all = await axios.get(`${apiUrl}/collections/authors/`).catch(() => ({ data: [] }));
+        const all = await axios.get(`${apiUrl}/collections/authors/`, { timeout: 20000 }).catch(() => ({ data: [] }));
         if (cancelled) return;
         const others = asList(all.data).filter((a) => String(a.id) !== String(data.id));
         const sameGenre = others.filter((a) => data.genre && a.genre === data.genre);
@@ -152,8 +174,9 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
 
     load();
     return () => { cancelled = true; };
-  }, [id, apiUrl]);
+  }, [id, safeId, apiUrl, reloadKey]);
 
+  // Share sheet on phones, otherwise copy the link
   const handleShare = async () => {
     const url = window.location.href;
     try {
@@ -164,22 +187,41 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
     }
   };
 
-  const handleRatingChange = (rating) => setReviewForm({ ...reviewForm, rating });
+  const handleRatingChange = (rating) => {
+    setReviewForm({ ...reviewForm, rating });
+    if (reviewErrors.rating) setReviewErrors((prev) => ({ ...prev, rating: '' }));
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setReviewForm({ ...reviewForm, [name]: value });
+    if (reviewErrors[name]) setReviewErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
+  // Check every field and return the messages (empty object = all good)
+  const validateReview = () => {
+    const errs = {};
+    if (!reviewForm.name.trim()) errs.name = 'Enter your name.';
+    if (!reviewForm.email.trim()) errs.email = 'Enter your email address.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(reviewForm.email.trim())) errs.email = 'Enter an email address like name@example.com.';
+    if (!reviewForm.rating) errs.rating = 'Choose a star rating.';
+    if (reviewForm.review.trim().length < 10) errs.review = 'Write at least 10 characters.';
+    return errs;
+  };
+
+  // Note: author reviews are only shown on this page for now; they are not sent to the server yet.
   const handleSubmitReview = (e) => {
     e.preventDefault();
+    const errs = validateReview();
+    setReviewErrors(errs);
+    if (Object.keys(errs).length) return;
     setReviews([
       {
         id: reviews.length + 1,
-        name: reviewForm.name,
+        name: reviewForm.name.trim(),
         date: new Date().toLocaleDateString(),
         rating: reviewForm.rating,
-        review: reviewForm.review,
+        review: reviewForm.review.trim(),
         helpful: 0,
       },
       ...reviews,
@@ -192,15 +234,18 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
     setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, helpful: r.helpful + 1 } : r)));
   };
 
+  // Scroll the related-authors row
   const scrollRelated = (direction) => {
     relatedRef.current?.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
   };
 
+  // "See all works": open the Works tab and scroll to it
   const openWorks = () => {
     setActiveTab('works');
     document.getElementById('author-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // ---------------------------------------------------------------- render
   if (isLoading) {
     return <div className={styles.page}><Loader /></div>;
   }
@@ -209,7 +254,13 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
     return (
       <div className={styles.page}>
         <div className={styles.layout}>
-          <p>{loadError || 'This author could not be found.'} <Link to="/collections/authors">Browse authors</Link></p>
+          <p>
+            {loadError || 'This author could not be found.'}{' '}
+            {loadError && loadError !== 'This author could not be found.' && (
+              <><button type="button" className={styles.linkButton} onClick={() => setReloadKey((k) => k + 1)}>Try again</button> or </>
+            )}
+            <Link to="/collections/authors">Browse authors</Link>
+          </p>
         </div>
       </div>
     );
@@ -389,16 +440,18 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
 
               {activeTab === 'reviews' && (
                 showReviewForm ? (
-                  <form onSubmit={handleSubmitReview}>
+                  <form onSubmit={handleSubmitReview} noValidate>
                     <h3 className={styles.formTitle}>Write a review</h3>
                     <div className={styles.formRow}>
                       <div className={styles.field}>
                         <label htmlFor="name" className={styles.label}>Name</label>
-                        <input id="name" name="name" type="text" className={styles.input} value={reviewForm.name} onChange={handleInputChange} required />
+                        <input id="name" name="name" type="text" className={styles.input} value={reviewForm.name} onChange={handleInputChange} required maxLength={100} autoComplete="name" aria-invalid={Boolean(reviewErrors.name)} />
+                        {reviewErrors.name && <small className={styles.fieldError} role="alert">{reviewErrors.name}</small>}
                       </div>
                       <div className={styles.field}>
                         <label htmlFor="email" className={styles.label}>Email</label>
-                        <input id="email" name="email" type="email" className={styles.input} value={reviewForm.email} onChange={handleInputChange} required />
+                        <input id="email" name="email" type="email" className={styles.input} value={reviewForm.email} onChange={handleInputChange} required maxLength={254} autoComplete="email" aria-invalid={Boolean(reviewErrors.email)} />
+                        {reviewErrors.email && <small className={styles.fieldError} role="alert">{reviewErrors.email}</small>}
                       </div>
                     </div>
                     <div className={styles.field}>
@@ -417,10 +470,12 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
                           </button>
                         ))}
                       </div>
+                      {reviewErrors.rating && <small className={styles.fieldError} role="alert">{reviewErrors.rating}</small>}
                     </div>
                     <div className={styles.field}>
                       <label htmlFor="review" className={styles.label}>Your review</label>
-                      <textarea id="review" name="review" className={styles.textarea} value={reviewForm.review} onChange={handleInputChange} required />
+                      <textarea id="review" name="review" className={styles.textarea} value={reviewForm.review} onChange={handleInputChange} required maxLength={2000} aria-invalid={Boolean(reviewErrors.review)} />
+                      {reviewErrors.review && <small className={styles.fieldError} role="alert">{reviewErrors.review}</small>}
                     </div>
                     <div className={styles.formActions}>
                       <button type="button" className={styles.secondaryButton} onClick={() => setShowReviewForm(false)}>Cancel</button>

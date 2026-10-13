@@ -1,3 +1,11 @@
+/**
+ * hooks/useMembership.js
+ * -----------------------------------------------------------------------------
+ * React hook that tells any page which membership plan the signed-in user has
+ * (Free, Basic, Standard or Premium). Used by the navbar plan card, the
+ * Membership page, downloads and premium-only content.
+ * -----------------------------------------------------------------------------
+ */
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import paymentsApi from '../api/paymentsApi';
@@ -14,6 +22,7 @@ import paymentsApi from '../api/paymentsApi';
  *   isPremiumTier  on Standard or Premium
  */
 
+// Plans in order, so pages can compare them (upgrade vs downgrade)
 export const PLAN_RANK = { free: 0, basic: 1, standard: 2, premium: 3 };
 export const PLAN_NAMES = { free: 'Free', basic: 'Basic', standard: 'Standard', premium: 'Premium' };
 
@@ -23,6 +32,7 @@ export const announceMembershipChange = () => {
   try { window.dispatchEvent(new Event(MEMBERSHIP_CHANGED)); } catch { /* ignore */ }
 };
 
+// Turn any plan label from the server ("premium_member", "Standard"…) into a plan key
 export const normalizePlan = (value) => {
   const v = String(value || '').toLowerCase();
   if (v.includes('premium')) return 'premium';
@@ -31,8 +41,10 @@ export const normalizePlan = (value) => {
   return 'free';
 };
 
+// What a signed-out or free user gets
 const FREE = { plan: 'free', billing: null, periodEnd: null, status: null };
 
+// Read a subscription from the payments API; null if it isn't usable today
 const fromSubscription = (sub) => {
   if (!sub || !sub.plan) return null;
   const end = sub.current_period_end ? new Date(sub.current_period_end) : null;
@@ -48,6 +60,8 @@ const useMembership = (apiString) => {
   const [state, setState] = useState(FREE);
   const [loading, setLoading] = useState(Boolean(isLoggedIn));
 
+  // Load the plan. Any error falls back to the profile's membership level,
+  // so the page still works when the payments API is unreachable.
   const refresh = useCallback(async () => {
     if (!isLoggedIn || !accessToken) {
       setState(FREE);
@@ -70,10 +84,12 @@ const useMembership = (apiString) => {
   }, [refresh]);
 
   useEffect(() => {
+    // Re-check when another page says the plan changed (e.g. after paying)
     window.addEventListener(MEMBERSHIP_CHANGED, refresh);
     return () => window.removeEventListener(MEMBERSHIP_CHANGED, refresh);
   }, [refresh]);
 
+  // Values every caller gets back
   const rank = PLAN_RANK[state.plan] || 0;
   return {
     ...state,

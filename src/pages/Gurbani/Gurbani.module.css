@@ -1,3 +1,11 @@
+/*
+ * pages/Gurbani/Gurbani.module.css
+ * -----------------------------------------------------------------------------
+ * The Gurbani page: search and filters, the library rows (arch picture + action), explore tiles, "Because
+ * you viewed" arches and the audio/video player.
+ * -----------------------------------------------------------------------------
+ */
+
 /* ---------- Page base (shared by content pages) ---------- */
 .page {
   background: var(--background-color);
@@ -238,101 +246,102 @@
   color: var(--secondary-text-color);
 }
 
-/* Cards */
-.cardGrid {
+/* ---------- Library list ----------
+   Each item is a row: an arch-shaped picture (the Gurdwara doorway motif used
+   across Virsaa), the type, title and text, and one action on the right.
+   Two columns on wide screens, one on tablets and phones. */
+.list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.card {
-  display: flex;
-  flex-direction: column;
-  border-radius: 26px;
-  overflow: hidden;
+.row {
+  --row-accent: var(--primary-color);
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px 14px 14px;
+  border-radius: 22px;
   background: var(--glass-bg);
   border: 1px solid var(--glass-edge);
   box-shadow: var(--glass-highlight), var(--shadow-soft);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
-.card:hover {
-  transform: translateY(-4px);
+.row:hover {
+  border-color: color-mix(in srgb, var(--row-accent) 45%, transparent);
   box-shadow: var(--glass-highlight), var(--shadow-deep);
 }
 
-.premiumCard {
-  border-color: rgba(201, 151, 31, 0.45);
-}
+/* A different accent per type, used on the picture's edge and the type label */
+.row_shabad { --row-accent: #8c1232; }
+.row_audio { --row-accent: #b8860b; }
+.row_video { --row-accent: #b0455e; }
 
-.cardMedia {
-  position: relative;
-  aspect-ratio: 4 / 3;
+[data-theme='dark'] .row_shabad { --row-accent: #f2b3c2; }
+[data-theme='dark'] .row_audio { --row-accent: #f2d47e; }
+[data-theme='dark'] .row_video { --row-accent: #f0a3b4; }
+
+/* Arch-shaped picture: rounded top, square-ish bottom */
+.rowThumb {
+  width: 84px;
+  height: 104px;
   overflow: hidden;
+  border-radius: 999px 999px 14px 14px;
+  box-shadow: 0 0 0 2px var(--card-bg-color), 0 0 0 4px color-mix(in srgb, var(--row-accent) 55%, transparent);
 }
 
-.cardImage {
+.rowThumb img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
-  transition: transform 0.5s ease;
 }
 
-.card:hover .cardImage {
-  transform: scale(1.04);
+.rowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
-.typeBadge,
-.premiumBadge {
-  position: absolute;
-  top: 10px;
+.rowType {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.typeBadge {
-  left: 10px;
-  color: #fff;
-  background: rgba(40, 6, 16, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-}
-
-.premiumBadge {
-  right: 10px;
-  color: #2b1600;
-  background: linear-gradient(135deg, #f2d47e, #c9971f);
-}
-
-.cardBody {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px 18px 18px;
-}
-
-.cardTitle {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.15rem;
-  color: var(--headline-color);
   margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--row-accent);
 }
 
-.cardText {
-  flex: 1;
-  margin: 0 0 8px;
-  font-size: 0.92rem;
-  line-height: 1.5;
+.rowTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--headline-color);
+}
+
+.rowText {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
   color: var(--secondary-text-color);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.row .rowAction {
+  align-self: center;
+  white-space: nowrap;
 }
 
 .actionButton,
@@ -478,13 +487,6 @@
 .archTone0 { background: linear-gradient(170deg, #8c1232, #4a0215); }
 .archTone1 { background: linear-gradient(170deg, #a3384f, #65041d); }
 .archTone2 { background: linear-gradient(170deg, #5a1424, #2a0610); }
-
-.archCrown {
-  position: absolute;
-  top: 26%;
-  right: 18px;
-  color: #f2d47e;
-}
 
 .archIcon {
   display: grid;
@@ -760,6 +762,10 @@
 }
 
 @media (max-width: 991.98px) {
+  .list {
+    grid-template-columns: 1fr;
+  }
+
   .explore {
     grid-template-columns: 1fr;
   }
@@ -798,22 +804,23 @@
     flex-shrink: 0;
   }
 
-  .cardGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+  /* Phones: picture and text side by side, the button underneath */
+  .row {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px 14px;
+    padding: 12px;
   }
 
-  .cardBody {
-    padding: 12px 12px 14px;
+  .rowThumb {
+    width: 64px;
+    height: 80px;
   }
 
-  .cardText {
-    display: none;
-  }
-
-  .actionButton {
-    font-size: 0.82rem;
-    padding: 8px 12px;
+  .row .rowAction {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    justify-content: center;
+    font-size: 0.86rem;
   }
 
   .arches {
@@ -826,12 +833,7 @@
 }
 
 @media (max-width: 379.98px) {
-  .cardGrid,
   .arches {
     grid-template-columns: 1fr;
-  }
-
-  .cardText {
-    display: block;
   }
 }
