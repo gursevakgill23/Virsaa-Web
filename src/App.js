@@ -16,7 +16,7 @@
  * Virsaa loader is shown (Suspense fallback).
  * -----------------------------------------------------------------------------
  */
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import Cookies from 'js-cookie';
@@ -27,7 +27,7 @@ import Loader from './components/VirsaaLoader/Loader';
 import NotificationLayer from './components/NotificationLayer/NotificationLayer';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import GurdwaraAccessButton from './pages/GurdwaraAccess/GurdwaraAccessButton/GurdwaraAccessButton';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css';
 
 // ---------------------------------------------------------------- pages (loaded on demand)
@@ -93,6 +93,28 @@ const RouteLoader = () => {
   return <Loader key={playing} variant="quick" onLoadingComplete={() => setPlaying(0)} />;
 };
 
+/**
+ * Applies the theme saved on the user's account (Settings → Save settings) when they
+ * sign in or it changes. Skipped when "Match device" was chosen on this device.
+ * Lives inside <AuthProvider> so it can read the signed-in user.
+ */
+const ThemeFromProfile = ({ setTheme }) => {
+  const { userData } = useAuth();
+  const saved = userData?.theme_preference;
+  const applied = useRef(null);
+
+  useEffect(() => {
+    if (!saved || applied.current === saved) return;
+    applied.current = saved;
+    let choice = null;
+    try { choice = localStorage.getItem('virsaa:theme-choice'); } catch { /* storage blocked */ }
+    if (choice === 'system') return;
+    setTheme(saved === 'dark');
+  }, [saved, setTheme]);
+
+  return null;
+};
+
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -112,14 +134,17 @@ const App = () => {
     }
   }, []);
 
-  // Switch theme and remember it in the "theme" cookie.
+  // Set the theme and remember it on this device for a year ("theme" cookie).
   // SameSite=Lax keeps the cookie out of cross-site requests; Secure on HTTPS.
-  const toggleTheme = () => {
-    const newTheme = isDarkMode ? 'light' : 'dark';
-    Cookies.set('theme', newTheme, { sameSite: 'Lax', secure: window.location.protocol === 'https:' });
-    setIsDarkMode(!isDarkMode);
+  const setTheme = useCallback((dark) => {
+    const newTheme = dark ? 'dark' : 'light';
+    Cookies.set('theme', newTheme, { expires: 365, sameSite: 'Lax', secure: window.location.protocol === 'https:' });
+    setIsDarkMode(dark);
     document.documentElement.setAttribute('data-theme', newTheme);
-  };
+  }, []);
+
+  // The navbar's sun/moon button
+  const toggleTheme = () => setTheme(!isDarkMode);
 
   // Called by the splash loader when it has finished
   const handleLoadingComplete = () => {
@@ -145,6 +170,8 @@ const App = () => {
       <CssBaseline />
       {/* Success / error messages from toast.*() (utils/notify.js) */}
       <NotificationLayer />
+      {/* Use the theme saved on the account when someone signs in */}
+      <ThemeFromProfile setTheme={setTheme} />
 
       {isLoading ? (
         <Loader onLoadingComplete={handleLoadingComplete} />
@@ -205,7 +232,7 @@ const App = () => {
                 <Route path="/forgot-password" element={<ForgotPassword {...pageProps} />} />
                 <Route path="/forgot-password/:email/:token" element={<ForgotPassword {...pageProps} />} />
                 <Route path="/my-profile" element={<ProfileRoute {...pageProps} />} />
-                <Route path="/account-settings" element={<Settings {...pageProps} toggleTheme={toggleTheme} />} />
+                <Route path="/account-settings" element={<Settings {...pageProps} toggleTheme={toggleTheme} setTheme={setTheme} />} />
                 <Route path="/my-favorites" element={<MyFavorites {...pageProps} toggleTheme={toggleTheme} />} />
                 <Route path="/history" element={<History {...pageProps} toggleTheme={toggleTheme} />} />
                 <Route path="/notifications" element={<Notifications {...pageProps} toggleTheme={toggleTheme} />} />

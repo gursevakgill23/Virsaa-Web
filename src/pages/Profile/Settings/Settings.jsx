@@ -80,9 +80,12 @@ const SwitchRow = ({ id, title, description, checked, onChange, disabled }) => (
   </div>
 );
 
-const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
+// After a language change the page reloads; this flag shows "Settings saved" afterwards
+const SAVED_FLAG = 'virsaa:settings-saved';
+
+const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
-  const { isLoggedIn, accessToken, logout } = useAuth();
+  const { isLoggedIn, accessToken, logout, updateUserData } = useAuth();
   const navigate = useNavigate();
   const toastTheme = isDarkMode ? 'dark' : 'light';
   // Show a success / error message
@@ -90,8 +93,11 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
 
   // Open section, theme choice, saved settings and their error
   const [activeTab, setActiveTab] = useState('general');
+  // The saved theme choice: "system" if chosen here before, otherwise whatever is showing now
   const [selectedTheme, setSelectedTheme] = useState(() => {
-    try { return localStorage.getItem(THEME_KEY) || (isDarkMode ? 'dark' : 'light'); } catch { return isDarkMode ? 'dark' : 'light'; }
+    let stored = null;
+    try { stored = localStorage.getItem(THEME_KEY); } catch { /* storage blocked */ }
+    return stored === 'system' ? 'system' : (isDarkMode ? 'dark' : 'light');
   });
   const [prefs, setPrefs] = useState(null);
   const [prefsError, setPrefsError] = useState(null);
@@ -141,21 +147,69 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
 
   useEffect(() => { if (activeTab === 'storage') measureStorage(); }, [activeTab, measureStorage]);
 
-  // ---------- Appearance ----------
-  const handleThemeChange = (value) => {
-    const wantDark = value === 'system'
+  // ---------- Appearance (theme + language), saved with the "Save settings" button ----------
+  // Choices on screen that haven't been saved yet
+  const [draft, setDraft] = useState(() => ({ theme: selectedTheme, language: getLanguage() }));
+  const [savingGeneral, setSavingGeneral] = useState(false);
+
+  // Show "Settings saved" after the reload a language change causes
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(SAVED_FLAG)) {
+        sessionStorage.removeItem(SAVED_FLAG);
+        toast.success('Settings saved', { toastId: 'settings-saved' });
+      }
+    } catch { /* storage blocked */ }
+  }, []);
+
+  /**
+   * Save theme and language:
+   *   1. signed in: store the theme on the account (so it follows the user to other devices)
+   *   2. apply the theme here and remember it on this device
+   *   3. switch language last, because that reloads the page
+   * If the server refuses, nothing changes and an error explains why.
+   */
+  const saveGeneral = async () => {
+    if (savingGeneral) return;
+    const themeChanged = draft.theme !== selectedTheme;
+    const languageChanged = draft.language !== getLanguage();
+    if (!themeChanged && !languageChanged) return;
+
+    const wantDark = draft.theme === 'system'
       ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : value === 'dark';
-    if (wantDark !== isDarkMode && typeof toggleTheme === 'function') toggleTheme();
-    setSelectedTheme(value);
-    try { localStorage.setItem(THEME_KEY, value); } catch { /* ignore */ }
-    if (isLoggedIn) accountApi.updateSettings(apiString, accessToken, { theme: wantDark ? 'dark' : 'light' }).catch(() => {});
+      : draft.theme === 'dark';
+    setSavingGeneral(true);
+    try {
+      if (themeChanged && isLoggedIn) {
+        await accountApi.updateSettings(apiString, accessToken, { theme: wantDark ? 'dark' : 'light' });
+        updateUserData?.({ theme_preference: wantDark ? 'dark' : 'light' });
+      }
+    } catch (err) {
+      setSavingGeneral(false);
+      say('error', err.response?.status === 401
+        ? 'Your session has ended. Log in again to save your settings.'
+        : describeApiError(err, 'Your settings couldn’t be saved. Try again.'));
+      return;
+    }
+
+    if (themeChanged) {
+      if (typeof setTheme === 'function') setTheme(wantDark);
+      else if (wantDark !== isDarkMode && typeof toggleTheme === 'function') toggleTheme();
+      setSelectedTheme(draft.theme);
+      try { localStorage.setItem(THEME_KEY, draft.theme); } catch { /* storage blocked */ }
+    }
+
+    if (languageChanged) {
+      try { sessionStorage.setItem(SAVED_FLAG, '1'); } catch { /* storage blocked */ }
+      setSiteLanguage(draft.language); // reloads the page in the new language
+      return;
+    }
+    setSavingGeneral(false);
+    say('success', 'Settings saved');
   };
 
-  const isThemeActive = (value) => {
-    if (selectedTheme === 'system') return value === 'system';
-    return (value === 'dark' && isDarkMode) || (value === 'light' && !isDarkMode);
-  };
+  // Put the choices back to what's saved
+  const resetGeneral = () => setDraft({ theme: selectedTheme, language: getLanguage() });
 
   // ---------- Saved switches ----------
   const togglePref = async (key) => {
@@ -246,6 +300,7 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
 
   const tab = TABS.find((t) => t.id === activeTab);
   const currentLanguage = getLanguage();
+  const generalDirty = draft.theme !== selectedTheme || draft.language !== currentLanguage;
 
   // Shown instead of server settings when signed out, or while they load
   const needLogin = (
@@ -298,7 +353,7 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
                 <h3 className={styles.blockTitle}><FaPalette aria-hidden="true" /> Theme</h3>
                 <div className={styles.themes} role="radiogroup" aria-label="Theme">
                   {THEMES.map((theme) => {
-                    const active = isThemeActive(theme.value);
+                    const active = draft.theme === theme.value;
                     return (
                       <button
                         key={theme.value}
@@ -306,7 +361,7 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
                         role="radio"
                         aria-checked={active}
                         className={`${styles.themeCard} ${active ? styles.themeActive : ''}`}
-                        onClick={() => handleThemeChange(theme.value)}
+                        onClick={() => setDraft((d) => ({ ...d, theme: theme.value }))}
                       >
                         <span className={`${styles.preview} ${styles[`preview_${theme.value}`]}`} aria-hidden="true">
                           <span className={styles.previewBar} />
@@ -330,12 +385,28 @@ const Settings = ({ isDarkMode, toggleTheme, apiString }) => {
                 <select
                   id="language"
                   className={`${styles.select} ${styles.narrow}`}
-                  value={currentLanguage}
-                  onChange={(e) => setSiteLanguage(e.target.value)}
+                  value={draft.language}
+                  onChange={(e) => setDraft((d) => ({ ...d, language: e.target.value }))}
                 >
                   {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
                 </select>
                 <p className={styles.hint}>The whole website switches language. Gurbani and the word games stay as written.</p>
+              </div>
+
+              {/* Save bar: nothing changes until "Save settings" is pressed */}
+              <div className={styles.saveBar}>
+                <p className={styles.saveStatus} role="status">
+                  {generalDirty ? 'You have unsaved changes.' : 'Your settings are saved.'}
+                  {!isLoggedIn && ' Sign in to keep your theme on every device.'}
+                </p>
+                <div className={styles.saveButtons}>
+                  <button type="button" className={styles.secondaryButton} onClick={resetGeneral} disabled={!generalDirty || savingGeneral}>
+                    Cancel
+                  </button>
+                  <button type="button" className={styles.primaryButton} onClick={saveGeneral} disabled={!generalDirty || savingGeneral}>
+                    {savingGeneral ? 'Saving…' : 'Save settings'}
+                  </button>
+                </div>
               </div>
             </>
           )}
