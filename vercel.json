@@ -4,11 +4,7 @@
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build",
-        "cleanUrls": true,
-        "includeFiles": ["src/images/**"]
-      }
+      "config": { "distDir": "build" }
     }
   ],
   "routes": [
@@ -16,9 +12,7 @@
       "src": "/backend/(.*)",
       "dest": "http://virsaa-api.us-east-2.elasticbeanstalk.com/$1"
     },
-    {
-      "src": "/(.*)",
-      "dest": "/build/index.html"
-    }
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
