@@ -31,26 +31,17 @@ import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { SOUND_URLS, themeBackground } from '../gameAssets';
+import { backgroundOf, useSiteImages } from '../../../../hooks/useSiteImages';
+import Avatar from '../../../../components/Avatar/Avatar';
 
-// Pictures (public/images)
-const playable1 = '/images/Learning/playables.jpg';
-const avatar = '/images/Learning/avatar.jpg';
-const userDefault = '/images/games/user-default.jpg';
-
-// Converts image paths for the production build (same helper used across pages)
-const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath;
-      }
-    }
-    return imagePath;
-  };
+// Pictures are real photos from S3, by name (hooks/useSiteImages.js); players without
+// a picture of their own show their initials (components/Avatar)
+const PLAYABLE_PICTURES = {
+  'Punjabi Puzzle': 'learn-alphabet',
+  'Gurmukhi Match': 'learning-default',
+  'Shabad Quiz': 'gurbani-shabad',
+  'Sikh History Trivia': 'home-history',
+  'Shabd Khoj': 'home-learning',
 };
 
 // This game's key on the server (results, leaderboard, words, achievements)
@@ -72,7 +63,7 @@ const fetchTopScorers = async (apiString) => {
     id: row.user_id,
     name: row.name,
     score: row.score,
-    avatar: row.avatar || avatar,
+    avatar: row.avatar || '',
   }));
 };
 
@@ -146,126 +137,108 @@ const virsaaPlayables = [
     id: 1,
     name: 'Punjabi Puzzle',
     description: 'Solve puzzles in Punjabi',
-    image: playable1,
     link: '/learning/games/shabd-khoj'
   },
   {
     id: 2,
     name: 'Gurmukhi Match',
     description: 'Match Gurmukhi characters',
-    image: playable1,
     link: '/learning/games/memory-match'
   },
   {
     id: 3,
     name: 'Shabad Quiz',
     description: 'Test your knowledge of Shabads',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 4,
     name: 'Sikh History Trivia',
     description: 'Learn Sikh history through trivia',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 5,
     name: 'Shabd Khoj',
     description: 'Learn Sikh history through trivia',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 6,
     name: 'Gurmukhi Match',
     description: 'Match Gurmukhi characters',
-    image: playable1,
     link: '/learning/games/memory-match'
   },
   {
     id: 7,
     name: 'Shabad Quiz',
     description: 'Test your knowledge of Shabads',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 8,
     name: 'Sikh History Trivia',
     description: 'Learn Sikh history through trivia',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 9,
     name: 'Shabd Khoj',
     description: 'Learn Sikh history through trivia',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 10,
     name: 'Punjabi Puzzle',
     description: 'Solve puzzles in Punjabi',
-    image: playable1,
     link: '/learning/games/shabd-khoj'
   },
   {
     id: 11,
     name: 'Gurmukhi Match',
     description: 'Match Gurmukhi characters',
-    image: playable1,
     link: '/learning/games/memory-match'
   },
   {
     id: 12,
     name: 'Shabad Quiz',
     description: 'Test your knowledge of Shabads',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 13,
     name: 'Sikh History Trivia',
     description: 'Learn Sikh history through trivia',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 14,
     name: 'Shabd Khoj',
     description: 'Learn Sikh history through trivia',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 15,
     name: 'Gurmukhi Match',
     description: 'Match Gurmukhi characters',
-    image: playable1,
     link: '/learning/games/memory-match'
   },
   {
     id: 16,
     name: 'Shabad Quiz',
     description: 'Test your knowledge of Shabads',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 17,
     name: 'Sikh History Trivia',
     description: 'Learn Sikh history through trivia',
-    image: playable1,
     link: '/learning'
   },
   {
     id: 18,
     name: 'Shabd Khoj',
     description: 'Learn Sikh history through trivia',
-    image: playable1,
     link: '/learning'
   },
 ];
@@ -305,7 +278,7 @@ const WordSearch = () => {
 
 // GamePlay component to be rendered in the new tab
 const WordSearchGamePlay = ({ apiString }) => {
-  const getImagePath = useProductionImagePath();
+  const pictures = useSiteImages(apiString); // map backgrounds and playables
 
   const { isLoggedIn, isPremium, accessToken, userData: authUser, logout } = useAuth();
   // Coins, XP and the game name/avatar: saved on the server when signed in, in the browser for guests
@@ -357,7 +330,7 @@ const WordSearchGamePlay = ({ apiString }) => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [newName, setNewName] = useState(userData?.name || '');
-  const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
+  const [newAvatar, setNewAvatar] = useState(userData?.avatar || '');
   const [newAvatarFile, setNewAvatarFile] = useState(null);
   const [lastResult, setLastResult] = useState(null);   // server reply after a game: badges, best score
   const scoreRef = useRef(0);
@@ -845,7 +818,7 @@ const WordSearchGamePlay = ({ apiString }) => {
     if (!selectedMap) return null;
 
     return (
-      <div className={styles.board} style={themeBackground(selectedMap.theme)}>
+      <div className={styles.board} style={themeBackground(selectedMap.theme, pictures)}>
         <div className={styles.boardOverlay}></div>
         <div className={styles.boardGrid}>
           {board.map((row, rowIndex) => (
@@ -957,7 +930,7 @@ const WordSearchGamePlay = ({ apiString }) => {
                 key={map.id}
                 className={`${styles.mapCard} ${map.premium ? styles.premium : ''} ${map.loginRequired ? styles.locked : ''}`}
               >
-                <div className={styles.mapImage} style={themeBackground(map.theme)}>
+                <div className={styles.mapImage} style={themeBackground(map.theme, pictures)}>
                   {map.loginRequired && !isLoggedIn && (
                     <div className={styles.lockOverlay}>
                       <FaLock />
@@ -1042,7 +1015,7 @@ const WordSearchGamePlay = ({ apiString }) => {
           <div className={styles.playablesContainer}>
             {virsaaPlayables.slice(0, displayCount).map(game => (
               <div key={game.id} className={styles.playableCard}>
-                <div className={styles.playableImage} style={{ backgroundImage: `url(${getImagePath(game.image)})` }}>
+                <div className={styles.playableImage} style={backgroundOf(pictures[PLAYABLE_PICTURES[game.name] || 'learn-alphabet'])}>
                   <button 
                     className={styles.playButton}
                     onClick={() => navigate(game.link)}
@@ -1301,7 +1274,7 @@ const WordSearchGamePlay = ({ apiString }) => {
             {topScorers.map((player, index) => (
               <div key={player.id} className={styles.leaderboardItem}>
                 <span className={styles.rank}>{index + 1}</span>
-                <img src={getImagePath(player.avatar)} alt={player.name} className={styles.avatar} />
+                <Avatar src={player.avatar} name={player.name} className={styles.avatar} />
                 <div className={styles.playerInfo}>
                   <span className={styles.name}>{player.name}</span>
                   <span className={styles.score}>{player.score} pts</span>
@@ -1444,11 +1417,7 @@ const WordSearchGamePlay = ({ apiString }) => {
             {isLoggedIn ? (
               <>
                 <div className={styles.userInfo}>
-                  <img
-                    src={getImagePath(userData?.avatar) || userDefault}
-                    alt="User"
-                    className={styles.userAvatar}
-                  />
+                  <Avatar src={userData?.avatar} name={userData?.name} className={styles.userAvatar} />
                   <div>
                     <h4>{userData?.name || 'Demo User'}</h4>
                     <p>
@@ -1594,7 +1563,7 @@ const WordSearchGamePlay = ({ apiString }) => {
         idPrefix="ws"
         language={settings.language}
         name={userData.name}
-        avatar={getImagePath(userData.avatar || userDefault)}
+        avatar={userData.avatar}
         coins={coins}
         level={wallet.level}
         xpIntoLevel={wallet.xpIntoLevel}
@@ -1609,12 +1578,12 @@ const WordSearchGamePlay = ({ apiString }) => {
         editing={editingProfile}
         saving={savingProfile}
         newName={newName}
-        newAvatar={getImagePath(newAvatar)}
+        newAvatar={newAvatar}
         onNameChange={setNewName}
         onAvatarChange={handleAvatarChange}
         onStartEdit={() => {
           setNewName(userData.name || '');
-          setNewAvatar(userData.avatar || userDefault);
+          setNewAvatar(userData.avatar || '');
           setEditingProfile(true);
         }}
         onSave={handleProfileUpdate}
@@ -1641,7 +1610,7 @@ const WordSearchGamePlay = ({ apiString }) => {
                 onMouseEnter={() => setShowProfileDropdown(true)}
                 onClick={() => setShowProfileDropdown(true)}
               >
-                <img src={getImagePath(userData.avatar || userDefault)} alt="User" className={styles.userAvatar} />
+                <Avatar src={userData.avatar} name={userData.name} className={styles.userAvatar} />
               </div>
               <span>{userData.name}</span>
               <span className={styles.coins}>

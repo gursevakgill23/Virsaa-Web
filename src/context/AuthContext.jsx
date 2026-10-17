@@ -7,16 +7,17 @@
  * What it does:
  *   - restores the session when the site opens (tokens in cookies, the user's
  *     profile in localStorage) and checks it with /api/auth/profile/
- *   - renews the access token with the refresh token when it has expired
- *     (also when the access-token cookie has already gone, so "Remember me"
- *     keeps working for its full 7 days)
+ *   - renews the access token (it lasts 30 minutes) with the refresh token when
+ *     it has expired (also when the access-token cookie has already gone, so
+ *     "Remember me" keeps working for its full 7 days)
  *   - adds the Bearer token to /api/auth/ requests and, when any request comes
  *     back 401, renews the token once and retries it
  *   - sends signed-out visitors to /login, except on the public pages below
  *   - "Explore as guest" (Login page): guests may browse the main sections
  *     (GUEST_ROUTES) but opening anything (a book, lesson, game, account page…)
  *     asks them to sign in
- *   - login(), logout(), continueAsGuest() and updateUserData() for the pages
+ *   - login(), logout(), continueAsGuest(), updateUserData() and
+ *     replaceTokens() (after a password change) for the pages
  *
  * Security notes:
  *   - tokens are never written to the console
@@ -43,9 +44,12 @@ const PUBLIC_ROUTES = [
   '/signup',
   '/forgot-password',
   '/forgot-password/:email/:token',
+  '/verify-email/:token',
+  '/verify-email/:email/:token',
   '/about',
   '/news',
   '/privacy-policy',
+  '/picture-credits',
 ];
 
 // Extra pages a guest ("Explore as guest") may browse. These are the overview pages;
@@ -78,7 +82,22 @@ const writeGuest = (on) => {
 };
 
 // Auth endpoints that must never get a token or trigger a token renewal
-const AUTH_FREE_PATHS = ['/login/', '/signup/', '/token/refresh/', '/forget-password/', '/verify-reset-code/', '/reset-password/'];
+const AUTH_FREE_PATHS = [
+  '/login/', '/signup/', '/verify-email/', '/resend-verification/', '/token/refresh/', '/forget-password/',
+  '/verify-reset-code/', '/reset-password/',
+];
+
+// Whether "Remember me" was ticked at sign-in, so renewed tokens keep the same cookie lifetime
+const REMEMBER_KEY = 'virsaa:remember';
+const readRemember = () => {
+  try { return localStorage.getItem(REMEMBER_KEY) === '1'; } catch { return false; }
+};
+const writeRemember = (on) => {
+  try {
+    if (on) localStorage.setItem(REMEMBER_KEY, '1');
+    else localStorage.removeItem(REMEMBER_KEY);
+  } catch { /* storage blocked: tokens last a day */ }
+};
 
 const TIMEOUT_MS = 20000; // give up on auth requests after 20 s
 const ACCESS_DAYS = 1; // access-token cookie lifetime
@@ -97,10 +116,16 @@ const SIGNED_OUT = {
 
 // ---------------------------------------------------------------- helpers
 
+/** "//verify-email/x/" -> "/verify-email/x" (doubled and trailing slashes don't change the page) */
+const tidyPath = (pathname) => String(pathname || '/').replace(/\/{2,}/g, '/').replace(/(.)\/$/, '$1');
+
 /** Does this path belong to a public page? (":email/:token" match any segment) */
-const isPublicPath = (pathname) => PUBLIC_ROUTES.some((route) => (route.includes(':')
-  ? new RegExp(`^${route.replace(/:[^/]+/g, '[^/]+')}$`).test(pathname)
-  : pathname === route));
+const isPublicPath = (pathname) => {
+  const path = tidyPath(pathname);
+  return PUBLIC_ROUTES.some((route) => (route.includes(':')
+    ? new RegExp(`^${route.replace(/:[^/]+/g, '[^/]+')}$`).test(path)
+    : path === route));
+};
 
 /** Is this URL one of the auth endpoints that work without a token? */
 const isAuthFreeUrl = (url) => AUTH_FREE_PATHS.some((path) => String(url || '').includes(path));
@@ -170,6 +195,7 @@ export const AuthProvider = ({ children, apiString }) => {
     Cookies.remove('accessToken', { path: '/' });
     Cookies.remove('refreshToken', { path: '/' });
     forgetUser();
+    writeRemember(false);
     tokensRef.current = { accessToken: null, refreshToken: null };
     setAuthState(SIGNED_OUT);
   }, []);
@@ -197,7 +223,7 @@ export const AuthProvider = ({ children, apiString }) => {
         .then((response) => {
           const newAccessToken = response.data?.access;
           if (!newAccessToken) throw new Error('No access token in the refresh reply');
-          Cookies.set('accessToken', newAccessToken, cookieOptions(ACCESS_DAYS));
+          Cookies.set('accessToken', newAccessToken, cookieOptions(readRemember() ? REMEMBER_DAYS : ACCESS_DAYS));
           tokensRef.current = { ...tokensRef.current, accessToken: newAccessToken };
           return newAccessToken;
         })
@@ -261,7 +287,7 @@ export const AuthProvider = ({ children, apiString }) => {
   // else they try to open asks them to sign in.
   useEffect(() => {
     if (authState.isLoading || authState.isLoggedIn || isPublicPath(pathname)) return;
-    if (isGuest && GUEST_ROUTES.includes(pathname)) return;
+    if (isGuest && GUEST_ROUTES.includes(tidyPath(pathname))) return;
     if (isGuest) {
       toast.info('Sign in or create a free account to open this. As a guest you can explore, but not open content.', { toastId: 'guest-locked' });
     }
@@ -330,11 +356,25 @@ export const AuthProvider = ({ children, apiString }) => {
   const login = useCallback((accessToken, refreshToken, user, rememberMe = false) => {
     writeGuest(false); // a real account replaces guest mode
     setIsGuest(false);
+    writeRemember(rememberMe);
     const days = rememberMe ? REMEMBER_DAYS : ACCESS_DAYS;
     Cookies.set('accessToken', accessToken, cookieOptions(days));
     Cookies.set('refreshToken', refreshToken, cookieOptions(days));
     applyUser(user, accessToken, refreshToken);
   }, [applyUser]);
+
+  /**
+   * New tokens for the same person, e.g. after changing the password (the server signs
+   * every other device out and sends this one a fresh pair). Keeps the "Remember me" choice.
+   */
+  const replaceTokens = useCallback((accessToken, refreshToken) => {
+    if (!accessToken || !refreshToken) return;
+    const days = readRemember() ? REMEMBER_DAYS : ACCESS_DAYS;
+    Cookies.set('accessToken', accessToken, cookieOptions(days));
+    Cookies.set('refreshToken', refreshToken, cookieOptions(days));
+    tokensRef.current = { accessToken, refreshToken };
+    setAuthState((prev) => (prev.isLoggedIn ? { ...prev, accessToken, refreshToken } : prev));
+  }, []);
 
   /** "Explore as guest" on the Login page: browse the main sections without an account. */
   const continueAsGuest = useCallback(() => {
@@ -346,13 +386,14 @@ export const AuthProvider = ({ children, apiString }) => {
 
   /** Tell the server to retire the refresh token, then forget the session locally. */
   const logout = useCallback(async () => {
-    const { accessToken, refreshToken } = tokensRef.current;
-    if (refreshToken && accessToken) {
+    const { refreshToken } = tokensRef.current;
+    if (refreshToken) {
       try {
+        // The refresh token itself is the proof, so this works even after the access token expired
         await axios.post(
           `${apiUrl}/api/auth/logout/`,
           { refresh_token: refreshToken },
-          { headers: { Authorization: `Bearer ${accessToken}` }, timeout: TIMEOUT_MS, _skipAuthRefresh: true }
+          { timeout: TIMEOUT_MS, _skipAuthRefresh: true }
         );
       } catch (error) {
         logError('Logout request failed:', error); // signed out locally anyway
@@ -414,7 +455,8 @@ export const AuthProvider = ({ children, apiString }) => {
     logout,
     continueAsGuest,
     updateUserData,
-  }), [authState, isGuest, login, logout, continueAsGuest, updateUserData]);
+    replaceTokens,
+  }), [authState, isGuest, login, logout, continueAsGuest, updateUserData, replaceTokens]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

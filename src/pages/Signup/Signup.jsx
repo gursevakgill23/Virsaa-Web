@@ -3,36 +3,24 @@
  * -----------------------------------------------------------------------------
  * The sign-up page (/signup): a glass form (name, username, email, password
  * with a strength meter and rules, confirmation, reCAPTCHA), what happens next,
- * features and FAQs. After signing up the user verifies their email, then
- * signs in. Server field errors are shown next to the matching input.
+ * features and FAQs. After signing up the form is replaced by "Check your
+ * email" (with a button to send the link again); the person opens the link,
+ * sees "Email verified" and logs in. Server field errors are shown next to the
+ * matching input.
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { toast } from '../../utils/notify';
 import ReCAPTCHA from 'react-google-recaptcha';
 import styles from './Signup.module.css';
 import {
   FaGoogle, FaFacebook, FaEye, FaEyeSlash, FaBook, FaRegFileAudio,
-  FaGamepad, FaHeart, FaCheck, FaHistory,
+  FaGamepad, FaHeart, FaCheck, FaHistory, FaEnvelopeOpenText, FaSignInAlt,
 } from 'react-icons/fa';
 import { FaHandsPraying } from 'react-icons/fa6';
-
-// Converts image paths for the production build (same helper used across pages)
-const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
-          ? imagePath
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath;
-      }
-    }
-    return imagePath;
-  };
-};
+import ResendVerification from '../../components/ResendVerification/ResendVerification';
+import { SitePicture } from '../../components/SitePicture/SitePicture';
 
 // Backend field names -> form field ids
 // Server field names → form field ids, for showing server errors in the right place
@@ -76,7 +64,7 @@ const FAQS = [
   },
   {
     q: 'I didn’t get the verification email.',
-    a: 'Check your spam or promotions folder. The email comes from Virsaa and can take a few minutes to arrive.',
+    a: 'Check your spam or promotions folder; it can take a few minutes to arrive. You can send the link again from this page after signing up, or from the login page.',
   },
   {
     q: 'What can I use as a username?',
@@ -101,13 +89,10 @@ const passwordScore = (pw) => {
 const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 
 const Signup = ({ isDarkMode, apiString }) => {
-  const getImagePath = useProductionImagePath();
-  const navigate = useNavigate();
   // The reCAPTCHA widget (its token is sent with the form)
   const recaptchaRef = useRef(null);
 
-  // Pictures
-  const formSideImage = '/images/Login/right_section.png';
+  // Page header pictures (public/images); the side picture comes from S3 (SitePicture)
   const headerImageLight = '/images/Login/background.jpeg';
   const headerImageDark = '/images/Login/background-dark.jpeg';
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
@@ -124,6 +109,8 @@ const Signup = ({ isDarkMode, apiString }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // The address the verification link went to (shows "Check your email" instead of the form)
+  const [sentTo, setSentTo] = useState('');
 
   // Live password strength and the rule checklist
   const score = passwordScore(formData.password);
@@ -206,7 +193,8 @@ const Signup = ({ isDarkMode, apiString }) => {
       const data = await response.json().catch(() => ({}));
 
       if (response.status === 429) throw new Error('Too many attempts. Wait a minute, then try again.');
-      if (response.status >= 500) throw new Error('Something went wrong on our side. Try again in a moment.');
+      // 503: the verification email couldn't be sent, or the robot check is down (the server says which)
+      if (response.status >= 500) throw new Error(data.error || 'Something went wrong on our side. Try again in a moment.');
 
       if (!response.ok) {
         // Show field errors from the API next to the matching input
@@ -222,13 +210,13 @@ const Signup = ({ isDarkMode, apiString }) => {
         );
       }
 
-      toast.success('Account created. Check your email to verify it, then sign in.', {
+      toast.success('Account created. Check your email for the verification link.', {
         position: 'top-center',
-        autoClose: 3000,
+        autoClose: 4000,
         theme: isDarkMode ? 'dark' : 'light',
       });
-
-      setTimeout(() => navigate('/login'), 3000);
+      setSentTo(data?.user?.email || formData.email.trim());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       toast.error(error.message || 'Sign up failed. Check the form and try again.', {
         position: 'top-center',
@@ -270,6 +258,22 @@ const Signup = ({ isDarkMode, apiString }) => {
 
         <div className={styles.heroInner}>
           <div className={styles.formCard}>
+            {sentTo ? (
+              <div className={styles.sentPanel} role="status" aria-live="polite">
+                <FaEnvelopeOpenText className={styles.sentIcon} aria-hidden="true" />
+                <h1 className={styles.formTitle}>Check your email</h1>
+                <p className={styles.formLede}>
+                  We sent a link to <strong className={styles.sentAddress}>{sentTo}</strong>. Open it to confirm your
+                  email address, then log in. The link works for 24 hours.
+                </p>
+                <Link to="/login" className={`${styles.primaryButton} ${styles.linkButton}`}>
+                  <FaSignInAlt aria-hidden="true" /> Go to log in
+                </Link>
+                <p className={styles.sentHint}>Nothing yet? Check your spam folder, or send it again:</p>
+                <ResendVerification apiString={apiString} initialEmail={sentTo} hideEmail label="Send the link again" />
+              </div>
+            ) : (
+            <>
             <p className={styles.gurmukhi} lang="pa">ਵਿਰਸੇ ਨਾਲ ਜੁੜੋ</p>
             <h1 className={styles.formTitle}>Create your account</h1>
             <p className={styles.formLede}>Join Virsaa to save books, follow your progress and read the full Hukamnama.</p>
@@ -362,10 +366,12 @@ const Signup = ({ isDarkMode, apiString }) => {
             <p className={styles.switchText}>
               Already have an account? <Link to="/login" className={styles.inlineLink}>Sign in</Link>
             </p>
+            </>
+            )}
           </div>
 
           <aside className={styles.perksPanel}>
-            <img src={getImagePath(formSideImage)} alt="" className={styles.perksImage} />
+            <SitePicture name="login-side" alt="" className={styles.perksImage} />
             <h2 className={styles.perksTitle}>Your heritage, in one place</h2>
             <ul className={styles.perkList}>
               {PERKS.map((perk) => (

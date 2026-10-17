@@ -6,7 +6,9 @@
  * opens up, and sign-in FAQs.
  * On success the tokens go to AuthContext.login() and the user is sent home.
  * Every problem is explained: field messages under the inputs, and an alert
- * for server/connection errors (see utils/apiError.js).
+ * for server/connection errors (see utils/apiError.js). An account whose email
+ * isn't verified yet gets a box to send a new verification link; after 10
+ * wrong passwords the server pauses sign-in for 15 minutes and says so.
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useRef } from 'react';
@@ -21,23 +23,9 @@ import {
 import { FaHandsPraying } from 'react-icons/fa6';
 import { useAuth } from '../../context/AuthContext';
 import { describeApiError } from '../../utils/apiError';
+import ResendVerification from '../../components/ResendVerification/ResendVerification';
+import { SitePicture } from '../../components/SitePicture/SitePicture';
 import axios from 'axios';
-
-// Converts image paths for the production build (same helper used across pages)
-const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
-          ? imagePath
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        return imagePath.default || imagePath;
-      }
-    }
-    return imagePath;
-  };
-};
 
 // Content for the side panel and the sections below the form
 const PERKS = [
@@ -58,7 +46,11 @@ const FEATURES = [
 const FAQS = [
   {
     q: 'I forgot my password. What do I do?',
-    a: 'Choose “Forgot password?” under the form. We’ll email you a link to set a new one.',
+    a: 'Choose “Forgot password?” under the form. We’ll email you a 6-digit code to set a new one.',
+  },
+  {
+    q: 'It says my email isn’t verified. What now?',
+    a: 'Open the link in the “Verify your email” message we sent when you signed up. Can’t find it? Sign in once more and use “Send a new link”.',
   },
   {
     q: 'Can I sign in with my username?',
@@ -75,14 +67,12 @@ const FAQS = [
 ];
 
 const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
-  const getImagePath = useProductionImagePath();
   const { login, continueAsGuest } = useAuth();
   const navigate = useNavigate();
   // The reCAPTCHA widget (its token is sent with the form)
   const recaptchaRef = useRef(null);
 
-  // Pictures
-  const formSideImage = '/images/Login/right_section.png';
+  // Page header pictures (public/images); the side picture comes from S3 (SitePicture)
   const headerImageLight = '/images/Login/background.jpeg';
   const headerImageDark = '/images/Login/background-dark.jpeg';
 
@@ -95,6 +85,8 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Set when the password was right but the email isn't verified yet: the address for a new link
+  const [unverifiedEmail, setUnverifiedEmail] = useState(null);
   const headerImage = isDarkMode ? headerImageDark : headerImageLight;
 
   // Keep the typed value and clear that field's error
@@ -141,6 +133,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+    setUnverifiedEmail(null);
 
     try {
       const captchaToken = recaptchaRef.current.getValue();
@@ -152,6 +145,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
         login: formData.email.trim(),
         password: formData.password,
         captcha: captchaToken,
+        remember_me: formData.rememberMe,
       };
 
       const response = await axios.post(`${apiString}/api/auth/login/`, payload, { timeout: 20000 });
@@ -183,7 +177,18 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
 
       setTimeout(() => navigate('/'), 2000);
     } catch (error) {
-      // Server reasons first (wrong details, captcha), then a clear general message
+      // Right password, but the email address isn't confirmed yet: offer a new link
+      if (error.response?.data?.code === 'email_not_verified') {
+        const typed = formData.email.trim();
+        setUnverifiedEmail(typed.includes('@') ? typed : '');
+        toast.info('Your email address isn’t verified yet. Open the link we emailed you, or send a new one.', {
+          position: 'top-center',
+          autoClose: 6000,
+          theme: isDarkMode ? 'dark' : 'light',
+        });
+        return;
+      }
+      // Server reasons first (wrong details, paused sign-in, captcha), then a clear general message
       const errorMessage =
         error.response?.data?.login?.[0] ||
         error.response?.data?.error ||
@@ -294,6 +299,17 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
                 {isSubmitting ? <span className={styles.spinner} aria-label="Signing in" /> : 'Sign in'}
               </button>
 
+              {unverifiedEmail !== null && (
+                <div className={styles.verifyNotice} role="status">
+                  <h2 className={styles.verifyTitle}>Confirm your email to sign in</h2>
+                  <p className={styles.verifyText}>
+                    We emailed you a link when you signed up. Open it, or send a new one here
+                    (it works for 24 hours).
+                  </p>
+                  <ResendVerification apiString={apiString} initialEmail={unverifiedEmail} />
+                </div>
+              )}
+
               <div className={styles.divider}><span>or</span></div>
 
               <div className={styles.socialLogin}>
@@ -321,7 +337,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
           </div>
 
           <aside className={styles.perksPanel}>
-            <img src={getImagePath(formSideImage)} alt="" className={styles.perksImage} />
+            <SitePicture name="login-side" alt="" className={styles.perksImage} />
             <h2 className={styles.perksTitle}>Everything you saved is waiting</h2>
             <ul className={styles.perkList}>
               {PERKS.map((perk) => (

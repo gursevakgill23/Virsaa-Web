@@ -2,41 +2,65 @@
  * pages/Collections/AudiobookDetail/AudiobookDetail.jsx
  * -----------------------------------------------------------------------------
  * One audiobook (/collections/audiobooks/audiobook/:id):
- *   - cover, details, the audio player (play/pause, skip ±15 s, seek bar)
- *   - Like / Save for later (useLibraryItem), Share
- *   - chapters, description, reviews, related audiobooks
- * Listening progress is saved to History. The audio file is private on S3;
- * the API returns a temporary link. While loading, the Virsaa loader is shown.
+ *   - cover (a real picture, credited), details, Like / Save for later, Share
+ *   - where it plays from (the API's `media`):
+ *       "youtube"  a recording on YouTube, played in YouTube's own player (its
+ *                  terms allow embedding, not copying). The player loads only
+ *                  when the visitor presses Play, so YouTube sees nothing before
+ *                  that, and it uses YouTube's privacy-enhanced address.
+ *                  Each part (or chapter time) can be played from the list.
+ *       "file"     our own mp3 (private on S3; the API returns a temporary link
+ *                  for signed-in visitors) in our player: play/pause, ±15 s, seek
+ *   - chapters / parts, description, ratings and reviews (components/Reviews),
+ *     related audiobooks
+ * Listening is saved to History. While loading, the Virsaa loader is shown.
  * -----------------------------------------------------------------------------
  */
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight,
-  FaStar, FaRegStar, FaSort, FaPlay, FaPause, FaHeadphones, FaClock, FaLock, FaChevronDown,
-  FaUndoAlt, FaRedoAlt,
+  FaStar, FaRegStar, FaPlay, FaPause, FaHeadphones, FaClock, FaLock, FaChevronDown,
+  FaUndoAlt, FaRedoAlt, FaYoutube, FaExternalLinkAlt, FaMicrophone,
 } from 'react-icons/fa';
 import styles from './AudiobookDetail.module.css';
 import PageHero from '../../../components/PageHero/PageHero';
 import Loader from '../../../components/VirsaaLoader/Loader';
+import Reviews from '../../../components/Reviews/Reviews';
+import { CoverPicture } from '../../../components/SitePicture/SitePicture';
 import axios from 'axios';
 import useLibraryItem from '../../../hooks/useLibraryItem';
 import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
-import { safeUrl } from '../../../utils/safeUrl';
+import { useAuth } from '../../../context/AuthContext';
+import { safeExternalUrl, safeUrl } from '../../../utils/safeUrl';
 
-// Converts image paths for the production build (same helper used across pages)
-const useProductionImagePath = () => {
-  return (imagePath) => {
-    if (process.env.NODE_ENV === 'production') {
-      if (typeof imagePath === 'string') {
-        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath))
-          ? imagePath
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      }
-      return imagePath.default || imagePath;
-    }
-    return imagePath;
-  };
+const HEADER_LIGHT = '/images/header-image.png';
+const HEADER_DARK = '/images/header-image-dark.png';
+
+// ---------------------------------------------------------------- YouTube
+const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+
+/**
+ * YouTube's privacy-enhanced embed address for one video, from `start` seconds.
+ * `next` lists the following parts' videos, which YouTube then plays in order.
+ */
+const embedUrl = (videoId, start, autoplay, next = []) => {
+  const params = new URLSearchParams({ rel: '0', playsinline: '1' });
+  if (start) params.set('start', String(Math.max(0, Math.floor(start))));
+  if (autoplay) params.set('autoplay', '1');
+  if (next.length) params.set('playlist', next.slice(0, 50).join(','));
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+};
+
+/** Only links to youtube.com / youtu.be are shown as "on YouTube". */
+const youtubeLink = (url) => {
+  const safe = safeExternalUrl(url);
+  try {
+    const host = new URL(safe).hostname.replace(/^www\./, '');
+    return ['youtube.com', 'm.youtube.com', 'youtu.be'].includes(host) ? safe : '';
+  } catch {
+    return '';
+  }
 };
 
 // Five stars, filled up to `value`
@@ -59,9 +83,40 @@ const RelatedSkeleton = () => (
   </div>
 );
 
+/** API audiobook -> what the page shows. */
+const toAudiobook = (data, authorName) => {
+  const chapters = (Array.isArray(data.chapters) ? data.chapters : [])
+    .map((c) => ({ ...c, youtube_id: VIDEO_ID.test(c.youtube_id || '') ? c.youtube_id : '' }));
+  const youtube = data.media === 'youtube' && data.youtube ? {
+    videoId: VIDEO_ID.test(data.youtube.video_id || '') ? data.youtube.video_id : (chapters.find((c) => c.youtube_id)?.youtube_id || ''),
+    channel: data.youtube.channel || '',
+    url: youtubeLink(data.youtube.url),
+  } : null;
+  return {
+    id: data.id,
+    title: data.title,
+    titlePa: data.title_pa || '',
+    author: authorName,
+    authorId: data.author,
+    narrator: data.narrator || '',
+    language: data.language_label || '',
+    cover: data.cover || '',
+    coverCredit: data.cover_credit?.text || '',
+    coverSource: safeExternalUrl(data.cover_credit?.source_url),
+    rating: Number(data.rating) || 0,
+    length: data.duration,
+    format: data.format || 'MP3',
+    genre: data.genre || 'Audiobook',
+    description: data.description || '',
+    media: youtube?.videoId ? 'youtube' : data.media === 'file' ? 'file' : null,
+    youtube,
+    chapters,
+  };
+};
+
 const AudiobookDetail = ({ isDarkMode, apiString }) => {
-  const getImagePath = useProductionImagePath();
   const { id } = useParams();
+  const { accessToken, isLoggedIn } = useAuth();
   // Audiobook data, loading/error state and the audio link
   const [audiobook, setAudiobook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,28 +131,22 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
   const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
   const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again"
-  const [reviewErrors, setReviewErrors] = useState({}); // field → message for the review form
   // Chapter/description toggles and the player's state
   const [expandedChapter, setExpandedChapter] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  // YouTube: what is in the player (null until the visitor presses Play)
+  const [nowPlaying, setNowPlaying] = useState(null); // { videoId, start, chapterId, autoplay }
 
   const audioRef = useRef(null);
+  const listenRef = useRef(null);
   const relatedRef = useRef(null);
   const recommendedRef = useRef(null);
 
-  const header_image_dark = '/images/header-image-dark.png';
-  const header_image_light = '/images/header-image.png';
-  const bookImage = '/images/book-image.jpg';
-
-  // Review form and list
-  const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, review: '' });
-  const [reviews, setReviews] = useState([]);
-  const [visibleReviews, setVisibleReviews] = useState(5);
-  const [sortBy, setSortBy] = useState('newest');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Average rating and number of reviews, reported by the Reviews section
+  const [reviewSummary, setReviewSummary] = useState({ count: 0, average: null });
 
   // ---------- History ----------
   // What gets saved to History for this audiobook
@@ -129,8 +178,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
     }
   };
 
-  // ---------- Player ----------
-  // ---------------------------------------------------------------- player controls
+  // ---------------------------------------------------------------- our own player (mp3)
   const togglePlayPause = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -169,17 +217,46 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  // ---------------------------------------------------------------- YouTube player
+  /** Load YouTube's player with this part (or chapter time) and start it. */
+  const playOnYouTube = (picked = null) => {
+    if (!audiobook?.youtube) return;
+    // Starting from the top: the part that holds the book's first video, if parts are videos
+    const chapter = picked
+      || audiobook.chapters.find((c) => c.youtube_id && c.youtube_id === audiobook.youtube.videoId) || null;
+    const videoId = chapter?.youtube_id || audiobook.youtube.videoId;
+    if (!VIDEO_ID.test(videoId || '')) return;
+    // The parts after this one play on by themselves
+    const position = chapter ? audiobook.chapters.indexOf(chapter) : -1;
+    const next = chapter?.youtube_id
+      ? audiobook.chapters.slice(position + 1).map((c) => c.youtube_id).filter(Boolean)
+      : [];
+    setNowPlaying({
+      videoId, next, start: chapter?.youtube_id ? 0 : chapter?.start_seconds || 0, chapterId: chapter?.id ?? null, autoplay: true,
+    });
+    if (!listenedRef.current) {
+      listenedRef.current = true;
+      const index = chapter ? audiobook.chapters.findIndex((c) => c.id === chapter.id) : 0;
+      const parts = audiobook.chapters.length;
+      recordHistory(historyEntry(parts > 1 && index >= 0 ? { progress: (index / parts) * 100, position: index + 1 } : {}));
+    }
+    listenRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  // ---------------------------------------------------------------- load
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setRelatedLoading(true);
     setLoadError(null);
     setAudioUrl(null);
+    setNowPlaying(null);
     listenedRef.current = false;
     setIsPlaying(false);
     setCurrentTime(0);
 
     const load = async () => {
+      let book = null;
       try {
         const { data } = await axios.get(`${apiUrl}/collections/audiobooks/${safeId}/`, { timeout: 20000 });
         let authorName = '';
@@ -187,52 +264,37 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
           authorName = await axios.get(`${apiUrl}/collections/authors/${encodeURIComponent(data.author)}/`, { timeout: 20000 })
             .then((r) => r.data?.name || '').catch(() => '');
         }
-        const reviewRes = await axios.get(`${apiUrl}/collections/audiobooks/${safeId}/reviews/`, { timeout: 20000 }).catch(() => ({ data: [] }));
         if (cancelled) return;
-        setAudiobook({
-          id: data.id,
-          title: data.title,
-          author: authorName,
-          authorId: data.author,
-          cover: data.cover || bookImage,
-          rating: Number(data.rating) || 0,
-          length: data.duration,
-          format: data.format || 'MP3',
-          genre: data.genre || 'Audiobook',
-          description: data.description || '',
-          chapters: Array.isArray(data.chapters) ? data.chapters : [],
-        });
-        const rows = Array.isArray(reviewRes.data) ? reviewRes.data : [];
-        setReviews(rows.map((r) => ({
-          id: r.id,
-          name: r.user || 'Anonymous',
-          date: r.date ? new Date(r.date).toLocaleDateString() : '',
-          rating: r.rating,
-          review: r.review || '',
-          helpful: r.helpful || 0,
-        })));
+        book = toAudiobook(data, authorName);
+        setAudiobook(book);
       } catch (err) {
         if (!cancelled) setLoadError(err.response?.status === 404 ? 'This audiobook could not be found.' : 'This audiobook couldn’t be loaded right now.');
       } finally {
         if (!cancelled) setIsLoading(false);
       }
 
-      // Audio files are private on S3; stream_audio returns a temporary link
-      axios.get(`${apiUrl}/collections/audiobooks/${safeId}/stream_audio/`, { timeout: 20000 })
-        .then((r) => { if (!cancelled) setAudioUrl(safeUrl(r.data?.audio_url) || null); })
-        .catch(() => { if (!cancelled) setAudioUrl(null); });
+      // Our own mp3s are private on S3; stream_audio returns a temporary link (signed in only)
+      if (book?.media === 'file' && accessToken) {
+        axios.get(`${apiUrl}/collections/audiobooks/${safeId}/stream_audio/`, {
+          timeout: 20000, headers: { Authorization: `Bearer ${accessToken}` },
+        })
+          .then((r) => { if (!cancelled) setAudioUrl(safeUrl(r.data?.audio_url) || null); })
+          .catch(() => { if (!cancelled) setAudioUrl(null); });
+      }
 
       const all = await axios.get(`${apiUrl}/collections/audiobooks/`, { timeout: 20000 }).catch(() => ({ data: [] }));
       if (cancelled) return;
       const list = Array.isArray(all.data) ? all.data : all.data?.results || [];
-      setRelated(list.filter((a) => String(a.id) !== String(id)).slice(0, 10).map((a) => ({
-        id: a.id, title: a.title, author: a.genre || 'Audiobook', cover: a.cover || bookImage,
+      setRelated(list.filter((a) => String(a.id) !== String(id)).slice(0, 11).map((a) => ({
+        id: a.id, title: a.title, meta: [a.genre, a.duration].filter(Boolean).join(' · ') || 'Audiobook', cover: a.cover || '',
       })));
       setRelatedLoading(false);
     };
 
     load();
     return () => { cancelled = true; };
+    // accessToken is read once per audiobook: a renewed token mustn't reload the page
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, safeId, apiUrl, reloadKey]);
 
   // Share sheet on phones, otherwise copy the link
@@ -248,8 +310,12 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
   const toggleChapter = (chapterId) => setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
 
-  // Play from the start
-  const handleListenChapter = () => {
+  // A chapter's play button: YouTube part / chapter time, or our player from the start
+  const handleListenChapter = (chapter) => {
+    if (audiobook?.media === 'youtube') {
+      playOnYouTube(chapter);
+      return;
+    }
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
     audioRef.current.play().then(handlePlayStarted).catch(() => setIsPlaying(false));
@@ -258,62 +324,6 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const scrollRow = (ref, direction) => {
     ref.current?.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
   };
-
-  const handleRatingChange = (rating) => {
-    setReviewForm({ ...reviewForm, rating });
-    if (reviewErrors.rating) setReviewErrors((prev) => ({ ...prev, rating: '' }));
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setReviewForm({ ...reviewForm, [name]: value });
-    if (reviewErrors[name]) setReviewErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  // Check every field and return the messages (empty object = all good)
-  const validateReview = () => {
-    const errs = {};
-    if (!reviewForm.name.trim()) errs.name = 'Enter your name.';
-    if (!reviewForm.email.trim()) errs.email = 'Enter your email address.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(reviewForm.email.trim())) errs.email = 'Enter an email address like name@example.com.';
-    if (!reviewForm.rating) errs.rating = 'Choose a star rating.';
-    if (reviewForm.review.trim().length < 10) errs.review = 'Write at least 10 characters.';
-    return errs;
-  };
-
-  // Note: audiobook reviews are only shown on this page for now; they are not sent to the server yet.
-  const handleSubmitReview = (e) => {
-    e.preventDefault();
-    const errs = validateReview();
-    setReviewErrors(errs);
-    if (Object.keys(errs).length) return;
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setReviews((prev) => [
-        {
-          id: prev.length + 1,
-          name: reviewForm.name.trim(),
-          date: new Date().toLocaleDateString(),
-          rating: reviewForm.rating,
-          review: reviewForm.review.trim(),
-          helpful: 0,
-        },
-        ...prev,
-      ]);
-      setReviewForm({ name: '', email: '', rating: 0, review: '' });
-      setIsSubmitting(false);
-    }, 600);
-  };
-
-  const toggleHelpful = (reviewId) => {
-    setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, helpful: r.helpful + 1 } : r)));
-  };
-
-  const sortedReviews = useMemo(
-    () => [...reviews].sort((a, b) => (sortBy === 'newest' ? b.id - a.id : b.helpful - a.helpful)),
-    [reviews, sortBy]
-  );
-  const displayedReviews = sortedReviews.slice(0, visibleReviews);
 
   // ---------------------------------------------------------------- render
   if (isLoading) {
@@ -339,6 +349,9 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const [firstParagraph] = audiobook.description.split('\n');
   const progress = duration ? (currentTime / duration) * 100 : 0;
   const hasMoreDescription = audiobook.description.length > firstParagraph.length;
+  const isYouTube = audiobook.media === 'youtube';
+  const partsAreVideos = audiobook.chapters.some((c) => c.youtube_id);
+  const lockedCount = audiobook.chapters.filter((c) => c.locked).length;
 
   // A scrolling row of related audiobooks
   const renderRelated = (items, ref, label) => (
@@ -359,10 +372,10 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
           ? Array.from({ length: 4 }).map((_, i) => <RelatedSkeleton key={i} />)
           : items.map((book) => (
               <Link key={book.id} to={`/collections/audiobooks/audiobook/${book.id}`} className={styles.relatedCard}>
-                <img src={getImagePath(book.cover)} alt="" className={`${styles.relatedThumb} ${styles.relatedThumbSquare}`} loading="lazy" />
+                <CoverPicture src={book.cover} alt="" className={`${styles.relatedThumb} ${styles.relatedThumbSquare}`} />
                 <span className={styles.relatedInfo}>
                   <span className={styles.relatedTitle}>{book.title}</span>
-                  <span className={styles.relatedMeta}>{book.author}</span>
+                  <span className={styles.relatedMeta}>{book.meta}</span>
                 </span>
               </Link>
             ))}
@@ -372,18 +385,20 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
   return (
     <div className={styles.page}>
-      <audio
-        ref={audioRef}
-        src={audioUrl || undefined}
-        preload="metadata"
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => { setIsPlaying(false); saveListening(true); }}
-      />
+      {audiobook.media === 'file' && (
+        <audio
+          ref={audioRef}
+          src={audioUrl || undefined}
+          preload="metadata"
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={() => { setIsPlaying(false); saveListening(true); }}
+        />
+      )}
 
       <PageHero
         compact
-        image={getImagePath(isDarkMode ? header_image_dark : header_image_light)}
+        image={isDarkMode ? HEADER_DARK : HEADER_LIGHT}
         title={audiobook.title}
         subtitle={audiobook.author ? `by ${audiobook.author}` : 'Audiobook'}
         crumbs={[
@@ -398,21 +413,30 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
         <div className={styles.main}>
           <section className={styles.productCard} aria-label="Audiobook details">
             <div className={styles.coverStage}>
-              <div className={`${styles.cover} ${styles.coverSquare} ${isPlaying ? styles.coverPlaying : ''}`}>
-                <img src={getImagePath(audiobook.cover)} alt={`Cover of ${audiobook.title}`} className={styles.coverImg} />
+              <div className={`${styles.cover} ${styles.coverSquare} ${isPlaying || nowPlaying ? styles.coverPlaying : ''}`}>
+                <CoverPicture src={audiobook.cover} alt={`Cover of ${audiobook.title}`} className={styles.coverImg} loading="eager" />
               </div>
+              {audiobook.cover && audiobook.coverCredit && (
+                <p className={styles.coverCredit}>
+                  Cover picture:{' '}
+                  {audiobook.coverSource
+                    ? <a href={audiobook.coverSource} target="_blank" rel="noopener noreferrer">{audiobook.coverCredit}</a>
+                    : audiobook.coverCredit}
+                </p>
+              )}
             </div>
 
             <div className={styles.info}>
               <div className={styles.chipRow}>
                 <span className={styles.chip}><FaHeadphones aria-hidden="true" /> {audiobook.genre}</span>
                 <span className={styles.ratingRow}>
-                  <Stars value={audiobook.rating} />
-                  {audiobook.rating.toFixed(1)} · {reviews.length.toLocaleString()} {reviews.length === 1 ? 'review' : 'reviews'}
+                  <Stars value={reviewSummary.average ?? audiobook.rating} />
+                  {(reviewSummary.average ?? audiobook.rating).toFixed(1)} · {reviewSummary.count.toLocaleString()} {reviewSummary.count === 1 ? 'review' : 'reviews'}
                 </span>
               </div>
 
               <h2 className={styles.title}>{audiobook.title}</h2>
+              {audiobook.titlePa && <p className={styles.titlePa} lang="pa">{audiobook.titlePa}</p>}
               {audiobook.author && (
                 <p className={styles.byline}>
                   by {audiobook.authorId ? <Link to={`/collections/authors/author/${audiobook.authorId}`}>{audiobook.author}</Link> : audiobook.author}
@@ -421,9 +445,14 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
               <div className={styles.metaRow}>
                 {audiobook.length && <span className={styles.metaPill}><FaClock aria-hidden="true" /> {audiobook.length}</span>}
-                <span className={styles.metaPill}>{audiobook.format}</span>
+                {audiobook.language && <span className={styles.metaPill}>{audiobook.language}</span>}
+                {isYouTube
+                  ? <span className={styles.metaPill}><FaYoutube aria-hidden="true" /> YouTube</span>
+                  : <span className={styles.metaPill}>{audiobook.format}</span>}
                 {audiobook.chapters.length > 0 && (
-                  <span className={styles.metaPill}>{audiobook.chapters.length} {audiobook.chapters.length === 1 ? 'chapter' : 'chapters'}</span>
+                  <span className={styles.metaPill}>
+                    {audiobook.chapters.length} {partsAreVideos ? (audiobook.chapters.length === 1 ? 'part' : 'parts') : (audiobook.chapters.length === 1 ? 'chapter' : 'chapters')}
+                  </span>
                 )}
               </div>
 
@@ -436,45 +465,69 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                 )}
               </div>
 
-              {/* Player */}
-              <div className={styles.player}>
-                <button
-                  type="button"
-                  className={styles.playButton}
-                  onClick={togglePlayPause}
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
-                >
-                  {isPlaying ? <FaPause /> : <FaPlay className={styles.playIconNudge} />}
-                </button>
-                <div className={styles.playerTrack}>
-                  <div className={styles.playerTop}>
-                    <span className={styles.playerLabel}>{!audioUrl ? 'Audio not available yet' : isPlaying ? 'Now playing' : 'Ready to play'}</span>
-                    <div className={styles.skipButtons}>
-                      <button type="button" className={styles.skipButton} onClick={() => skip(-15)} aria-label="Back 15 seconds">
-                        <FaUndoAlt /><span>15</span>
-                      </button>
-                      <button type="button" className={styles.skipButton} onClick={() => skip(15)} aria-label="Forward 15 seconds">
-                        <FaRedoAlt /><span>15</span>
-                      </button>
-                    </div>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max={duration || 100}
-                    step="1"
-                    value={currentTime}
-                    onChange={handleSeek}
-                    className={styles.progressBar}
-                    style={{ '--progress': `${progress}%` }}
-                    aria-label="Seek"
-                  />
-                  <div className={styles.timeDisplay}>
-                    <span>{formatTime(currentTime)}</span>
-                    <span>{formatTime(duration)}</span>
+              {/* Player: YouTube's (below) or ours */}
+              {isYouTube ? (
+                <div className={styles.player}>
+                  <button
+                    type="button"
+                    className={styles.playButton}
+                    onClick={() => (nowPlaying
+                      ? listenRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                      : playOnYouTube())}
+                    aria-label={nowPlaying ? 'Go to the player' : 'Play'}
+                  >
+                    <FaPlay className={styles.playIconNudge} />
+                  </button>
+                  <div className={styles.playerTrack}>
+                    <span className={styles.playerLabel}>{nowPlaying ? 'Playing in the YouTube player below' : 'Ready to play'}</span>
+                    {audiobook.narrator && <p className={styles.narrator}><FaMicrophone aria-hidden="true" /> Read by {audiobook.narrator}</p>}
                   </div>
                 </div>
-              </div>
+              ) : audiobook.media === 'file' ? (
+                <div className={styles.player}>
+                  <button
+                    type="button"
+                    className={styles.playButton}
+                    onClick={togglePlayPause}
+                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                    disabled={!audioUrl}
+                  >
+                    {isPlaying ? <FaPause /> : <FaPlay className={styles.playIconNudge} />}
+                  </button>
+                  <div className={styles.playerTrack}>
+                    <div className={styles.playerTop}>
+                      <span className={styles.playerLabel}>
+                        {!isLoggedIn ? 'Sign in to listen' : !audioUrl ? 'Audio not available yet' : isPlaying ? 'Now playing' : 'Ready to play'}
+                      </span>
+                      <div className={styles.skipButtons}>
+                        <button type="button" className={styles.skipButton} onClick={() => skip(-15)} aria-label="Back 15 seconds">
+                          <FaUndoAlt /><span>15</span>
+                        </button>
+                        <button type="button" className={styles.skipButton} onClick={() => skip(15)} aria-label="Forward 15 seconds">
+                          <FaRedoAlt /><span>15</span>
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max={duration || 100}
+                      step="1"
+                      value={currentTime}
+                      onChange={handleSeek}
+                      className={styles.progressBar}
+                      style={{ '--progress': `${progress}%` }}
+                      aria-label="Seek"
+                    />
+                    <div className={styles.timeDisplay}>
+                      <span>{formatTime(currentTime)}</span>
+                      <span>{formatTime(duration)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className={styles.sectionNote}>This audiobook’s recording is being prepared.</p>
+              )}
 
               <div className={styles.actions}>
                 <button
@@ -504,23 +557,74 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
             </div>
           </section>
 
-          {/* Chapters */}
+          {/* YouTube's player: our cover until Play is pressed, then the video */}
+          {isYouTube && (
+            <section className={styles.listen} ref={listenRef} aria-labelledby="listen-title">
+              <h3 id="listen-title" className={styles.sectionTitle}>Listen</h3>
+              <div className={styles.playerFrame}>
+                {nowPlaying ? (
+                  <iframe
+                    key={`${nowPlaying.videoId}-${nowPlaying.start}`}
+                    src={embedUrl(nowPlaying.videoId, nowPlaying.start, nowPlaying.autoplay, nowPlaying.next)}
+                    title={`${audiobook.title} on YouTube`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
+                ) : (
+                  <button type="button" className={styles.poster} onClick={() => playOnYouTube()}
+                    aria-label={`Play ${audiobook.title}`}>
+                    <CoverPicture src={audiobook.cover} alt="" className={styles.posterImage} />
+                    <span className={styles.posterShade} aria-hidden="true" />
+                    <span className={styles.posterPlay} aria-hidden="true"><FaPlay /></span>
+                    <span className={styles.posterNote}>
+                      <FaYoutube aria-hidden="true" /> Plays in YouTube’s player
+                    </span>
+                  </button>
+                )}
+              </div>
+              <p className={styles.recordingCredit}>
+                {audiobook.narrator ? `Read by ${audiobook.narrator}. ` : ''}
+                Recording published on YouTube{audiobook.youtube.channel ? ` by “${audiobook.youtube.channel}”` : ''}.
+                {audiobook.youtube.url && (
+                  <>
+                    {' '}
+                    <a href={audiobook.youtube.url} target="_blank" rel="noopener noreferrer">
+                      Open on YouTube <FaExternalLinkAlt aria-hidden="true" />
+                    </a>
+                  </>
+                )}
+              </p>
+            </section>
+          )}
+
+          {/* Chapters / parts */}
           {audiobook.chapters.length > 0 && (
           <section className={styles.section} aria-labelledby="chapters-title">
             <div className={styles.sectionHead}>
               <div>
-                <h3 id="chapters-title" className={styles.sectionTitle}>Chapters</h3>
-                <p className={styles.sectionNote}>{audiobook.chapters.filter((c) => !c.locked).length} free, {audiobook.chapters.filter((c) => c.locked).length} with Premium</p>
+                <h3 id="chapters-title" className={styles.sectionTitle}>{partsAreVideos ? 'Parts' : 'Chapters'}</h3>
+                <p className={styles.sectionNote}>
+                  {isYouTube
+                    ? `${audiobook.chapters.length} to listen to, free`
+                    : `${audiobook.chapters.length - lockedCount} free, ${lockedCount} with Premium`}
+                </p>
               </div>
             </div>
             <ol className={styles.chapterList}>
               {audiobook.chapters.map((chapter, index) => {
                 const open = expandedChapter === chapter.id;
+                const current = nowPlaying?.chapterId === chapter.id;
                 return (
-                  <li key={chapter.id} className={`${styles.chapter} ${styles.glass} ${open ? styles.chapterOpen : ''}`}>
+                  <li key={chapter.id} className={`${styles.chapter} ${styles.glass} ${open ? styles.chapterOpen : ''} ${current ? styles.chapterCurrent : ''}`}>
                     <button type="button" className={styles.chapterHead} onClick={() => toggleChapter(chapter.id)} aria-expanded={open}>
                       <span className={styles.chapterIndex}>{chapter.locked ? <FaLock aria-label="Premium" /> : index + 1}</span>
-                      <span className={styles.chapterName}>{chapter.title}</span>
+                      <span className={styles.chapterName}>
+                        {chapter.title}
+                        {current && (
+                          <span className={styles.nowTag}>{nowPlaying.next?.length ? ' · playing from here' : ' · now playing'}</span>
+                        )}
+                      </span>
                       <span className={styles.chapterMeta}><FaClock aria-hidden="true" /> {chapter.duration}</span>
                       <FaChevronDown className={styles.chapterChevron} aria-hidden="true" />
                     </button>
@@ -532,8 +636,8 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                             <FaLock aria-hidden="true" /> Unlock with Premium
                           </Link>
                         ) : (
-                          <button type="button" className={styles.smallButton} onClick={() => handleListenChapter(chapter.id)}>
-                            <FaPlay aria-hidden="true" /> Listen to this chapter
+                          <button type="button" className={styles.smallButton} onClick={() => handleListenChapter(chapter)}>
+                            <FaPlay aria-hidden="true" /> {partsAreVideos ? 'Play this part' : 'Listen to this chapter'}
                           </button>
                         )}
                       </div>
@@ -551,88 +655,13 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
               <h3 id="reviews-title" className={styles.sectionTitle}>Ratings and reviews</h3>
             </div>
 
-            <form className={`${styles.reviewForm} ${styles.glass}`} onSubmit={handleSubmitReview} noValidate>
-              <h4 className={styles.formTitle}>Write a review</h4>
-              <div className={styles.formRow}>
-                <div className={styles.field}>
-                  <label htmlFor="name" className={styles.label}>Name</label>
-                  <input id="name" name="name" type="text" className={styles.input} value={reviewForm.name} onChange={handleInputChange} required maxLength={100} autoComplete="name" aria-invalid={Boolean(reviewErrors.name)} />
-                  {reviewErrors.name && <small className={styles.fieldError} role="alert">{reviewErrors.name}</small>}
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="email" className={styles.label}>Email</label>
-                  <input id="email" name="email" type="email" className={styles.input} value={reviewForm.email} onChange={handleInputChange} required maxLength={254} autoComplete="email" aria-invalid={Boolean(reviewErrors.email)} />
-                  {reviewErrors.email && <small className={styles.fieldError} role="alert">{reviewErrors.email}</small>}
-                </div>
-              </div>
-              <div className={styles.field}>
-                <span className={styles.label} id="a-rating-label">Your rating</span>
-                <div className={styles.starPicker} role="group" aria-labelledby="a-rating-label">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => handleRatingChange(star)}
-                      className={styles.starButton}
-                      aria-label={`${star} star${star !== 1 ? 's' : ''}`}
-                      aria-pressed={star <= reviewForm.rating}
-                    >
-                      {star <= reviewForm.rating ? <FaStar className={styles.starOn} /> : <FaRegStar className={styles.starOff} />}
-                    </button>
-                  ))}
-                  <span className={styles.ratingHint}>{reviewForm.rating > 0 ? `${reviewForm.rating} of 5` : 'Tap a star'}</span>
-                </div>
-                {reviewErrors.rating && <small className={styles.fieldError} role="alert">{reviewErrors.rating}</small>}
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="review" className={styles.label}>Your review</label>
-                <textarea id="review" name="review" className={styles.textarea} value={reviewForm.review} onChange={handleInputChange} required maxLength={2000} aria-invalid={Boolean(reviewErrors.review)} />
-                {reviewErrors.review && <small className={styles.fieldError} role="alert">{reviewErrors.review}</small>}
-              </div>
-              <div className={styles.formActions}>
-                <button type="submit" className={styles.primaryButton} disabled={isSubmitting || reviewForm.rating === 0}>
-                  {isSubmitting ? 'Posting…' : 'Post review'}
-                </button>
-              </div>
-            </form>
-
-            <div className={styles.reviewsHeader}>
-              <p className={styles.reviewsCount}>{reviews.length} reviews</p>
-              <label className={styles.sortWrap}>
-                <FaSort aria-hidden="true" />
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles.sortSelect} aria-label="Sort reviews">
-                  <option value="newest">Newest first</option>
-                  <option value="top">Most helpful</option>
-                </select>
-              </label>
-            </div>
-
-            <ul className={styles.reviewList}>
-              {displayedReviews.map((review) => (
-                <li key={review.id} className={`${styles.review} ${styles.glass}`}>
-                  <div className={styles.reviewTop}>
-                    <div className={styles.reviewer}>
-                      <span className={styles.avatar} aria-hidden="true">{review.name.charAt(0).toUpperCase()}</span>
-                      <div>
-                        <div className={styles.reviewName}>{review.name}</div>
-                        <div className={styles.reviewDate}>{review.date}</div>
-                      </div>
-                    </div>
-                    <Stars value={review.rating} />
-                  </div>
-                  <p className={styles.reviewBody}>{review.review}</p>
-                  <button type="button" className={styles.helpful} onClick={() => toggleHelpful(review.id)}>
-                    Helpful ({review.helpful})
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {visibleReviews < reviews.length && (
-              <button type="button" className={`${styles.secondaryButton} ${styles.loadMore}`} onClick={() => setVisibleReviews((v) => v + 5)}>
-                Show more reviews
-              </button>
-            )}
+            <Reviews
+              apiString={apiString}
+              type="audiobook"
+              id={id}
+              itemTitle={audiobook.title}
+              onSummary={setReviewSummary}
+            />
           </section>
         </div>
 

@@ -3,16 +3,19 @@
  * -----------------------------------------------------------------------------
  * Directions to one Gurdwara (/gurdwara-access/locate/:id): travel mode
  * (walk, drive, transit), a map with the route, travel time and step-by-step
- * directions. Uses sample data for now; a routing API will replace it.
+ * directions. The Gurdwara comes from the shared list (../gurdwaras.js); the
+ * route and directions are sample data for now (a routing API will replace
+ * them). An unknown id shows the first Gurdwara.
  * -----------------------------------------------------------------------------
  */
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import '../mapIcons'; // Leaflet's marker pictures, from the leaflet package
 import { FaWalking, FaCar, FaBus, FaMapMarkerAlt, FaHistory } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
+import { GURDWARAS, findGurdwara } from '../gurdwaras';
 import styles from './GurdwaraLocate.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -43,29 +46,12 @@ const GurdwaraLocate = ({ isDarkMode }) => {
   const { id } = useParams();
   const [transportMode, setTransportMode] = useState('car');
 
-  // Pictures and Leaflet marker icons
+  // Header pictures (public/images)
   const header_image_light = '/images/header-image.png';
   const header_image_dark = '/images/header-image-dark.png';
-  const marker_icon = '/images/gurdwaraAccess/marker-icon.png';
-  const marker_icon_2x = '/images/gurdwaraAccess/marker-icon-2x.png';
-  const marker_shadow = '/images/gurdwaraAccess/marker-shadow.png';
 
-  // Default marker icons for Leaflet
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: getImagePath(marker_icon_2x),
-    iconUrl: getImagePath(marker_icon),
-    shadowUrl: getImagePath(marker_shadow),
-  });
-
-  // Mock data; will come from the API by id later
-  const gurdwaras = [
-    { id: 1, name: 'Gurdwara Sikh Sangat Brampton', address: '32 Regan Rd, Brampton, ON, Canada', coordinates: [43.7156, -79.7607] },
-    { id: 2, name: 'Gurudwara Nanaksar-Brampton', address: '64 Timberlane Dr, Brampton, ON, Canada', coordinates: [43.7089, -79.7631] },
-    { id: 3, name: 'Sri Guru Nanak Sikh Centre Brampton', address: '99 Glidden Rd, Brampton, ON, Canada', coordinates: [43.7023, -79.7665] },
-  ];
-
-  const selectedGurdwara = gurdwaras.find((g) => g.id === parseInt(id, 10)) || gurdwaras[0];
+  // The Gurdwara for this URL (the first one if the id is unknown)
+  const selectedGurdwara = findGurdwara(id) || GURDWARAS[0];
 
   // Mock user location and route (a routing API will replace these)
   const userLocation = [43.7216, -79.7447];

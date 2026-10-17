@@ -319,6 +319,8 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 0; /* the arched frame gives the shape */
+  --avatar-initials-size: 30cqmin;
 }
 
 .memberName {

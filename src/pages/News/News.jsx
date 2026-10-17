@@ -18,6 +18,7 @@ import 'swiper/css/navigation';
 import PageHero from '../../components/PageHero/PageHero';
 import newsApi from '../../api/newsApi';
 import { safeExternalUrl } from '../../utils/safeUrl';
+import { CoverPicture } from '../../components/SitePicture/SitePicture';
 import styles from './News.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -36,10 +37,11 @@ const getImagePath = (imagePath) => {
 // Header pictures
 const headerLight = '/images/header-image.png';
 const headerDark = '/images/header-image-dark.png';
-// Shown when a story or event has no picture of its own
-const latestNewsImage = '/images/News/latest-news.jpg';
-const upcomingEventsImage = '/images/News/upcoming-events.jpg';
-const featuredNewsImage = '/images/News/featured-news.jpg';
+// Stories and events without a picture of their own show a related website picture chosen by
+// the server (`picture`), or else these ones (all real photos stored in S3)
+const LATEST_PICTURE = 'news-latest';
+const EVENT_PICTURE = 'news-events';
+const FEATURED_PICTURE = 'news-featured';
 
 const REFRESH_MS = 60000; // new events appear without reloading
 
@@ -55,14 +57,6 @@ const formatTime = (hhmm) => {
   if (!hhmm) return '';
   const [h, m] = hhmm.split(':').map(Number);
   return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-};
-
-// onError handler: swap a broken picture for the default one (once)
-const useFallbackImage = (fallback) => (e) => {
-  const img = e.currentTarget;
-  if (img.dataset.fallback) return;
-  img.dataset.fallback = '1';
-  img.src = getImagePath(fallback);
 };
 
 const News = ({ isDarkMode, apiString }) => {
@@ -105,10 +99,6 @@ const News = ({ isDarkMode, apiString }) => {
     return (marked.length ? marked : news).slice(0, 2);
   }, [news]);
 
-  const onNewsImageError = useFallbackImage(latestNewsImage);
-  const onEventImageError = useFallbackImage(upcomingEventsImage);
-  const onFeaturedImageError = useFallbackImage(featuredNewsImage);
-
   // Message shown instead of a list: loading, error (with Try again) or empty
   const stateNote = (state, emptyText, retry) => {
     if (state === 'loading') return <p className={styles.note} role="status">Loading…</p>;
@@ -139,7 +129,7 @@ const News = ({ isDarkMode, apiString }) => {
           <div className={`${styles.featuredGrid} ${featured.length === 1 ? styles.featuredSingle : ''}`}>
             {featured.map((item, i) => (
               <article key={item.id} className={`${styles.featuredCard} ${i === 0 ? styles.featuredLead : ''}`}>
-                <img src={getImagePath(item.image || featuredNewsImage)} alt="" className={styles.featuredImage} loading="lazy" onError={onFeaturedImageError} />
+                <CoverPicture src={item.image || item.picture} fallback={FEATURED_PICTURE} alt="" className={styles.featuredImage} />
                 <div className={styles.featuredScrim} aria-hidden="true" />
                 <div className={styles.featuredContent}>
                   <time className={styles.featuredDate} dateTime={item.published_at}>{longDate(item.published_at)}</time>
@@ -174,7 +164,7 @@ const News = ({ isDarkMode, apiString }) => {
                 <SwiperSlide key={event.id} className={styles.slide}>
                   <article className={styles.eventCard}>
                     <div className={styles.eventMedia}>
-                      <img src={getImagePath(event.image_url || upcomingEventsImage)} alt="" className={styles.eventImage} loading="lazy" onError={onEventImageError} />
+                      <CoverPicture src={event.image_url || event.picture} fallback={EVENT_PICTURE} alt="" className={styles.eventImage} />
                       <time className={styles.dateTile} dateTime={event.start_date}>
                         <span className={styles.dateDay}>{d.getDate()}</span>
                         <span className={styles.dateMonth}>{d.toLocaleDateString(undefined, { month: 'short' })}</span>
@@ -214,7 +204,7 @@ const News = ({ isDarkMode, apiString }) => {
             {news.map((item) => (
               <article key={item.id} className={styles.newsCard}>
                 <div className={styles.newsMedia}>
-                  <img src={getImagePath(item.image || latestNewsImage)} alt="" className={styles.newsImage} loading="lazy" onError={onNewsImageError} />
+                  <CoverPicture src={item.image || item.picture} fallback={LATEST_PICTURE} alt="" className={styles.newsImage} />
                 </div>
                 <div className={styles.newsBody}>
                   <time className={styles.newsDate} dateTime={item.published_at}>{longDate(item.published_at)}</time>

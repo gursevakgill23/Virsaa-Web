@@ -1,0 +1,207 @@
+/*
+ * pages/PictureCredits/PictureCredits.module.css
+ * -----------------------------------------------------------------------------
+ * The Picture credits page: a short introduction, then each group of pictures
+ * as a two-column list of rows (thumbnail, what it shows, who made it, links).
+ * -----------------------------------------------------------------------------
+ */
+.page {
+  background: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-body);
+  overflow-x: clip;
+}
+
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
+.page p,
+.page h3 {
+  font-family: var(--font-body);
+}
+
+.layout {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: clamp(32px, 5vw, 56px) clamp(16px, 4vw, 32px) clamp(56px, 8vw, 96px);
+}
+
+.intro {
+  max-width: 72ch;
+  display: grid;
+  gap: 12px;
+  line-height: 1.7;
+  color: var(--secondary-text-color);
+}
+
+.intro a,
+.credit a {
+  color: var(--link-color);
+  text-underline-offset: 3px;
+}
+
+.group {
+  margin-top: clamp(32px, 5vw, 48px);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.35rem, 1.2rem + 0.6vw, 1.7rem);
+  color: var(--headline-color);
+}
+
+.count {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--secondary-text-color);
+}
+
+.list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+}
+
+.thumb {
+  display: block;
+  width: 84px;
+  height: 84px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--accent-soft);
+}
+
+.text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text-color);
+}
+
+.usedOn {
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+}
+
+.credit {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sourceLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 2px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.sourceLink:hover {
+  text-decoration: underline;
+}
+
+.sourceLink svg {
+  font-size: 0.75em;
+}
+
+.sourceLink:focus-visible,
+.retry:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.notice {
+  margin-top: 32px;
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  color: var(--secondary-text-color);
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Loading rows */
+.skeleton {
+  background: var(--skeleton-bg-color);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonLine {
+  display: block;
+  height: 14px;
+  border-radius: 7px;
+  width: 80%;
+}
+
+.skeletonShort {
+  width: 50%;
+}
+
+@keyframes shimmer {
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .list {
+    grid-template-columns: 1fr;
+  }
+
+  .item {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .thumb {
+    width: 64px;
+    height: 64px;
+  }
+}

@@ -6,31 +6,34 @@
  *   - lists Gurdwaras within 10 km with distance and walk/bus/car times, and
  *     shows them on a Leaflet map (OpenStreetMap tiles)
  *   - links to directions, services and history for each Gurdwara
- *   - history of the nearest Gurdwara and the services Gurdwaras offer
+ *   - the history of the nearest Gurdwara, loaded live from Wikipedia through
+ *     our server (hooks/useGurdwaraHistory) with the credit its licence asks for
+ *   - the services Gurdwaras offer
  * Addresses are looked up with OpenStreetMap's Nominatim service (Canada only).
- * The Gurdwara list itself is local data for now.
+ * The Gurdwara list is shared with the other Gurdwara pages (gurdwaras.js).
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
 import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
+import './mapIcons'; // Leaflet's marker pictures, from the leaflet package
 import styles from './GurdwaraAccess.module.css';
 import {
   FaSearch, FaLocationArrow, FaWalking, FaBus, FaCar, FaGlobe, FaPhoneAlt, FaMapMarkedAlt,
-  FaHandsHelping, FaBook, FaUtensils, FaBed, FaHeartbeat, FaChevronDown, FaHistory, FaMapMarkerAlt,
+  FaHandsHelping, FaBook, FaUtensils, FaBed, FaHeartbeat, FaChevronDown, FaHistory, FaMapMarkerAlt, FaRedo,
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
+import useGurdwaraHistory from '../../hooks/useGurdwaraHistory';
 import { safeExternalUrl } from '../../utils/safeUrl';
+import { GURDWARAS } from './gurdwaras';
+import WikipediaCredit from './WikipediaCredit';
+import { SitePicture } from '../../components/SitePicture/SitePicture';
 
-// Pictures and Leaflet marker icons (files in public/images)
-const gurdwaraHistoryImage = '/images/gurdwaraAccess/gurdwara-history.jpg';
+// Header pictures (public/images). A Gurdwara without a Wikipedia photo shows the
+// website picture 'gurdwara-history' (S3).
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
-const iconRetinaUrl = '/images/gurdwaraAccess/marker-icon-2x.png';
-const iconUrl = '/images/gurdwaraAccess/marker-icon.png';
-const iconShadowUrl = '/images/gurdwaraAccess/marker-shadow.png';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -47,65 +50,6 @@ const useProductionImagePath = () => {
   };
 };
 
-// Default marker icons for Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl: iconShadowUrl });
-
-// Gurdwara list (can move to the API later)
-const gurdwaraDatabase = [
-  {
-    id: 1,
-    name: 'Gurdwara Sikh Sangat Brampton',
-    address: '32 Regan Rd, Brampton, ON, Canada',
-    coordinates: [43.7156, -79.7607],
-    website: 'https://www.gssbrampton.com',
-    phone: '(905) 495-1200',
-    history: 'Established in 1995, Gurdwara Sikh Sangat Brampton has served as a spiritual and cultural hub for thousands of devotees. It was founded by a small group of Sikh immigrants and has grown to become one of the largest Gurdwaras in the region.',
-    services: ['Langar', 'Accommodation', 'Religious Classes'],
-  },
-  {
-    id: 2,
-    name: 'Gurudwara Nanaksar-Brampton',
-    address: '64 Timberlane Dr, Brampton, ON, Canada',
-    coordinates: [43.7089, -79.7631],
-    website: 'https://www.nanaksar.com',
-    phone: '(905) 452-1313',
-    history: 'Founded in 2002, Gurudwara Nanaksar-Brampton follows the Nanaksar tradition. It is known for its peaceful atmosphere and strict adherence to Sikh principles. The Gurdwara hosts regular kirtan programs and religious discourses.',
-    services: ['Langar', 'Medical Camps', 'Library'],
-  },
-  {
-    id: 3,
-    name: 'Sri Guru Nanak Sikh Centre Brampton',
-    address: '99 Glidden Rd, Brampton, ON, Canada',
-    coordinates: [43.7023, -79.7665],
-    website: 'https://www.sgnsc.com',
-    phone: '(905) 457-5757',
-    history: 'Sri Guru Nanak Sikh Centre was established in 2010 to serve the growing Sikh community in northwest Brampton. It features modern facilities while maintaining traditional Sikh architecture and values.',
-    services: ['Langar', 'Religious Classes', 'Youth Programs'],
-  },
-  {
-    id: 4,
-    name: 'Gurdwara Sahib Malton',
-    address: '7085 Airport Rd, Mississauga, ON, Canada',
-    coordinates: [43.6921, -79.6428],
-    website: 'https://www.gsmalton.com',
-    phone: '(905) 677-1111',
-    history: 'One of the oldest Gurdwaras in the region, established in 1985. It played a key role in serving the early Sikh immigrant community and continues to be an important institution.',
-    services: ['Langar', 'Senior Programs', 'Community Services'],
-  },
-  {
-    id: 5,
-    name: 'Ontario Khalsa Darbar',
-    address: '7080 Dixie Rd, Mississauga, ON, Canada',
-    coordinates: [43.6845, -79.6553],
-    website: 'https://www.ontariokhalsadarbar.com',
-    phone: '(905) 670-1771',
-    history: 'Known as one of the largest Gurdwaras outside India, Ontario Khalsa Darbar opened in 2007. It features magnificent architecture and can accommodate thousands of devotees.',
-    services: ['Langar', 'Accommodation', 'Library', 'Medical Camps'],
-  },
-];
-
-// Distance between two coordinates in km
 // Straight-line distance in km between two coordinates (haversine formula)
 function deg2rad(deg) {
   return deg * (Math.PI / 180);
@@ -128,7 +72,16 @@ const servicesList = [
   { id: 5, icon: <FaBook />, name: 'Library (Sikh Literature and History)', description: 'Explore our library filled with Sikh literature and history. Learn about our rich heritage.' },
 ];
 
-const GurdwaraAccess = ({ isDarkMode }) => {
+// The first paragraph of a Gurdwara's history, cut at a word if it's very long
+const INTRO_MAX = 480;
+const historyIntro = (data) => {
+  const first = (Array.isArray(data?.summary) && data.summary[0])
+    || data?.sections?.[0]?.paragraphs?.[0] || '';
+  return first.length > INTRO_MAX ? `${first.slice(0, first.lastIndexOf(' ', INTRO_MAX))}…` : first;
+};
+
+// Props: isDarkMode, apiString (API base URL)
+const GurdwaraAccess = ({ isDarkMode, apiString }) => {
   const getImagePath = useProductionImagePath();
   // Search box, location, results, loading/error and suggestions state
   const [selectedService, setSelectedService] = useState(null);
@@ -158,7 +111,7 @@ const GurdwaraAccess = ({ isDarkMode }) => {
 
   // Gurdwaras within 10 km
   const findNearbyGurdwaras = useCallback((lat, lng) => {
-    const nearby = gurdwaraDatabase
+    const nearby = GURDWARAS
       .map((g) => {
         const distance = getDistance(lat, lng, g.coordinates[0], g.coordinates[1]);
         return {
@@ -318,6 +271,12 @@ const GurdwaraAccess = ({ isDarkMode }) => {
     mapRef.current?.flyTo?.(gurdwara.coordinates, 15);
   };
 
+  // History of the nearest Gurdwara, live from Wikipedia (reloads when the nearest changes)
+  const nearestHistory = useGurdwaraHistory(apiString, nearestGurdwara);
+  const historyFound = nearestHistory.status === 'found';
+  const historyPhoto = historyFound ? safeExternalUrl(nearestHistory.data.image) : '';
+  const historyPhotoPage = historyFound ? safeExternalUrl(nearestHistory.data.image_page) : '';
+
   return (
     <div className={styles.page}>
       <PageHero
@@ -457,20 +416,70 @@ const GurdwaraAccess = ({ isDarkMode }) => {
         </div>
       </section>
 
-      {/* ---------- History of the nearest ---------- */}
+      {/* ---------- History of the nearest (live from Wikipedia) ---------- */}
       {nearestGurdwara && (
         <section className={styles.section} aria-labelledby="history-title">
           <div className={styles.history}>
-            <div className={styles.historyImageWrap}>
-              <img src={getImagePath(gurdwaraHistoryImage)} alt="" className={styles.historyImage} loading="lazy" />
-            </div>
-            <div className={styles.historyText}>
+            {/* Wikipedia's photo of this Gurdwara when it has one, otherwise our own picture */}
+            <figure className={styles.historyImageWrap}>
+              {historyPhoto ? (
+                <img src={historyPhoto} alt={nearestHistory.data.title} className={styles.historyImage} loading="lazy" />
+              ) : (
+                <SitePicture name="gurdwara-history" alt="" className={styles.historyImage} />
+              )}
+              {historyPhoto && historyPhotoPage && (
+                <figcaption className={styles.photoCredit}>
+                  <a href={historyPhotoPage} target="_blank" rel="noopener noreferrer">Photo: Wikipedia</a>
+                </figcaption>
+              )}
+            </figure>
+
+            <div className={styles.historyText} aria-busy={nearestHistory.status === 'loading'}>
               <span className={styles.eyebrowIcon} aria-hidden="true"><FaHistory /></span>
               <h2 id="history-title" className={styles.sectionTitle}>History of {nearestGurdwara.name}</h2>
-              <p>{nearestGurdwara.history}</p>
-              <Link to={`/gurdwara-access/history/${nearestGurdwara.id}`} className={styles.primaryButton}>
-                Read the full history
-              </Link>
+
+              {nearestHistory.status === 'loading' && (
+                <div className={styles.historySkeleton} role="status" aria-label="Loading the history from Wikipedia">
+                  <span /><span /><span /><span />
+                </div>
+              )}
+
+              {historyFound && (
+                <>
+                  <p>{historyIntro(nearestHistory.data)}</p>
+                  <WikipediaCredit data={nearestHistory.data} className={styles.credit} />
+                  <Link to={`/gurdwara-access/history/${nearestGurdwara.id}`} className={styles.primaryButton}>
+                    Read the full history
+                  </Link>
+                </>
+              )}
+
+              {nearestHistory.status === 'missing' && (
+                <>
+                  <p>Wikipedia doesn’t have an article about this Gurdwara yet, so there’s no history to show here.</p>
+                  <div className={styles.historyActions}>
+                    {safeExternalUrl(nearestGurdwara.website) && (
+                      <a href={safeExternalUrl(nearestGurdwara.website)} className={styles.primaryButton} target="_blank" rel="noopener noreferrer">
+                        <FaGlobe aria-hidden="true" /> Visit its website
+                      </a>
+                    )}
+                    {safeExternalUrl(nearestHistory.data?.search_url) && (
+                      <a href={safeExternalUrl(nearestHistory.data.search_url)} className={styles.secondaryButton} target="_blank" rel="noopener noreferrer">
+                        Search Wikipedia
+                      </a>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {nearestHistory.status === 'error' && (
+                <>
+                  <p role="alert">{nearestHistory.error}</p>
+                  <button type="button" className={styles.secondaryButton} onClick={nearestHistory.retry}>
+                    <FaRedo aria-hidden="true" /> Try again
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </section>

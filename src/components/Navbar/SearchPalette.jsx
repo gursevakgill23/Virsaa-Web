@@ -15,12 +15,13 @@ import {
   FaGraduationCap, FaArrowRight,
 } from 'react-icons/fa';
 import { FaHandsPraying } from 'react-icons/fa6';
+import Avatar from '../Avatar/Avatar';
+import { CoverPicture } from '../SitePicture/SitePicture';
 import styles from './SearchPalette.module.css';
 
 const RECENT_KEY = 'virsaa_recent_searches'; // last 5 searches, kept in this browser
 const MAX_QUERY = 100; // longest search we send
 const TIMEOUT_MS = 15000; // give up on a slow search instead of spinning forever
-const FALLBACK_IMAGE = '/images/logo.png';
 
 // Quick links shown before anything is typed
 const JUMP_LINKS = [
@@ -293,12 +294,9 @@ const SearchPalette = ({ onClose, apiString }) => {
                         onMouseEnter={() => setActive(flat.indexOf(r))}
                         onClick={() => go(r.to)}
                       >
-                        <img
-                          src={r.image || FALLBACK_IMAGE}
-                          alt=""
-                          className={`${styles.thumb} ${r.round ? styles.thumbRound : ''}`}
-                          onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE; }}
-                        />
+                        {r.round
+                          ? <Avatar src={r.image} name={r.title} className={`${styles.thumb} ${styles.thumbRound}`} />
+                          : <CoverPicture src={r.image} alt="" className={styles.thumb} />}
                         <span className={styles.rowText}>
                           <span className={styles.rowTitle}><Highlight text={r.title} query={term} /></span>
                           <span className={styles.rowMeta}>{r.meta}</span>

@@ -14,6 +14,7 @@ import { FaCamera, FaUser, FaPen, FaCalendarAlt, FaVenusMars, FaHeart, FaCheck }
 import axios from 'axios';
 import PageHero from '../../../components/PageHero/PageHero';
 import { useAuth } from '../../../context/AuthContext';
+import Avatar from '../../../components/Avatar/Avatar';
 import styles from './CompleteProfile.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -29,7 +30,6 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
-const PLACEHOLDER_PHOTO = '/images/Login/user-placeholder.jpg';
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 MB
 
 // Today as YYYY-MM-DD in the visitor's time zone (for the date-of-birth check)
@@ -224,7 +224,7 @@ const CompleteProfile = ({ isDarkMode, apiString, profile, onCompleted }) => {
         {/* ---------- Photo + progress ---------- */}
         <aside className={`${styles.panel} ${styles.photoCard}`}>
           <div className={`${styles.avatarFrame} ${errors.profile_photo ? styles.avatarError : ''}`}>
-            <img src={previewPhoto || getImagePath(PLACEHOLDER_PHOTO)} alt="" className={styles.avatar} />
+            <Avatar src={previewPhoto} name={[formData.first_name, formData.last_name].filter(Boolean).join(' ')} className={styles.avatar} />
             <label htmlFor="profile_photo" className={styles.cameraButton}>
               <FaCamera aria-hidden="true" />
               <span className={styles.srOnly}>Choose profile photo</span>

@@ -35,6 +35,7 @@ import SearchPalette from './SearchPalette';
 import useMembership from '../../hooks/useMembership';
 import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
 import useUnreadNotifications, { refreshUnread } from '../../hooks/useUnreadNotifications';
+import Avatar from '../Avatar/Avatar';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -52,8 +53,8 @@ const useProductionImagePath = () => {
   };
 };
 
-// Shown when the user has no profile photo
-const userImage = '/images/Login/user-placeholder.jpg';
+// "First Last", or the username: used for the avatar's initials when there is no photo
+const nameOf = (person) => [person?.first_name, person?.last_name].filter(Boolean).join(' ') || person?.username || '';
 
 const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const logo_virsaa = '/images/logo.png';
@@ -131,7 +132,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
           setProfileData({
             first_name: data.first_name || '',
             last_name: data.last_name || '',
-            profile_photo: data.profile_photo || userImage,
+            profile_photo: data.profile_photo || '',
             email: data.email || user?.email || '',
           });
         } catch (error) {
@@ -144,7 +145,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
           setProfileData({
             first_name: user?.first_name || '',
             last_name: user?.last_name || '',
-            profile_photo: user?.profile_photo || userImage,
+            profile_photo: user?.profile_photo || '',
             email: user?.email || '',
           });
         }
@@ -312,9 +313,9 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
               aria-expanded={showProfileSidebar}
             >
               {unread > 0 && <span className={styles.avatarBadge} aria-hidden="true">{unreadLabel}</span>}
-              <img 
-                src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)} 
-                alt="" 
+              <Avatar
+                src={profileData?.profile_photo || userData?.profile_photo}
+                name={nameOf(profileData?.first_name ? profileData : userData)}
                 className={styles.userImage}
               />
             </button>
@@ -357,9 +358,9 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
             <div className={styles.accountBody}>
               {/* Who is signed in, and their plan */}
               <section className={styles.accountCard}>
-                <img
-                  src={getImagePath(profileData?.profile_photo || userData?.profile_photo || userImage)}
-                  alt=""
+                <Avatar
+                  src={profileData?.profile_photo || userData?.profile_photo}
+                  name={nameOf(profileData?.first_name ? profileData : userData)}
                   className={styles.accountAvatar}
                 />
                 <div className={styles.accountWho}>

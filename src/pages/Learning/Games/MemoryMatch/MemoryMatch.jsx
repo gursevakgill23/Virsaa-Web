@@ -26,45 +26,11 @@ import { MdLeaderboard, MdStars } from 'react-icons/md';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { SOUND_URLS, HOW_TO_PLAY_VIDEO } from '../gameAssets';
+import { SitePicture } from '../../../../components/SitePicture/SitePicture';
+import Avatar from '../../../../components/Avatar/Avatar';
 
-
-// Pictures for the cards and the default player avatar (public/images/games)
-const userDefault = '/images/games/user-default.jpg';
-const vaisakhi = '/images/games/vaisakhi.jpg';
-const bhangra = '/images/games/bhangra.jpg';
-const giddha = '/images/games/giddha.jpg';
-const phulkari = '/images/games/phulkari.jpg';
-const lassi = '/images/games/lassi.jpg';
-const lohri = '/images/games/lohri.jpg';
-const basant = '/images/games/basant.jpg';
-const holi = '/images/games/holi.jpg';
-const diwali = '/images/games/diwali.jpg';
-const kangha = '/images/games/kangha.jpg';
-const kara = '/images/games/kara.jpg';
-const ik_onkar = '/images/games/ik-onkar.jpg';
-const khanda = '/images/games/khanda.jpg';
-const kirpan = '/images/games/kirpan.jpg';
-
-// Converts image paths for the production build (same helper used across pages)
-const useProductionImagePath = () => {
-  
-  return (imagePath) => {
-    // Only modify in production
-    if (process.env.NODE_ENV === 'production') {
-      // Handle both imported images and public folder images
-      if (typeof imagePath === 'string') {
-        // For public folder images
-        return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) 
-          ? imagePath 
-          : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-      } else {
-        // For imported images
-        return imagePath.default || imagePath;
-      }
-    }
-    return imagePath;
-  };
-};
+// The card pictures are real photos from S3, by name (components/SitePicture);
+// players without a picture of their own show their initials (components/Avatar)
 
 // This game's key on the server (results, leaderboard, achievements)
 const GAME_KEY = 'memory_match';
@@ -90,23 +56,23 @@ const readSoundPref = () => {
 // Card sets
 const cardSets = {
   festivals: [
-    { id: 1, image: vaisakhi, text: 'Vaisakhi', punjabiText: 'ਵਿਸਾਖੀ' },
-    { id: 2, image: lohri, text: 'Lohri', punjabiText: 'ਲੋਹੜੀ' },
-    { id: 3, image: basant, text: 'Basant', punjabiText: 'ਬਸੰਤ' },
-    { id: 4, image: holi, text: 'Holi', punjabiText: 'ਹੋਲੀ' },
-    { id: 5, image: diwali, text: 'Diwali', punjabiText: 'ਦੀਵਾਲੀ' },
-    { id: 6, image: bhangra, text: 'Bhangra', punjabiText: 'ਭੰਗੜਾ' },
-    { id: 7, image: giddha, text: 'Giddha', punjabiText: 'ਗਿੱਧਾ' },
-    { id: 8, image: phulkari, text: 'Phulkari', punjabiText: 'ਫੁਲਕਾਰੀ' },
-    { id: 9, image: lassi, text: 'Lassi', punjabiText: 'ਲੱਸੀ' },
-    { id: 10, image: bhangra, text: 'Bhangra', punjabiText: 'ਭੰਗੜਾ' },
+    { id: 1, picture: 'game-vaisakhi', text: 'Vaisakhi', punjabiText: 'ਵਿਸਾਖੀ' },
+    { id: 2, picture: 'game-lohri', text: 'Lohri', punjabiText: 'ਲੋਹੜੀ' },
+    { id: 3, picture: 'game-basant', text: 'Basant', punjabiText: 'ਬਸੰਤ' },
+    { id: 4, picture: 'game-holi', text: 'Holi', punjabiText: 'ਹੋਲੀ' },
+    { id: 5, picture: 'game-diwali', text: 'Diwali', punjabiText: 'ਦੀਵਾਲੀ' },
+    { id: 6, picture: 'game-bhangra', text: 'Bhangra', punjabiText: 'ਭੰਗੜਾ' },
+    { id: 7, picture: 'game-giddha', text: 'Giddha', punjabiText: 'ਗਿੱਧਾ' },
+    { id: 8, picture: 'game-phulkari', text: 'Phulkari', punjabiText: 'ਫੁਲਕਾਰੀ' },
+    { id: 9, picture: 'game-lassi', text: 'Lassi', punjabiText: 'ਲੱਸੀ' },
+    { id: 10, picture: 'game-bhangra', text: 'Bhangra', punjabiText: 'ਭੰਗੜਾ' },
   ],
   symbols: [
-    { id: 6, image: khanda, text: 'Khanda', punjabiText: 'ਖੰਡਾ' },
-    { id: 7, image: ik_onkar, text: 'Ik Onkar', punjabiText: 'ਇੱਕ ਓਅੰਕਾਰ' },
-    { id: 8, image: kirpan, text: 'Kirpan', punjabiText: 'ਕਿਰਪਾਨ' },
-    { id: 9, image: kara, text: 'Kara', punjabiText: 'ਕੜਾ' },
-    { id: 10, image: kangha, text: 'Kangha', punjabiText: 'ਕੰਘਾ' },
+    { id: 6, picture: 'game-khanda', text: 'Khanda', punjabiText: 'ਖੰਡਾ' },
+    { id: 7, picture: 'game-ik-onkar', text: 'Ik Onkar', punjabiText: 'ਇੱਕ ਓਅੰਕਾਰ' },
+    { id: 8, picture: 'game-kirpan', text: 'Kirpan', punjabiText: 'ਕਿਰਪਾਨ' },
+    { id: 9, picture: 'game-kara', text: 'Kara', punjabiText: 'ਕੜਾ' },
+    { id: 10, picture: 'game-kangha', text: 'Kangha', punjabiText: 'ਕੰਘਾ' },
   ],
 };
 
@@ -117,7 +83,7 @@ const fetchTopScorers = async (apiString) => {
     id: row.user_id,
     name: row.name,
     score: row.score,
-    avatar: row.avatar || userDefault,
+    avatar: row.avatar || '',
   }));
 };
 
@@ -163,7 +129,6 @@ const gameModes = [
 
 // ---------------------------------------------------------------- component
 const MemoryMatch = ({ apiString }) => {
-  const getImagePath = useProductionImagePath();
 
   const { isLoggedIn, accessToken, userData: authUser, logout } = useAuth();
   // Coins, XP and the game name/avatar: saved on the server when signed in, in the browser for guests
@@ -201,7 +166,7 @@ const MemoryMatch = ({ apiString }) => {
   const [userStats, setUserStats] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [newName, setNewName] = useState(userData?.name || '');
-  const [newAvatar, setNewAvatar] = useState(userData?.avatar || userDefault);
+  const [newAvatar, setNewAvatar] = useState(userData?.avatar || '');
   const [newAvatarFile, setNewAvatarFile] = useState(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [lastResult, setLastResult] = useState(null);   // server reply: XP, badges, best score
@@ -572,12 +537,15 @@ const MemoryMatch = ({ apiString }) => {
       <div className={styles.navbarRight}>
         {isLoggedIn && userData ? (
           <div className={styles.userInfo}>
-            <img
-              src={getImagePath(userData.avatar || userDefault)}
-              alt="User"
-              className={styles.userAvatar}
+            <button
+              type="button"
+              className={styles.avatarButton}
               onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-            />
+              aria-label={language === 'punjabi' ? 'ਤੁਹਾਡੀ ਗੇਮ ਪ੍ਰੋਫਾਈਲ' : 'Your game profile'}
+              aria-expanded={showProfileDropdown}
+            >
+              <Avatar src={userData.avatar} name={userData.name} className={styles.userAvatar} />
+            </button>
             <span>{userData.name || 'Virsaa Player'}</span>
             <span className={styles.coins}>
               {coins} <FaCoins />
@@ -597,7 +565,7 @@ const MemoryMatch = ({ apiString }) => {
                 idPrefix="mm"
                 language={language}
                 name={userData.name || 'Virsaa Player'}
-                avatar={getImagePath(userData.avatar || userDefault)}
+                avatar={userData.avatar}
                 coins={coins}
                 level={wallet.level}
                 xpIntoLevel={wallet.xpIntoLevel}
@@ -612,12 +580,12 @@ const MemoryMatch = ({ apiString }) => {
                 editing={editingProfile}
                 saving={savingProfile}
                 newName={newName}
-                newAvatar={getImagePath(newAvatar)}
+                newAvatar={newAvatar}
                 onNameChange={setNewName}
                 onAvatarChange={handleAvatarChange}
                 onStartEdit={() => {
                   setNewName(userData.name || '');
-                  setNewAvatar(userData.avatar || userDefault);
+                  setNewAvatar(userData.avatar || '');
                   setEditingProfile(true);
                 }}
                 onSave={handleProfileUpdate}
@@ -823,7 +791,7 @@ const MemoryMatch = ({ apiString }) => {
                   <span className={styles.hiddenIcon}>?</span>
                 </div>
                 <div className={styles.cardBack}>
-                  <img src={getImagePath(card.image)} alt={card.text} loading="lazy" />
+                  <SitePicture name={card.picture} alt={card.text} className={styles.cardPicture} />
                 </div>
               </div>
             </div>
@@ -867,7 +835,7 @@ const MemoryMatch = ({ apiString }) => {
                 </div>
                 <div className={styles.cardBack}>
                   {card.type === 'image' ? (
-                    <img src={getImagePath(card.image)} alt={card.text} loading="lazy" />
+                    <SitePicture name={card.picture} alt={card.text} className={styles.cardPicture} />
                   ) : (
                     <span>{language === 'punjabi' ? card.punjabiText : card.text}</span>
                   )}
@@ -893,7 +861,7 @@ const MemoryMatch = ({ apiString }) => {
             topScorers.map((player, index) => (
               <div key={player.id} className={styles.leaderboardItem}>
                 <span>{index + 1}</span>
-                <img src={getImagePath(player.avatar)} alt={player.name} />
+                <Avatar src={player.avatar} name={player.name} className={styles.leaderAvatar} />
                 <div>
                   <span>{player.name}</span>
                   <span>{player.score} pts</span>
@@ -973,7 +941,7 @@ const MemoryMatch = ({ apiString }) => {
           <h2>{language === 'punjabi' ? 'ਕਾਰਡ ਜੋੜਾ' : 'Card Pair'}</h2>
           <div className={styles.cardPair}>
             <div className={styles.cardPreview}>
-              <img src={getImagePath(showCardModal.image)} alt={showCardModal.text} loading="lazy" />
+              <SitePicture name={showCardModal.picture} alt={showCardModal.text} className={styles.cardPicture} />
             </div>
             <div className={styles.cardPreview}>
               <span>{language === 'punjabi' ? pairCard.punjabiText : pairCard.text}</span>

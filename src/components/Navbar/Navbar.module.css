@@ -104,23 +104,35 @@ body, html {
   gap: 15px;
 }
 
+/* Round icon buttons: a fixed square box, so the hover circle is a true circle
+   and never wider than the button itself */
 .searchIcon,
 .menuIcon,
 .themeToggle {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   background: none;
   border: none;
+  border-radius: 50%;
   font-size: 1.25rem;
+  line-height: 1;
   cursor: pointer;
   color: var(--icon-color);
-  padding: 8px;
-  border-radius: 50%;
-  transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s ease;
 }
 
-.searchIcon:hover,
-.menuIcon:hover,
-.themeToggle:hover {
-  background-color: rgba(var(--primary-rgb), 0.1);
+/* Hover only with a real pointer (on touch screens it would stick after a tap) */
+@media (hover: hover) {
+  .searchIcon:hover,
+  .menuIcon:hover,
+  .themeToggle:hover {
+    background-color: rgba(var(--primary-rgb), 0.1);
+  }
 }
 
 .noScroll {
@@ -528,8 +540,9 @@ body, html {
   .searchIcon,
   .menuIcon,
   .themeToggle {
-    font-size: 1rem;
-    padding: 6px;
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
   }
 
   .loginButton, .getPremiumButton {
@@ -568,13 +581,6 @@ body, html {
     width: 40px;
   }
 
-  .searchIcon,
-  .menuIcon,
-  .themeToggle {
-    font-size: 1.1rem;
-    padding: 9px;
-  }
-
   .userProfile {
     width: 36px;
     height: 36px;
@@ -598,7 +604,8 @@ body, html {
   .searchIcon,
   .menuIcon,
   .themeToggle {
-    padding: 7px;
+    width: 34px;
+    height: 34px;
   }
 
   .loginButton, .getPremiumButton {

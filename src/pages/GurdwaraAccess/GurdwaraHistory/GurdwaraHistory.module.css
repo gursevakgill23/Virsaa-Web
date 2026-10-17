@@ -1,8 +1,9 @@
 /*
  * pages/GurdwaraAccess/GurdwaraHistory/GurdwaraHistory.module.css
  * -----------------------------------------------------------------------------
- * History of one Gurdwara: photo gallery with facts, the timeline and notable
- * figures.
+ * History of one Gurdwara: the article loaded from Wikipedia (photo, text,
+ * credit), the visiting details beside it, and the loading, "no article" and
+ * error states.
  * -----------------------------------------------------------------------------
  */
 
@@ -37,32 +38,6 @@
 
 .section:last-child {
   padding-bottom: clamp(56px, 8vw, 96px);
-}
-
-.sectionTitle {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.6rem);
-  line-height: 1.1;
-  letter-spacing: -0.015em;
-  color: var(--headline-color);
-  margin: 0 0 10px;
-}
-
-.lede {
-  font-size: 1.05rem;
-  line-height: 1.6;
-  color: var(--secondary-text-color);
-  max-width: 60ch;
-  margin: 0 0 28px;
-}
-
-.glass {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-edge);
-  box-shadow: var(--glass-highlight), var(--shadow-soft);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 
 .primaryButton,
@@ -114,106 +89,168 @@
 /* =========================================================================
    Gurdwara history
    ========================================================================= */
-.galleryLayout {
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Article on the left, visiting details on the right */
+.layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: clamp(24px, 4vw, 48px);
   align-items: start;
 }
 
-.mainImageContainer {
+/* ---------- The article ---------- */
+.article {
+  min-width: 0;
+  max-width: 72ch;
+}
+
+.article p {
+  margin: 0 0 18px;
+  font-size: 1.04rem;
+  line-height: 1.75;
+}
+
+.article .lead {
+  font-size: 1.2rem;
+  line-height: 1.65;
+  color: var(--headline-color);
+}
+
+.articleSection {
+  margin-top: 34px;
+}
+
+.articleSection h3 {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.3rem, 1.1rem + 0.8vw, 1.7rem);
+  line-height: 1.2;
+  color: var(--headline-color);
+}
+
+/* Wikipedia's photo, with a link to its own page (author and licence) */
+.photo {
   position: relative;
-  aspect-ratio: 16 / 10;
-  border-radius: 32px;
+  margin: 0 0 28px;
+  border-radius: 28px;
   overflow: hidden;
   box-shadow: var(--shadow-deep);
   background: var(--skeleton-bg-color);
 }
 
-.mainImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.photo img {
   display: block;
+  width: 100%;
+  max-height: 460px;
+  object-fit: cover;
 }
 
-.navArrow {
+.photo figcaption {
   position: absolute;
-  top: 42%;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-  background: rgba(40, 6, 16, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  cursor: pointer;
-}
-
-.navPrev {
   left: 14px;
-}
-
-.navNext {
-  right: 14px;
-}
-
-/* Thumbnails float on the photo in a glass strip */
-.thumbnailGallery {
-  position: absolute;
-  left: 50%;
   bottom: 14px;
-  transform: translateX(-50%);
-  max-width: calc(100% - 28px);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.photo figcaption a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.photo figcaption a:hover {
+  text-decoration: underline;
+}
+
+/* Credit and the link to the whole article */
+.articleFoot {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.article .credit {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--secondary-text-color);
+}
+
+.credit a,
+.fact dd a {
+  color: var(--link-color);
+}
+
+/* "No article yet" and "couldn't load" */
+.notice {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: clamp(20px, 3vw, 28px);
+  border-radius: 24px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+}
+
+.notice p {
+  margin: 0;
+}
+
+.actions,
+.infoActions {
   display: flex;
-  gap: 8px;
-  padding: 8px;
-  border-radius: 20px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.thumbnailGallery::-webkit-scrollbar {
-  display: none;
+/* Grey shapes while the history loads */
+.skeleton {
+  display: grid;
+  gap: 12px;
 }
 
-.thumbnail {
-  flex-shrink: 0;
-  width: 64px;
-  height: 48px;
-  padding: 0;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 2px solid transparent;
-  opacity: 0.7;
-  cursor: pointer;
-  background: none;
-  transition: opacity 0.2s ease, border-color 0.2s ease;
-}
-
-.thumbnail:hover {
-  opacity: 1;
-}
-
-.thumbnail.active {
-  opacity: 1;
-  border-color: #fff;
-}
-
-.thumbnailImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.skeleton span {
   display: block;
+  height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.07), rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.07));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
 }
 
+.skeleton .skeletonPhoto {
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 14px;
+  border-radius: 28px;
+}
+
+.skeleton .skeletonShort {
+  width: 55%;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+
+  to { background-position: -200% 0; }
+}
+
+/* ---------- Visiting details ---------- */
 .infoCard {
   position: sticky;
   top: 84px;
@@ -262,131 +299,40 @@
 .fact dd {
   margin: 0;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
-/* Timeline: chronological, so a line with dots (no numbers needed) */
-.timeline {
-  position: relative;
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 36px;
-  max-width: 860px;
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.article a:focus-visible,
+.fact dd a:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
 }
 
-.timeline::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 11px;
-  width: 2px;
-  background: linear-gradient(var(--primary-color), rgba(var(--primary-rgb), 0.12));
-}
-
-.timelineItem {
-  position: relative;
-  margin-bottom: 14px;
-}
-
-.timelineDot {
-  position: absolute;
-  left: -32px;
-  top: 22px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--maroon);
-  box-shadow: 0 0 0 5px var(--background-color), 0 0 0 6px rgba(var(--primary-rgb), 0.3);
-}
-
-.timelineContent {
-  padding: 16px 20px;
-  border-radius: 20px;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-edge);
-  box-shadow: var(--glass-highlight), var(--shadow-soft);
-}
-
-.timelineContent p {
-  margin: 0;
-  line-height: 1.6;
-}
-
-/* Notable figures */
-.figuresGrid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.figureCard {
-  padding: 26px 22px;
-  border-radius: 26px;
-  text-align: center;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-edge);
-  box-shadow: var(--glass-highlight), var(--shadow-soft);
-}
-
-.figureImage {
-  display: grid;
-  place-items: center;
-  width: 96px;
-  height: 120px;
-  margin: 0 auto 14px;
-  border-radius: 50% 50% 18px 18px / 38% 38% 18px 18px;
-  font-size: 2rem;
-  color: rgba(var(--primary-rgb), 0.5);
-  background: rgba(var(--primary-rgb), 0.08);
-  border: 3px solid var(--glass-border);
-  box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.2);
-}
-
-.figureCard h3 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.15rem;
-  color: var(--headline-color);
-  margin: 0 0 6px;
-}
-
-.figureCard p {
-  margin: 0;
-  line-height: 1.5;
-  color: var(--secondary-text-color);
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span {
+    animation: none;
+  }
 }
 
 @media (max-width: 991.98px) {
-  .galleryLayout {
+  .layout {
     grid-template-columns: 1fr;
   }
 
   .infoCard {
     position: static;
   }
-
-  .figuresGrid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 767.98px) {
-  .mainImageContainer {
-    aspect-ratio: 4 / 3;
-    border-radius: 24px;
+  .photo,
+  .skeleton .skeletonPhoto {
+    border-radius: 22px;
   }
 
-  .navArrow {
-    top: 36%;
-    width: 38px;
-    height: 38px;
-  }
-
-  .thumbnail {
-    width: 52px;
-    height: 40px;
+  .article .lead {
+    font-size: 1.1rem;
   }
 }

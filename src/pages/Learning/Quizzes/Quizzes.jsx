@@ -143,6 +143,8 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const [tournamentScores, setTournamentScores] = useState([]);
   // Answers sent for server marking, per-question timer, server result
   const [answers, setAnswers] = useState({});               // { questionId: optionId } for server marking
+  const [picked, setPicked] = useState({});                 // { questionId: optionId | null } answered so far (null = ran out of time)
+  const advanceRef = useRef(null);                          // the pending "move to the next question" timer
   const [questionTimeLeft, setQuestionTimeLeft] = useState(null);
   const [result, setResult] = useState(null);               // what the server sent back after submitting
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -250,9 +252,10 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerStarted, timerPaused, isEvaluated, questionTimeLeft]);
 
-  // Reset the per-question timer when the question changes
+  // Reset the per-question timer when the question changes (none when going back to an answered one)
   useEffect(() => {
-    if (timerStarted) setQuestionTimeLeft(perQuestionLimit(questions[currentQuestion]));
+    const q = questions[currentQuestion];
+    if (timerStarted) setQuestionTimeLeft(q && picked[q.id] !== undefined ? null : perQuestionLimit(q));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentQuestion, timerStarted]);
 
@@ -285,6 +288,8 @@ const Quizzes = ({ isDarkMode, apiString }) => {
 
   // Back to question 1 with a fresh timer
   const resetQuiz = (tournamentId = null) => {
+    clearTimeout(advanceRef.current);
+    setPicked({});
     setCurrentQuestion(0);
     setScore(0);
     setSelectedAnswers([]);
@@ -365,6 +370,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
 
   // End the quiz: send the result and show the summary
   const finishQuiz = (finalScore, finalAnswers = answers) => {
+    clearTimeout(advanceRef.current);
     submitScore(finalScore, finalAnswers, true);
     setShowSummary(true);
     setTimerStarted(false);
@@ -373,27 +379,43 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   };
 
   // Pick an answer: mark it, then move on
+  // Show question `index` fresh: cancel any pending auto-advance and clear the last answer's colours.
+  // (Leaving the old answer marked is what made the next question show its correct answer early.)
+  const goToQuestion = (index) => {
+    clearTimeout(advanceRef.current);
+    setSelectedOption(null);
+    setIsEvaluated(false);
+    setCurrentQuestion(index);
+  };
+
+  // Stop a pending auto-advance if the page closes mid-quiz
+  useEffect(() => () => clearTimeout(advanceRef.current), []);
+
   const handleAnswer = (isCorrect, optionId) => {
-    if (isEvaluated || timeLeft <= 0 || timerPaused) return;
+    const q = questions[currentQuestion];
+    // One answer per question: going back to an answered question only shows the result
+    if (isEvaluated || timeLeft <= 0 || timerPaused || !q || picked[q.id] !== undefined) return;
 
     // Work out the new score now: the timeout below would otherwise see the old value
     const newScore = isCorrect ? score + 1 : score;
-    const q = questions[currentQuestion];
-    const newAnswers = optionId != null && q ? { ...answers, [q.id]: optionId } : answers;
+    const newAnswers = optionId != null ? { ...answers, [q.id]: optionId } : answers;
+    const index = currentQuestion;
     setSelectedOption(optionId);
     setIsEvaluated(true);
-    setSelectedAnswers([...selectedAnswers, { questionId: currentQuestion, optionId }]);
+    setPicked((prev) => ({ ...prev, [q.id]: optionId }));
+    setSelectedAnswers([...selectedAnswers, { questionId: index, optionId }]);
     setAnswers(newAnswers);
     setScore(newScore);
 
-    // Leave time to read the explanation, if there is one
-    const delay = q?.explanation ? 3200 : 1500;
-    setTimeout(() => {
-      setSelectedOption(null);
-      setIsEvaluated(false);
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
+    // Leave time to read the explanation, then move on (Next skips the wait)
+    const delay = q.explanation ? 3200 : 1500;
+    clearTimeout(advanceRef.current);
+    advanceRef.current = setTimeout(() => {
+      if (index < questions.length - 1) {
+        goToQuestion(index + 1);
       } else {
+        setSelectedOption(null);
+        setIsEvaluated(false);
         finishQuiz(newScore, newAnswers);
       }
     }, delay);
@@ -485,11 +507,17 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     setTournamentScores([]);
   };
 
-  // Answer button style after checking: correct, wrong or dimmed
+  // Has the question on screen been answered (just now, or earlier when going back)?
+  const shownQuestion = questions[currentQuestion];
+  const earlierPick = shownQuestion ? picked[shownQuestion.id] : undefined;
+  const showResult = isEvaluated || earlierPick !== undefined;
+  const chosenOption = isEvaluated ? selectedOption : earlierPick;
+
+  // Answer button style: plain until this question is answered, then correct, wrong or dimmed
   const optionClass = (option) => {
-    if (!isEvaluated) return styles.option;
+    if (!showResult) return styles.option;
     if (option.is_correct) return `${styles.option} ${styles.optionCorrect}`;
-    if (option.id === selectedOption) return `${styles.option} ${styles.optionWrong}`;
+    if (option.id === chosenOption) return `${styles.option} ${styles.optionWrong}`;
     return `${styles.option} ${styles.optionDimmed}`;
   };
 
@@ -630,16 +658,16 @@ const Quizzes = ({ isDarkMode, apiString }) => {
                     type="button"
                     className={optionClass(option)}
                     onClick={() => handleAnswer(option.is_correct, option.id)}
-                    disabled={!timerStarted || isEvaluated || timeLeft <= 0 || timerPaused}
+                    disabled={!timerStarted || showResult || timeLeft <= 0 || timerPaused}
                   >
                     <span className={styles.optionLetter} aria-hidden="true">
-                      {isEvaluated && option.is_correct ? <FaCheck /> : OPTION_LETTERS[i] || i + 1}
+                      {showResult && option.is_correct ? <FaCheck /> : OPTION_LETTERS[i] || i + 1}
                     </span>
                     <span>{option.text}</span>
                   </button>
                 ))}
               </div>
-              {isEvaluated && question.explanation && (
+              {showResult && question.explanation && (
                 <p className={styles.idleHint} role="status">{question.explanation}</p>
               )}
               {!timerStarted && (
@@ -661,7 +689,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
                 type="button"
                 className={styles.secondaryButton}
                 disabled={currentQuestion === 0 || timeLeft <= 0 || timerPaused}
-                onClick={() => setCurrentQuestion(currentQuestion - 1)}
+                onClick={() => goToQuestion(currentQuestion - 1)}
               >
                 <FaChevronLeft aria-hidden="true" /> Previous
               </button>
@@ -669,8 +697,8 @@ const Quizzes = ({ isDarkMode, apiString }) => {
                 <button
                   type="button"
                   className={styles.secondaryButton}
-                  onClick={() => setCurrentQuestion(currentQuestion + 1)}
-                  disabled={!isEvaluated || timeLeft <= 0 || timerPaused}
+                  onClick={() => goToQuestion(currentQuestion + 1)}
+                  disabled={!showResult || timeLeft <= 0 || timerPaused}
                 >
                   Next <FaChevronRight aria-hidden="true" />
                 </button>

@@ -1,29 +1,45 @@
 /**
  * pages/Gurbani/Gurbani.jsx
  * -----------------------------------------------------------------------------
- * The Gurbani page (/gurbani): shabads, audio kirtan and video kirtan.
- *   - search (typed, or by voice where the browser supports it) and filters
- *   - 10 items per page, shown as rows; premium items have an "Unlock" button
- *     (no Premium label) that leads to the membership page
+ * The Gurbani page (/gurbani): banis, shabads, audio kirtan and video kirtan.
+ *
+ * Data comes from our backend (api/sikhismApi.js -> /api/sikhism/gurbani/):
+ *   - the list of items (anyone can browse it, guests included)
+ *   - today's Hukamnama from Sri Darbar Sahib (shown at the top)
+ *   - an item's words (GurbaniReader), loaded only when it is opened
+ *   - what to play, also only on open: a short-lived link to our own file, or
+ *     a YouTube video played in YouTube's own player, with its credit line
+ * Gurbani text and translations come from BaniDB (Khalis Foundation) via the
+ * backend; recordings are added with the backend's load_gurbani_data.
+ *
+ * On the page:
+ *   - search (typed, or by voice where the browser supports it), type filters
+ *     and category tabs (Nitnem, Kirtan, Katha...)
+ *   - 10 items per page, shown as rows. Premium items show "Unlock to …" for
+ *     visitors without a membership (no Premium label), leading to /premium
  *   - audio/video open in a player with play/pause, previous/next, seek,
- *     volume and full screen; plays are recorded in History
- * The list is sample content for now (gurbaniData below).
+ *     volume, full screen and "Read along" (the words under the player)
+ *   - shabads open in the reader; opens and plays are recorded in History
+ *   - guests can look around; opening anything asks them to sign in
  * -----------------------------------------------------------------------------
  */
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaCrown, FaSearch, FaTimes, FaVideo, FaHeadphones, FaLock, FaMicrophone, FaPlay, FaPause,
-  FaStepBackward, FaStepForward, FaVolumeUp, FaExpand, FaBookOpen,
+  FaStepBackward, FaStepForward, FaVolumeUp, FaExpand, FaBookOpen, FaRedo,
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
 import useHistoryRecorder from '../../hooks/useHistoryRecorder';
+import useMembership from '../../hooks/useMembership';
+import { gurbaniApi } from '../../api/sikhismApi';
+import { describeApiError } from '../../utils/apiError';
 import { safeUrl } from '../../utils/safeUrl';
 import { toast } from '../../utils/notify';
 import { useAuth } from '../../context/AuthContext';
+import GurbaniReader from './GurbaniReader';
+import { CoverPicture, SitePicture } from '../../components/SitePicture/SitePicture';
 import styles from './Gurbani.module.css';
-import audioFile from './assets/Nitnem.mp3';
-import videoFile from './assets/Aarti.mp4';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -40,8 +56,6 @@ const useProductionImagePath = () => {
   };
 };
 
-// Only filters that actually narrow the list. Language and raag filters can be
-// added back here once the data has those fields.
 // Filter chips
 const FILTERS = [
   { id: 'shabad', label: 'Shabad', icon: <FaBookOpen /> },
@@ -57,73 +71,186 @@ const TYPE_META = {
   video: { label: 'Video kirtan', icon: <FaVideo /> },
 };
 
-// Button text for a card (premium, listen, watch, read)
-const actionLabel = (item) => {
-  if (item.type === 'shabad') return item.isPremium ? 'Unlock to read' : 'Read now';
-  if (item.type === 'audio') return item.isPremium ? 'Unlock to listen' : 'Listen now';
-  return item.isPremium ? 'Unlock to watch' : 'Watch now';
+// Website pictures (S3) per type, for items without a picture of their own from the admin
+const TYPE_PICTURES = {
+  shabad: 'gurbani-shabad',
+  audio: 'gurbani-audio',
+  video: 'gurbani-video',
 };
+
+// Remembers the last opened item, for the "Because you viewed" heading
+const LAST_KEY = 'virsaa:gurbani-last';
+const readLast = () => {
+  try { return JSON.parse(localStorage.getItem(LAST_KEY) || 'null')?.title || ''; } catch { return ''; }
+};
+const saveLast = (title) => {
+  try { localStorage.setItem(LAST_KEY, JSON.stringify({ title })); } catch { /* storage blocked */ }
+};
+
+/**
+ * Server item -> what the page uses. Only http(s) pictures are accepted;
+ * items without one show the type's website picture (TYPE_PICTURES).
+ */
+const toPageItem = (raw) => {
+  const type = TYPE_META[raw?.type] ? raw.type : 'shabad';
+  return {
+    id: raw.id,
+    type,
+    title: String(raw.title || 'Untitled'),
+    titleGurmukhi: raw.title_gurmukhi || '',
+    description: raw.description || '',
+    category: raw.category || '',
+    categoryLabel: raw.category_label || '',
+    image: safeUrl(raw.image, { allowRelative: false }),
+    picture: TYPE_PICTURES[type],
+    artist: raw.artist || '',
+    ang: raw.ang || null,
+    raag: raw.raag || '',
+    lineCount: raw.line_count || null,
+    isPremium: Boolean(raw.is_premium),
+    hasText: Boolean(raw.has_text),
+    hasMedia: Boolean(raw.has_media),
+    hasPdf: Boolean(raw.has_pdf),
+  };
+};
+
+// "Bhai Harjinder Singh · Ang 268 · 48 lines" under a row's title
+const rowDetails = (item) => [
+  item.artist,
+  item.ang ? `Ang ${item.ang}` : null,
+  item.type === 'shabad' && item.lineCount ? `${item.lineCount} lines` : null,
+].filter(Boolean);
 
 const Gurbani = ({ isDarkMode, apiString }) => {
   const recordHistory = useHistoryRecorder(apiString);
   const getImagePath = useProductionImagePath();
+  const navigate = useNavigate();
+  const { isLoggedIn, accessToken } = useAuth();
+  const { isMember } = useMembership(apiString);
 
   const header_image_light = '/images/header-image.png';
   const header_image_dark = '/images/header-image-dark.png';
-  const gurbaniImage = '/images/Gurbani/gurbani.png';
-  const audioKirtanImage = '/images/Gurbani/audio-kirtan.jpg';
-  const videoKirtanImage = '/images/Gurbani/video-kirtan.jpg';
-  const sectionImage = '/images/Gurbani/section-image.jpg';
-  const bookImage = '/images/Collections/book-image.jpg';
 
-  // Search, filters, paging, voice search and the media player's state
+  // ---- Catalogue ----
+  const [items, setItems] = useState([]);
+  const [listStatus, setListStatus] = useState('loading'); // loading | ready | error
+  const [listError, setListError] = useState('');
+  const [hukamnama, setHukamnama] = useState(null);
+
+  // ---- Search, filters, paging, voice search ----
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState([]);
+  const [category, setCategory] = useState(''); // '' = every category
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [cardsPerPage] = useState(10);
+  const [lastViewed, setLastViewed] = useState(readLast);
+
+  // ---- Reader (shabads, Hukamnama) ----
+  const [reader, setReader] = useState(null); // { item } or { preloaded, title }
+
+  // ---- Media player ----
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [currentMedia, setCurrentMedia] = useState(null);
   const [mediaType, setMediaType] = useState(null); // 'audio' | 'video'
+  const [media, setMedia] = useState({ status: 'idle' }); // idle | loading | ready | error (+ kind, url, youtubeId, message)
+  const [showWords, setShowWords] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
 
-  // Voice recogniser, media element, player modal and the results grid
+  // Voice recogniser, media element, player modal, results list, latest media request
   const recognitionRef = useRef(null);
   const mediaRef = useRef(null);
   const modalRef = useRef(null);
   const gridRef = useRef(null);
-  const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const mediaRequest = useRef(0);
+  const tokenRef = useRef(accessToken);
+  tokenRef.current = accessToken;
 
-  // Sample content shown on the page
-  const gurbaniData = useMemo(() => [
-    { id: 1, type: 'shabad', image: gurbaniImage, title: 'Shabad 1', description: 'This is a description of the first shabad.', isPremium: true },
-    { id: 2, type: 'audio', image: audioKirtanImage, title: 'Anand Sahib', description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.', isPremium: false },
-    { id: 3, type: 'video', image: videoKirtanImage, title: 'Rehras Sahib', description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.', isPremium: true },
-    { id: 4, type: 'shabad', image: gurbaniImage, title: 'Shabad 2', description: 'This is a description of the second shabad.', isPremium: false },
-    { id: 5, type: 'audio', image: audioKirtanImage, title: 'Japji Sahib', description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.', isPremium: true },
-    { id: 6, type: 'video', image: videoKirtanImage, title: 'Kirtan Sohila', description: 'Enjoy the peaceful Kirtan Sohila by Bhai Jarnail Singh.', isPremium: false },
-    { id: 7, type: 'shabad', image: gurbaniImage, title: 'Shabad 3', description: 'This is a description of the third shabad.', isPremium: true },
-    { id: 8, type: 'audio', image: audioKirtanImage, title: 'Rehras Sahib', description: 'Meditate with the soothing Rehras Sahib by Bhai Balbir Singh.', isPremium: false },
-    { id: 9, type: 'video', image: videoKirtanImage, title: 'Asa Di Var', description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.', isPremium: true },
-    { id: 10, type: 'shabad', image: gurbaniImage, title: 'Shabad 4', description: 'This is a description of the fourth shabad.', isPremium: false },
-    { id: 11, type: 'audio', image: audioKirtanImage, title: 'Sukhmani Sahib', description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.', isPremium: true },
-    { id: 12, type: 'video', image: videoKirtanImage, title: 'Japji Sahib', description: 'Experience the spiritual Japji Sahib by Bhai Niranjan Singh.', isPremium: false },
-    { id: 13, type: 'shabad', image: gurbaniImage, title: 'Shabad 5', description: 'This is a description of the fifth shabad.', isPremium: true },
-    { id: 14, type: 'audio', image: audioKirtanImage, title: 'Anand Sahib', description: 'Listen to the divine Anand Sahib by Bhai Harjinder Singh.', isPremium: false },
-    { id: 15, type: 'video', image: videoKirtanImage, title: 'Rehras Sahib', description: 'Watch the soulful Rehras Sahib by Bhai Balbir Singh.', isPremium: true },
-    { id: 16, type: 'shabad', image: gurbaniImage, title: 'Shabad 6', description: 'This is a description of the sixth shabad.', isPremium: false },
-    { id: 17, type: 'audio', image: audioKirtanImage, title: 'Kirtan Sohila', description: 'End your day with the peaceful Kirtan Sohila by Bhai Jarnail Singh.', isPremium: true },
-    { id: 18, type: 'video', image: videoKirtanImage, title: 'Asa Di Var', description: 'Experience the uplifting Asa Di Var by Bhai Harjinder Singh.', isPremium: false },
-    { id: 19, type: 'shabad', image: gurbaniImage, title: 'Shabad 7', description: 'This is a description of the seventh shabad.', isPremium: true },
-    { id: 20, type: 'audio', image: audioKirtanImage, title: 'Sukhmani Sahib', description: 'Find peace with Sukhmani Sahib by Bhai Niranjan Singh.', isPremium: false },
-  ], [gurbaniImage, audioKirtanImage, videoKirtanImage]);
+  const isLocked = useCallback((item) => item.isPremium && !isMember, [isMember]);
 
-  // ---------- Media player ----------
+  // Button text for a row (unlock, read, listen, watch)
+  const actionLabel = (item) => {
+    const locked = isLocked(item);
+    if (item.type === 'shabad') return locked ? 'Unlock to read' : 'Read now';
+    if (item.type === 'audio') return locked ? 'Unlock to listen' : 'Listen now';
+    return locked ? 'Unlock to watch' : 'Watch now';
+  };
+
+  // ---------------------------------------------------------------- loading
+  // The list. The token is sent when there is one so staff also see drafts.
+  const loadItems = useCallback(async () => {
+    setListStatus('loading');
+    setListError('');
+    try {
+      const data = await gurbaniApi.list(apiString, tokenRef.current);
+      setItems(data.map(toPageItem));
+      setListStatus('ready');
+    } catch (err) {
+      setListError(describeApiError(err, 'The Gurbani library couldn’t be loaded. Check your connection and try again.'));
+      setListStatus('error');
+    }
+  }, [apiString]);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  // Today's Hukamnama. Not essential, so a failure just hides the card.
+  useEffect(() => {
+    let alive = true;
+    gurbaniApi.hukamnama(apiString)
+      .then((data) => { if (alive && data?.shabads?.[0]?.lines?.length) setHukamnama(data); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [apiString]);
+
+  // ---------------------------------------------------------------- access
+  // Server said no: sign in, or a plan is needed
+  const handleLocked = useCallback((code) => {
+    setReader(null);
+    setShowMediaModal(false);
+    document.body.style.overflow = 'auto';
+    if (code === 'premium_required') {
+      toast.info('This is part of Virsaa membership. Choose a plan to unlock it.', { toastId: 'gurbani-premium' });
+      navigate('/premium');
+    } else {
+      toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'guest-locked' });
+      navigate('/login');
+    }
+  }, [navigate]);
+
+  const remember = (item) => {
+    saveLast(item.title);
+    setLastViewed(item.title);
+  };
+
+  // ---------------------------------------------------------------- media player
+  // Ask the server for a playable link for `item` (ignores answers for an item no longer open)
+  const fetchMedia = useCallback(async (item) => {
+    const id = ++mediaRequest.current;
+    setMedia({ status: 'loading' });
+    try {
+      const result = await gurbaniApi.media(apiString, tokenRef.current, item.id);
+      if (id !== mediaRequest.current) return;
+      if (!result) {
+        setMedia({ status: 'error', message: 'This recording isn’t available right now.' });
+        return;
+      }
+      setMedia({ status: 'ready', ...result });
+    } catch (err) {
+      if (id !== mediaRequest.current) return;
+      const code = err?.response?.data?.code;
+      if (code === 'login_required' || code === 'premium_required' || err?.response?.status === 401) {
+        handleLocked(code || 'login_required');
+        return;
+      }
+      setMedia({ status: 'error', message: describeApiError(err, 'This recording couldn’t be loaded. Try again.') });
+    }
+  }, [apiString, handleLocked]);
+
   // Play / pause; a failed play is reported
   const togglePlayPause = () => {
     const el = mediaRef.current;
@@ -133,7 +260,6 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       setIsPlaying(false);
     } else {
       el.play().then(() => setIsPlaying(true)).catch((error) => {
-        console.error('Playback failed:', error.message);
         setIsPlaying(false);
         // AbortError just means another play/pause interrupted it; anything else is a real failure
         if (error.name !== 'AbortError') toast.error('This recording couldn’t be played. Try again.');
@@ -141,15 +267,24 @@ const Gurbani = ({ isDarkMode, apiString }) => {
     }
   };
 
-  const handleTimeUpdate = () => setCurrentTime(mediaRef.current.currentTime);
+  const handleTimeUpdate = () => setCurrentTime(mediaRef.current?.currentTime || 0);
   const handleLoadedMetadata = () => {
+    if (!mediaRef.current) return;
     setDuration(mediaRef.current.duration);
     mediaRef.current.volume = volume;
   };
 
+  // The file itself failed (expired link, network): offer to fetch a fresh link
+  const handleMediaError = () => {
+    setIsPlaying(false);
+    setMedia((prev) => (prev.status === 'ready'
+      ? { status: 'error', message: 'This recording stopped loading. Try again to get a fresh link.' }
+      : prev));
+  };
+
   const handleSeek = (e) => {
     const seekTime = Number(e.target.value);
-    mediaRef.current.currentTime = seekTime;
+    if (mediaRef.current) mediaRef.current.currentTime = seekTime;
     setCurrentTime(seekTime);
   };
 
@@ -170,60 +305,111 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   // Open the player for an item, and close it again
   const playMedia = (item, type) => {
     recordHistory({ type: type === 'video' ? 'video' : 'gurbani', item_id: `gurbani-${item.id}`, title: item.title, path: '/gurbani' });
+    remember(item);
+    mediaRef.current?.pause();
     setCurrentMedia(item);
     setMediaType(type);
     setShowMediaModal(true);
+    setShowWords(false);
     setIsPlaying(false);
     setCurrentTime(0);
+    setDuration(0);
     document.body.style.overflow = 'hidden';
+    fetchMedia(item);
   };
 
   const closeModal = () => {
+    mediaRequest.current += 1; // forget a link that is still on its way
     mediaRef.current?.pause();
     setShowMediaModal(false);
     setIsPlaying(false);
+    setMedia({ status: 'idle' });
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     document.body.style.overflow = 'auto';
   };
 
-  // Next / previous item of the same type
-  const playNext = () => {
-    const currentIndex = gurbaniData.findIndex((item) => item.id === currentMedia.id);
-    playMedia(gurbaniData[(currentIndex + 1) % gurbaniData.length], mediaType);
-  };
+  // Next / previous playable item of the same type
+  const playlist = useMemo(
+    () => items.filter((item) => item.type === mediaType && item.hasMedia && !isLocked(item)),
+    [items, mediaType, isLocked],
+  );
 
-  const playPrevious = () => {
-    const currentIndex = gurbaniData.findIndex((item) => item.id === currentMedia.id);
-    playMedia(gurbaniData[(currentIndex - 1 + gurbaniData.length) % gurbaniData.length], mediaType);
+  const playStep = (step) => {
+    if (!currentMedia || playlist.length < 2) return;
+    const index = playlist.findIndex((item) => item.id === currentMedia.id);
+    playMedia(playlist[(index + step + playlist.length) % playlist.length], mediaType);
   };
 
   // Player full screen on/off
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      modalRef.current?.requestFullscreen().catch((err) => console.error('Fullscreen failed:', err.message));
+      modalRef.current?.requestFullscreen?.().catch(() => toast.warn('Full screen isn’t available here.'));
     } else {
-      document.exitFullscreen();
+      document.exitFullscreen().catch(() => {});
     }
   };
 
-  // Item action: premium goes to /premium, media opens the player
+  // ---------------------------------------------------------------- PDFs
+  // Open an item's PDF in a new tab (link fetched on demand, checked before use)
+  const openPdf = async (item) => {
+    // Open the tab now, while the click still counts as the user's action (pop-up blockers)
+    const tab = window.open('', '_blank');
+    if (tab) tab.opener = null;
+    try {
+      const result = await gurbaniApi.media(apiString, tokenRef.current, item.id, 'pdf');
+      if (!result?.url) throw new Error('no link');
+      if (tab) tab.location.href = result.url;
+      else window.open(result.url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      tab?.close();
+      const code = err?.response?.data?.code;
+      if (code === 'login_required' || code === 'premium_required') {
+        handleLocked(code);
+        return;
+      }
+      toast.error(describeApiError(err, 'The PDF couldn’t be opened. Try again.'));
+    }
+  };
+
+  // ---------------------------------------------------------------- open
+  // Row/tile action. Guests sign in first; locked premium items go to /premium.
   const openItem = (item) => {
-    // Guests can explore the list, but opening anything needs an account
     if (!isLoggedIn) {
       toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'guest-locked' });
       navigate('/login');
       return;
     }
-    if (item.isPremium) {
+    if (isLocked(item)) {
       navigate('/premium');
-    } else if (item.type === 'audio' || item.type === 'video') {
+      return;
+    }
+    if ((item.type === 'audio' || item.type === 'video') && item.hasMedia) {
       playMedia(item, item.type);
-    } else if (safeUrl(item.fileUrl)) {
-      // Opened in a new tab without access back to this page (noopener)
-      window.open(safeUrl(item.fileUrl), '_blank', 'noopener,noreferrer');
+    } else if (item.hasText) {
+      recordHistory({ type: 'gurbani', item_id: `gurbani-${item.id}`, title: item.title, path: '/gurbani' });
+      remember(item);
+      setReader({ item });
+    } else if (item.hasPdf) {
+      remember(item);
+      openPdf(item);
+    } else {
+      toast.warn('There is nothing to open for this item yet.');
     }
   };
 
-  // Voice search setup + fake loading delay
+  // Today's Hukamnama in the reader (the text is already loaded)
+  const openHukamnama = () => {
+    if (!isLoggedIn) {
+      toast.info('Sign in or create a free account to read the Hukamnama.', { toastId: 'guest-locked' });
+      navigate('/login');
+      return;
+    }
+    setReader({ preloaded: hukamnama.shabads[0], title: 'Today’s Hukamnama' });
+  };
+
+  const closeReader = useCallback(() => setReader(null), []);
+
+  // ---------------------------------------------------------------- voice search
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -233,7 +419,6 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       recognitionRef.current.lang = 'en-US';
       recognitionRef.current.onresult = (event) => setSearchQuery(event.results[0][0].transcript);
       recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
         setIsListening(false);
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
           toast.error('Allow microphone access in your browser to search by voice.');
@@ -243,10 +428,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       };
       recognitionRef.current.onend = () => setIsListening(false);
     }
-
-    const loadingTimer = setTimeout(() => setIsLoading(false), 1200);
     return () => {
-      clearTimeout(loadingTimer);
       recognitionRef.current?.stop();
       document.body.style.overflow = 'auto';
     };
@@ -260,12 +442,14 @@ const Gurbani = ({ isDarkMode, apiString }) => {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  // Items after search and filters
+  // ---------------------------------------------------------------- list
+  // Items after search and filters (Gurmukhi titles are searched too)
   const filteredData = useMemo(() => {
-    let results = gurbaniData;
+    let results = items;
     const q = searchQuery.trim().toLowerCase();
     if (q) {
-      results = results.filter((item) => item.title.toLowerCase().includes(q) || item.description.toLowerCase().includes(q));
+      results = results.filter((item) => [item.title, item.titleGurmukhi, item.description, item.artist]
+        .some((field) => field && field.toLowerCase().includes(q)));
     }
     if (selectedFilters.length > 0) {
       results = results.filter((item) => {
@@ -275,15 +459,26 @@ const Gurbani = ({ isDarkMode, apiString }) => {
         return true;
       });
     }
+    if (category) results = results.filter((item) => item.category === category);
     return results;
-  }, [searchQuery, selectedFilters, gurbaniData]);
+  }, [searchQuery, selectedFilters, category, items]);
 
-  useEffect(() => setCurrentPage(1), [searchQuery, selectedFilters]);
+  // Category tabs: only the categories that have items, in the order they first appear
+  const categories = useMemo(() => {
+    const seen = new Map();
+    items.forEach((item) => {
+      if (item.category && !seen.has(item.category)) seen.set(item.category, item.categoryLabel || item.category);
+    });
+    return [...seen].map(([id, label]) => ({ id, label }));
+  }, [items]);
+
+  useEffect(() => setCurrentPage(1), [searchQuery, selectedFilters, category]);
 
   // This page of results
+  const isLoading = listStatus === 'loading';
   const totalPages = Math.max(1, Math.ceil(filteredData.length / cardsPerPage));
   const currentCards = filteredData.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
-  const isFiltering = searchQuery.trim() || selectedFilters.length > 0;
+  const isFiltering = searchQuery.trim() || selectedFilters.length > 0 || category;
 
   const paginate = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -317,19 +512,29 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   const clearFilters = () => {
     setSelectedFilters([]);
     setSearchQuery('');
+    setCategory('');
   };
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
+  const hukam = hukamnama?.shabads?.[0];
+  const hukamFirst = hukam?.lines?.find((line) => !line.header) || hukam?.lines?.[0];
+  const hukamDate = hukamnama?.date
+    ? new Date(`${hukamnama.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+  const isOwnFile = media.status === 'ready' && media.kind !== 'youtube';
 
   return (
     <div className={`${styles.page} notranslate`} translate="no">
-      {mediaType === 'audio' && showMediaModal && (
+      {/* Audio plays from a hidden element so it keeps going while the words are scrolled */}
+      {mediaType === 'audio' && showMediaModal && isOwnFile && (
         <audio
           ref={mediaRef}
-          src={audioFile}
+          src={media.url}
+          preload="metadata"
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={() => setIsPlaying(false)}
+          onError={handleMediaError}
         />
       )}
 
@@ -383,15 +588,64 @@ const Gurbani = ({ isDarkMode, apiString }) => {
         </div>
       </PageHero>
 
+      {/* ---------- Today's Hukamnama (only when it loaded) ---------- */}
+      {hukam && hukamFirst && (
+        <section className={styles.section} aria-labelledby="hukam-title">
+          <div className={styles.hukam}>
+            <div className={styles.hukamHead}>
+              <h2 id="hukam-title" className={styles.hukamTitle}>Today’s Hukamnama</h2>
+              <p className={styles.hukamWhere}>
+                Sri Darbar Sahib, Amritsar{hukamDate ? `, ${hukamDate}` : ''}
+                {hukam.info?.ang ? ` · Ang ${hukam.info.ang}` : ''}
+              </p>
+            </div>
+            <p className={styles.hukamLine} lang="pa">{hukamFirst.gurmukhi}</p>
+            {hukamFirst.english && <p className={styles.hukamMeaning}>{hukamFirst.english}</p>}
+            <button type="button" className={styles.primaryButton} onClick={openHukamnama}>
+              <FaBookOpen aria-hidden="true" /> Read the Hukamnama
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ---------- Results ---------- */}
       <section className={styles.section} ref={gridRef} aria-label="Gurbani library">
-        {isFiltering && !isLoading && (
+        {categories.length > 1 && (
+          <div className={styles.tabs} role="tablist" aria-label="Category">
+            {[{ id: '', label: 'All' }, ...categories].map((c) => (
+              <button
+                key={c.id || 'all'}
+                type="button"
+                role="tab"
+                aria-selected={category === c.id}
+                className={`${styles.tab} ${category === c.id ? styles.tabOn : ''}`}
+                onClick={() => setCategory(c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {isFiltering && listStatus === 'ready' && (
           <p className={styles.resultsNote}>
             {filteredData.length === 0
               ? 'Nothing matches. Try another word or clear the filters.'
               : `${filteredData.length} ${filteredData.length === 1 ? 'result' : 'results'}${searchQuery.trim() ? ` for “${searchQuery.trim()}”` : ''}`}
           </p>
+        )}
+
+        {listStatus === 'error' && (
+          <div className={styles.listProblem} role="alert">
+            <p>{listError}</p>
+            <button type="button" className={styles.secondaryButton} onClick={loadItems}>
+              <FaRedo aria-hidden="true" /> Try again
+            </button>
+          </div>
+        )}
+
+        {listStatus === 'ready' && items.length === 0 && (
+          <p className={styles.resultsNote}>The Gurbani library is being prepared. Please check back soon.</p>
         )}
 
         {/* The library as a list of rows: arch-shaped picture, type, title, text and one action.
@@ -407,31 +661,37 @@ const Gurbani = ({ isDarkMode, apiString }) => {
                   </div>
                 </li>
               ))
-            : currentCards.map((item) => (
-                <li key={item.id} className={`${styles.row} ${styles[`row_${item.type}`] || ''}`}>
-                  <div className={styles.rowThumb}>
-                    <img src={getImagePath(item.image)} alt="" loading="lazy" />
-                  </div>
-                  <div className={styles.rowBody}>
-                    <p className={styles.rowType}>
-                      <span aria-hidden="true">{TYPE_META[item.type].icon}</span> {TYPE_META[item.type].label}
-                    </p>
-                    <h3 className={styles.rowTitle}>{item.title}</h3>
-                    <p className={styles.rowText}>{item.description}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className={`${styles.actionButton} ${styles.rowAction} ${item.isPremium ? styles.premiumButton : ''}`}
-                    onClick={() => openItem(item)}
-                  >
-                    {item.isPremium ? <FaLock aria-hidden="true" /> : TYPE_META[item.type].icon}
-                    {actionLabel(item)}
-                  </button>
-                </li>
-              ))}
+            : currentCards.map((item) => {
+                const details = rowDetails(item);
+                const locked = isLocked(item);
+                return (
+                  <li key={item.id} className={`${styles.row} ${styles[`row_${item.type}`] || ''}`}>
+                    <div className={styles.rowThumb}>
+                      <CoverPicture src={item.image} fallback={item.picture} alt="" className={styles.thumbImage} />
+                    </div>
+                    <div className={styles.rowBody}>
+                      <p className={styles.rowType}>
+                        <span aria-hidden="true">{TYPE_META[item.type].icon}</span> {TYPE_META[item.type].label}
+                      </p>
+                      <h3 className={styles.rowTitle}>{item.title}</h3>
+                      {item.titleGurmukhi && <p className={styles.rowGurmukhi} lang="pa">{item.titleGurmukhi}</p>}
+                      {item.description && <p className={styles.rowText}>{item.description}</p>}
+                      {details.length > 0 && <p className={styles.rowDetails}>{details.join(' · ')}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      className={`${styles.actionButton} ${styles.rowAction} ${locked ? styles.premiumButton : ''}`}
+                      onClick={() => openItem(item)}
+                    >
+                      {locked ? <FaLock aria-hidden="true" /> : TYPE_META[item.type].icon}
+                      {actionLabel(item)}
+                    </button>
+                  </li>
+                );
+              })}
         </ul>
 
-        {!isLoading && totalPages > 1 && (
+        {listStatus === 'ready' && totalPages > 1 && (
           <nav className={styles.pagination} aria-label="Pages">
             {Array.from({ length: totalPages }, (_, i) => (
               <button
@@ -452,7 +712,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       <section className={styles.section}>
         <div className={styles.explore}>
           <div className={styles.exploreImage}>
-            {isLoading ? <div className={styles.skeleton} /> : <img src={getImagePath(sectionImage)} alt="" loading="lazy" />}
+            {isLoading ? <div className={styles.skeleton} /> : <SitePicture name="gurbani-section" alt="" className={styles.exploreImg} />}
           </div>
           <div className={styles.exploreText}>
             <h2 className={styles.sectionTitle}>Explore the Divine Wisdom</h2>
@@ -469,28 +729,46 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       </section>
 
       {/* ---------- Because you viewed: arch tiles ---------- */}
-      <section className={styles.section} aria-labelledby="because-title">
-        <h2 id="because-title" className={styles.sectionTitle}>Because You Viewed Rehraas Sahib</h2>
-        <p className={styles.lede}>More shabads and kirtan you may find peace in.</p>
-        <div className={styles.arches}>
-          {isLoading
-            ? Array.from({ length: 6 }).map((_, i) => <div key={`a-${i}`} className={`${styles.arch} ${styles.skeleton}`} aria-hidden="true" />)
-            : gurbaniData.slice(0, 6).map((item, index) => (
-                <article key={item.id} className={`${styles.arch} ${styles[`archTone${index % 3}`]}`}>
-                  <span className={styles.archIcon} aria-hidden="true">{TYPE_META[item.type].icon}</span>
-                  <h3 className={styles.archTitle}>{item.title}</h3>
-                  <p className={styles.archText}>{item.description}</p>
-                  <button
-                    type="button"
-                    className={`${styles.archButton} ${item.isPremium ? styles.premiumButton : ''}`}
-                    onClick={() => openItem(item)}
-                  >
-                    {actionLabel(item)}
-                  </button>
-                </article>
-              ))}
-        </div>
-      </section>
+      {(isLoading || items.length > 0) && (
+        <section className={styles.section} aria-labelledby="because-title">
+          <h2 id="because-title" className={styles.sectionTitle}>
+            {lastViewed ? `Because You Viewed ${lastViewed}` : 'Begin With Nitnem'}
+          </h2>
+          <p className={styles.lede}>More shabads and kirtan you may find peace in.</p>
+          <div className={styles.arches}>
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, i) => <div key={`a-${i}`} className={`${styles.arch} ${styles.skeleton}`} aria-hidden="true" />)
+              : items.filter((item) => item.title !== lastViewed).slice(0, 6).map((item, index) => (
+                  <article key={item.id} className={`${styles.arch} ${styles[`archTone${index % 3}`]}`}>
+                    <span className={styles.archIcon} aria-hidden="true">{TYPE_META[item.type].icon}</span>
+                    <h3 className={styles.archTitle}>{item.title}</h3>
+                    <p className={styles.archText}>{item.description}</p>
+                    <button
+                      type="button"
+                      className={`${styles.archButton} ${isLocked(item) ? styles.premiumButton : ''}`}
+                      onClick={() => openItem(item)}
+                    >
+                      {actionLabel(item)}
+                    </button>
+                  </article>
+                ))}
+          </div>
+        </section>
+      )}
+
+      {/* ---------- Reader ---------- */}
+      {reader && (
+        <GurbaniReader
+          apiString={apiString}
+          token={accessToken}
+          item={reader.item}
+          preloaded={reader.preloaded}
+          title={reader.title}
+          onClose={closeReader}
+          onLocked={handleLocked}
+          onOpenPdf={reader.item?.hasPdf ? () => openPdf(reader.item) : undefined}
+        />
+      )}
 
       {/* ---------- Player ---------- */}
       {showMediaModal && currentMedia && (
@@ -507,81 +785,156 @@ const Gurbani = ({ isDarkMode, apiString }) => {
               <FaTimes />
             </button>
 
-            {mediaType === 'video' ? (
+            {/* The picture / video area, or a loading / problem message in its place */}
+            {media.status === 'loading' && (
+              <div className={`${styles.mediaState} ${mediaType === 'video' ? styles.mediaStateVideo : ''}`}>
+                <span className={styles.spinner} aria-hidden="true" />
+                <p>Getting the recording ready…</p>
+              </div>
+            )}
+            {media.status === 'error' && (
+              <div className={`${styles.mediaState} ${mediaType === 'video' ? styles.mediaStateVideo : ''}`} role="alert">
+                <p>{media.message}</p>
+                <button type="button" className={styles.secondaryButton} onClick={() => fetchMedia(currentMedia)}>
+                  <FaRedo aria-hidden="true" /> Try again
+                </button>
+              </div>
+            )}
+            {media.status === 'ready' && media.kind === 'youtube' && (
+              <div className={`${styles.videoContainer} ${styles.youtube}`}>
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(media.youtubeId)}?rel=0&modestbranding=1`}
+                  title={currentMedia.title}
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+            )}
+            {isOwnFile && mediaType === 'video' && (
               <div className={styles.videoContainer}>
                 <video
                   ref={mediaRef}
-                  src={videoFile}
+                  src={media.url}
                   className={styles.videoPlayer}
                   onClick={togglePlayPause}
                   onTimeUpdate={handleTimeUpdate}
                   onLoadedMetadata={handleLoadedMetadata}
                   onEnded={() => setIsPlaying(false)}
+                  onError={handleMediaError}
+                  preload="metadata"
                   playsInline
                 />
               </div>
-            ) : (
+            )}
+            {isOwnFile && mediaType === 'audio' && (
               <div className={styles.artwork}>
-                <img src={getImagePath(bookImage)} alt="" className={`${isPlaying ? styles.artworkSpin : ''}`} />
+                <CoverPicture
+                  src={currentMedia.image}
+                  fallback={currentMedia.picture || 'gurbani-audio'}
+                  alt=""
+                  className={`${styles.artworkImg} ${isPlaying ? styles.artworkSpin : ''}`}
+                />
               </div>
             )}
 
             <div className={styles.modalInfo}>
               <h3>{currentMedia.title}</h3>
-              <p>{currentMedia.description}</p>
+              {currentMedia.artist && <p className={styles.modalArtist}>{currentMedia.artist}</p>}
+              {currentMedia.description && <p>{currentMedia.description}</p>}
+              {/* Credit for the recording: the channel, its source and licence (CC BY requires this) */}
+              {media.status === 'ready' && media.credit && (
+                <p className={styles.credit}>
+                  {media.kind === 'youtube' ? 'From ' : 'Recording: '}
+                  {media.credit.url ? (
+                    <a href={media.credit.url} target="_blank" rel="noopener noreferrer">
+                      {media.credit.label || 'the original'}{media.kind === 'youtube' ? ' on YouTube' : ''}
+                    </a>
+                  ) : (
+                    media.credit.label
+                  )}
+                  {media.credit.licenseLabel && <span> · {media.credit.licenseLabel}</span>}
+                </p>
+              )}
             </div>
 
-            <div className={styles.controls}>
-              <input
-                type="range"
-                min="0"
-                max={duration || 100}
-                step="1"
-                value={currentTime}
-                onChange={handleSeek}
-                className={styles.progressBar}
-                style={{ '--progress': `${progress}%` }}
-                aria-label="Seek"
-              />
-              <div className={styles.timeDisplay}>
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
-              </div>
+            {/* Our own controls for our files; YouTube brings its own */}
+            {isOwnFile && (
+              <div className={styles.controls}>
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 100}
+                  step="1"
+                  value={currentTime}
+                  onChange={handleSeek}
+                  className={styles.progressBar}
+                  style={{ '--progress': `${progress}%` }}
+                  aria-label="Seek"
+                />
+                <div className={styles.timeDisplay}>
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
 
-              <div className={styles.mainControls}>
-                <button type="button" className={styles.controlButton} onClick={playPrevious} aria-label="Previous">
-                  <FaStepBackward />
-                </button>
-                <button type="button" className={styles.playButton} onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'}>
-                  {isPlaying ? <FaPause /> : <FaPlay className={styles.playNudge} />}
-                </button>
-                <button type="button" className={styles.controlButton} onClick={playNext} aria-label="Next">
-                  <FaStepForward />
-                </button>
-              </div>
-
-              <div className={styles.secondaryControls}>
-                <label className={styles.volume}>
-                  <FaVolumeUp aria-hidden="true" />
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={volume}
-                    onChange={handleVolumeChange}
-                    className={styles.volumeSlider}
-                    style={{ '--progress': `${volume * 100}%` }}
-                    aria-label="Volume"
-                  />
-                </label>
-                {mediaType === 'video' && (
-                  <button type="button" className={styles.controlButton} onClick={toggleFullscreen} aria-label="Full screen">
-                    <FaExpand />
+                <div className={styles.mainControls}>
+                  <button type="button" className={styles.controlButton} onClick={() => playStep(-1)} aria-label="Previous" disabled={playlist.length < 2}>
+                    <FaStepBackward />
                   </button>
+                  <button type="button" className={styles.playButton} onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'}>
+                    {isPlaying ? <FaPause /> : <FaPlay className={styles.playNudge} />}
+                  </button>
+                  <button type="button" className={styles.controlButton} onClick={() => playStep(1)} aria-label="Next" disabled={playlist.length < 2}>
+                    <FaStepForward />
+                  </button>
+                </div>
+
+                <div className={styles.secondaryControls}>
+                  <label className={styles.volume}>
+                    <FaVolumeUp aria-hidden="true" />
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={volume}
+                      onChange={handleVolumeChange}
+                      className={styles.volumeSlider}
+                      style={{ '--progress': `${volume * 100}%` }}
+                      aria-label="Volume"
+                    />
+                  </label>
+                  {mediaType === 'video' && (
+                    <button type="button" className={styles.controlButton} onClick={toggleFullscreen} aria-label="Full screen">
+                      <FaExpand />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Read along: the words of what is playing */}
+            {currentMedia.hasText && (
+              <div className={styles.readAlong}>
+                <button
+                  type="button"
+                  className={styles.readAlongToggle}
+                  onClick={() => setShowWords((v) => !v)}
+                  aria-expanded={showWords}
+                >
+                  <FaBookOpen aria-hidden="true" /> {showWords ? 'Hide the words' : 'Read along'}
+                </button>
+                {showWords && (
+                  <GurbaniReader
+                    apiString={apiString}
+                    token={accessToken}
+                    item={currentMedia}
+                    variant="inline"
+                    onLocked={handleLocked}
+                  />
                 )}
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}

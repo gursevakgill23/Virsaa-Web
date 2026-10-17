@@ -23,9 +23,8 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import styles from './Home.module.css';
 import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
-
-// Shown when a cover or portrait can't be loaded
-const FALLBACK_IMAGE = '/images/logo.png';
+import { CoverPicture, SitePicture } from '../../components/SitePicture/SitePicture';
+import Avatar from '../../components/Avatar/Avatar';
 
 // Utility function to handle public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -42,13 +41,6 @@ const getProductionImagePath = (imagePath) => {
   return imagePath;
 };
 
-// onError handler for covers/portraits: use the logo instead (once)
-const handleImageError = (e) => {
-  if (e.currentTarget.dataset.fallback) return;
-  e.currentTarget.dataset.fallback = '1';
-  e.currentTarget.src = FALLBACK_IMAGE;
-};
-
 const Home = ({ isDarkMode, apiString }) => {
   const getStaticImagePath = getProductionImagePath;
   // Header slideshow pictures (light mode)
@@ -61,14 +53,7 @@ const Home = ({ isDarkMode, apiString }) => {
   const slide2Dark = getStaticImagePath('/images/header-slide2-dark.jpg');
   const slide3Dark = getStaticImagePath('/images/header-slide3-dark.jpg');
 
-  // Section pictures
-  const audiobooks_kirtan = getStaticImagePath('/images/audiobooks_kirtan.jpg');
-  const learning_resources = getStaticImagePath('/images/learning_resources.jpg');
-  const games_quizzes = getStaticImagePath('/images/games_quizzes.jpg');
-  const sikh_history = getStaticImagePath('/images/sikh_history.jpg');
-  const recent_news = getStaticImagePath('/images/recent_news.jpg');
-  const gurbani = getStaticImagePath('/images/gurbani.jpg');
-  const heritage = getStaticImagePath('/images/heritage.jpg');
+  // The section pictures are real photos from S3, by name (components/SitePicture)
 
   // Slideshow position and loading state for the book shelf
   const [imageIndex, setImageIndex] = useState(0);
@@ -245,32 +230,32 @@ const Home = ({ isDarkMode, apiString }) => {
 
   const experiences = [
     {
-      to: '/collections/audiobooks', img: audiobooks_kirtan, size: 'large',
+      to: '/collections/audiobooks', picture: 'home-audiobooks', size: 'large',
       title: 'Audiobooks and kirtan',
       text: 'Listen to kirtan and narrated books on Sikh history and spirituality, wherever you are.',
     },
     {
-      to: '/learning', img: learning_resources,
+      to: '/learning', picture: 'home-learning',
       title: 'Learning resources',
       text: 'Lessons and reading on Punjabi language, culture and Sikh heritage.',
     },
     {
-      to: '/learning', img: games_quizzes,
+      to: '/learning', picture: 'home-games',
       title: 'Games and quizzes',
       text: 'Shabd Khoj, Memory Match and quizzes to test what you know.',
     },
     {
-      to: '/sikh-history', img: sikh_history, size: 'wide',
+      to: '/sikh-history', picture: 'home-history', size: 'wide',
       title: 'Sikh history',
       text: 'From Guru Nanak Dev Ji to today, told through stories and sources.',
     },
     {
-      to: '/news', img: recent_news, size: 'wide',
+      to: '/news', picture: 'home-news', size: 'wide',
       title: 'Recent news',
       text: 'Updates from the Sikh and Punjabi community.',
     },
     {
-      to: '/gurbani', img: gurbani, size: 'wide',
+      to: '/gurbani', picture: 'home-gurbani', size: 'wide',
       title: 'Gurbani',
       text: 'Read and listen to Gurbani, with meanings in Punjabi and English.',
     },
@@ -450,13 +435,7 @@ const Home = ({ isDarkMode, apiString }) => {
               : latestBooks.map((book) => (
                   <Link key={book.id} to={`/collections/ebooks/ebook/${book.id}`} className={styles.bookSlot}>
                     <div className={styles.book}>
-                      <img
-                        src={book.cover_image || FALLBACK_IMAGE}
-                        alt={`Cover of ${book.title}`}
-                        className={styles.bookCover}
-                        loading="lazy"
-                        onError={handleImageError}
-                      />
+                      <CoverPicture src={book.cover_image} alt={`Cover of ${book.title}`} className={styles.bookCover} />
                     </div>
                     <h3 className={styles.bookTitle}>{book.title}</h3>
                     <p className={styles.bookAuthor}>{authorOf(book)}</p>
@@ -505,7 +484,7 @@ const Home = ({ isDarkMode, apiString }) => {
               to={item.to}
               className={`${styles.bentoTile} ${item.size === 'large' ? styles.bentoLarge : ''} ${item.size === 'wide' ? styles.bentoWide : ''}`}
             >
-              <img src={item.img} alt="" className={styles.bentoImage} loading="lazy" />
+              <SitePicture name={item.picture} alt="" className={styles.bentoImage} />
               <div className={styles.bentoGlass}>
                 <h3>{item.title}</h3>
                 <p>{item.text}</p>
@@ -531,13 +510,7 @@ const Home = ({ isDarkMode, apiString }) => {
           <div className={styles.authorRow}>
             {authors.slice(0, 8).map((author) => (
               <Link key={author.id} to={`/collections/authors/author/${author.id}`} className={styles.authorCard}>
-                <img
-                  src={author.image || FALLBACK_IMAGE}
-                  alt=""
-                  className={styles.authorImage}
-                  loading="lazy"
-                  onError={handleImageError}
-                />
+                <Avatar src={author.image} name={author.name} className={styles.authorImage} loading="lazy" />
                 <h3>{author.name}</h3>
                 <p>
                   {author.books?.length
@@ -555,7 +528,7 @@ const Home = ({ isDarkMode, apiString }) => {
         <h2 id="heritage-title" className={styles.title}>The richness of Punjabi and Sikh heritage</h2>
         <div className={styles.heritageStage}>
           <div className={styles.heritagePhoto}>
-            <img src={getStaticImagePath(heritage)} alt="Punjabi and Sikh heritage" loading="lazy" />
+            <SitePicture name="home-heritage" className={styles.heritageImage} />
           </div>
           <div className={styles.heritageStack}>
             {heritageItems.map((item) => (
@@ -587,7 +560,7 @@ const Home = ({ isDarkMode, apiString }) => {
         </Link>
       </section>
 
-      <ChatButton isDarkMode={isDarkMode} />
+      <ChatButton apiString={apiString} />
     </div>
   );
 };

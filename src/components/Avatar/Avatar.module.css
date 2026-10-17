@@ -1,0 +1,42 @@
+/*
+ * components/Avatar/Avatar.module.css
+ * Initials on the site's maroon (the colours are set inline by Avatar.jsx).
+ * The defaults are wrapped in :where() so the page's own class always wins
+ * (its size, shape and display); the letters are centred inside and follow
+ * the size (container query units, with a fixed size as a fallback).
+ * A page can set --avatar-initials-size on its class (e.g. 28cqmin).
+ */
+:where(.avatar) {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.avatar {
+  container-type: size;
+  user-select: none;
+}
+
+.initials {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1rem;
+  font-size: var(--avatar-initials-size, 40cqmin); /* a page can make the letters smaller */
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.person {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}

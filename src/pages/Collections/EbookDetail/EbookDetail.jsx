@@ -4,30 +4,30 @@
  * One ebook (/collections/ebooks/ebook/:id):
  *   - cover, details, Read now (opens the flip-book reader full screen),
  *     Like / Save for later / Download (useLibraryItem), Share
- *   - chapters, description, reviews (signed-in users can post one)
+ *   - chapters, description, ratings and reviews (components/Reviews)
  *   - related and recommended books
  * Reading progress is saved to History while reading, when the reader closes
  * and when the page is left. While loading, the Virsaa loader is shown;
  * "not found" and "couldn't load" (with Try again) are told apart.
  * -----------------------------------------------------------------------------
  */
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import {
   FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar,
-  FaSort, FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown, FaDownload,
+  FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown, FaDownload,
 } from 'react-icons/fa';
 import { toast } from '../../../utils/notify';
 import styles from './EbookDetail.module.css';
 import PageHero from '../../../components/PageHero/PageHero';
 import Loader from '../../../components/VirsaaLoader/Loader';
-import { useAuth } from '../../../context/AuthContext.jsx';
 import axios from 'axios';
 import BookReader from '../../../components/BookReader/BookReader';
+import Reviews from '../../../components/Reviews/Reviews';
 import useLibraryItem from '../../../hooks/useLibraryItem';
 import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
-
-const DEFAULT_IMAGE_PATH = '/images/Collections/book-image.jpg';
+import { useAuth } from '../../../context/AuthContext';
+import { CoverPicture } from '../../../components/SitePicture/SitePicture';
 
 // Fisher-Yates shuffle
 // Random order for the recommendations
@@ -40,22 +40,10 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
-// Public/static images
-// Converts image paths for the production build (same helper used across pages)
-const getProductionImagePath = (imagePath) => {
-  if (!imagePath || typeof imagePath !== 'string') return DEFAULT_IMAGE_PATH;
-  if (process.env.NODE_ENV === 'production' && !(imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) && !imagePath.startsWith('http')) {
-    return `/images/Collections/${imagePath.split('/').pop()}`;
-  }
-  return imagePath;
-};
-
-// onError handler: switch a broken cover to the default one (once)
-const handleImgError = (e) => {
-  if (e.currentTarget.dataset.fallback) return;
-  e.currentTarget.dataset.fallback = '1';
-  e.currentTarget.src = DEFAULT_IMAGE_PATH;
-};
+// Page header pictures (public/images). Book covers come from the API (S3); a book
+// without one shows the website picture 'fallback-book' (CoverPicture).
+const HEADER_LIGHT = '/images/header-image.png';
+const HEADER_DARK = '/images/header-image-dark.png';
 
 // Five stars, filled up to `value`
 const Stars = ({ value }) => (
@@ -80,25 +68,8 @@ const RelatedSkeleton = () => (
 // Lists may come back plain or paginated ({ results: [...] })
 const toList = (data) => (Array.isArray(data) ? data : data?.results || []);
 
-// Review length limits
-const REVIEW_MIN = 10;
-const REVIEW_MAX = 2000;
-
-// A clear message for a failed review: signed out, the server's own reason, or a general one
-const reviewErrorMessage = (error) => {
-  const status = error.response?.status;
-  const d = error.response?.data || {};
-  if (status === 401) return 'Your session has ended. Log in again to post your review.';
-  const first = (v) => (Array.isArray(v) ? v[0] : v);
-  const serverReason = first(d.review) || first(d.rating) || first(d.non_field_errors) || d.detail || d.error;
-  if (status >= 400 && status < 500 && typeof serverReason === 'string') return serverReason;
-  return 'Your review couldn’t be posted. Try again.';
-};
-
 const EbookDetail = ({ isDarkMode, apiString }) => {
-  const { isLoggedIn, accessToken, userData } = useAuth();
   const { id } = useParams();
-  const navigate = useNavigate();
   const library = useLibraryItem(apiString, 'ebook', id);
   const recordHistory = useHistoryRecorder(apiString);
   const readingRef = useRef(null); // last page reached, saved to History when the reader closes
@@ -119,22 +90,19 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState(null);
 
-  // Review form and list
-  const [reviewForm, setReviewForm] = useState({ rating: 0, review: '' });
-  const [reviews, setReviews] = useState([]);
-  const [visibleReviews, setVisibleReviews] = useState(5);
-  const [sortBy, setSortBy] = useState('newest');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reviewError, setReviewError] = useState(''); // message under the review form
+  // Average rating and number of reviews, reported by the Reviews section
+  const [reviewSummary, setReviewSummary] = useState({ count: 0, average: null });
   const [loadFailed, setLoadFailed] = useState(false); // true = network/server problem (not "not found")
   const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again"
 
   const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
   const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
-  const headerImage = getProductionImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
+  const headerImage = isDarkMode ? HEADER_DARK : HEADER_LIGHT;
+  const { accessToken } = useAuth(); // reading a book needs an account
 
-  // Ebook, its author and reviews. These endpoints are public, so no token is sent
-  // (an expired token would make them fail with 401).
+  // Ebook, its author and related books. These endpoints are public, so no token
+  // is sent (an expired token would make them fail with 401). Reviews load
+  // themselves inside <Reviews>.
   useEffect(() => {
     let cancelled = false;
     const fetchEbook = async () => {
@@ -166,17 +134,6 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
           chapters: Array.isArray(data.chapters) ? [...data.chapters].sort((a, b) => a.order - b.order) : [],
         });
         setIsLoading(false);
-
-        const reviewsRes = await axios.get(`${apiUrl}/collections/ebooks/${safeId}/reviews/`, { timeout: 20000 }).catch(() => ({ data: [] }));
-        if (cancelled) return;
-        setReviews(toList(reviewsRes.data).map((review) => ({
-          id: review.id,
-          name: review.user || 'Anonymous',
-          date: review.date ? new Date(review.date).toLocaleDateString() : '',
-          rating: review.rating || 0,
-          review: review.review || '',
-          helpful: review.helpful || 0,
-        })));
 
         // Related: same author first, then other books
         const allRes = await axios.get(`${apiUrl}/collections/ebooks/`, { timeout: 20000 }).catch(() => ({ data: [] }));
@@ -211,12 +168,17 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     setPdfError(null);
     setPdfUrl(null);
     try {
-      const response = await axios.get(`${apiUrl}/collections/ebooks/${safeId}/read_pdf/`, { timeout: 20000 });
+      const response = await axios.get(`${apiUrl}/collections/ebooks/${safeId}/read_pdf/`, {
+        timeout: 20000,
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
       if (!response.data?.pdf_url) throw new Error('No PDF link returned');
       setPdfUrl(response.data.pdf_url);
     } catch (error) {
       console.error('Error fetching PDF link:', error.response?.status || error.message);
-      setPdfError(error.response?.status === 404 ? 'This book has no file yet.' : 'The book couldn’t be opened right now.');
+      const code = error.response?.status;
+      setPdfError(code === 404 ? 'This book has no file yet.'
+        : code === 401 ? 'Sign in to read this book.' : 'The book couldn’t be opened right now.');
     } finally {
       setPdfLoading(false);
     }
@@ -295,72 +257,6 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     ref.current?.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
   };
 
-  const handleRatingChange = (rating) => setReviewForm({ ...reviewForm, rating });
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setReviewForm({ ...reviewForm, [name]: value });
-    if (reviewError) setReviewError('');
-  };
-
-  // Post a review (signed-in only). Problems are shown under the form and as an alert.
-  const handleSubmitReview = async (e) => {
-    e.preventDefault();
-    if (!isLoggedIn) {
-      toast.warn('Sign in to write a review.', { position: 'top-right', autoClose: 3000 });
-      navigate('/login');
-      return;
-    }
-    // Check the form before sending
-    const text = reviewForm.review.trim();
-    if (!reviewForm.rating) { setReviewError('Choose a star rating.'); return; }
-    if (text.length < REVIEW_MIN) { setReviewError(`Write at least ${REVIEW_MIN} characters.`); return; }
-    setReviewError('');
-    setIsSubmitting(true);
-    try {
-      const response = await axios.post(
-        `${apiUrl}/collections/reviews/`,
-        { ebook_id: id, rating: reviewForm.rating, review: text },
-        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, timeout: 20000 }
-      );
-      const userFullName = userData?.first_name && userData?.last_name
-        ? `${userData.first_name} ${userData.last_name}`
-        : userData?.username || 'Anonymous';
-      setReviews([
-        {
-          id: response.data.id,
-          name: userFullName,
-          date: new Date(response.data.date).toLocaleDateString(),
-          rating: response.data.rating,
-          review: response.data.review,
-          helpful: response.data.helpful || 0,
-        },
-        ...reviews,
-      ]);
-      setReviewForm({ rating: 0, review: '' });
-      toast.success('Review posted. Thank you!', { position: 'top-right', autoClose: 3000 });
-    } catch (error) {
-      console.error('Error submitting review:', error.response?.status || error.message);
-      const message = reviewErrorMessage(error);
-      setReviewError(message);
-      toast.error(message, { position: 'top-right', autoClose: 3000 });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // "Helpful" counter (on this page only)
-  const toggleHelpful = (reviewId) => {
-    setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, helpful: r.helpful + 1 } : r)));
-  };
-
-  // Reviews in the chosen order, a few at a time
-  const sortedReviews = useMemo(
-    () => [...reviews].sort((a, b) => (sortBy === 'newest' ? b.id - a.id : b.helpful - a.helpful)),
-    [reviews, sortBy]
-  );
-  const displayedReviews = sortedReviews.slice(0, visibleReviews);
-
   // ---------------------------------------------------------------- render
   if (isLoading) {
     return (
@@ -416,7 +312,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
         {!relatedLoading && items.length === 0 && <p className={styles.relatedMeta}>No other books to show yet.</p>}
         {!relatedLoading && items.map((book) => (
           <Link key={book.id} to={`/collections/ebooks/ebook/${book.id}`} className={styles.relatedCard}>
-            <img src={book.cover || DEFAULT_IMAGE_PATH} alt="" className={styles.relatedThumb} loading="lazy" onError={handleImgError} />
+            <CoverPicture src={book.cover} alt="" className={styles.relatedThumb} />
             <span className={styles.relatedInfo}>
               <span className={styles.relatedTitle}>{book.title}</span>
               <span className={styles.relatedMeta}>Ebook</span>
@@ -448,7 +344,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
           <section className={styles.productCard} aria-label="Book details">
             <div className={styles.coverStage}>
               <div className={styles.cover}>
-                <img src={ebook.cover || DEFAULT_IMAGE_PATH} alt={`Cover of ${ebook.title}`} className={styles.coverImg} onError={handleImgError} />
+                <CoverPicture src={ebook.cover} alt={`Cover of ${ebook.title}`} className={styles.coverImg} loading="eager" />
               </div>
             </div>
 
@@ -456,8 +352,8 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
               <div className={styles.chipRow}>
                 <span className={styles.chip}><FaBookOpen aria-hidden="true" /> Ebook</span>
                 <span className={styles.ratingRow}>
-                  <Stars value={ebook.rating || 0} />
-                  {(ebook.rating || 0).toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                  <Stars value={reviewSummary.average ?? (Number(ebook.rating) || 0)} />
+                  {(reviewSummary.average ?? (Number(ebook.rating) || 0)).toFixed(1)} · {reviewSummary.count.toLocaleString()} {reviewSummary.count === 1 ? 'review' : 'reviews'}
                 </span>
               </div>
 
@@ -569,102 +465,13 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
               <h3 id="reviews-title" className={styles.sectionTitle}>Ratings and reviews</h3>
             </div>
 
-            <div className={`${styles.reviewForm} ${styles.glass}`}>
-              <h4 className={styles.formTitle}>Write a review</h4>
-              {!isLoggedIn ? (
-                <p className={styles.loginPrompt}>
-                  <Link to="/login">Sign in</Link> to rate this book and share what you thought.
-                </p>
-              ) : (
-                <form onSubmit={handleSubmitReview}>
-                  <div className={styles.field}>
-                    <span className={styles.label} id="rating-label">Your rating</span>
-                    <div className={styles.starPicker} role="group" aria-labelledby="rating-label">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => handleRatingChange(star)}
-                          className={styles.starButton}
-                          aria-label={`${star} star${star !== 1 ? 's' : ''}`}
-                          aria-pressed={star <= reviewForm.rating}
-                        >
-                          {star <= reviewForm.rating ? <FaStar className={styles.starOn} /> : <FaRegStar className={styles.starOff} />}
-                        </button>
-                      ))}
-                      <span className={styles.ratingHint}>
-                        {reviewForm.rating > 0 ? `${reviewForm.rating} of 5` : 'Tap a star'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="review" className={styles.label}>Your review</label>
-                    <textarea
-                      id="review"
-                      name="review"
-                      className={styles.textarea}
-                      value={reviewForm.review}
-                      onChange={handleInputChange}
-                      placeholder="What did you enjoy? Who would you recommend it to?"
-                      required
-                      maxLength={REVIEW_MAX}
-                      aria-invalid={Boolean(reviewError)}
-                      aria-describedby={reviewError ? 'review-error' : undefined}
-                    />
-                  </div>
-                  {reviewError && <p id="review-error" className={styles.reviewError} role="alert">{reviewError}</p>}
-                  <div className={styles.formActions}>
-                    <button type="submit" className={styles.primaryButton} disabled={isSubmitting || reviewForm.rating === 0}>
-                      {isSubmitting ? 'Posting…' : 'Post review'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            <div className={styles.reviewsHeader}>
-              <p className={styles.reviewsCount}>{reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}</p>
-              {reviews.length > 1 && (
-                <label className={styles.sortWrap}>
-                  <FaSort aria-hidden="true" />
-                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles.sortSelect} aria-label="Sort reviews">
-                    <option value="newest">Newest first</option>
-                    <option value="top">Most helpful</option>
-                  </select>
-                </label>
-              )}
-            </div>
-
-            {reviews.length === 0 ? (
-              <p className={styles.emptyNote}>No reviews yet. Be the first to share what you thought.</p>
-            ) : (
-              <ul className={styles.reviewList}>
-                {displayedReviews.map((review) => (
-                  <li key={review.id} className={`${styles.review} ${styles.glass}`}>
-                    <div className={styles.reviewTop}>
-                      <div className={styles.reviewer}>
-                        <span className={styles.avatar} aria-hidden="true">{review.name.charAt(0).toUpperCase()}</span>
-                        <div>
-                          <div className={styles.reviewName}>{review.name}</div>
-                          <div className={styles.reviewDate}>{review.date}</div>
-                        </div>
-                      </div>
-                      <Stars value={review.rating} />
-                    </div>
-                    <p className={styles.reviewBody}>{review.review}</p>
-                    <button type="button" className={styles.helpful} onClick={() => toggleHelpful(review.id)}>
-                      Helpful ({review.helpful})
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {visibleReviews < reviews.length && (
-              <button type="button" className={`${styles.secondaryButton} ${styles.loadMore}`} onClick={() => setVisibleReviews((v) => v + 5)}>
-                Show more reviews
-              </button>
-            )}
+            <Reviews
+              apiString={apiString}
+              type="ebook"
+              id={id}
+              itemTitle={ebook.title}
+              onSummary={setReviewSummary}
+            />
           </section>
         </div>
 

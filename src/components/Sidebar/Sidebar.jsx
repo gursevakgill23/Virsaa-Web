@@ -5,7 +5,7 @@
  * section tab bar shown at the bottom of the screen on phones and tablets.
  *
  * The panel has three views:
- *   'home'     greeting with today's Nanakshahi date, "Share an event", what's on
+ *   'home'     greeting with today's Nanakshahi date (SGPC calendar), "Share an event", what's on
  *              today (calendar days + community events), the Nanakshahi calendar
  *              card, "Did you know?" and links to every page
  *   'calendar' the Nanakshahi calendar month view (NanakshahiCalendar.jsx)
@@ -25,7 +25,7 @@ import { BsCollectionFill } from 'react-icons/bs';
 import { IoIosPeople } from 'react-icons/io';
 import { useAuth } from '../../context/AuthContext';
 import newsApi, { calendarApi, localISODate } from '../../api/newsApi';
-import { toNanakshahi } from '../../utils/nanakshahi';
+import useNanakshahiYear from '../../hooks/useNanakshahiYear';
 import NanakshahiCalendar from './NanakshahiCalendar';
 import styles from './Sidebar.module.css';
 
@@ -142,9 +142,15 @@ const Sidebar = ({ open, closeSidebar, apiString }) => {
     () => new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }),
     []
   );
-  const nanakshahiToday = today.nanakshahi?.label || toNanakshahi(new Date())?.label;
-  // Pieces for the calendar card's date tile (Gurmukhi month, day, year)
-  const nsParts = useMemo(() => toNanakshahi(new Date()), []);
+  // Today's Nanakshahi date (SGPC calendar) arrives with today's events. Only if
+  // that request fails is it worked out here from this year's month starts.
+  const { convert: nsConvert } = useNanakshahiYear(apiString, open && todayState === 'error' ? new Date().getFullYear() : null);
+  // { day, pa (Gurmukhi month), year, label } for the header and the calendar card's date tile
+  const nsToday = useMemo(() => {
+    const fromServer = today.nanakshahi;
+    if (fromServer?.label) return { day: fromServer.day, pa: fromServer.month_pa, year: fromServer.year, label: fromServer.label };
+    return nsConvert(new Date());
+  }, [today.nanakshahi, nsConvert]);
 
   // Today's events: load when the panel opens, then refresh every minute while it stays open
   // Today's events: load when the panel opens, then refresh every minute while it stays open.
@@ -368,11 +374,11 @@ const Sidebar = ({ open, closeSidebar, apiString }) => {
     }
   };
 
-  // One community event card under "Today"
+  // One community event card under "Today" (its own photo, else a related website picture)
   const renderEvent = (ev) => (
     <li key={ev.id} className={styles.eventCard}>
-      {ev.image_url ? (
-        <img src={ev.image_url} alt="" className={styles.eventImage} />
+      {ev.image_url || ev.picture ? (
+        <img src={ev.image_url || ev.picture} alt="" className={styles.eventImage} loading="lazy" />
       ) : (
         <div className={styles.eventImagePlaceholder} aria-hidden="true"><FaCalendarAlt /></div>
       )}
@@ -412,10 +418,11 @@ const Sidebar = ({ open, closeSidebar, apiString }) => {
   const renderPick = (pick) => {
     const item = pick.item;
     const isEvent = pick.type === 'event';
+    const picture = (isEvent ? item.image_url : item.image) || item.picture;
     return (
       <Link to="/news" className={styles.pickCard} onClick={handleClose}>
-        {(isEvent ? item.image_url : item.image) ? (
-          <img src={isEvent ? item.image_url : item.image} alt="" className={styles.pickImage} />
+        {picture ? (
+          <img src={picture} alt="" className={styles.pickImage} loading="lazy" />
         ) : (
           <span className={styles.pickIcon} aria-hidden="true">{isEvent ? <FaCalendarAlt /> : <FaNewspaper />}</span>
         )}
@@ -456,7 +463,7 @@ const Sidebar = ({ open, closeSidebar, apiString }) => {
             <div>
               <p className={styles.greeting}>Sat Sri Akal</p>
               <p className={styles.today}>{todayLabel}</p>
-              {nanakshahiToday && <p className={styles.nsToday}>{nanakshahiToday} Nanakshahi</p>}
+              {nsToday && <p className={styles.nsToday}>{nsToday.label} Nanakshahi</p>}
             </div>
           )}
           <button type="button" className={styles.iconButton} onClick={handleClose} aria-label="Close panel">
@@ -530,9 +537,9 @@ const Sidebar = ({ open, closeSidebar, apiString }) => {
                   Gurpurab or festival. Opens the full month view. */}
               <button type="button" className={styles.calendarCard} onClick={() => openCalendar()}>
                 <span className={styles.dateTile} aria-hidden="true">
-                  <span className={styles.dateTileMonth} lang="pa">{nsParts?.pa}</span>
-                  <span className={styles.dateTileDay}>{nsParts?.day}</span>
-                  <span className={styles.dateTileYear}>{nsParts?.year}</span>
+                  <span className={styles.dateTileMonth} lang="pa">{nsToday?.pa}</span>
+                  <span className={styles.dateTileDay}>{nsToday?.day ?? '–'}</span>
+                  <span className={styles.dateTileYear}>{nsToday?.year}</span>
                 </span>
                 <span className={styles.calendarCardBody}>
                   <span className={styles.calendarCardTitle}>Nanakshahi calendar</span>

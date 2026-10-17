@@ -50,9 +50,13 @@ const newsApi = {
 export default newsApi;
 
 // ---------------------------------------------------------------- Nanakshahi calendar
-// Entries for a month, a duplicate check before posting an event, and ranges
+// Entries for a month, the year's month starts, a duplicate check before posting
+// an event, and ranges
 export const calendarApi = {
   month: (api, year, month) => axios.get(`${base(api)}/calendar/`, { params: { year, month }, timeout: TIMEOUT_MS }).then(list),
+  // { year, source: 'sgpc' | 'computed' | 'fallback', months: [{ date, index, name, name_pa }] }:
+  // the Sangrand that starts each Nanakshahi month, December of the year before to January after
+  months: (api, year) => axios.get(`${base(api)}/calendar/months/`, { params: { year }, timeout: TIMEOUT_MS }).then(data),
   check: (api, params) => axios.get(`${base(api)}/calendar/check/`, { params, timeout: TIMEOUT_MS }).then(data),
   eventsBetween: (api, from, to) => axios.get(`${base(api)}/events/`, { params: { from, to }, timeout: TIMEOUT_MS }).then(list),
   // Calendar entries in a date range, optionally only some kinds (e.g. 'gurpurab,festival')

@@ -445,11 +445,40 @@
   transform-origin: left center;
 }
 
+/* A real photo from S3 (SitePicture: a soft placeholder until it loads) */
 .perksImage {
+  display: block;
   width: 100%;
-  max-height: 200px;
-  object-fit: contain;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 20px;
   margin-bottom: 18px;
+  box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.55);
+}
+
+/* "Confirm your email" box, shown when the email isn't verified yet */
+.verifyNotice {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(var(--primary-rgb), 0.06);
+  border: 1px solid rgba(var(--primary-rgb), 0.18);
+}
+
+.verifyTitle {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--headline-color);
+}
+
+.verifyText {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
 }
 
 .perksTitle {

@@ -20,6 +20,8 @@ import AccountTabs from '../AccountTabs/AccountTabs';
 import { useAuth } from '../../../context/AuthContext';
 import libraryApi, { startDownload } from '../../../api/libraryApi';
 import { describeApiError } from '../../../utils/apiError';
+import Avatar from '../../../components/Avatar/Avatar';
+import { CoverPicture } from '../../../components/SitePicture/SitePicture';
 import styles from './MyFavorites.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -30,20 +32,11 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
-// Default pictures, and an onError handler that uses them
-const bookImage = '/images/book-image.jpg';
-const authorImage = '/images/author-image.jpg';
-const fallbackImage = (item) => item.image || (item.type === 'author' ? authorImage : bookImage);
-
-// Swap a broken cover for the placeholder (once, so a missing placeholder can't loop)
-const onImgError = (e) => {
-  const img = e.currentTarget;
-  if (img.dataset.fallback) return;
-  img.dataset.fallback = '1';
-  const isPerson = img.classList.contains(styles.thumbRound) || img.classList.contains(styles.savedThumbRound)
-    || Boolean(img.closest(`.${styles.authorFrame}`));
-  img.src = isPerson ? authorImage : bookImage;
-};
+// A thumbnail: the item's own picture; otherwise an author's initials, or the
+// website's book picture from S3 ('fallback-book')
+const Thumb = ({ item, className }) => (item.type === 'author'
+  ? <Avatar src={item.image} name={item.name || item.title} className={className} loading="lazy" />
+  : <CoverPicture src={item.image} alt="" className={className} />);
 
 // Tabs, labels and the empty state
 const TABS = [
@@ -258,7 +251,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
             return (
               <article key={`${item.type}-${item.id}`} className={styles.authorCard}>
                 <div className={styles.authorFrame}>
-                  <Link to={item.url} aria-label={item.name}><img src={getImagePath(fallbackImage(item))} alt="" loading="lazy" onError={onImgError} /></Link>
+                  <Link to={item.url} aria-label={item.name}><Thumb item={item} className={styles.frameImage} /></Link>
                   <RemoveButton label={`${item.name} from liked authors`} onClick={() => remove('authors', item)} />
                 </div>
                 <h3 className={styles.cardTitle}><Link to={item.url} className={styles.cardLink}>{item.name}</Link></h3>
@@ -272,7 +265,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
           return (
             <article key={`${item.type}-${item.id}`} className={isEbook ? styles.bookCard : styles.audioCard}>
               <div className={isEbook ? styles.bookCover : styles.audioCover}>
-                <Link to={item.url} aria-label={item.title}><img src={getImagePath(fallbackImage(item))} alt="" loading="lazy" onError={onImgError} /></Link>
+                <Link to={item.url} aria-label={item.title}><Thumb item={item} className={styles.frameImage} /></Link>
                 {!isEbook && <span className={styles.audioBadge} aria-hidden="true"><FiHeadphones /></span>}
                 <RemoveButton label={`${item.title} from liked ${tab.label.toLowerCase()}`} onClick={() => remove(activeTab, item)} />
               </div>
@@ -307,7 +300,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
         {current.map((item) => (
           <div key={`${item.type}-${item.id}`} className={styles.tr} role="row">
             <span role="cell" className={styles.tdMain}>
-              <img src={getImagePath(fallbackImage(item))} alt="" className={activeTab === 'authors' ? styles.thumbRound : styles.thumb} loading="lazy" onError={onImgError} />
+              <Thumb item={item} className={activeTab === 'authors' ? styles.thumbRound : styles.thumb} />
               <Link to={item.url} className={styles.cardLink}>{item.title || item.name}</Link>
             </span>
             {activeTab === 'authors' ? (
@@ -465,7 +458,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
           <ul className={styles.savedList}>
             {filtered.saved.map((item) => (
               <li key={`${item.type}-${item.id}`} className={styles.savedItem}>
-                <img src={getImagePath(fallbackImage(item))} alt="" loading="lazy" onError={onImgError} className={`${styles.savedThumb} ${item.type === 'author' ? styles.savedThumbRound : ''}`} />
+                <Thumb item={item} className={`${styles.savedThumb} ${item.type === 'author' ? styles.savedThumbRound : ''}`} />
                 <div className={styles.savedBody}>
                   <h3><Link to={item.url} className={styles.cardLink}>{item.title}</Link></h3>
                   <p><span className={styles.typeTag}>{TYPE_LABELS[item.type]}</span> <span className={styles.savedWhen}>Saved {timeAgo(item.added_at)}</span></p>
@@ -498,7 +491,7 @@ const MyFavorites = ({ isDarkMode, apiString }) => {
           <ul className={styles.savedList}>
             {filtered.downloads.map((item) => (
               <li key={`dl-${item.id}`} className={styles.savedItem}>
-                <img src={getImagePath(fallbackImage(item))} alt="" loading="lazy" onError={onImgError} className={styles.savedThumb} />
+                <Thumb item={item} className={styles.savedThumb} />
                 <div className={styles.savedBody}>
                   <h3><Link to={item.url} className={styles.cardLink}>{item.title}</Link></h3>
                   <p><span className={styles.savedMeta}>{item.author ? `${item.author}. ` : ''}Downloaded {timeAgo(item.downloaded_at)}</span></p>

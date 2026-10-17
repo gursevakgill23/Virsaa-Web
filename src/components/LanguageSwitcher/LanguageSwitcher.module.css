@@ -106,15 +106,28 @@
 }
 
 /* Match the navbar's other icons at each screen size */
+/* Phones: only the globe shows, in a round button the same size as the navbar's
+   other icon buttons (Navbar.module.css) */
 @media (max-width: 767.98px) {
   .trigger {
-    height: 38px;
-    padding: 0 9px;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
     font-size: 1.1rem;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .code {
     display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .trigger {
+    width: 34px;
+    height: 34px;
   }
 }
 

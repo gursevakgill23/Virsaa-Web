@@ -2,6 +2,7 @@
  * api/accountApi.js
  * -----------------------------------------------------------------------------
  * Calls to the Django auth_api for the account area (/api/auth/...):
+ *   - the "verify your email" page and "send the link again" (no token)
  *   - Settings page: preferences, password change, account deletion
  *   - History page: what the user has read, watched and played
  *   - Notifications page and the unread badge in the navbar
@@ -30,9 +31,17 @@ const seg = (value) => encodeURIComponent(String(value));
 
 // ---------------------------------------------------------------- endpoints
 const accountApi = {
+  // Email verification (before signing in, so no token)
+  //   verifyEmail -> { verified: true, already_verified? }  (400 { reason: 'expired' | 'invalid' })
+  verifyEmail: (api, code) => axios.post(`${base(api)}/verify-email/`, { code }, { timeout: TIMEOUT_MS }).then(data),
+  //   always the same answer, whether or not an account uses the email
+  resendVerification: (api, email) =>
+    axios.post(`${base(api)}/resend-verification/`, { email }, { timeout: TIMEOUT_MS }).then(data),
+
   // Settings
   settings: (api, token) => axios.get(`${base(api)}/settings/`, auth(token)).then(data),
   updateSettings: (api, token, fields) => axios.patch(`${base(api)}/settings/`, fields, auth(token)).then(data),
+  // -> { message, access, refresh }: other devices are signed out, this one gets new tokens
   changePassword: (api, token, currentPassword, newPassword) =>
     axios.post(`${base(api)}/change-password/`, { current_password: currentPassword, new_password: newPassword }, auth(token)).then(data),
   deleteAccount: (api, token, password) =>

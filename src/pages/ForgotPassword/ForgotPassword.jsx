@@ -93,10 +93,11 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     if (error.code === 'ECONNABORTED') return 'The request timed out. Check your connection and try again.';
     if (error.response) {
       const d = error.response.data || {};
-      if (error.response.status === 429) return (Array.isArray(d.captcha) ? d.captcha.join(', ') : d.captcha) || 'Too many attempts. Wait a few minutes and try again.';
+      if (error.response.status === 429) return (Array.isArray(d.captcha) ? d.captcha.join(', ') : d.captcha) || d.error || 'Too many attempts. Wait a few minutes and try again.';
       if (error.response.status >= 500) return 'Something went wrong on our side. Try again in a moment.';
-      return (Array.isArray(d.captcha) && d.captcha.join(', '))
-        || (Array.isArray(d.email) && d.email.join(', '))
+      const text = (value) => (Array.isArray(value) ? value.join(' ') : value);
+      return text(d.captcha) || text(d.email)
+        || text(d.new_password) || text(d.code)
         || d.error || d.message || fallback;
     }
     if (error.request) return 'The server didn’t respond. Try again later.';
@@ -122,7 +123,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
       // Any 2xx reply means the code was sent; the server's message is shown when it has one
       toast.success(response.data?.message || 'We’ve emailed you a 6-digit code.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
       setEmailSent(formData.email.trim());
-      setCountdown(30);
+      setCountdown(60); // the server sends at most one code a minute
       setStep(2);
     } catch (error) {
       console.error('Forgot password error:', error.response?.status || error.message);
@@ -156,13 +157,13 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     if (!validatePasswordForm()) return;
     setIsSubmitting(true);
     try {
-      const response = await post('/api/auth/reset-password/', {
+      await post('/api/auth/reset-password/', {
         email: emailSent,
         code: formData.code,
         new_password: formData.newPassword,
         confirm_new_password: formData.confirmNewPassword,
       });
-      toast.success(response.data?.message || 'Your password has been changed. You can sign in now.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
+      toast.success('Your password has been changed and any other devices signed out. You can sign in now.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
       setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
       console.error('Reset password error:', error.response?.status || error.message);
@@ -184,7 +185,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
     try {
       const response = await post('/api/auth/forget-password/', { email: emailSent, captcha: token });
       toast.success(response.data?.message || 'A new code is on its way.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
-      setCountdown(30);
+      setCountdown(60); // the server sends at most one code a minute
       setErrors((prev) => ({ ...prev, captcha: '' }));
     } catch (error) {
       console.error('Resend code error:', error.response?.status || error.message);
@@ -230,7 +231,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
           </h1>
           <p className={styles.lede}>
             {step === 1 && 'Enter the email you signed up with and we’ll send you a 6-digit code.'}
-            {step === 2 && <>We sent a 6-digit code to <strong>{emailSent}</strong>. It may take a minute to arrive.</>}
+            {step === 2 && <>If an account uses <strong>{emailSent}</strong>, we’ve sent a 6-digit code to it. It may take a minute to arrive.</>}
             {step === 3 && 'Choose a password you haven’t used on Virsaa before.'}
           </p>
 

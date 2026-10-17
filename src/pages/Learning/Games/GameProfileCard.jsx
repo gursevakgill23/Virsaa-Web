@@ -9,6 +9,7 @@
 import React, { forwardRef } from 'react';
 import { FaCoins, FaEdit, FaSignOutAlt, FaShoppingCart, FaCamera, FaTimes } from 'react-icons/fa';
 import styles from './GameProfileCard.module.css';
+import Avatar from '../../../components/Avatar/Avatar';
 
 // Text in English and Punjabi
 const T = {
@@ -79,7 +80,7 @@ const GameProfileCard = forwardRef(({
       {editing ? (
         <div className={styles.identity}>
           <div className={styles.avatarWrap}>
-            <img src={newAvatar} alt="" className={styles.avatar} />
+            <Avatar src={newAvatar} name={newName || name} className={styles.avatar} />
             <label htmlFor={`${idPrefix}-avatar-upload`} className={styles.cameraButton} title={t.changePhoto}>
               <FaCamera aria-hidden="true" />
               <span className={styles.srOnly}>{t.changePhoto}</span>
@@ -106,7 +107,7 @@ const GameProfileCard = forwardRef(({
       ) : (
         <div className={styles.identity}>
           <div className={styles.avatarWrap}>
-            <img src={avatar} alt="" className={styles.avatar} />
+            <Avatar src={avatar} name={name} className={styles.avatar} />
           </div>
           <p className={styles.name}>{name}</p>
           <div className={styles.chips}>

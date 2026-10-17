@@ -2,8 +2,8 @@
  * pages/GurdwaraAccess/GurdwaraAccess.module.css
  * -----------------------------------------------------------------------------
  * The Gurdwara finder: search and location bar with suggestions, results list
- * with travel times, the map, history of the nearest Gurdwara and the
- * services.
+ * with travel times, the map, the history of the nearest Gurdwara (from
+ * Wikipedia, with its credit) and the services.
  * -----------------------------------------------------------------------------
  */
 
@@ -56,14 +56,6 @@
   color: var(--secondary-text-color);
   max-width: 60ch;
   margin: 0 0 28px;
-}
-
-.glass {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-edge);
-  box-shadow: var(--glass-highlight), var(--shadow-soft);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 
 .primaryButton,
@@ -474,12 +466,34 @@
 }
 
 .historyImageWrap {
+  position: relative;
   grid-column: 1 / 2;
   grid-row: 1;
   aspect-ratio: 4 / 3;
+  margin: 0;
   border-radius: 32px;
   overflow: hidden;
   box-shadow: var(--shadow-deep);
+}
+
+/* Link to the photo's own Wikipedia page, which names its author and licence */
+.photoCredit {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.photoCredit a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.photoCredit a:hover {
+  text-decoration: underline;
 }
 
 .historyImage {
@@ -506,6 +520,55 @@
 .historyText p {
   margin: 0 0 20px;
   line-height: 1.65;
+}
+
+/* "From the Wikipedia article …" under the text */
+.historyText .credit {
+  margin: -8px 0 20px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+}
+
+.credit a {
+  color: var(--link-color);
+}
+
+.historyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Grey lines while the history loads */
+.historySkeleton {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.historySkeleton span {
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.07), rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.07));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.historySkeleton span:last-child {
+  width: 60%;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .historySkeleton span {
+    animation: none;
+  }
 }
 
 .eyebrowIcon {

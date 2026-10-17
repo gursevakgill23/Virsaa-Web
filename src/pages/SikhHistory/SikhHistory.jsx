@@ -1,25 +1,34 @@
 /**
  * pages/SikhHistory/SikhHistory.jsx
  * -----------------------------------------------------------------------------
- * The Sikh History page (/sikh-history): a strip of topics, a timeline of
- * eras, an "Inspiring" section, recommended reading and the "Stay tuned"
- * block. Static content for now (no API calls).
+ * The Sikh History page (/sikh-history).
+ *
+ * Articles come from the backend (api/sikhismApi.js -> /api/sikhism/history/):
+ *   - search and category chips in the header (The Gurus, The Khalsa and the
+ *     Guru's family, Leaders and martyrs, Events, Places)
+ *   - "Explore": the articles of the chosen category as cards
+ *   - "Timeline": every dated article from 1469 onwards, oldest first
+ *   - the "Inspiring" block, real books from the library, and "Stay tuned"
+ * Opening an article goes to /sikh-history/<slug> (SikhHistoryArticle). Guests
+ * can browse the cards; the router asks them to sign in before opening one.
+ * Only the article list must load; the timeline and books fail quietly.
  * -----------------------------------------------------------------------------
  */
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaBookOpen } from 'react-icons/fa';
+import axios from 'axios';
+import { FaBookOpen, FaRedo, FaSearch, FaTimes } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
 import ComingSoon from '../../elements/ComingSoon/ComingSoon';
+import { historyApi } from '../../api/sikhismApi';
+import { describeApiError } from '../../utils/apiError';
+import HistoryCard from './HistoryCard';
+import { CoverPicture, SitePicture } from '../../components/SitePicture/SitePicture';
 import styles from './SikhHistory.module.css';
 
-// Pictures used on the page (files in public/images)
+// Header pictures (public/images); the other pictures are real photos from S3 (SitePicture)
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
-const filter_image = '/images/sikhHistory/filter_image.jpeg';
-const sikh_history = '/images/sikhHistory/sikh_history1.jpg';
-const book_image = '/images/book-image.jpg';
-const inspiring_image = '/images/sikhHistory/inspiring.jpg';
 
 // Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
@@ -34,135 +43,181 @@ const getImagePath = (imagePath) => {
   return imagePath;
 };
 
-// Topics in the scrolling strip at the top
-const scrollableImages = [
-  { id: 1, src: filter_image, text: 'Guru Nanak Dev Ji' },
-  { id: 2, src: filter_image, text: 'Foundation of Sikhism' },
-  { id: 3, src: filter_image, text: 'Guru Angad Dev Ji' },
-  { id: 4, src: filter_image, text: 'Gurmukhi Script' },
-  { id: 5, src: filter_image, text: 'Guru Amar Das Ji' },
-  { id: 6, src: filter_image, text: 'Langar Tradition' },
-  { id: 7, src: filter_image, text: 'Guru Ram Das Ji' },
-  { id: 8, src: filter_image, text: 'Amritsar Foundation' },
-  { id: 9, src: filter_image, text: 'Guru Arjan Dev Ji' },
-  { id: 10, src: filter_image, text: 'Compilation of Guru Granth Sahib' },
-  { id: 11, src: filter_image, text: 'Martyrdom of Guru Arjan Dev Ji' },
-  { id: 12, src: filter_image, text: 'Guru Hargobind Ji' },
-  { id: 13, src: filter_image, text: 'Miri-Piri Concept' },
-  { id: 14, src: filter_image, text: 'Guru Har Rai Ji' },
-  { id: 15, src: filter_image, text: 'Guru Harkrishan Ji' },
-  { id: 16, src: filter_image, text: 'Youngest Guru' },
+// Shown on the chips until the server's own list of categories arrives
+const DEFAULT_CATEGORIES = [
+  { id: 'gurus', label: 'The Gurus' },
+  { id: 'khalsa', label: 'The Khalsa and the Guru’s family' },
+  { id: 'leaders', label: 'Leaders and martyrs' },
+  { id: 'events', label: 'Events' },
+  { id: 'places', label: 'Places' },
 ];
+const SKELETON_CARDS = 6;
 
-// Timeline eras
-const sikhHistoryData = [
-  { id: 1, image: sikh_history, title: 'Guru Nanak Dev Ji', description: 'Founder of Sikhism', date: '1469 - 1539' },
-  { id: 2, image: sikh_history, title: 'Guru Angad Dev Ji', description: 'Second Sikh Guru', date: '1504 - 1552' },
-  { id: 3, image: sikh_history, title: 'Guru Amar Das Ji', description: 'Third Sikh Guru', date: '1479 - 1574' },
-  { id: 4, image: sikh_history, title: 'Guru Ram Das Ji', description: 'Fourth Sikh Guru', date: '1534 - 1581' },
-  { id: 5, image: sikh_history, title: 'Guru Arjan Dev Ji', description: 'Fifth Sikh Guru', date: '1563 - 1606' },
-  { id: 6, image: sikh_history, title: 'Guru Hargobind Ji', description: 'Sixth Sikh Guru', date: '1595 - 1644' },
-  { id: 7, image: sikh_history, title: 'Guru Har Rai Ji', description: 'Seventh Sikh Guru', date: '1630 - 1661' },
-  { id: 8, image: sikh_history, title: 'Guru Harkrishan Ji', description: 'Eighth Sikh Guru', date: '1656 - 1664' },
-  { id: 9, image: sikh_history, title: 'Guru Tegh Bahadur Ji', description: 'Ninth Sikh Guru', date: '1621 - 1675' },
-  { id: 10, image: sikh_history, title: 'Guru Gobind Singh Ji', description: 'Tenth Sikh Guru', date: '1666 - 1708' },
-  { id: 11, image: sikh_history, title: 'Guru Granth Sahib Ji', description: 'Eternal Guru', date: '1708 - Present' },
-  { id: 12, image: sikh_history, title: 'Khalsa Panth', description: 'Sikh Community', date: '1699 - Present' },
-];
-
-// Recommended reading cards
-const recommendedItems = [
-  { id: 1, image: book_image, title: 'Heer Ranjha' },
-  { id: 2, image: book_image, title: 'Pinjar' },
-  { id: 3, image: book_image, title: 'Sadda Punjab' },
-  { id: 4, image: book_image, title: 'Ik Si Punjab' },
-  { id: 5, image: book_image, title: 'Loona' },
-  { id: 6, image: book_image, title: 'Mera Pind' },
-  { id: 7, image: book_image, title: 'Chitta Lahu' },
-  { id: 8, image: book_image, title: 'Sunehray Din' },
-  { id: 9, image: book_image, title: 'Punjab Diyan Lok Kathavan' },
-  { id: 10, image: book_image, title: 'Raseedi Ticket' },
-];
-
-const SikhHistory = ({ isDarkMode }) => {
+const SikhHistory = ({ isDarkMode, apiString }) => {
+  const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
   const headerImage = getImagePath(isDarkMode ? header_image_dark : header_image_light);
-  const [activeTopic, setActiveTopic] = useState(null);
 
-  // Topics are static for now; clicking one highlights the matching timeline entry when there is one
-  const matchesTopic = (title) => activeTopic && title.toLowerCase() === activeTopic.toLowerCase();
+  // Articles, the timeline and the library books
+  const [articles, setArticles] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [status, setStatus] = useState('loading'); // loading | ready | error
+  const [error, setError] = useState('');
+  const [timeline, setTimeline] = useState([]);
+  const [books, setBooks] = useState([]);
 
-  // Toggle a topic and scroll to its era in the timeline, if there is one
-  const handleTopic = (text) => {
-    const next = activeTopic === text ? null : text;
-    setActiveTopic(next);
-    if (next) {
-      const match = sikhHistoryData.find((c) => c.title.toLowerCase() === next.toLowerCase());
-      if (match) document.getElementById(`era-${match.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // What the reader picked
+  const [category, setCategory] = useState('gurus');
+  const [query, setQuery] = useState('');
+
+  // ---------------------------------------------------------------- loading
+  const loadArticles = useCallback(async () => {
+    setStatus('loading');
+    setError('');
+    try {
+      const data = await historyApi.list(apiUrl);
+      setArticles(data.results);
+      if (data.categories.length) setCategories(data.categories);
+      setStatus('ready');
+    } catch (err) {
+      setError(describeApiError(err, 'Sikh History couldn’t be loaded. Check your connection and try again.'));
+      setStatus('error');
     }
-  };
+  }, [apiUrl]);
+
+  useEffect(() => {
+    loadArticles();
+  }, [loadArticles]);
+
+  // The timeline and the books are extras: a failure just hides them
+  useEffect(() => {
+    let alive = true;
+    historyApi.timeline(apiUrl).then((rows) => { if (alive) setTimeline(rows); }).catch(() => {});
+    axios.get(`${apiUrl}/collections/ebooks/`, { timeout: 20000 })
+      .then((r) => { if (alive && Array.isArray(r.data)) setBooks(r.data.slice(0, 10)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [apiUrl]);
+
+  // ---------------------------------------------------------------- filtering
+  const searching = query.trim().length > 0;
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q) {
+      // A search looks across every category
+      return articles.filter((a) => [a.title, a.title_pa, a.subtitle, a.summary, a.date_label]
+        .some((field) => field && String(field).toLowerCase().includes(q)));
+    }
+    return articles.filter((a) => a.category === category);
+  }, [articles, category, query]);
+
+  const categoryLabel = categories.find((c) => c.id === category)?.label || 'Articles';
+  const heading = searching ? `Results for “${query.trim()}”` : categoryLabel;
 
   return (
     <div className={styles.page}>
       <PageHero
         image={headerImage}
         title="Sikh History"
-        subtitle="Explore Sikh history: timeless teachings, inspiring legacy, and profound wisdom for all."
+        subtitle="The Gurus, the Khalsa, its heroes and the turning points of five centuries."
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Sikh History' }]}
-      />
-
-      {/* ---------- Topics strip ---------- */}
-      <section className={styles.topicsSection} aria-label="Topics">
-        <div className={styles.topics}>
-          {scrollableImages.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`${styles.topic} ${activeTopic === item.text ? styles.topicOn : ''}`}
-              aria-pressed={activeTopic === item.text}
-              onClick={() => handleTopic(item.text)}
-            >
-              <span className={styles.topicFrame}>
-                <img src={getImagePath(item.src)} alt="" loading="lazy" />
-              </span>
-              <span className={styles.topicText}>{item.text}</span>
-            </button>
-          ))}
+      >
+        <div className={styles.toolbar}>
+          <form className={styles.searchBar} role="search" onSubmit={(e) => e.preventDefault()}>
+            <FaSearch className={styles.searchIcon} aria-hidden="true" />
+            <input
+              type="search"
+              placeholder="Search people, places and events"
+              maxLength={100}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search Sikh History"
+            />
+            {searching && (
+              <button type="button" className={styles.clearSearch} onClick={() => setQuery('')} aria-label="Clear search">
+                <FaTimes aria-hidden="true" />
+              </button>
+            )}
+          </form>
+          <div className={styles.chips} role="tablist" aria-label="Category">
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                role="tab"
+                aria-selected={!searching && category === c.id}
+                className={`${styles.chip} ${!searching && category === c.id ? styles.chipOn : ''}`}
+                onClick={() => { setCategory(c.id); setQuery(''); }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
+      </PageHero>
+
+      {/* ---------- Explore: the chosen category (or search results) ---------- */}
+      <section className={styles.section} aria-labelledby="explore-title">
+        <div className={styles.rowHead}>
+          <h2 id="explore-title" className={styles.sectionTitle}>{heading}</h2>
+          {status === 'ready' && <p className={styles.count}>{shown.length} {shown.length === 1 ? 'article' : 'articles'}</p>}
+        </div>
+
+        {status === 'error' && (
+          <div className={styles.problem} role="alert">
+            <p>{error}</p>
+            <button type="button" className={styles.secondaryButton} onClick={loadArticles}>
+              <FaRedo aria-hidden="true" /> Try again
+            </button>
+          </div>
+        )}
+
+        {status === 'ready' && shown.length === 0 && (
+          <p className={styles.empty}>
+            {searching ? 'Nothing matches that search. Try a name, a place or a year.' : 'No articles here yet.'}
+          </p>
+        )}
+
+        <ul className={styles.cards}>
+          {status === 'loading'
+            ? Array.from({ length: SKELETON_CARDS }).map((_, i) => (
+                <li key={`s-${i}`} className={`${styles.cardSkeleton} ${styles.skeleton}`} aria-hidden="true" />
+              ))
+            : shown.map((article) => (
+                <li key={article.slug}>
+                  <HistoryCard article={article} showCategory={searching} />
+                </li>
+              ))}
+        </ul>
       </section>
 
       {/* ---------- Timeline ---------- */}
-      <section className={styles.section} aria-labelledby="roots-title">
-        <h2 id="roots-title" className={styles.sectionTitle}>Roots of Sikhism</h2>
-        <p className={styles.lede}>The ten Gurus, the Guru Granth Sahib and the Khalsa, with their dates.</p>
-
-        <ol className={styles.timeline}>
-          {sikhHistoryData.map((card) => (
-            <li
-              key={card.id}
-              id={`era-${card.id}`}
-              className={`${styles.era} ${matchesTopic(card.title) ? styles.eraOn : ''}`}
-            >
-              <span className={styles.node} aria-hidden="true" />
-              <article className={styles.eraCard}>
-                <div className={styles.eraFrame}>
-                  <img src={getImagePath(card.image)} alt="" loading="lazy" />
-                </div>
-                <div className={styles.eraBody}>
-                  <p className={styles.eraDate}>{card.date.replace(' - ', ' – ')}</p>
-                  <h3 className={styles.eraTitle}>{card.title}</h3>
-                  <p className={styles.eraText}>{card.description}</p>
-                </div>
-              </article>
-            </li>
-          ))}
-        </ol>
-      </section>
+      {timeline.length > 0 && (
+        <section className={styles.section} aria-labelledby="timeline-title">
+          <h2 id="timeline-title" className={styles.sectionTitle}>Five centuries, one story</h2>
+          <p className={styles.lede}>From the birth of Guru Nanak Dev Ji in 1469 to the present day, in order.</p>
+          <ol className={styles.timeline}>
+            {timeline.map((entry) => (
+              <li key={entry.slug} className={styles.era}>
+                <span className={styles.node} aria-hidden="true" />
+                <Link to={`/sikh-history/${encodeURIComponent(entry.slug)}`} className={styles.eraCard}>
+                  <span className={styles.eraYear} aria-hidden="true">{entry.start_year}</span>
+                  <span className={styles.eraBody}>
+                    <span className={styles.eraDate}>{entry.date_label}</span>
+                    <span className={styles.eraTitle}>{entry.title}</span>
+                    {entry.subtitle && <span className={styles.eraText}>{entry.subtitle}</span>}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       {/* ---------- Inspiring ---------- */}
       <section className={styles.section}>
         <div className={styles.inspiring}>
           <div className={styles.inspiringMedia}>
-            <img src={getImagePath(inspiring_image)} alt="" loading="lazy" />
+            <SitePicture name="history-inspiring" alt="" className={styles.mediaImage} />
           </div>
           <div className={styles.inspiringBody}>
             <h2>Most inspiring in Sikhism</h2>
@@ -174,23 +229,25 @@ const SikhHistory = ({ isDarkMode }) => {
         </div>
       </section>
 
-      {/* ---------- Recommended ---------- */}
-      <section className={styles.section} aria-labelledby="recommended-title">
-        <div className={styles.rowHead}>
-          <h2 id="recommended-title" className={styles.sectionTitle}>Recommended for you</h2>
-          <Link to="/collections/ebooks" className={styles.textLink}>See all books</Link>
-        </div>
-        <div className={styles.shelf}>
-          {recommendedItems.map((item) => (
-            <article key={item.id} className={styles.book}>
-              <div className={styles.bookCover}>
-                <img src={getImagePath(item.image)} alt="" loading="lazy" />
-              </div>
-              <h3 className={styles.bookTitle}>{item.title}</h3>
-            </article>
-          ))}
-        </div>
-      </section>
+      {/* ---------- Books from the library ---------- */}
+      {books.length > 0 && (
+        <section className={styles.section} aria-labelledby="recommended-title">
+          <div className={styles.rowHead}>
+            <h2 id="recommended-title" className={styles.sectionTitle}>Read further</h2>
+            <Link to="/collections/ebooks" className={styles.textLink}>See all books</Link>
+          </div>
+          <div className={styles.shelf}>
+            {books.map((book) => (
+              <Link key={book.id} to={`/collections/ebooks/ebook/${encodeURIComponent(book.id)}`} className={styles.book}>
+                <div className={styles.bookCover}>
+                  <CoverPicture src={book.cover_image} alt="" className={styles.mediaImage} />
+                </div>
+                <h3 className={styles.bookTitle}>{book.title}</h3>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <ComingSoon isDarkMode={isDarkMode} />
     </div>

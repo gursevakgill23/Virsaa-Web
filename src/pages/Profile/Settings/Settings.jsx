@@ -85,7 +85,7 @@ const SAVED_FLAG = 'virsaa:settings-saved';
 
 const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
-  const { isLoggedIn, accessToken, logout, updateUserData } = useAuth();
+  const { isLoggedIn, accessToken, logout, updateUserData, replaceTokens } = useAuth();
   const navigate = useNavigate();
   const toastTheme = isDarkMode ? 'dark' : 'light';
   // Show a success / error message
@@ -237,9 +237,11 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
     if (Object.keys(errors).length) return;
     setPwSaving(true);
     try {
-      await accountApi.changePassword(apiString, accessToken, pw.current, pw.next);
+      const result = await accountApi.changePassword(apiString, accessToken, pw.current, pw.next);
+      // The server signed every other device out; this one carries on with the new tokens
+      replaceTokens?.(result?.access, result?.refresh);
       setPw({ current: '', next: '', confirm: '' });
-      say('success', 'Password changed');
+      say('success', 'Password changed. Any other devices have been signed out.');
       refreshUnread();
     } catch (err) {
       const d = err.response?.data || {};

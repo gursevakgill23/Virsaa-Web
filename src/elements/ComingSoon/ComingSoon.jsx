@@ -7,22 +7,15 @@
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect } from 'react';
+import { SitePicture } from '../../components/SitePicture/SitePicture';
 import styles from './ComingSoon.module.css';
 
-// Converts image paths for the production build (same helper used across pages)
-const getImagePath = (imagePath) => {
-  if (process.env.NODE_ENV === 'production' && typeof imagePath === 'string') {
-    return (imagePath.startsWith('/') || /^(https?:|blob:|data:)/i.test(imagePath)) ? imagePath : `/${imagePath.replace(/.*static\/media/, 'static/media')}`;
-  }
-  return imagePath;
-};
-
-// The items and their pictures (in public/images)
+// The items and their pictures: real photos from S3, by name (components/SitePicture)
 const CONTENT = [
-  { text: 'Content coming soon', image: '/images/comingsoon1.jpeg' },
-  { text: 'New features arriving', image: '/images/comingsoon2.jpg' },
-  { text: 'Stay tuned for updates', image: '/images/comingsoon3.png' },
-  { text: 'Exciting news ahead', image: '/images/comingsoon4.jpg' },
+  { text: 'Content coming soon', picture: 'coming-1' },
+  { text: 'New features arriving', picture: 'coming-2' },
+  { text: 'Stay tuned for updates', picture: 'coming-3' },
+  { text: 'Exciting news ahead', picture: 'coming-4' },
 ];
 
 // Time each item stays (ms)
@@ -84,12 +77,7 @@ const ComingSoon = () => {
 
         <div className={styles.rightSide}>
           <div className={styles.frame}>
-            <img
-              key={active.image}
-              src={getImagePath(active.image)}
-              alt={active.text}
-              className={styles.horizontalImage}
-            />
+            <SitePicture key={active.picture} name={active.picture} className={styles.horizontalImage} loading="eager" />
           </div>
         </div>
       </div>

@@ -240,7 +240,8 @@
   overflow: hidden;
 }
 
-.cardMedia img {
+.cardMedia img,
+.cardImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -248,7 +249,8 @@
   transition: transform 0.5s ease;
 }
 
-.card:hover .cardMedia img {
+.card:hover .cardMedia img,
+.card:hover .cardImage {
   transform: scale(1.04);
 }
 

@@ -3,7 +3,8 @@
  * -----------------------------------------------------------------------------
  * One author (/collections/authors/author/:id):
  *   - portrait, life dates, genre, rating, Like / Save for later, Share
- *   - tabs: Biography, Works (their ebooks), Awards, Reviews
+ *   - tabs: Biography, Works (their ebooks), Awards, Reviews (components/Reviews:
+ *     ratings and reviews saved on the server)
  *   - related authors (same genre first)
  * While loading, the Virsaa loader is shown; "not found" and "couldn't load"
  * (with Try again) are told apart.
@@ -16,9 +17,13 @@ import {
   FaStar, FaRegStar, FaPenFancy, FaBook, FaAward, FaQuoteLeft,
 } from 'react-icons/fa';
 import Loader from '../../../components/VirsaaLoader/Loader';
+import Reviews from '../../../components/Reviews/Reviews';
 import axios from 'axios';
 import useLibraryItem from '../../../hooks/useLibraryItem';
 import PageHero from '../../../components/PageHero/PageHero';
+import Avatar from '../../../components/Avatar/Avatar';
+import { CoverPicture } from '../../../components/SitePicture/SitePicture';
+import { safeExternalUrl } from '../../../utils/safeUrl';
 import styles from './AuthorDetail.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -99,16 +104,15 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
   const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
   const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
   const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again"
-  const [reviewErrors, setReviewErrors] = useState({}); // field → message for the review form
-  // Open tab, review form and list
+  // Open tab
   const [activeTab, setActiveTab] = useState('biography');
-  const [showReviewForm, setShowReviewForm] = useState(false);
   const header_image_dark = '/images/header-image-dark.png';
   const header_image_light = '/images/header-image.png';
-  const authorImage = '/images/author-image.jpg';
+  // Authors without a photo show their initials (Avatar); books without a cover show the
+  // website picture 'fallback-book' (CoverPicture)
 
-  const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, review: '' });
-  const [reviews, setReviews] = useState([]);
+  // Average rating and number of reviews, reported by the Reviews tab
+  const [reviewSummary, setReviewSummary] = useState({ count: 0, average: null });
 
   useEffect(() => {
     let cancelled = false;
@@ -121,18 +125,19 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
     const load = async () => {
       try {
         const { data } = await axios.get(`${apiUrl}/collections/authors/${safeId}/`, { timeout: 20000 });
-        const [booksRes, reviewRes] = await Promise.all([
-          axios.get(`${apiUrl}/collections/ebooks/`, { params: { author__name: data.name }, timeout: 20000 }).catch(() => ({ data: [] })),
-          axios.get(`${apiUrl}/collections/authors/${safeId}/reviews/`, { timeout: 20000 }).catch(() => ({ data: [] })),
-        ]);
+        const booksRes = await axios.get(`${apiUrl}/collections/ebooks/`, { params: { author__name: data.name }, timeout: 20000 })
+          .catch(() => ({ data: [] }));
         if (cancelled) return;
         const books = asList(booksRes.data)
           .filter((b) => String(b.author) === String(data.id))
-          .map((b) => ({ id: b.id, title: b.title, cover: b.cover_image || authorImage, rating: Number(b.rating) || 0, pages: b.pages }));
+          .map((b) => ({ id: b.id, title: b.title, cover: b.cover_image || '', rating: Number(b.rating) || 0, pages: b.pages }));
         setAuthor({
           id: data.id,
           name: data.name,
-          image: data.image || authorImage,
+          image: data.image || '',
+          // Photos from Wikimedia Commons carry the credit their licence asks for
+          imageCredit: data.image_credit?.text || '',
+          imageSource: safeExternalUrl(data.image_credit?.source_url),
           rating: Number(data.rating) || 0,
           born: formatDate(data.born),
           died: formatDate(data.died),
@@ -144,14 +149,6 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
           books,
           awards: parseAwards(data.awards),
         });
-        setReviews(asList(reviewRes.data).map((r) => ({
-          id: r.id,
-          name: r.user || 'Anonymous',
-          date: r.date ? new Date(r.date).toLocaleDateString() : '',
-          rating: r.rating,
-          review: r.review || '',
-          helpful: r.helpful || 0,
-        })));
 
         const all = await axios.get(`${apiUrl}/collections/authors/`, { timeout: 20000 }).catch(() => ({ data: [] }));
         if (cancelled) return;
@@ -160,7 +157,7 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
         setAuthor((prev) => prev && ({
           ...prev,
           relatedAuthors: [...sameGenre, ...others.filter((a) => !sameGenre.includes(a))].slice(0, 8)
-            .map((a) => ({ id: a.id, name: a.name, image: a.image || authorImage, genre: a.genre })),
+            .map((a) => ({ id: a.id, name: a.name, image: a.image || '', genre: a.genre })),
         }));
       } catch (err) {
         if (!cancelled) setLoadError(err.response?.status === 404 ? 'This author could not be found.' : 'This author couldn’t be loaded right now.');
@@ -185,53 +182,6 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
     } catch {
       // share sheet dismissed
     }
-  };
-
-  const handleRatingChange = (rating) => {
-    setReviewForm({ ...reviewForm, rating });
-    if (reviewErrors.rating) setReviewErrors((prev) => ({ ...prev, rating: '' }));
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setReviewForm({ ...reviewForm, [name]: value });
-    if (reviewErrors[name]) setReviewErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  // Check every field and return the messages (empty object = all good)
-  const validateReview = () => {
-    const errs = {};
-    if (!reviewForm.name.trim()) errs.name = 'Enter your name.';
-    if (!reviewForm.email.trim()) errs.email = 'Enter your email address.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(reviewForm.email.trim())) errs.email = 'Enter an email address like name@example.com.';
-    if (!reviewForm.rating) errs.rating = 'Choose a star rating.';
-    if (reviewForm.review.trim().length < 10) errs.review = 'Write at least 10 characters.';
-    return errs;
-  };
-
-  // Note: author reviews are only shown on this page for now; they are not sent to the server yet.
-  const handleSubmitReview = (e) => {
-    e.preventDefault();
-    const errs = validateReview();
-    setReviewErrors(errs);
-    if (Object.keys(errs).length) return;
-    setReviews([
-      {
-        id: reviews.length + 1,
-        name: reviewForm.name.trim(),
-        date: new Date().toLocaleDateString(),
-        rating: reviewForm.rating,
-        review: reviewForm.review.trim(),
-        helpful: 0,
-      },
-      ...reviews,
-    ]);
-    setReviewForm({ name: '', email: '', rating: 0, review: '' });
-    setShowReviewForm(false);
-  };
-
-  const toggleHelpful = (reviewId) => {
-    setReviews(reviews.map((r) => (r.id === reviewId ? { ...r, helpful: r.helpful + 1 } : r)));
   };
 
   // Scroll the related-authors row
@@ -286,17 +236,19 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
           <section className={styles.productCard} aria-label="About the author">
             <div className={styles.portraitStage}>
               <div className={styles.portrait}>
-                <img
-                  src={getImagePath(author.image)}
-                  alt={author.name}
-                  className={styles.portraitImg}
-                  onError={(e) => { if (!e.currentTarget.dataset.fallback) { e.currentTarget.dataset.fallback = '1'; e.currentTarget.src = authorImage; } }}
-                />
+                <Avatar src={author.image} name={author.name} alt={author.name} className={styles.portraitImg} />
                 <div className={styles.portraitRating}>
-                  <Stars value={author.rating} />
-                  <span>{author.rating.toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}</span>
+                  <Stars value={reviewSummary.average ?? author.rating} />
+                  <span>{(reviewSummary.average ?? author.rating).toFixed(1)} · {reviewSummary.count} {reviewSummary.count === 1 ? 'review' : 'reviews'}</span>
                 </div>
               </div>
+              {author.image && author.imageCredit && (
+                <p className={styles.photoCredit}>
+                  Photo: {author.imageSource
+                    ? <a href={author.imageSource} target="_blank" rel="noopener noreferrer">{author.imageCredit}</a>
+                    : author.imageCredit}
+                </p>
+              )}
             </div>
 
             <div className={styles.info}>
@@ -375,7 +327,7 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
                   onClick={() => setActiveTab(tab.id)}
                 >
                   {tab.label}
-                  {tab.id === 'reviews' && <span className={styles.tabCount}>{reviews.length}</span>}
+                  {tab.id === 'reviews' && <span className={styles.tabCount}>{reviewSummary.count}</span>}
                 </button>
               ))}
             </div>
@@ -407,7 +359,7 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
                     {author.books.map((book) => (
                       <Link key={book.id} to={`/collections/ebooks/ebook/${book.id}`} className={styles.workCard}>
                         <span className={styles.workCover}>
-                          <img src={getImagePath(book.cover)} alt="" />
+                          <CoverPicture src={book.cover} alt="" className={styles.workImage} />
                         </span>
                         <span className={styles.workTitle}>{book.title}</span>
                         <span className={styles.workMeta}>
@@ -438,81 +390,10 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
                 </>
               )}
 
-              {activeTab === 'reviews' && (
-                showReviewForm ? (
-                  <form onSubmit={handleSubmitReview} noValidate>
-                    <h3 className={styles.formTitle}>Write a review</h3>
-                    <div className={styles.formRow}>
-                      <div className={styles.field}>
-                        <label htmlFor="name" className={styles.label}>Name</label>
-                        <input id="name" name="name" type="text" className={styles.input} value={reviewForm.name} onChange={handleInputChange} required maxLength={100} autoComplete="name" aria-invalid={Boolean(reviewErrors.name)} />
-                        {reviewErrors.name && <small className={styles.fieldError} role="alert">{reviewErrors.name}</small>}
-                      </div>
-                      <div className={styles.field}>
-                        <label htmlFor="email" className={styles.label}>Email</label>
-                        <input id="email" name="email" type="email" className={styles.input} value={reviewForm.email} onChange={handleInputChange} required maxLength={254} autoComplete="email" aria-invalid={Boolean(reviewErrors.email)} />
-                        {reviewErrors.email && <small className={styles.fieldError} role="alert">{reviewErrors.email}</small>}
-                      </div>
-                    </div>
-                    <div className={styles.field}>
-                      <span className={styles.label} id="au-rating-label">Your rating</span>
-                      <div className={styles.starPicker} role="group" aria-labelledby="au-rating-label">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => handleRatingChange(star)}
-                            className={styles.starButton}
-                            aria-label={`${star} star${star !== 1 ? 's' : ''}`}
-                            aria-pressed={star <= reviewForm.rating}
-                          >
-                            {star <= reviewForm.rating ? <FaStar className={styles.starOn} /> : <FaRegStar className={styles.starOff} />}
-                          </button>
-                        ))}
-                      </div>
-                      {reviewErrors.rating && <small className={styles.fieldError} role="alert">{reviewErrors.rating}</small>}
-                    </div>
-                    <div className={styles.field}>
-                      <label htmlFor="review" className={styles.label}>Your review</label>
-                      <textarea id="review" name="review" className={styles.textarea} value={reviewForm.review} onChange={handleInputChange} required maxLength={2000} aria-invalid={Boolean(reviewErrors.review)} />
-                      {reviewErrors.review && <small className={styles.fieldError} role="alert">{reviewErrors.review}</small>}
-                    </div>
-                    <div className={styles.formActions}>
-                      <button type="button" className={styles.secondaryButton} onClick={() => setShowReviewForm(false)}>Cancel</button>
-                      <button type="submit" className={styles.primaryButton} disabled={reviewForm.rating === 0}>Post review</button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <div className={styles.reviewsHeader}>
-                      <h3 className={styles.sectionTitle}>Reviews ({reviews.length})</h3>
-                      <button type="button" className={styles.primaryButton} onClick={() => setShowReviewForm(true)}>
-                        Write a review
-                      </button>
-                    </div>
-                    <ul className={`${styles.reviewList} ${styles.reviewScroll}`}>
-                      {reviews.map((review) => (
-                        <li key={review.id} className={styles.review}>
-                          <div className={styles.reviewTop}>
-                            <div className={styles.reviewer}>
-                              <span className={styles.avatar} aria-hidden="true">{review.name.charAt(0).toUpperCase()}</span>
-                              <div>
-                                <div className={styles.reviewName}>{review.name}</div>
-                                <div className={styles.reviewDate}>{review.date}</div>
-                              </div>
-                            </div>
-                            <Stars value={review.rating} />
-                          </div>
-                          <p className={styles.reviewBody}>{review.review}</p>
-                          <button type="button" className={styles.helpful} onClick={() => toggleHelpful(review.id)}>
-                            Helpful ({review.helpful})
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )
-              )}
+              {/* Always mounted (just hidden), so the review count in the header is known from the start */}
+              <div hidden={activeTab !== 'reviews'}>
+                <Reviews apiString={apiString} type="author" id={id} itemTitle={author.name} onSummary={setReviewSummary} />
+              </div>
             </div>
           </section>
         </div>
@@ -535,7 +416,7 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
                 ? Array.from({ length: 4 }).map((_, i) => <RelatedAuthorSkeleton key={i} />)
                 : (author.relatedAuthors || []).map((related) => (
                     <Link key={related.id} to={`/collections/authors/author/${related.id}`} className={styles.relatedCard}>
-                      <img src={getImagePath(related.image)} alt="" className={`${styles.relatedThumb} ${styles.relatedThumbRound}`} loading="lazy" />
+                      <Avatar src={related.image} name={related.name} className={`${styles.relatedThumb} ${styles.relatedThumbRound}`} loading="lazy" />
                       <span className={styles.relatedInfo}>
                         <span className={styles.relatedTitle}>{related.name}</span>
                         <span className={styles.relatedMeta}>{related.genre}</span>

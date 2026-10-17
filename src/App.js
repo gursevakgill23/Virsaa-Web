@@ -17,7 +17,7 @@
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import Cookies from 'js-cookie';
 import Navbar from './components/Navbar/Navbar';
@@ -34,9 +34,11 @@ import './App.css';
 const Home = lazy(() => import('./pages/HomePage/Home'));
 const Collections = lazy(() => import('./pages/Collections/Collections'));
 const SikhHistory = lazy(() => import('./pages/SikhHistory/SikhHistory'));
+const SikhHistoryArticle = lazy(() => import('./pages/SikhHistory/SikhHistoryArticle'));
 const Login = lazy(() => import('./pages/Login/Login'));
 const Signup = lazy(() => import('./pages/Signup/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword/ForgotPassword'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail/VerifyEmail'));
 const Membership = lazy(() => import('./pages/Membership/Membership'));
 const GurdwaraAccess = lazy(() => import('./pages/GurdwaraAccess/GurdwaraAccess'));
 const GurdwaraLocate = lazy(() => import('./pages/GurdwaraAccess/GurdwaraLocate/GurdwaraLocate'));
@@ -66,6 +68,7 @@ const History = lazy(() => import('./pages/Profile/History/History'));
 const Notifications = lazy(() => import('./pages/Profile/Notifications/Notifications'));
 const LearningMaterial = lazy(() => import('./pages/Learning/LearningMaterial/LearningMaterial'));
 const NotFound = lazy(() => import('./pages/NotFound/NotFound'));
+const PictureCredits = lazy(() => import('./pages/PictureCredits/PictureCredits'));
 
 // Base URL of the Django API, set in .env / Vercel as REACT_APP_API_URL
 const API_STRING = process.env.REACT_APP_API_URL;
@@ -91,6 +94,21 @@ const RouteLoader = () => {
 
   if (!playing) return null;
   return <Loader key={playing} variant="quick" onLoadingComplete={() => setPlaying(0)} />;
+};
+
+/**
+ * Tidies addresses with doubled slashes ("//verify-email/…", e.g. from a link
+ * built with a trailing slash) or a trailing slash, so they open the right
+ * page instead of "not found" or the login page.
+ */
+const CleanPath = () => {
+  const { pathname, search, hash } = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const clean = pathname.replace(/\/{2,}/g, '/').replace(/(.)\/$/, '$1');
+    if (clean !== pathname) navigate(`${clean}${search}${hash}`, { replace: true });
+  }, [pathname, search, hash, navigate]);
+  return null;
 };
 
 /**
@@ -172,6 +190,7 @@ const App = () => {
       <NotificationLayer />
       {/* Use the theme saved on the account when someone signs in */}
       <ThemeFromProfile setTheme={setTheme} />
+      <CleanPath />
 
       {isLoading ? (
         <Loader onLoadingComplete={handleLoadingComplete} />
@@ -213,6 +232,7 @@ const App = () => {
 
                 {/* Sikhism */}
                 <Route path="/sikh-history" element={<SikhHistory {...pageProps} />} />
+                <Route path="/sikh-history/:slug" element={<SikhHistoryArticle {...pageProps} />} />
                 <Route path="/gurbani" element={<Gurbani {...pageProps} />} />
                 <Route path="/gurdwara-access" element={<GurdwaraAccess {...pageProps} />} />
                 <Route path="/gurdwara-access/locate/:id" element={<GurdwaraLocate {...pageProps} />} />
@@ -231,6 +251,8 @@ const App = () => {
                 <Route path="/signup" element={<Signup {...pageProps} />} />
                 <Route path="/forgot-password" element={<ForgotPassword {...pageProps} />} />
                 <Route path="/forgot-password/:email/:token" element={<ForgotPassword {...pageProps} />} />
+                <Route path="/verify-email/:token" element={<VerifyEmail {...pageProps} />} />
+                <Route path="/verify-email/:email/:token" element={<VerifyEmail {...pageProps} />} />
                 <Route path="/my-profile" element={<ProfileRoute {...pageProps} />} />
                 <Route path="/account-settings" element={<Settings {...pageProps} toggleTheme={toggleTheme} setTheme={setTheme} />} />
                 <Route path="/my-favorites" element={<MyFavorites {...pageProps} toggleTheme={toggleTheme} />} />
@@ -246,6 +268,7 @@ const App = () => {
                 <Route path="/news" element={<News {...pageProps} />} />
                 <Route path="/about" element={<About {...pageProps} />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy {...pageProps} />} />
+                <Route path="/picture-credits" element={<PictureCredits {...pageProps} />} />
 
                 {/* Any other address: "page not found" instead of an empty screen */}
                 <Route path="*" element={<NotFound {...pageProps} />} />

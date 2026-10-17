@@ -16,9 +16,11 @@ import PageHero from '../../components/PageHero/PageHero';
 import styles from './Learning.module.css';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
+import { CoverPicture } from '../../components/SitePicture/SitePicture';
 
-// Picture used when an item has none
-const DEFAULT_IMAGE_PATH = '/images/Learning/learning.jpg';
+// Every card's picture comes from the API (a real photo in S3, chosen for its topic);
+// a card without one, or whose picture fails, shows this website picture instead
+const DEFAULT_PICTURE = 'learning-default';
 
 // Public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -53,7 +55,7 @@ const BUILT_IN_GAMES = [
     id: 'game-word-search',
     title: 'Word Search (Shabad Khoj)',
     description: 'Find hidden Punjabi and English words on themed maps before the timer runs out.',
-    image: '/images/Learning/playables.jpg',
+    picture: 'learn-alphabet',
     category: 'Games',
     link: GAME_ROUTES.wordSearch,
   },
@@ -61,7 +63,7 @@ const BUILT_IN_GAMES = [
     id: 'game-memory-match',
     title: 'Memory Match (Virsaa Vich Yaad)',
     description: 'Memorise Punjabi festivals and Sikh symbols, then match each picture with its name.',
-    image: '/images/games/lohri.jpg',
+    picture: 'game-lohri',
     category: 'Games',
     link: GAME_ROUTES.memoryMatch,
   },
@@ -103,14 +105,10 @@ const gameRoute = (item) => {
   return GAME_ROUTES.wordSearch;
 };
 
-// Use the item's picture only if it's a real URL or site path
-const imageUrl = (path) => (typeof path === 'string' && (path.startsWith('http') || path.startsWith('/')) ? path : DEFAULT_IMAGE_PATH);
-
-const handleImgError = (e) => {
-  if (e.currentTarget.dataset.fallback) return;
-  e.currentTarget.dataset.fallback = '1';
-  e.currentTarget.src = DEFAULT_IMAGE_PATH;
-};
+// A card's picture: its own from the API, or the website picture named on the card
+const CardPicture = ({ card, className }) => (
+  <CoverPicture src={card.image} fallback={card.picture || DEFAULT_PICTURE} alt="" className={className} />
+);
 
 // Tabs and the label/icon for each content type
 const TABS = [
@@ -166,7 +164,7 @@ const Learning = ({ isDarkMode, apiString }) => {
         const map = (item, type, link) => ({
           id: item.id,
           type,
-          image: item.image || DEFAULT_IMAGE_PATH,
+          image: item.image || '',
           title: item.title,
           description: summary(item.description),
           category: item.category || 'Uncategorized',
@@ -258,7 +256,7 @@ const Learning = ({ isDarkMode, apiString }) => {
     const inner = (
       <>
         <span className={styles.cardMedia}>
-          <img src={imageUrl(card.image)} alt="" loading="lazy" onError={handleImgError} className={open ? '' : styles.dimmed} />
+          <CardPicture card={card} className={`${styles.cardImage} ${open ? '' : styles.dimmed}`} />
           <span className={styles.typeBadge}>
             <span aria-hidden="true">{TYPE_META[card.type].icon}</span> {TYPE_META[card.type].label}
           </span>
@@ -381,7 +379,7 @@ const Learning = ({ isDarkMode, apiString }) => {
             <div className={`${styles.spotlight} ${styles.skeleton}`} aria-hidden="true" />
           ) : (
             <div className={styles.spotlight}>
-              <img src={imageUrl(game.image)} alt="" className={styles.spotlightImage} onError={handleImgError} />
+              <CardPicture card={game} className={styles.spotlightImage} />
               <div className={styles.spotlightGlass}>
                 <span className={styles.spotlightCount}>{gameIndex + 1} / {games.length}</span>
                 <h3>{game.title}</h3>
@@ -412,7 +410,7 @@ const Learning = ({ isDarkMode, apiString }) => {
                   const open = isCardAccessible(quiz);
                   return (
                     <article key={quiz.id} className={styles.quizCard}>
-                      <img src={imageUrl(quiz.image)} alt="" className={`${styles.quizImage} ${open ? '' : styles.dimmed}`} loading="lazy" onError={handleImgError} />
+                      <CardPicture card={quiz} className={`${styles.quizImage} ${open ? '' : styles.dimmed}`} />
                       <div className={styles.quizBody}>
                         <h3>{quiz.title}</h3>
                         {quiz.description && <p>{quiz.description}</p>}

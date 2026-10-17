@@ -1,14 +1,16 @@
 /*
  * elements/ChatWithUs/ChatButton/ChatButton.module.css
  * -----------------------------------------------------------------------------
- * The floating "Ask about Sikhism" chat button and its chat window (messages,
- * suggestions, typing dots, question box).
+ * The floating "Ask about Sikhism" chat button and its chat window: header
+ * with the helper's avatar, the conversation (message groups, typing dots),
+ * the options under an answer (page link, "Tell me more", follow-up
+ * questions) and the question box.
  * -----------------------------------------------------------------------------
  */
 
 /* =========================================================================
-   "Ask about Sikhism" chat: a floating maroon button that opens a glass
-   panel. Follows the site's light / dark theme through the CSS variables.
+   A floating maroon button that opens a glass panel. Follows the site's
+   light / dark theme through the CSS variables.
    ========================================================================= */
 .chatWidget {
   position: fixed;
@@ -30,7 +32,7 @@
   white-space: nowrap;
 }
 
-/* Launcher */
+/* ---------- Launcher ---------- */
 .chatButton {
   display: grid;
   place-items: center;
@@ -59,16 +61,16 @@
   font-size: 1.35rem;
 }
 
-/* Panel */
+/* ---------- Window ---------- */
 .chatWindow {
   position: absolute;
   right: 0;
   bottom: 0;
   display: flex;
   flex-direction: column;
-  width: 370px;
+  width: 380px;
   max-width: calc(100vw - 32px);
-  height: min(560px, calc(100vh - 120px));
+  height: min(590px, calc(100vh - 120px));
   overflow: hidden;
   color: var(--text-color);
   background: var(--glass-bg-strong);
@@ -91,32 +93,69 @@
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease, visibility 0s;
 }
 
+/* ---------- Header: the helper's avatar, name and status ---------- */
 .chatHeader {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 18px 18px 16px 20px;
+  padding: 14px 14px 14px 16px;
   color: #fff;
   background: linear-gradient(140deg, var(--maroon-bright), var(--maroon-deep));
 }
 
-.chatHeader h3 {
+/* Ik Onkar in a gold ring stands for the helper, here and beside its messages */
+.headerAvatar,
+.avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-family: var(--font-body);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.headerAvatar {
+  width: 42px;
+  height: 42px;
+  font-size: 1.35rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 2px #d9b45a;
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.headerText h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 600;
   color: #fff;
 }
 
-.chatHeader p {
-  margin: 2px 0 0;
+.headerText p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 1px 0 0;
   font-family: var(--font-body);
-  font-size: 0.84rem;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.82);
 }
 
-.closeButton {
+.onlineDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6fd39a;
+  box-shadow: 0 0 0 2px rgba(111, 211, 154, 0.25);
+}
+
+.headerButton {
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -128,24 +167,66 @@
   cursor: pointer;
 }
 
-.closeButton:hover {
+.headerButton:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.24) !important;
 }
 
+.headerButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------- Conversation ---------- */
 .chatBody {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px 16px;
+  gap: 6px;
+  padding: 16px 14px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(var(--primary-rgb), 0.3) transparent;
 }
 
+/* One message with (for the helper) its avatar. The avatar shows on the
+   first message of a group; later ones keep the space so they line up. */
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.rowUser {
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.rowBot + .rowUser,
+.rowUser + .rowBot {
+  margin-top: 8px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.9rem;
+  color: var(--maroon);
+  background: rgba(var(--primary-rgb), 0.08);
+  box-shadow: inset 0 0 0 1.5px #c9a24a;
+}
+
+[data-theme='dark'] .avatar {
+  color: #f2d47e;
+}
+
+.avatarSpacer {
+  visibility: hidden;
+}
+
 .message {
-  max-width: 85%;
-  padding: 10px 14px;
+  max-width: 82%;
+  margin: 0;
+  padding: 9px 14px;
   border-radius: 18px;
   font-size: 0.94rem;
   line-height: 1.5;
@@ -155,14 +236,12 @@
 }
 
 .botMessage {
-  align-self: flex-start;
   color: var(--text-color);
   background: rgba(var(--primary-rgb), 0.07);
   border-bottom-left-radius: 6px;
 }
 
 .userMessage {
-  align-self: flex-end;
   color: #fff;
   background: var(--maroon);
   border-bottom-right-radius: 6px;
@@ -173,33 +252,19 @@
   background: #f2b3c2;
 }
 
-.suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 2px;
+/* "Couldn't reach the server" and similar */
+.errorMessage {
+  color: #8a1c13;
+  background: rgba(179, 38, 30, 0.09);
 }
 
-.suggestion {
-  min-height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  font-family: var(--font-body);
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--primary-color);
-  background: var(--card-bg-color) !important;
-  border: 1.5px solid rgba(var(--primary-rgb), 0.25) !important;
-  cursor: pointer;
-}
-
-.suggestion:hover {
-  border-color: var(--primary-color) !important;
+[data-theme='dark'] .errorMessage {
+  color: #ffb4ab;
+  background: rgba(255, 180, 171, 0.12);
 }
 
 /* Typing dots */
 .typingIndicator {
-  align-self: flex-start;
   display: flex;
   gap: 5px;
   padding: 12px 14px;
@@ -219,7 +284,76 @@
 .typingDot:nth-child(2) { animation-delay: 0.15s; }
 .typingDot:nth-child(3) { animation-delay: 0.3s; }
 
-/* Input row */
+/* ---------- Under an answer: page link and suggested questions ---------- */
+.options {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 0 36px; /* lines up with the helper's messages */
+  animation: rise 0.25s ease;
+}
+
+.pageLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  justify-self: start;
+  gap: 10px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-decoration: none;
+  background: var(--card-bg-color);
+  border: 1.5px solid rgba(var(--primary-rgb), 0.25);
+}
+
+.pageLink:hover {
+  border-color: var(--primary-color);
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--primary-color);
+  background: var(--card-bg-color) !important;
+  border: 1.5px solid rgba(var(--primary-rgb), 0.25) !important;
+  cursor: pointer;
+}
+
+.suggestion:hover {
+  border-color: var(--primary-color) !important;
+}
+
+/* "Try again" and "Tell me more" lead the row */
+.suggestionStrong {
+  color: #fff;
+  background: var(--maroon) !important;
+  border-color: var(--maroon) !important;
+}
+
+[data-theme='dark'] .suggestionStrong {
+  color: var(--maroon);
+  background: #f2b3c2 !important;
+  border-color: #f2b3c2 !important;
+}
+
+/* ---------- Question box ---------- */
 .chatFooter {
   display: flex;
   gap: 8px;
@@ -273,6 +407,15 @@
   cursor: not-allowed;
 }
 
+.chatButton:focus-visible,
+.headerButton:focus-visible,
+.suggestion:focus-visible,
+.pageLink:focus-visible,
+.sendButton:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}
+
 @keyframes rise {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
@@ -281,6 +424,17 @@
 @keyframes bounce {
   0%, 60%, 100% { transform: translateY(0); }
   30% { transform: translateY(-5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message,
+  .options {
+    animation: none;
+  }
+
+  .typingDot {
+    animation-duration: 2.4s;
+  }
 }
 
 /* Tablets: sit above the floating tab bar */
@@ -309,6 +463,10 @@
     bottom: calc(92px + env(safe-area-inset-bottom));
     width: auto;
     max-width: none;
-    height: min(520px, calc(100vh - 120px - env(safe-area-inset-bottom)));
+    height: min(540px, calc(100vh - 120px - env(safe-area-inset-bottom)));
+  }
+
+  .message {
+    max-width: 88%;
   }
 }

@@ -39,6 +39,7 @@ const USEFUL_LINKS = [
   { label: 'Premium', to: '/premium' },
   { label: 'About', to: '/about' },
   { label: 'Privacy Policy', to: '/privacy-policy' },
+  { label: 'Picture credits', to: '/picture-credits' },
 ];
 
 // "Follow us" links. Replace these with Virsaa's real profile URLs

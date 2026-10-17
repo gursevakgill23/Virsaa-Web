@@ -942,7 +942,8 @@
   box-shadow: var(--shadow-deep);
 }
 
-.heritagePhoto img {
+.heritagePhoto img,
+.heritageImage {
   width: 100%;
   height: 100%;
   object-fit: cover;

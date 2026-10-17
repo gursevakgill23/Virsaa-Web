@@ -1,8 +1,9 @@
 /*
  * pages/SikhHistory/SikhHistory.module.css
  * -----------------------------------------------------------------------------
- * The Sikh History page: topics strip, the timeline of eras, the Inspiring
- * section and recommended reading.
+ * The Sikh History page and its articles: search and category chips in the
+ * header, article cards (an arch with the year), the timeline, the Inspiring
+ * section, books from the library, and the article page (SikhHistoryArticle).
  * -----------------------------------------------------------------------------
  */
 
@@ -116,73 +117,6 @@
    Sikh History
    ========================================================================= */
 
-/* Topics: arch-framed thumbnails in a scrolling strip */
-.topicsSection {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px clamp(16px, 4vw, 32px) 0;
-}
-
-.topics {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 118px;
-  gap: 16px;
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  padding: 6px 4px 14px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(var(--primary-rgb), 0.3) transparent;
-}
-
-.topic {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  scroll-snap-align: start;
-  cursor: pointer;
-  text-align: center;
-  color: var(--text-color);
-}
-
-.topicFrame {
-  display: block;
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  border-radius: 50% 50% 18px 18px / 38% 38% 18px 18px;
-  overflow: hidden;
-  background: var(--skeleton-bg-color);
-  border: 3px solid var(--card-bg-color);
-  box-shadow: 0 0 0 1px var(--border-color), var(--shadow-soft);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.topicFrame img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.topic:hover .topicFrame {
-  transform: translateY(-4px);
-}
-
-.topicOn .topicFrame {
-  box-shadow: 0 0 0 3px var(--primary-color), var(--shadow-deep);
-}
-
-.topicText {
-  font-size: 0.86rem;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.topicOn .topicText {
-  color: var(--primary-color);
-}
-
 /* Timeline: a spine down the middle, entries alternate left and right */
 .timeline {
   position: relative;
@@ -233,6 +167,8 @@
 }
 
 .eraCard {
+  color: inherit;
+  text-decoration: none;
   display: flex;
   align-items: center;
   gap: 18px;
@@ -257,31 +193,31 @@
   box-shadow: var(--glass-highlight), var(--shadow-deep);
 }
 
-.eraOn .eraCard {
-  box-shadow: 0 0 0 2px var(--primary-color), var(--shadow-deep);
+.eraCard:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 3px;
 }
 
-.eraOn .node {
-  background: var(--primary-color);
-}
-
-.eraFrame {
+/* The year the entry begins, in the arch shape used across the site */
+.eraYear {
+  display: grid;
+  place-items: center;
   width: 78px;
   aspect-ratio: 3 / 4;
   flex-shrink: 0;
   border-radius: 50% 50% 14px 14px / 38% 38% 14px 14px;
-  overflow: hidden;
-  background: var(--skeleton-bg-color);
-}
-
-.eraFrame img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+  background: linear-gradient(160deg, var(--maroon-bright), var(--maroon) 60%, var(--maroon-deep));
+  color: #f6e7c1;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  font-variant-numeric: oldstyle-nums;
+  padding-top: 10px;
 }
 
 .eraBody {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
@@ -328,7 +264,8 @@
   background: linear-gradient(135deg, var(--maroon-bright), var(--maroon-deep));
 }
 
-.inspiringMedia img {
+.inspiringMedia img,
+.mediaImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -392,6 +329,8 @@
 .book {
   scroll-snap-align: start;
   min-width: 0;
+  color: inherit;
+  text-decoration: none;
 }
 
 .bookCover {
@@ -466,10 +405,452 @@
 }
 
 @media (max-width: 480px) {
-  .eraFrame {
+  .eraYear {
     width: 62px;
+    font-size: 1rem;
   }
-  .topics {
-    grid-auto-columns: 100px;
+}
+
+
+/* =========================================================================
+   Search and categories (in the header)
+   ========================================================================= */
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(780px, 100%);
+  margin-top: 22px;
+}
+
+.searchBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 18px;
+  color: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+.searchBar input {
+  width: 100%;
+  height: 50px;
+  padding: 0 48px 0 46px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.searchBar input::placeholder {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.searchBar input:focus {
+  outline: none;
+  border-color: #f1d58c;
+  box-shadow: 0 0 0 3px rgba(241, 213, 140, 0.35);
+}
+
+.clearSearch {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.chip:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.chipOn,
+.chipOn:hover {
+  background: #fff;
+  border-color: #fff;
+  color: var(--maroon);
+}
+
+/* =========================================================================
+   Article cards
+   ========================================================================= */
+.count {
+  margin: 0;
+  color: var(--secondary-text-color);
+  font-weight: 600;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cardsCompact {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.card {
+  display: flex;
+  gap: 16px;
+  height: 100%;
+  padding: 14px 18px 14px 14px;
+  border-radius: 24px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(var(--primary-rgb), 0.35);
+  box-shadow: var(--glass-highlight), var(--shadow-deep);
+}
+
+.card:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 3px;
+}
+
+.cardArch {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 96px;
+  flex-shrink: 0;
+  border-radius: 50% 50% 14px 14px / 38% 38% 14px 14px;
+  background: linear-gradient(160deg, var(--maroon-bright), var(--maroon) 60%, var(--maroon-deep));
+  color: #f6e7c1;
+  padding-top: 10px;
+}
+
+.cardYear {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  font-variant-numeric: oldstyle-nums;
+}
+
+.cardLetter {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1.6rem;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cardPa {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--primary-color);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  color: var(--headline-color);
+}
+
+.cardMeta {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--secondary-text-color);
+}
+
+.cardSummary {
+  margin-top: 4px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardRead {
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.cardCompact .cardArch {
+  width: 54px;
+  height: 72px;
+}
+
+.cardCompact .cardYear {
+  font-size: 0.95rem;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skeleton-bg-color) 0%, var(--skeleton-shine-color) 50%, var(--skeleton-bg-color) 100%);
+  background-size: 200% 100%;
+  animation: historyShimmer 1.4s infinite linear;
+}
+
+@keyframes historyShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.cardSkeleton {
+  height: 150px;
+  border-radius: 24px;
+}
+
+.empty {
+  color: var(--secondary-text-color);
+}
+
+.problem {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 36px 16px;
+  text-align: center;
+  border-radius: 24px;
+  border: 1px dashed rgba(var(--primary-rgb), 0.35);
+  color: var(--secondary-text-color);
+}
+
+.problem p {
+  margin: 0;
+  max-width: 50ch;
+}
+
+.problemActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* =========================================================================
+   One article
+   ========================================================================= */
+.articleWrap {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 720px);
+  justify-content: center;
+  gap: clamp(24px, 4vw, 56px);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(32px, 5vw, 56px) clamp(16px, 4vw, 32px) 0;
+}
+
+.articleWrap:not(:has(.toc)) {
+  grid-template-columns: minmax(0, 720px);
+}
+
+.toc {
+  position: sticky;
+  top: 110px;
+  align-self: start;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+}
+
+.page .tocTitle {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.toc ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc a {
+  color: var(--text-color);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.toc a:hover {
+  color: var(--primary-color);
+}
+
+.articleHead {
+  margin-bottom: 8px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.page .articlePa {
+  margin: 0 0 6px;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.1rem);
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.page .articleMeta {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.page .articleSummary {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 1.05rem + 0.4vw, 1.35rem);
+  line-height: 1.55;
+  color: var(--headline-color);
+}
+
+.articleSection {
+  scroll-margin-top: 110px;
+  padding-top: 24px;
+}
+
+.articleSection h2,
+.sources h2 {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.3rem, 1.15rem + 0.6vw, 1.6rem);
+  color: var(--headline-color);
+}
+
+.page .articleSection p {
+  margin: 0 0 14px;
+  font-size: 1.06rem;
+  line-height: 1.75;
+  color: var(--text-color);
+}
+
+.sources {
+  margin-top: 32px;
+  padding: 20px 22px;
+  border-radius: 20px;
+  background: rgba(var(--primary-rgb), 0.05);
+}
+
+.sources ul {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.sources a {
+  color: var(--link-color, var(--primary-color));
+  font-weight: 600;
+}
+
+.sources svg {
+  font-size: 0.7rem;
+  margin-left: 4px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .articleWrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .toc {
+    position: static;
+  }
+}
+
+@media (max-width: 480px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .cardArch {
+    width: 60px;
+    height: 80px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+
+  .card,
+  .eraCard {
+    transition: none;
   }
 }

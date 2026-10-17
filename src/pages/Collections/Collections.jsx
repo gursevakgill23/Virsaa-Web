@@ -14,10 +14,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { FaSearch, FaTimes, FaBook, FaRegFileAudio, FaFeatherAlt, FaStar, FaClock } from 'react-icons/fa';
 import axios from 'axios';
 import PageHero from '../../components/PageHero/PageHero';
+import { CoverPicture } from '../../components/SitePicture/SitePicture';
+import Avatar from '../../components/Avatar/Avatar';
 import styles from './Collections.module.css';
-
-// Cover shown when an item has no picture or it fails to load
-const DEFAULT_IMAGE_PATH = '/images/Collections/book-image.jpg';
 
 // Public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -33,18 +32,9 @@ const getProductionImagePath = (imagePath) => {
   return imagePath;
 };
 
-// API files come back as full S3 URLs; anything else falls back to the default cover
-const fileUrl = (path) => {
-  if (typeof path === 'string' && path.startsWith('http')) return path.replace('/uthors/', '/authors/');
-  return DEFAULT_IMAGE_PATH;
-};
-
-// onError handler: switch a broken cover to the default one (once)
-const handleImgError = (e) => {
-  if (e.currentTarget.dataset.fallback) return;
-  e.currentTarget.dataset.fallback = '1';
-  e.currentTarget.src = DEFAULT_IMAGE_PATH;
-};
+// API files come back as full S3 URLs. Covers without one show the website picture
+// 'fallback-book' (CoverPicture); authors without a photo show their initials (Avatar).
+const fileUrl = (path) => (typeof path === 'string' && path.startsWith('http') ? path.replace('/uthors/', '/authors/') : '');
 
 // The three tabs (ids match the URL: /collections/<id>)
 const SECTIONS = [
@@ -161,7 +151,7 @@ const Collections = ({ isDarkMode, apiString }) => {
   const currentCards = displayData.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
   const trendingEbooks = ebooks.filter((e) => e.rating >= 4.7).slice(0, 8);
   const featuredAuthors = authors.slice(0, 8);
-  const latestAudiobooks = audiobooks.slice(0, 8);
+  const latestAudiobooks = audiobooks.slice(0, 12);
   const isFiltering = filters.length > 0 || query.trim();
 
   // Go to a page of results
@@ -175,7 +165,7 @@ const Collections = ({ isDarkMode, apiString }) => {
   const BookCard = ({ item }) => (
     <Link to={`/collections/ebooks/ebook/${item.id}`} className={styles.bookCard}>
       <span className={styles.bookCover}>
-        <img src={fileUrl(item.cover_image)} alt="" loading="lazy" onError={handleImgError} />
+        <CoverPicture src={fileUrl(item.cover_image)} alt="" className={styles.coverImage} />
       </span>
       <span className={styles.cardTitle}>{item.title}</span>
       <span className={styles.cardMeta}>
@@ -187,18 +177,21 @@ const Collections = ({ isDarkMode, apiString }) => {
   const AudioCard = ({ item }) => (
     <Link to={`/collections/audiobooks/audiobook/${item.id}`} className={styles.audioCard}>
       <span className={styles.audioCover}>
-        <img src={fileUrl(item.cover)} alt="" loading="lazy" onError={handleImgError} />
+        <CoverPicture src={fileUrl(item.cover)} alt="" className={styles.coverImage} />
         <span className={styles.audioBadge}><FaRegFileAudio aria-hidden="true" /></span>
       </span>
       <span className={styles.cardTitle}>{item.title}</span>
-      <span className={styles.cardMeta}>{item.duration ? <><FaClock aria-hidden="true" /> {item.duration}</> : 'Audiobook'}</span>
+      <span className={styles.cardMeta}>
+        {authorNames[item.author] ? `${authorNames[item.author]} · ` : ''}
+        {item.duration ? <><FaClock aria-hidden="true" /> {item.duration}</> : 'Audiobook'}
+      </span>
     </Link>
   );
 
   const AuthorCard = ({ item }) => (
     <Link to={`/collections/authors/author/${item.id}`} className={styles.authorCard}>
       <span className={styles.authorFrame}>
-        <img src={fileUrl(item.image)} alt="" loading="lazy" onError={handleImgError} />
+        <Avatar src={fileUrl(item.image)} name={item.name} className={styles.coverImage} loading="lazy" />
       </span>
       <span className={styles.cardTitle}>{item.name}</span>
       <span className={styles.cardMeta}>{item.genre || 'Author'}</span>

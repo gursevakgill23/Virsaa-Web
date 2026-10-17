@@ -688,7 +688,8 @@
 
 .bookCover img,
 .audioCover img,
-.authorFrame img {
+.authorFrame img,
+.frameImage {
   display: block;
   width: 100%;
   height: 100%;

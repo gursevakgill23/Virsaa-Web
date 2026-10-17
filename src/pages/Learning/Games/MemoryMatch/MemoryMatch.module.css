@@ -126,6 +126,21 @@
   transform: scale(1.06);
 }
 
+/* The player's picture opens the game profile */
+.avatarButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.avatarButton:focus-visible {
+  outline: 3px solid var(--primary-color);
+  outline-offset: 3px;
+}
+
 .userInfo > span {
   font-weight: 700;
 }
@@ -975,12 +990,19 @@
   border: 3px solid var(--card-bg-color);
 }
 
-.card img {
+.card img,
+.cardPicture {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 14px;
   display: block;
+}
+
+/* The picture placeholder is a <span>: keep the text-card padding off it */
+.cardBack .cardPicture,
+.cardPreview .cardPicture {
+  padding: 0;
 }
 
 .hiddenIcon {
@@ -1070,9 +1092,11 @@
   background: rgba(var(--primary-rgb), 0.05);
 }
 
-.leaderboardItem img {
+.leaderboardItem img,
+.leaderAvatar {
   width: 38px;
   height: 38px;
+  flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -1186,7 +1210,8 @@
   box-shadow: 0 0 0 1px var(--border-color), var(--shadow-soft);
 }
 
-.cardPreview img {
+.cardPreview img,
+.cardPreview .cardPicture {
   width: 100%;
   height: 100%;
   object-fit: cover;

@@ -1,19 +1,22 @@
 /**
  * components/Sidebar/NanakshahiCalendar.jsx
  * -----------------------------------------------------------------------------
- * The Nanakshahi calendar view inside the side panel.
+ * The Nanakshahi calendar view inside the side panel, following the calendar
+ * as the SGPC publishes it (months begin on the Sangrand; most Gurpurabs
+ * follow the moon, so their dates change every year).
  *   - month grid: each day shows its Gregorian number and its Nanakshahi day
  *     (the Gurmukhi month name on the 1st of each Nanakshahi month)
  *   - coloured dots for Gurpurab, Shaheedi Purab, festivals, Sangrand,
  *     Puranmashi/Masya and community events (with a key underneath)
  *   - tap a day to list everything on it; "This month" lists the main days
- * Data: /collections/calendar/?year&month and /collections/events/?from&to.
+ * Data: /collections/calendar/?year&month, /collections/events/?from&to and the
+ * year's month starts (hooks/useNanakshahiYear).
  * -----------------------------------------------------------------------------
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FaChevronLeft, FaChevronRight, FaMoon, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
 import { calendarApi, localISODate } from '../../api/newsApi';
-import { toNanakshahi } from '../../utils/nanakshahi';
+import useNanakshahiYear from '../../hooks/useNanakshahiYear';
 import styles from './NanakshahiCalendar.module.css';
 
 // Readable names for each kind of entry
@@ -62,6 +65,10 @@ const NanakshahiCalendar = ({ apiString, focusDate }) => {
   const [events, setEvents] = useState([]);
   const [state, setState] = useState('loading');
   const [showMoon, setShowMoon] = useState(true);
+  // Nanakshahi dates for the year on screen, and for the selected day's year
+  // (they differ when you move to another year with a day still selected)
+  const nsMonth = useNanakshahiYear(apiString, cursor.y);
+  const nsSelected = useNanakshahiYear(apiString, Number(selected.slice(0, 4)));
 
   // Jump to a date passed in from outside (e.g. "see it in the calendar")
   useEffect(() => {
@@ -134,18 +141,22 @@ const NanakshahiCalendar = ({ apiString, focusDate }) => {
     setSelected(todayISO);
   };
 
-  // Header text: "October 2026" and the Nanakshahi months it covers
+  // Header text: "October 2026" and the Nanakshahi months it covers, e.g.
+  // "Assu – Katik 558" (or "Phagun 557 – Chet 558" across the Nanakshahi new year)
   const monthTitle = new Date(cursor.y, cursor.m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  const nsFirst = toNanakshahi(new Date(cursor.y, cursor.m - 1, 1));
-  const nsLast = toNanakshahi(new Date(cursor.y, cursor.m, 0));
-  const nsSpan = nsFirst && nsLast
-    ? (nsFirst.month === nsLast.month ? `${nsFirst.month} ${nsFirst.year}` : `${nsFirst.month} – ${nsLast.month} ${nsLast.year}`)
-    : '';
+  const nsFirst = nsMonth.convert(new Date(cursor.y, cursor.m - 1, 1));
+  const nsLast = nsMonth.convert(new Date(cursor.y, cursor.m, 0));
+  let nsSpan = '';
+  if (nsFirst && nsLast) {
+    if (nsFirst.month === nsLast.month) nsSpan = `${nsFirst.month} ${nsFirst.year}`;
+    else if (nsFirst.year !== nsLast.year) nsSpan = `${nsFirst.month} ${nsFirst.year} – ${nsLast.month} ${nsLast.year}`;
+    else nsSpan = `${nsFirst.month} – ${nsLast.month} ${nsLast.year}`;
+  }
 
   // The selected day's entries, and the month's main days for the list at the bottom
   const selectedItems = byDay[selected] || [];
   const selectedDate = parseISO(selected);
-  const selectedNs = toNanakshahi(selectedDate);
+  const selectedNs = nsSelected.convert(selectedDate);
   const monthHighlights = entries.filter((e) => ['gurpurab', 'shaheedi', 'festival', 'historical'].includes(e.kind));
 
   return (
@@ -155,7 +166,8 @@ const NanakshahiCalendar = ({ apiString, focusDate }) => {
         <button type="button" className={styles.navButton} onClick={() => move(-1)} aria-label="Previous month"><FaChevronLeft /></button>
         <div className={styles.headTitle}>
           <h3>{monthTitle}</h3>
-          <p>{nsSpan} Nanakshahi</p>
+          {/* A non-breaking space keeps the header's height while the dates load */}
+          <p>{nsSpan ? `${nsSpan} Nanakshahi` : '\u00a0'}</p>
         </div>
         <button type="button" className={styles.navButton} onClick={() => move(1)} aria-label="Next month"><FaChevronRight /></button>
       </div>
@@ -168,6 +180,13 @@ const NanakshahiCalendar = ({ apiString, focusDate }) => {
         </label>
       </div>
 
+      {nsMonth.status === 'error' && (
+        <p className={styles.muted} role="status">
+          Nanakshahi dates couldn’t be loaded.{' '}
+          <button type="button" className={styles.linkButton} onClick={nsMonth.retry}>Try again</button>
+        </p>
+      )}
+
       {/* Month grid */}
       <div className={styles.grid} role="grid" aria-label={`${monthTitle} calendar`} aria-busy={state === 'loading'}>
         {WEEKDAYS.map((w, i) => <span key={`${w}${i}`} className={styles.weekday} aria-hidden="true">{w}</span>)}
@@ -175,7 +194,7 @@ const NanakshahiCalendar = ({ apiString, focusDate }) => {
           if (!day) return <span key={`blank-${i}`} className={styles.blank} />;
           const iso = isoOf(cursor.y, cursor.m, day);
           const items = byDay[iso] || [];
-          const ns = toNanakshahi(new Date(cursor.y, cursor.m - 1, day));
+          const ns = nsMonth.convert(new Date(cursor.y, cursor.m - 1, day));
           const kinds = [...new Set(items.map((x) => DOT[x.kind] || 'dotFestival'))].slice(0, 3);
           return (
             <button
@@ -186,10 +205,10 @@ const NanakshahiCalendar = ({ apiString, focusDate }) => {
               onClick={() => setSelected(iso)}
               aria-selected={iso === selected}
               aria-current={iso === todayISO ? 'date' : undefined}
-              aria-label={`${parseISO(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}, ${ns?.label}${items.length ? `, ${items.length} listed` : ''}`}
+              aria-label={`${parseISO(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}${ns ? `, ${ns.label} Nanakshahi` : ''}${items.length ? `, ${items.length} listed` : ''}`}
             >
               <span className={styles.dayNumber}>{day}</span>
-              <span className={styles.nsDay}>{ns?.day === 1 ? ns.pa : ns?.day}</span>
+              <span className={styles.nsDay} lang={ns?.day === 1 ? 'pa' : undefined}>{ns ? (ns.day === 1 ? ns.pa : ns.day) : ''}</span>
               <span className={styles.dots} aria-hidden="true">
                 {kinds.map((k) => <span key={k} className={`${styles.dot} ${styles[k]}`} />)}
               </span>
@@ -212,7 +231,7 @@ const NanakshahiCalendar = ({ apiString, focusDate }) => {
       <section className={styles.dayPanel} aria-live="polite">
         <h4>
           {selectedDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
-          <span>{selectedNs?.label} · {selectedNs?.pa}</span>
+          {selectedNs && <span>{selectedNs.label} · {selectedNs.pa}</span>}
         </h4>
         {state === 'error' ? (
           <p className={styles.muted}>The calendar couldn’t be loaded. <button type="button" className={styles.linkButton} onClick={load}>Try again</button></p>
@@ -262,8 +281,18 @@ const NanakshahiCalendar = ({ apiString, focusDate }) => {
       )}
 
       <p className={styles.footnote}>
-        Dates follow the original Nanakshahi calendar. Moon-based days (Guru Nanak Dev Ji’s Gurpurab,
-        Bandi Chhor Divas, Hola Mohalla, Puranmashi, Masya) are calculated and can differ by a day at your Gurdwara.
+        {nsMonth.source === 'fallback' ? (
+          <>
+            The SGPC calendar isn’t available for {cursor.y}, so this month uses the original 2003 Nanakshahi
+            dates. Moon-based days are calculated and can differ by a day at your Gurdwara.
+          </>
+        ) : (
+          <>
+            Dates follow the Nanakshahi calendar as published by the SGPC. Each month begins on its Sangrand,
+            and most Gurpurabs follow the moon, so their dates change every year and can differ by a day at your
+            Gurdwara. Years the SGPC hasn’t published yet are worked out with the same rules.
+          </>
+        )}
       </p>
     </div>
   );

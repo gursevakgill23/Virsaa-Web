@@ -23,6 +23,15 @@ import styles from './ErrorBoundary.module.css';
 // "Loading chunk 12 failed" / "Failed to fetch dynamically imported module"
 const isChunkError = (error) => /chunk|dynamically imported module/i.test(String(error?.message || error?.name || ''));
 
+// When we reload because of a chunk error, remember when. If the same error comes back
+// straight after that reload, reloading again won't help (e.g. the files are being
+// requested from the wrong address), so we stop offering it instead of looping.
+const RELOAD_KEY = 'virsaa:chunk-reload';
+const RELOAD_WINDOW_MS = 30000;
+const reloadedRecently = () => {
+  try { return Date.now() - Number(sessionStorage.getItem(RELOAD_KEY) || 0) < RELOAD_WINDOW_MS; } catch { return false; }
+};
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -43,7 +52,8 @@ class ErrorBoundary extends React.Component {
 
   // Render the page again (useful for one-off failures)
   handleRetry = () => {
-    if (isChunkError(this.state.error)) {
+    if (isChunkError(this.state.error) && !reloadedRecently()) {
+      try { sessionStorage.setItem(RELOAD_KEY, String(Date.now())); } catch { /* storage blocked */ }
       window.location.reload(); // fetch the newly deployed files
       return;
     }
@@ -54,7 +64,8 @@ class ErrorBoundary extends React.Component {
     const { error } = this.state;
     if (!error) return this.props.children;
 
-    const outdated = isChunkError(error);
+    // A chunk error right after our own reload isn't an update; treat it as a normal failure
+    const outdated = isChunkError(error) && !reloadedRecently();
     return (
       <main className={styles.wrap}>
         <section className={styles.card} role="alert">

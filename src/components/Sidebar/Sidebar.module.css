@@ -526,7 +526,11 @@
 }
 
 /* =========================================================================
-   Section tab bar (below 992px): floating glass at the bottom of the screen
+   Section tab bar (below 992px): floating glass at the bottom of the screen.
+   Every tab gets an equal share of the bar, with a small gap between tabs.
+   The hover / current-page highlight is a pill behind the icon that is
+   always narrower than its own tab, so two highlights never touch and a
+   highlight never runs into the next tab's label.
    ========================================================================= */
 .tabNavigation {
   position: fixed;
@@ -535,8 +539,8 @@
   transform: translateX(-50%);
   width: min(720px, calc(100% - 28px));
   display: flex;
-  justify-content: space-around;
-  align-items: center;
+  align-items: stretch;
+  gap: 4px;
   padding: 6px 8px;
   border-radius: 28px;
   background: var(--glass-bg);
@@ -552,40 +556,77 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  min-height: 52px;
-  padding: 6px 4px;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 0; /* a long label shortens with "…" instead of widening its tab */
+  min-height: 56px;
+  padding: 6px 2px;
   border: none;
-  border-radius: 20px;
+  border-radius: 18px;
   background: transparent;
   color: var(--text-color);
   text-decoration: none;
   font: inherit;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  -webkit-tap-highlight-color: transparent; /* no grey tap flash spreading over the neighbours */
+  transition: color 0.2s ease;
 }
 
-.tabItem:hover {
-  background: rgba(var(--primary-rgb), 0.1);
-  color: var(--primary-color);
-}
-
-.tabActive,
-.tabActive:hover {
-  color: var(--primary-color);
-  background: rgba(var(--primary-rgb), 0.12);
-}
-
+/* The highlight lives here: a pill behind the icon, inset from the tab's edges */
 .tabIcon {
+  display: grid;
+  place-items: center;
+  width: min(56px, calc(100% - 8px));
+  height: 30px;
+  border-radius: 999px;
   font-size: 20px;
-  margin-bottom: 3px;
   color: var(--icon-color);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .tabLabel {
+  max-width: 100%;
   font-size: 11px;
   font-weight: 600;
   font-family: var(--font-body);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Hover only on devices with a real pointer. On touch screens :hover sticks to
+   the last tab tapped, which left two tabs highlighted side by side. */
+@media (hover: hover) {
+  .tabItem:hover {
+    color: var(--primary-color);
+  }
+
+  .tabItem:hover .tabIcon {
+    background-color: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary-color);
+  }
+}
+
+.tabActive {
+  color: var(--primary-color);
+}
+
+.tabActive .tabIcon,
+.tabActive:hover .tabIcon {
+  background-color: rgba(var(--primary-rgb), 0.16);
+  color: var(--primary-color);
+}
+
+.tabActive .tabLabel {
+  font-weight: 700;
+}
+
+/* Keyboard focus: the ring is drawn inside the tab so it can't cover the next one
+   (the site-wide ring sits 3px outside the element) */
+.tabItem:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
 }
 
 /* Phones: the same floating tab bar carries the section links.
@@ -596,29 +637,28 @@
     right: 10px;
     width: auto;
     transform: none;
-    padding: 4px;
+    gap: 2px;
+    padding: 5px;
     border-radius: 26px;
     z-index: 1000;
   }
 
   .tabItem {
-    min-width: 0;
+    gap: 3px;
     min-height: 54px;
-    padding: 6px 0;
-    border-radius: 20px;
+    padding: 5px 1px;
+    border-radius: 16px;
   }
 
   .tabIcon {
+    width: min(48px, calc(100% - 6px));
+    height: 28px;
     font-size: 19px;
   }
 
   .tabLabel {
-    max-width: 100%;
     font-size: clamp(9px, 2.6vw, 10.5px);
     letter-spacing: -0.01em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .sidebar {

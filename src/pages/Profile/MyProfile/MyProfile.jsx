@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
+import Avatar from '../../../components/Avatar/Avatar';
 import styles from './MyProfile.module.css';
 import { useAuth } from '../../../context/AuthContext';
 import learningApi from '../../../api/learningApi';
@@ -40,7 +41,6 @@ const getImagePath = (imagePath) => {
 };
 
 // Defaults and labels
-const PLACEHOLDER_PHOTO = '/images/Login/user-placeholder.jpg';
 const CONTENT_OPTIONS = ['fiction', 'sikh_history', 'punjabi_culture', 'spirituality', 'non_fiction', 'poetry', 'audiobook', 'ebook'];
 const GENDER_LABELS = { male: 'Male', female: 'Female', other: 'Other', prefer_not_to_say: 'Prefer not to say' };
 
@@ -361,7 +361,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
       <section className={styles.section}>
         <div className={`${styles.identity} ${styles.panel}`}>
           <div className={styles.avatarFrame}>
-            <img src={userData.profile_photo || getImagePath(PLACEHOLDER_PHOTO)} alt="" className={styles.avatar} />
+            <Avatar src={userData.profile_photo} name={[userData.first_name, userData.last_name].filter(Boolean).join(' ') || userData.username} className={styles.avatar} />
           </div>
 
           <div className={styles.identityText}>

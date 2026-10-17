@@ -13,6 +13,8 @@ import {
   FaLightbulb, FaBookOpen, FaSeedling, FaPalette, FaLock,
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
+import { SitePicture } from '../../components/SitePicture/SitePicture';
+import Avatar from '../../components/Avatar/Avatar';
 import styles from './About.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -64,24 +66,21 @@ const VALUES = [
 ];
 
 const About = ({ isDarkMode }) => {
-  // Pictures used on the page (files in public/images)
+  // The header picture is in public/images; the others are real photos from S3 (SitePicture)
   const getImagePath = useProductionImagePath();
-  const teamMember = '/images/About/team-member.jpg';
   const headerDark = '/images/header-image-dark.png';
   const headerLight = '/images/header-image.png';
-  const heritageImage = '/images/About/heritage.jpg';
-  const communityImage = '/images/About/community.jpg';
-  const digitizationImage = '/images/About/digitization.jpg';
 
   const navigate = useNavigate();
   const headerImage = isDarkMode ? headerDark : headerLight;
 
-  // Team cards (replace with the real team when ready)
+  // Team cards (replace with the real team when ready). Add `photo: 'https://…'` to show a
+  // photo; without one, the person's initials are shown.
   const team = [
-    { name: 'John Doe', role: 'Founder & CEO', image: teamMember },
-    { name: 'Jane Smith', role: 'Content Curator', image: teamMember },
-    { name: 'Gursevak Singh', role: 'Developer', image: teamMember },
-    { name: 'Navjot Singh', role: 'Community Manager', image: teamMember },
+    { name: 'John Doe', role: 'Founder & CEO' },
+    { name: 'Jane Smith', role: 'Content Curator' },
+    { name: 'Gursevak Singh', role: 'Developer' },
+    { name: 'Navjot Singh', role: 'Community Manager' },
   ];
 
   return (
@@ -120,7 +119,7 @@ const About = ({ isDarkMode }) => {
       <section className={styles.section} aria-label="Mission and community">
         <div className={styles.pillars}>
           <article className={styles.pillar}>
-            <img src={getImagePath(heritageImage)} alt="" className={styles.pillarImage} loading="lazy" />
+            <SitePicture name="about-mission" alt="" className={styles.pillarImage} />
             <div className={styles.pillarGlass}>
               <h2 className={styles.pillarTitle}>Our mission</h2>
               <p>
@@ -129,7 +128,7 @@ const About = ({ isDarkMode }) => {
             </div>
           </article>
           <article className={styles.pillar}>
-            <img src={getImagePath(communityImage)} alt="" className={styles.pillarImage} loading="lazy" />
+            <SitePicture name="about-community" alt="" className={styles.pillarImage} />
             <div className={styles.pillarGlass}>
               <h2 className={styles.pillarTitle}>Our community</h2>
               <p>
@@ -162,7 +161,7 @@ const About = ({ isDarkMode }) => {
           {team.map((member) => (
             <li key={member.name} className={styles.teamMember}>
               <span className={styles.memberFrame}>
-                <img src={getImagePath(member.image)} alt={member.name} className={styles.memberImage} loading="lazy" />
+                <Avatar src={member.photo} name={member.name} className={styles.memberImage} loading="lazy" />
               </span>
               <h3 className={styles.memberName}>{member.name}</h3>
               <p className={styles.memberRole}>{member.role}</p>
@@ -175,7 +174,7 @@ const About = ({ isDarkMode }) => {
       <section className={styles.section} aria-labelledby="digit-title">
         <div className={styles.digitization}>
           <div className={styles.digitImageWrap}>
-            <img src={getImagePath(digitizationImage)} alt="Digitization" className={styles.digitImage} loading="lazy" />
+            <SitePicture name="about-digitization" className={styles.digitImage} />
           </div>
           <div className={styles.digitText}>
             <h2 id="digit-title" className={styles.sectionTitle}>Our digitization process</h2>

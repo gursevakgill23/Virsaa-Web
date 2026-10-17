@@ -4,13 +4,15 @@
  * Services at one Gurdwara (/gurdwara-access/services/:id): langar,
  * accommodation, classes, medical camps and the library, each with timings
  * and capacity. Opened from the Gurdwara finder.
- * Uses sample data for now; an unknown id shows the first Gurdwara.
+ * The Gurdwara comes from the shared list (../gurdwaras.js); the services are
+ * sample data for now. An unknown id shows the first Gurdwara.
  * -----------------------------------------------------------------------------
  */
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { FaUtensils, FaBed, FaBook, FaClinicMedical, FaMusic } from 'react-icons/fa';
 import { toast } from '../../../utils/notify';
+import { GURDWARAS, findGurdwara } from '../gurdwaras';
 import styles from './GurdwaraServices.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -35,13 +37,6 @@ const useProductionImagePath = () => {
 // Header pictures (public/images). The light one is a .png like on every other page.
 const HEADER_LIGHT = '/images/header-image.png';
 const HEADER_DARK = '/images/header-image-dark.png';
-
-// Sample Gurdwaras; will come from the API by id later
-const GURDWARAS = [
-  { id: 1, name: 'Gurdwara Sikh Sangat Brampton', address: '32 Regan Rd, Brampton, ON, Canada' },
-  { id: 2, name: 'Gurudwara Nanaksar-Brampton', address: '64 Timberlane Dr, Brampton, ON, Canada' },
-  { id: 3, name: 'Sri Guru Nanak Sikh Centre Brampton', address: '99 Glidden Rd, Brampton, ON, Canada' },
-];
 
 // Services offered, with timings and capacity
 const SERVICES = [
@@ -92,7 +87,7 @@ const GurdwaraServices = ({ isDarkMode }) => {
   const { id } = useParams();
 
   // The Gurdwara for this URL (the first one if the id is unknown)
-  const selectedGurdwara = GURDWARAS.find((g) => g.id === parseInt(id, 10)) || GURDWARAS[0];
+  const selectedGurdwara = findGurdwara(id) || GURDWARAS[0];
 
   // If the header picture fails, try the light one once, then hide it
   const handleHeaderError = (e) => {

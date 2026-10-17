@@ -6,6 +6,10 @@
  *   - renders pages to images in the background, nearest pages first, and
  *     keeps at most CACHE_LIMIT of them in memory
  *   - two-page spreads on wide screens, one page on phones / portrait
+ *   - zoom from 100% to 400%: the − / + buttons, Ctrl + mouse wheel (or a
+ *     trackpad pinch), a two-finger pinch on touch screens, or the + / − / 0
+ *     keys. Zoomed pages are re-drawn sharper, and dragging moves around the
+ *     page instead of turning it
  *   - turn pages by dragging, tapping either half, the arrow buttons, the
  *     slider or the keyboard (arrows, Page Up/Down, Space, Home, End, Esc)
  *   - reports the current page through onProgress (used for History)
@@ -15,6 +19,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   FaTimes, FaExpand, FaCompress, FaChevronLeft, FaChevronRight, FaExternalLinkAlt, FaRedo,
+  FaSearchPlus, FaSearchMinus,
 } from 'react-icons/fa';
 import styles from './BookReader.module.css';
 import { safeUrl } from '../../utils/safeUrl';
@@ -50,6 +55,16 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+/* ---------------------------------------------------------------- zoom
+   1 = the page fits the screen. Buttons step through ZOOM_STEPS; pinch and
+   Ctrl + wheel zoom smoothly in between. Pages are never drawn taller than
+   MAX_RENDER_H pixels, which keeps memory use reasonable on phones. */
+const ZOOM_STEPS = [1, 1.25, 1.5, 2, 2.5, 3, 4];
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
+const MAX_RENDER_H = 3600;
+const RENDER_DELAY_MS = 250; // wait for zooming to settle before drawing sharper pages
+
 /* Spreads (two-page view): 0 = [ -, 1 ], 1 = [ 2, 3 ], 2 = [ 4, 5 ] ...
    so the cover sits alone on the right, like a real book. */
 const leftOf = (s) => (s === 0 ? null : 2 * s);
@@ -70,6 +85,8 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   // DOM nodes and the open PDF document
   const rootRef = useRef(null);
   const stageRef = useRef(null);
+  const areaRef = useRef(null); // the scrollable area around the book (scrolls when zoomed)
+  const wrapRef = useRef(null); // the book itself, used to keep the zoom centred on a point
   const pdfRef = useRef(null);
 
   // Loading state of the book
@@ -85,6 +102,14 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   const [flip, setFlip] = useState(null); // { a, x }: turning the leaf between position a and a+1, x 0..1
   const [images, setImages] = useState({}); // page number -> { src, h }
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
+
+  // Zoom (1 = fit) and the zoom the pages are drawn for (catches up after zooming stops)
+  const [zoom, setZoom] = useState(1);
+  const [renderZoom, setRenderZoom] = useState(1);
+  const zoomRef = useRef(1);
+  const anchorRef = useRef(null); // the point that should stay under the finger/cursor while zooming
+  const pointersRef = useRef(new Map()); // touches on the book, for pinch-to-zoom
+  const pinchRef = useRef(null);
 
   // Mirrors of state for animation / drag handlers (avoid stale values)
   const flipRef = useRef(null);
@@ -102,12 +127,16 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     return () => ro.disconnect();
   }, []);
 
-  // Page size that fits the stage (two pages side by side in spread view)
+  // One page on phones / portrait, two pages side by side on wide screens
   const spread = stage.w >= 760 && stage.w > stage.h * 1.05;
+
+  // Page size that fits the stage (two pages side by side in spread view), then zoomed
   const availW = Math.max(0, stage.w - (spread ? 48 : 24));
   const availH = Math.max(0, stage.h - 24);
-  const pageH = Math.floor(Math.min(availH, (spread ? availW / 2 : availW) / aspect));
-  const pageW = Math.floor(pageH * aspect);
+  const fitH = Math.floor(Math.min(availH, (spread ? availW / 2 : availW) / aspect));
+  const pageH = Math.floor(fitH * zoom);
+  const pageW = Math.floor(fitH * aspect * zoom);
+  const isZoomed = zoom > 1.001;
 
   // Keep the reader on the same page when switching between one- and two-page view
   const spreadRef = useRef(spread);
@@ -189,8 +218,10 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   const focusRef = useRef(1);
   const renderHRef = useRef(0);
 
+  // Draw pages for the settled zoom, sharp on high-density screens, within the size cap
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  renderHRef.current = Math.round(pageH * dpr);
+  const renderH = Math.min(MAX_RENDER_H, Math.round(fitH * renderZoom * dpr));
+  renderHRef.current = renderH;
 
   // Works through the queue of pages to render, one at a time, closest to the
   // reader first. Each page is drawn on a canvas and kept as a JPEG blob URL.
@@ -245,7 +276,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
 
   useEffect(() => {
     // Queue the pages around the current position whenever it changes
-    if (status !== 'ready' || !pageH) return;
+    if (status !== 'ready' || !renderH) return;
     const focus = spread ? Math.max(1, 2 * current) : current;
     focusRef.current = focus;
     const ahead = spread ? 6 : 3;
@@ -254,12 +285,73 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
       if (p >= 1 && p <= numPages) queueRef.current.add(p);
     }
     pump();
-  }, [status, current, spread, numPages, pageH, pump]);
+  }, [status, current, spread, numPages, renderH, pump]);
 
   // Free every image when the reader closes
   useEffect(() => () => {
     Object.values(imagesRef.current).forEach((img) => URL.revokeObjectURL(img.src));
   }, []);
+
+  /* ---------- Zoom ---------- */
+  /**
+   * Zoom to `value`, keeping the point under (clientX, clientY) where it is
+   * (the middle of the screen when no point is given).
+   */
+  const zoomAt = useCallback((value, clientX, clientY) => {
+    const next = clamp(Math.round(value * 100) / 100, MIN_ZOOM, MAX_ZOOM);
+    if (next === zoomRef.current) return;
+    const area = areaRef.current;
+    const book = wrapRef.current;
+    if (area && book) {
+      const box = area.getBoundingClientRect();
+      const r = book.getBoundingClientRect();
+      const x = clientX ?? box.left + box.width / 2;
+      const y = clientY ?? box.top + box.height / 2;
+      // Where that point is on the book, as a fraction of its size
+      anchorRef.current = { x, y, fx: r.width ? (x - r.left) / r.width : 0.5, fy: r.height ? (y - r.top) / r.height : 0.5 };
+    }
+    zoomRef.current = next;
+    setZoom(next);
+  }, []);
+
+  // After the bigger/smaller book is laid out, scroll so the anchor point is back under the cursor
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    const area = areaRef.current;
+    const book = wrapRef.current;
+    anchorRef.current = null;
+    if (!anchor || !area || !book) return;
+    const r = book.getBoundingClientRect();
+    area.scrollLeft += r.left + anchor.fx * r.width - anchor.x;
+    area.scrollTop += r.top + anchor.fy * r.height - anchor.y;
+  }, [zoom]);
+
+  // Draw sharper (or lighter) pages once zooming has stopped for a moment
+  useEffect(() => {
+    const t = setTimeout(() => setRenderZoom(zoom), RENDER_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [zoom]);
+
+  // Button steps: the next step up / down from the current zoom
+  const zoomIn = () => zoomAt(ZOOM_STEPS.find((z) => z > zoomRef.current + 0.01) ?? MAX_ZOOM);
+  const zoomOut = () => zoomAt([...ZOOM_STEPS].reverse().find((z) => z < zoomRef.current - 0.01) ?? MIN_ZOOM);
+  const zoomReset = () => zoomAt(1);
+
+  // Ctrl/⌘ + wheel (and trackpad pinch, which browsers report the same way) zooms at the cursor.
+  // Added directly because React's wheel listener can't stop the browser zooming the whole page.
+  const hasBookArea = fitH > 0; // the listener is (re)attached once the book area exists
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return undefined;
+    const onWheel = (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      // One mouse-wheel notch (deltaY 100) is about 20%; trackpad pinches send small steps
+      zoomAt(zoomRef.current * Math.exp(-e.deltaY * 0.002), e.clientX, e.clientY);
+    };
+    area.addEventListener('wheel', onWheel, { passive: false });
+    return () => area.removeEventListener('wheel', onWheel);
+  }, [zoomAt, status, hasBookArea]);
 
   /* ---------- Page turning ---------- */
   const canNext = status === 'ready' && current < maxIndex;
@@ -316,16 +408,64 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
 
-  /* Drag / swipe: the page follows the finger */
+  // Zoomed in and the page changes: start reading the new page from its top
+  useEffect(() => {
+    if (zoomRef.current > 1 && areaRef.current) areaRef.current.scrollTop = 0;
+  }, [current, spread]);
+
+  /* Drag / swipe: the page follows the finger. Two fingers pinch-zoom.
+     When zoomed in, dragging moves around the page instead of turning it. */
+  const pinchDistance = () => {
+    const [a, b] = [...pointersRef.current.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y) || 1;
+  };
+
   const onPointerDown = (e) => {
-    if (status !== 'ready' || flipRef.current || e.button > 0) return;
+    if (status !== 'ready' || e.button > 0) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Second finger down: start pinching (and let go of any half-turned page)
+    if (pointersRef.current.size === 2) {
+      if (dragRef.current?.mode === 'next' || dragRef.current?.mode === 'prev') {
+        animateTo(flipRef.current && flipRef.current.x > 0.5 ? 1 : 0);
+      }
+      dragRef.current = null;
+      pinchRef.current = { dist: pinchDistance(), zoom: zoomRef.current };
+      return;
+    }
+    if (flipRef.current || pointersRef.current.size > 2) return;
+
+    if (zoomRef.current > 1 && areaRef.current) {
+      const area = areaRef.current;
+      dragRef.current = {
+        mode: 'pan', id: e.pointerId, startX: e.clientX, startY: e.clientY,
+        left: area.scrollLeft, top: area.scrollTop,
+      };
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     dragRef.current = { startX: e.clientX, startY: e.clientY, rect, mode: null, id: e.pointerId };
   };
 
   const onPointerMove = (e) => {
+    if (pointersRef.current.has(e.pointerId)) {
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    // Pinch: zoom by how far the fingers moved apart, around the point between them
+    const pinch = pinchRef.current;
+    if (pinch && pointersRef.current.size >= 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      zoomAt(pinch.zoom * (pinchDistance() / pinch.dist), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      return;
+    }
     const drag = dragRef.current;
     if (!drag || drag.id !== e.pointerId) return;
+    if (drag.mode === 'pan') {
+      areaRef.current.scrollLeft = drag.left - (e.clientX - drag.startX);
+      areaRef.current.scrollTop = drag.top - (e.clientY - drag.startY);
+      return;
+    }
     const dx = e.clientX - drag.startX;
     if (!drag.mode) {
       if (Math.abs(dx) < 8) return;
@@ -347,9 +487,16 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   };
 
   const onPointerUp = (e) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pinchRef.current) {
+      // The pinch ends when fewer than two fingers remain
+      if (pointersRef.current.size < 2) pinchRef.current = null;
+      dragRef.current = null;
+      return;
+    }
     const drag = dragRef.current;
     dragRef.current = null;
-    if (!drag || drag.id !== e.pointerId) return;
+    if (!drag || drag.id !== e.pointerId || drag.mode === 'pan') return;
     if (drag.mode) {
       const { x } = flipRef.current;
       const target = drag.mode === 'next' ? (x > 0.22 ? 1 : 0) : (x < 0.78 ? 0 : 1);
@@ -363,8 +510,12 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     else goPrev();
   };
 
-  const onPointerCancel = () => {
-    if (dragRef.current?.mode && flipRef.current) animateTo(flipRef.current.x > 0.5 ? 1 : 0);
+  const onPointerCancel = (e) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    if (dragRef.current?.mode && dragRef.current.mode !== 'pan' && flipRef.current) {
+      animateTo(flipRef.current.x > 0.5 ? 1 : 0);
+    }
     dragRef.current = null;
   };
 
@@ -372,10 +523,23 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   useEffect(() => {
     const onKey = (e) => {
       if (e.target instanceof HTMLInputElement && e.key !== 'Escape') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        // Ctrl + / Ctrl − zoom the book rather than the whole website
+        if (['+', '=', '-', '0'].includes(e.key) && status === 'ready') {
+          e.preventDefault();
+          if (e.key === '0') zoomReset(); else if (e.key === '-') zoomOut(); else zoomIn();
+        }
+        return;
+      }
       if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); goNext(); }
       else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); goPrev(); }
       else if (e.key === 'Home') jumpTo(minIndex);
       else if (e.key === 'End') jumpTo(maxIndex);
+      else if ((e.key === '+' || e.key === '=') && status === 'ready') zoomIn();
+      else if (e.key === '-' && status === 'ready') zoomOut();
+      else if (e.key === '0' && status === 'ready') zoomReset();
+      // Escape: first back to 100%, then out of the reader
+      else if (e.key === 'Escape' && zoomRef.current > 1) zoomReset();
       else if (e.key === 'Escape' && !document.fullscreenElement) onClose();
     };
     window.addEventListener('keydown', onKey);
@@ -528,6 +692,27 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
           {shownPages && <span className={styles.pageInfo} aria-live="polite">{shownPages}</span>}
         </div>
         <div className={styles.topActions}>
+          {/* Zoom out / reset (shows the current zoom) / zoom in */}
+          {status === 'ready' && !errorMessage && (
+            <div className={styles.zoomGroup} role="group" aria-label="Zoom">
+              <button type="button" onClick={zoomOut} disabled={!isZoomed} aria-label="Zoom out" title="Zoom out (−)">
+                <FaSearchMinus aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className={styles.zoomValue}
+                onClick={zoomReset}
+                disabled={!isZoomed}
+                aria-label={`Zoom ${Math.round(zoom * 100)}%. Reset to fit`}
+                title="Fit to screen (0)"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <button type="button" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} aria-label="Zoom in" title="Zoom in (+)">
+                <FaSearchPlus aria-hidden="true" />
+              </button>
+            </div>
+          )}
           {document.fullscreenEnabled && (
             <button
               type="button"
@@ -572,14 +757,20 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
           </div>
         ) : (
           <div
-            className={styles.bookArea}
+            ref={areaRef}
+            className={`${styles.bookArea} ${isZoomed ? styles.bookAreaZoomed : ''}`}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerCancel}
           >
-            {renderBook()}
-            <div className={styles.floorShadow} style={{ width: spread ? pageW * 2 : pageW }} aria-hidden="true" />
+            {/* margin:auto centres the book while it fits, and lets every edge be scrolled to once zoomed */}
+            <div ref={wrapRef} className={styles.bookWrap}>
+              {renderBook()}
+              {!isZoomed && (
+                <div className={styles.floorShadow} style={{ width: spread ? pageW * 2 : pageW }} aria-hidden="true" />
+              )}
+            </div>
           </div>
         )}
       </div>

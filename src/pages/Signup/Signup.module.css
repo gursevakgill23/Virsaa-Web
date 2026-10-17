@@ -400,11 +400,15 @@
   transform-origin: left center;
 }
 
+/* A real photo from S3 (SitePicture: a soft placeholder until it loads) */
 .perksImage {
+  display: block;
   width: 100%;
-  max-height: 200px;
-  object-fit: contain;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 20px;
   margin-bottom: 18px;
+  box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.55);
 }
 
 .perksTitle {
@@ -730,4 +734,38 @@
   .captcha > div {
     transform: scale(0.88);
   }
+}
+
+/* ---------- "Check your email" (after signing up) ---------- */
+.sentPanel {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.sentIcon {
+  font-size: 2.8rem;
+  color: var(--primary-color);
+}
+
+.sentAddress {
+  color: var(--headline-color);
+  word-break: break-all;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  text-decoration: none;
+}
+
+.sentHint {
+  margin-top: 6px;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--secondary-text-color);
 }
