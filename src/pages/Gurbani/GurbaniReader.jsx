@@ -101,7 +101,7 @@ const GurbaniReader = ({
       if (id !== requestId.current) return;
       const code = err?.response?.data?.code;
       if ((code === 'login_required' || code === 'premium_required' || err?.response?.status === 401) && onLockedRef.current) {
-        onLockedRef.current(code || 'login_required');
+        onLockedRef.current(code || 'login_required', err?.response?.data?.required_plan);
         return;
       }
       setError(describeApiError(err, 'The Gurbani text couldn’t be loaded. Check your connection and try again.'));

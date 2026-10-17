@@ -56,7 +56,8 @@ const plans = [
     monthly: 9.99,
     blurb: 'Everything in the library, without ads.',
     features: [
-      { icon: <FaBookOpen />, text: 'Access to all content' },
+      { icon: <FaBookOpen />, text: 'All books and audiobooks' },
+      { icon: <FaBookOpen />, text: 'Standard Gurbani: Sukhmani Sahib, Asa Di Var and more' },
       { icon: <FaAd />, text: 'Ad-free experience' },
       { icon: <FaDownload />, text: 'Download 20 items a month' },
       { icon: <FaStar />, text: 'Early access to new releases' },
@@ -71,6 +72,7 @@ const plans = [
     blurb: 'Unlimited, with priority help.',
     features: [
       { icon: <FaBookOpen />, text: 'Access to all content' },
+      { icon: <FaBookOpen />, text: 'All Gurbani, including Premium shabads and katha' },
       { icon: <FaAd />, text: 'Ad-free experience' },
       { icon: <FaDownload />, text: 'Unlimited downloads' },
       { icon: <FaStar />, text: 'Early access to new releases' },
@@ -83,7 +85,8 @@ const plans = [
 // true = included, false = not included, string = shown as text
 // Rows of the comparison table
 const comparison = [
-  { feature: 'Access to all content', values: [false, true, true] },
+  { feature: 'All books and audiobooks', values: [false, true, true] },
+  { feature: 'Gurbani', values: ['Free collection', 'Free + Standard', 'Everything'] },
   { feature: 'Ad-free experience', values: [false, true, true] },
   { feature: 'Downloads', values: ['5 / month', '20 / month', 'Unlimited'] },
   { feature: 'Early access', values: [false, true, true] },

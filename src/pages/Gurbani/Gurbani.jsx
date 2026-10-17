@@ -15,8 +15,11 @@
  * On the page:
  *   - search (typed, or by voice where the browser supports it), type filters
  *     and category tabs (Nitnem, Kirtan, Katha...)
- *   - 10 items per page, shown as rows. Premium items show "Unlock to …" for
- *     visitors without a membership (no Premium label), leading to /premium
+ *   - 10 items per page, shown as rows. Each item is Free (any account),
+ *     Standard (Standard or Premium plan) or Premium (Premium plan only);
+ *     paid items carry their level, and when the visitor's plan doesn't
+ *     include one its button says "Unlock to …" and leads to /premium.
+ *     Daily Nitnem and the Hukamnama are always free.
  *   - audio/video open in a player with play/pause, previous/next, seek,
  *     volume, full screen and "Read along" (the words under the player)
  *   - shabads open in the reader; opens and plays are recorded in History
@@ -27,11 +30,11 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   FaCrown, FaSearch, FaTimes, FaVideo, FaHeadphones, FaLock, FaMicrophone, FaPlay, FaPause,
-  FaStepBackward, FaStepForward, FaVolumeUp, FaExpand, FaBookOpen, FaRedo,
+  FaStepBackward, FaStepForward, FaVolumeUp, FaExpand, FaBookOpen, FaRedo, FaStar,
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
 import useHistoryRecorder from '../../hooks/useHistoryRecorder';
-import useMembership from '../../hooks/useMembership';
+import useMembership, { PLAN_NAMES, PLAN_RANK } from '../../hooks/useMembership';
 import { gurbaniApi } from '../../api/sikhismApi';
 import { describeApiError } from '../../utils/apiError';
 import { safeUrl } from '../../utils/safeUrl';
@@ -61,8 +64,18 @@ const FILTERS = [
   { id: 'shabad', label: 'Shabad', icon: <FaBookOpen /> },
   { id: 'audio', label: 'Audio kirtan', icon: <FaHeadphones /> },
   { id: 'video', label: 'Video kirtan', icon: <FaVideo /> },
+  { id: 'standard', label: 'Standard', icon: <FaStar /> },
   { id: 'premium', label: 'Premium', icon: <FaCrown /> },
 ];
+const LEVEL_FILTERS = ['standard', 'premium'];
+
+// Who can open an item: free = any account, standard = the Standard or Premium plan,
+// premium = the Premium plan only (the server checks it again when something is opened)
+const ACCESS_LEVELS = ['free', 'standard', 'premium'];
+const LEVEL_META = {
+  standard: { label: 'Standard', icon: <FaStar /> },
+  premium: { label: 'Premium', icon: <FaCrown /> },
+};
 
 // Label and icon per content type
 const TYPE_META = {
@@ -107,7 +120,8 @@ const toPageItem = (raw) => {
     ang: raw.ang || null,
     raag: raw.raag || '',
     lineCount: raw.line_count || null,
-    isPremium: Boolean(raw.is_premium),
+    // older servers only said is_premium (= Standard)
+    access: ACCESS_LEVELS.includes(raw.access) ? raw.access : (raw.is_premium ? 'standard' : 'free'),
     hasText: Boolean(raw.has_text),
     hasMedia: Boolean(raw.has_media),
     hasPdf: Boolean(raw.has_pdf),
@@ -125,8 +139,9 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   const recordHistory = useHistoryRecorder(apiString);
   const getImagePath = useProductionImagePath();
   const navigate = useNavigate();
-  const { isLoggedIn, accessToken } = useAuth();
-  const { isMember } = useMembership(apiString);
+  const { isLoggedIn, accessToken, userData } = useAuth();
+  const { plan } = useMembership(apiString);
+  const isStaff = Boolean(userData?.is_staff);
 
   const header_image_light = '/images/header-image.png';
   const header_image_dark = '/images/header-image-dark.png';
@@ -169,7 +184,11 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   const tokenRef = useRef(accessToken);
   tokenRef.current = accessToken;
 
-  const isLocked = useCallback((item) => item.isPremium && !isMember, [isMember]);
+  // Locked when the visitor's plan is below the item's level (staff can open everything)
+  const isLocked = useCallback(
+    (item) => item.access !== 'free' && !isStaff && (PLAN_RANK[plan] || 0) < PLAN_RANK[item.access],
+    [plan, isStaff],
+  );
 
   // Button text for a row (unlock, read, listen, watch)
   const actionLabel = (item) => {
@@ -208,13 +227,16 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   }, [apiString]);
 
   // ---------------------------------------------------------------- access
-  // Server said no: sign in, or a plan is needed
-  const handleLocked = useCallback((code) => {
+  // Server said no: sign in, or a plan is needed (`needed`: 'standard' | 'premium', when it says)
+  const handleLocked = useCallback((code, needed) => {
     setReader(null);
     setShowMediaModal(false);
     document.body.style.overflow = 'auto';
     if (code === 'premium_required') {
-      toast.info('This is part of Virsaa membership. Choose a plan to unlock it.', { toastId: 'gurbani-premium' });
+      const message = LEVEL_META[needed]
+        ? `This is part of the ${PLAN_NAMES[needed]} plan. Choose a plan to unlock it.`
+        : 'This is part of Virsaa membership. Choose a plan to unlock it.';
+      toast.info(message, { toastId: 'gurbani-premium' });
       navigate('/premium');
     } else {
       toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'guest-locked' });
@@ -244,7 +266,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       if (id !== mediaRequest.current) return;
       const code = err?.response?.data?.code;
       if (code === 'login_required' || code === 'premium_required' || err?.response?.status === 401) {
-        handleLocked(code || 'login_required');
+        handleLocked(code || 'login_required', err?.response?.data?.required_plan);
         return;
       }
       setMedia({ status: 'error', message: describeApiError(err, 'This recording couldn’t be loaded. Try again.') });
@@ -364,7 +386,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       tab?.close();
       const code = err?.response?.data?.code;
       if (code === 'login_required' || code === 'premium_required') {
-        handleLocked(code);
+        handleLocked(code, err?.response?.data?.required_plan);
         return;
       }
       toast.error(describeApiError(err, 'The PDF couldn’t be opened. Try again.'));
@@ -372,7 +394,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   };
 
   // ---------------------------------------------------------------- open
-  // Row/tile action. Guests sign in first; locked premium items go to /premium.
+  // Row/tile action. Guests sign in first; items above the visitor's plan go to /premium.
   const openItem = (item) => {
     if (!isLoggedIn) {
       toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'guest-locked' });
@@ -380,6 +402,8 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       return;
     }
     if (isLocked(item)) {
+      toast.info(`“${item.title}” is part of the ${PLAN_NAMES[item.access]} plan. Choose a plan to unlock it.`,
+        { toastId: 'gurbani-premium' });
       navigate('/premium');
       return;
     }
@@ -452,12 +476,11 @@ const Gurbani = ({ isDarkMode, apiString }) => {
         .some((field) => field && field.toLowerCase().includes(q)));
     }
     if (selectedFilters.length > 0) {
-      results = results.filter((item) => {
-        if (selectedFilters.includes('premium') && !item.isPremium) return false;
-        const typeFilters = selectedFilters.filter((f) => f !== 'premium');
-        if (typeFilters.length && !typeFilters.includes(item.type)) return false;
-        return true;
-      });
+      // Levels (Standard, Premium) and types (Shabad, Audio, Video): any of the chosen ones in each group
+      const levels = selectedFilters.filter((f) => LEVEL_FILTERS.includes(f));
+      const types = selectedFilters.filter((f) => !LEVEL_FILTERS.includes(f));
+      results = results.filter((item) => (!levels.length || levels.includes(item.access))
+        && (!types.length || types.includes(item.type)));
     }
     if (category) results = results.filter((item) => item.category === category);
     return results;
@@ -672,6 +695,12 @@ const Gurbani = ({ isDarkMode, apiString }) => {
                     <div className={styles.rowBody}>
                       <p className={styles.rowType}>
                         <span aria-hidden="true">{TYPE_META[item.type].icon}</span> {TYPE_META[item.type].label}
+                        {LEVEL_META[item.access] && (
+                          <span className={`${styles.levelTag} ${styles[`level_${item.access}`]}`}>
+                            <span aria-hidden="true">{LEVEL_META[item.access].icon}</span>
+                            {LEVEL_META[item.access].label}
+                          </span>
+                        )}
                       </p>
                       <h3 className={styles.rowTitle}>{item.title}</h3>
                       {item.titleGurmukhi && <p className={styles.rowGurmukhi} lang="pa">{item.titleGurmukhi}</p>}
@@ -741,6 +770,12 @@ const Gurbani = ({ isDarkMode, apiString }) => {
               : items.filter((item) => item.title !== lastViewed).slice(0, 6).map((item, index) => (
                   <article key={item.id} className={`${styles.arch} ${styles[`archTone${index % 3}`]}`}>
                     <span className={styles.archIcon} aria-hidden="true">{TYPE_META[item.type].icon}</span>
+                    {LEVEL_META[item.access] && (
+                      <span className={`${styles.levelTag} ${styles.archLevel} ${styles[`level_${item.access}`]}`}>
+                        <span aria-hidden="true">{LEVEL_META[item.access].icon}</span>
+                        {LEVEL_META[item.access].label}
+                      </span>
+                    )}
                     <h3 className={styles.archTitle}>{item.title}</h3>
                     <p className={styles.archText}>{item.description}</p>
                     <button
