@@ -5,14 +5,19 @@
  * a comparison table, FAQs and a closing call to action.
  * The user's current plan is marked "Current", and other plans read as
  * Upgrade or Downgrade (useMembership). Choosing a plan opens Checkout.
+ * Plans that can also be taken with reward coins say how many and link to
+ * My Rewards (reward_cost from /api/payments/products/).
  * -----------------------------------------------------------------------------
  */
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaCheck, FaTimes, FaStar, FaDownload, FaAd, FaHeadset, FaBookOpen, FaChevronDown, FaCrown } from 'react-icons/fa';
 import { toast } from '../../utils/notify';
 import PageHero from '../../components/PageHero/PageHero';
 import useMembership, { PLAN_RANK } from '../../hooks/useMembership';
+import paymentsApi from '../../api/paymentsApi';
+import { formatCoins } from '../../api/rewardsApi';
+import RewardCoin from '../../components/RewardCoin/RewardCoin';
 import styles from './Membership.module.css';
 
 // Header pictures
@@ -123,6 +128,21 @@ const Membership = ({ isDarkMode, apiString }) => {
   const yearly = billing === 'yearly';
   const navigate = useNavigate();
 
+  // Plans that can also be taken with reward coins (My Rewards): { 'standard_monthly': 1000 }
+  const [rewardCosts, setRewardCosts] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    paymentsApi.products(apiString, 'membership')
+      .then((data) => {
+        if (cancelled) return;
+        const costs = {};
+        (data?.products || []).forEach((p) => { if (p.reward_cost) costs[`${p.plan}_${p.billing}`] = p.reward_cost; });
+        setRewardCosts(costs);
+      })
+      .catch(() => {});   // the plans still show without it
+    return () => { cancelled = true; };
+  }, [apiString]);
+
   // Choosing a plan opens checkout with that plan and the selected billing period
   const handleChoosePlan = (planTitle) => {
     if (!planTitle) {
@@ -224,6 +244,11 @@ const Membership = ({ isDarkMode, apiString }) => {
                   <span className={styles.per}>/{yearly ? 'year' : 'month'}</span>
                 </p>
                 {yearly && <p className={styles.planSub}>${(price / 12).toFixed(2)} a month, billed yearly</p>}
+                {rewardCosts[`${plan.key}_${billing}`] && (
+                  <Link to="/my-rewards#use" className={styles.rewardAlt}>
+                    <RewardCoin size={16} /> or {formatCoins(rewardCosts[`${plan.key}_${billing}`])} reward coins
+                  </Link>
+                )}
                 <ul className={styles.featuresList}>
                   {plan.features.map((feature) => (
                     <li key={feature.text} className={styles.featureItem}>

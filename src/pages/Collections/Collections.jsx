@@ -5,17 +5,20 @@
  *   - tabs switch between Ebooks, Audiobooks and Authors (the URL decides which)
  *   - search by title/author, rating and genre filters, 12 cards per page
  *   - featured rows underneath: trending ebooks, featured authors, latest audiobooks
+ *   - "Share a book": a button in the header and a note under the grid
+ *     (ebooks and audiobooks) that open /share-a-book (pages/Rewards)
  * Data: the three public /collections/ lists, loaded together; if all three
  * fail, a message with "Try again" is shown.
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaSearch, FaTimes, FaBook, FaRegFileAudio, FaFeatherAlt, FaStar, FaClock } from 'react-icons/fa';
+import { FaSearch, FaTimes, FaBook, FaRegFileAudio, FaFeatherAlt, FaStar, FaClock, FaPlus } from 'react-icons/fa';
 import axios from 'axios';
 import PageHero from '../../components/PageHero/PageHero';
 import { CoverPicture } from '../../components/SitePicture/SitePicture';
 import Avatar from '../../components/Avatar/Avatar';
+import RewardCoin from '../../components/RewardCoin/RewardCoin';
 import styles from './Collections.module.css';
 
 // Public/static images
@@ -160,6 +163,9 @@ const Collections = ({ isDarkMode, apiString }) => {
     document.getElementById('collection-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // "Share a book" opens on the kind of book being browsed
+  const shareType = currentSection === 'audiobooks' ? 'audiobook' : currentSection === 'ebooks' ? 'ebook' : '';
+
   // ---------- Card renderers ----------
   // Card layouts for each kind of item
   const BookCard = ({ item }) => (
@@ -217,18 +223,23 @@ const Collections = ({ isDarkMode, apiString }) => {
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Collections', to: '/collections' }, { label: sectionLabel }]}
       >
         <div className={styles.heroTools}>
-          <nav className={styles.sectionTabs} aria-label="Collection type">
-            {SECTIONS.map((s) => (
-              <Link
-                key={s.id}
-                to={`/collections/${s.id}`}
-                className={`${styles.sectionTab} ${currentSection === s.id ? styles.sectionTabActive : ''}`}
-                aria-current={currentSection === s.id ? 'page' : undefined}
-              >
-                <span aria-hidden="true">{s.icon}</span> {s.label}
-              </Link>
-            ))}
-          </nav>
+          <div className={styles.tabRow}>
+            <nav className={styles.sectionTabs} aria-label="Collection type">
+              {SECTIONS.map((s) => (
+                <Link
+                  key={s.id}
+                  to={`/collections/${s.id}`}
+                  className={`${styles.sectionTab} ${currentSection === s.id ? styles.sectionTabActive : ''}`}
+                  aria-current={currentSection === s.id ? 'page' : undefined}
+                >
+                  <span aria-hidden="true">{s.icon}</span> {s.label}
+                </Link>
+              ))}
+            </nav>
+            <Link to={`/share-a-book${shareType ? `?type=${shareType}` : ''}`} className={styles.shareLink}>
+              <FaPlus aria-hidden="true" /> Share a book
+            </Link>
+          </div>
           <form className={styles.searchBar} role="search" onSubmit={(e) => e.preventDefault()}>
             <FaSearch className={styles.searchIcon} aria-hidden="true" />
             <input
@@ -324,6 +335,28 @@ const Collections = ({ isDarkMode, apiString }) => {
           </nav>
         )}
       </section>
+
+      {/* ---------- Share a book ---------- */}
+      {shareType && (
+        <section className={styles.section} aria-labelledby="share-title">
+          <div className={styles.shareBanner}>
+            <span className={styles.shareCoin}><RewardCoin size={64} shine /></span>
+            <div className={styles.shareText}>
+              <h2 id="share-title">Have a Punjabi {shareType === 'audiobook' ? 'recording' : 'book'} to share?</h2>
+              <p>
+                Send it to Virsaa. When it passes our review it joins the library and you earn reward coins,
+                for game coins, a membership or printed books.
+              </p>
+            </div>
+            <div className={styles.shareActions}>
+              <Link to={`/share-a-book?type=${shareType}`} className={styles.shareButton}>
+                <FaPlus aria-hidden="true" /> Share {shareType === 'audiobook' ? 'an audiobook' : 'an ebook'}
+              </Link>
+              <Link to="/my-rewards" className={styles.textLink}>How rewards work</Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ---------- Featured rows ---------- */}
       {featuredAuthors.length > 0 && (

@@ -21,8 +21,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight,
   FaStar, FaRegStar, FaPlay, FaPause, FaHeadphones, FaClock, FaLock, FaChevronDown,
-  FaUndoAlt, FaRedoAlt, FaYoutube, FaExternalLinkAlt, FaMicrophone,
-} from 'react-icons/fa';
+  FaUndoAlt, FaRedoAlt, FaYoutube, FaExternalLinkAlt, FaMicrophone, FaHandHoldingHeart } from 'react-icons/fa';
 import styles from './AudiobookDetail.module.css';
 import PageHero from '../../../components/PageHero/PageHero';
 import Loader from '../../../components/VirsaaLoader/Loader';
@@ -111,6 +110,8 @@ const toAudiobook = (data, authorName) => {
     media: youtube?.videoId ? 'youtube' : data.media === 'file' ? 'file' : null,
     youtube,
     chapters,
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    sharedBy: data.shared_by?.name || '',
   };
 };
 
@@ -317,7 +318,8 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
       return;
     }
     if (!audioRef.current) return;
-    audioRef.current.currentTime = 0;
+    // Our own recordings: a chapter is a point in the one file (start_seconds)
+    audioRef.current.currentTime = Number(chapter?.start_seconds) || 0;
     audioRef.current.play().then(handlePlayStarted).catch(() => setIsPlaying(false));
   };
 
@@ -455,6 +457,16 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                   </span>
                 )}
               </div>
+
+              {/* Recordings shared by listeners (My Rewards): their tags and who shared it */}
+              {(audiobook.sharedBy || audiobook.tags.length > 0) && (
+                <div className={styles.sharedRow}>
+                  {audiobook.tags.map((tag) => <span key={tag} className={styles.tagPill}>{tag}</span>)}
+                  {audiobook.sharedBy && (
+                    <span className={styles.sharedBy}><FaHandHoldingHeart aria-hidden="true" /> Shared by {audiobook.sharedBy}</span>
+                  )}
+                </div>
+              )}
 
               <div className={styles.description}>
                 <p className={styles.descText}>{showFullDescription ? audiobook.description : firstParagraph}</p>

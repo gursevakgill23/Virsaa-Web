@@ -7,7 +7,8 @@
  *   - right: search (also Ctrl/Cmd+K or "/"), language, light/dark, the side
  *     panel button, and either Login/Premium or the user's avatar
  *   - the avatar opens the account panel (profile, settings, favourites,
- *     history, notifications with the unread count, plan card, log out)
+ *     history, notifications with the unread count, My Rewards with the
+ *     reward coin balance, plan card, log out)
  * On phones, swiping left on the navbar opens the side panel.
  * -----------------------------------------------------------------------------
  */
@@ -36,6 +37,8 @@ import useMembership from '../../hooks/useMembership';
 import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
 import useUnreadNotifications, { refreshUnread } from '../../hooks/useUnreadNotifications';
 import Avatar from '../Avatar/Avatar';
+import RewardCoin from '../RewardCoin/RewardCoin';
+import rewardsApi, { formatCoins } from '../../api/rewardsApi';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -65,6 +68,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [profileData, setProfileData] = useState(null);
+  const [rewardBalance, setRewardBalance] = useState(null);
   const navbarRef = useRef(null);
   const navigate = useNavigate();
   // Signed-in user, their plan and their unread notification count
@@ -81,6 +85,16 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
       refreshUnread();
     }
   }, [showProfileSidebar, refreshMembership]);
+
+  // The reward coin balance next to My Rewards (quietly left out if it can't be loaded)
+  useEffect(() => {
+    if (!showProfileSidebar || !accessToken) return undefined;
+    let cancelled = false;
+    rewardsApi.summary(apiString, accessToken)
+      .then((data) => { if (!cancelled) setRewardBalance(data?.balance ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [showProfileSidebar, accessToken, apiString]);
 
   // What the plan card in the account panel says
   const planCard = (() => {
@@ -378,7 +392,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
                 </div>
               </section>
 
-              {/* The five account pages */}
+              {/* The account pages, and My Rewards */}
               <nav className={styles.accountLinks} aria-label="Account pages">
               <Link to="/my-profile" className={styles.accountLink} onClick={closeProfileSidebar}>
                 <span className={styles.accountLinkIcon}><FaUser /></span>
@@ -410,6 +424,16 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
                 )}
                 <FaChevronRight className={styles.accountLinkArrow} aria-hidden="true" />
               </Link>
+              <Link to="/my-rewards" className={styles.accountLink} onClick={closeProfileSidebar}>
+                <span className={`${styles.accountLinkIcon} ${styles.rewardsIcon}`}><RewardCoin size={22} /></span>
+                <span>My Rewards</span>
+                {rewardBalance !== null && (
+                  <span className={styles.rewardCount}>
+                    {formatCoins(rewardBalance)}<span className={styles.srOnlyText}> reward coins</span>
+                  </span>
+                )}
+                <FaChevronRight className={styles.accountLinkArrow} aria-hidden="true" />
+              </Link>
               </nav>
 
               {/* Plan card: Get Premium / Upgrade / Change plan, depending on the current plan */}
@@ -417,6 +441,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
                 <span className={styles.premiumIcon} aria-hidden="true"><FaCrown /></span>
                 <span>
                   <strong>{planCard.title}</strong>
+                  {membership.isMember && <em className={styles.premiumCurrent}>Current plan: {membership.planName}</em>}
                   <small>{planCard.text}</small>
                 </span>
               </Link>

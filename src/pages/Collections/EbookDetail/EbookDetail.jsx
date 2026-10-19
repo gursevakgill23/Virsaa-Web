@@ -15,8 +15,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar,
-  FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown, FaDownload,
-} from 'react-icons/fa';
+  FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown, FaDownload, FaHandHoldingHeart } from 'react-icons/fa';
 import { toast } from '../../../utils/notify';
 import styles from './EbookDetail.module.css';
 import PageHero from '../../../components/PageHero/PageHero';
@@ -369,7 +368,18 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                 {ebook.pages > 0 && <span className={styles.metaPill}><FaBookOpen aria-hidden="true" /> {ebook.pages} pages</span>}
                 <span className={styles.metaPill}><FaFilePdf aria-hidden="true" /> PDF</span>
                 {ebook.chapters.length > 0 && <span className={styles.metaPill}>{ebook.chapters.length} chapters</span>}
+                {ebook.genre && <span className={styles.metaPill}>{ebook.genre}</span>}
               </div>
+
+              {/* Books shared by readers (My Rewards): their tags and who shared it */}
+              {(ebook.shared_by || (ebook.tags || []).length > 0) && (
+                <div className={styles.sharedRow}>
+                  {(ebook.tags || []).map((tag) => <span key={tag} className={styles.tagPill}>{tag}</span>)}
+                  {ebook.shared_by?.name && (
+                    <span className={styles.sharedBy}><FaHandHoldingHeart aria-hidden="true" /> Shared by {ebook.shared_by.name}</span>
+                  )}
+                </div>
+              )}
 
               {description && (
                 <div className={styles.description}>

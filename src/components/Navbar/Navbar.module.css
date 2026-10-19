@@ -704,6 +704,31 @@ body, html {
   margin-left: 0;
 }
 
+/* My Rewards: the reward coin and its balance */
+.rewardsIcon {
+  background: rgba(242, 193, 78, 0.16);
+}
+
+.rewardCount {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #6b4300;
+  background: #fff1c9;
+}
+
+[data-theme='dark'] .rewardCount {
+  color: #ffd98a;
+  background: rgba(242, 193, 78, 0.14);
+}
+
+.rewardCount + .accountLinkArrow {
+  margin-left: 0;
+}
+
 .srOnlyText {
   position: absolute;
   width: 1px;

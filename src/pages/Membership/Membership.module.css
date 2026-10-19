@@ -325,6 +325,32 @@
   color: var(--secondary-text-color);
 }
 
+/* "or 1,000 reward coins": the same plan from My Rewards */
+.rewardAlt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #8a5a07;
+  text-decoration: underline;
+  text-decoration-color: rgba(138, 90, 7, 0.35);
+  text-underline-offset: 3px;
+}
+
+[data-theme='dark'] .rewardAlt {
+  color: #ffd98a;
+  text-decoration-color: rgba(255, 217, 138, 0.35);
+}
+
+.popular .rewardAlt {
+  align-self: center;
+  color: #ffe2a0;
+  text-decoration-color: rgba(255, 226, 160, 0.4);
+}
+
 .featuresList {
   list-style: none;
   margin: 22px 0 26px;

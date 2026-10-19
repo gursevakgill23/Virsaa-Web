@@ -692,3 +692,37 @@
   }
 
 }
+
+/* Shared by a reader (rewards): tags and the credit */
+.sharedRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tagPill {
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.sharedBy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--secondary-text-color);
+}
+
+.sharedBy svg {
+  color: #c98a12;
+}
+
+[data-theme='dark'] .sharedBy svg {
+  color: #f2c14e;
+}

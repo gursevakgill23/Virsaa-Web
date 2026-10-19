@@ -72,6 +72,9 @@ const Notifications = lazy(() => import('./pages/Profile/Notifications/Notificat
 const LearningMaterial = lazy(() => import('./pages/Learning/LearningMaterial/LearningMaterial'));
 const NotFound = lazy(() => import('./pages/NotFound/NotFound'));
 const PictureCredits = lazy(() => import('./pages/PictureCredits/PictureCredits'));
+// Sharing books and the reward coins people earn for them (pages/Rewards)
+const MyRewards = lazy(() => import('./pages/Rewards/MyRewards'));
+const ShareBook = lazy(() => import('./pages/Rewards/ShareBook'));
 
 // Base URL of the Django API, set in .env / Vercel as REACT_APP_API_URL
 const API_STRING = process.env.REACT_APP_API_URL;
@@ -271,6 +274,8 @@ const App = () => {
                 <Route path="/my-favorites" element={<MyFavorites {...pageProps} toggleTheme={toggleTheme} />} />
                 <Route path="/history" element={<History {...pageProps} toggleTheme={toggleTheme} />} />
                 <Route path="/notifications" element={<Notifications {...pageProps} toggleTheme={toggleTheme} />} />
+                <Route path="/my-rewards" element={<MyRewards {...pageProps} />} />
+                <Route path="/share-a-book" element={<ShareBook {...pageProps} />} />
 
                 {/* Membership and payments */}
                 <Route path="/premium" element={<Membership {...pageProps} />} />
