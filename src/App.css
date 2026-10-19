@@ -178,10 +178,14 @@ body.no-scroll {
   overflow: hidden;
 }
 
-/* Leave room for the floating bottom navbar on phones */
+/* Leave room for the floating bottom navbar on phones (games hide the navbar) */
 @media (max-width: 767.98px) {
   body {
     padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  body.game-page {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
 }
 

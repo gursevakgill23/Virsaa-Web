@@ -1,7 +1,7 @@
 /**
  * pages/Learning/Games/useGameWallet.js
  * -----------------------------------------------------------------------------
- * React hook shared by both games and the game profile card.
+ * React hook shared by all the games and the game profile card.
  * -----------------------------------------------------------------------------
  *
  * Coins, XP, welcome bonus and the player's game name/avatar.
@@ -224,6 +224,13 @@ export default function useGameWallet({ apiString, accessToken, isLoggedIn, game
     }
   }, [online, apiString, accessToken, applyServer, saveGuest]);
 
+  /** Rewards a guest earned in a map game (pages/Learning/Arcade): kept in this browser. */
+  const addGuestRewards = useCallback(({ coins = 0, xp = 0 }) => {
+    if (online) return;
+    const w = walletRef.current;
+    saveGuest({ ...w, coins: w.coins + coins, xp: w.xp + xp });
+  }, [online, saveGuest]);
+
   return {
     ...wallet,
     online,
@@ -234,5 +241,7 @@ export default function useGameWallet({ apiString, accessToken, isLoggedIn, game
     earn,
     submitResult,
     saveProfile,
+    applyWallet: applyServer,   // a wallet the server sent back with a result
+    addGuestRewards,
   };
 }

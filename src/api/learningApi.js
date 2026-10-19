@@ -2,7 +2,8 @@
  * api/learningApi.js
  * -----------------------------------------------------------------------------
  * Calls to the Django learning API (/api/learning/...): lessons, quizzes,
- * tournaments, the word games, the coin wallet, badges and leaderboards.
+ * tournaments, the word games, the ten map games, the coin wallet, badges
+ * and leaderboards.
  *
  * Every function takes the API base address and (where needed) the signed-in
  * user's access token, and returns a Promise with the response body.
@@ -76,6 +77,22 @@ const learningApi = {
 
   // Public leaderboards
   leaderboard: (api, params) => get(api, null, '/leaderboard/', params),
+
+  // Every badge there is (for guests: what they could earn)
+  badges: (api) => get(api, null, '/badges/'),
+
+  // The ten map games (pages/Learning/Arcade): pass the token so signed-in players get their stars
+  arcadeGames: (api, token) => get(api, token, '/games/'),
+  arcadeGame: (api, token, slug) => get(api, token, `/games/${seg(slug)}/`),
+  arcadeContent: (api, token, slug, stage) => get(api, token, `/games/${seg(slug)}/content/`, { stage }),
+  // result: { stage, score (0-1000), time_taken_seconds, completed, details }
+  arcadeSubmit: (api, token, slug, result) => post(api, token, `/games/${seg(slug)}/submit/`, result),
+  arcadeLeaderboard: (api, token, slug, period = 'all', limit = 10) =>
+    get(api, token, `/games/${seg(slug)}/leaderboard/`, { period, limit }),
+  // Shabad-le is marked on the server
+  shabadPuzzle: (api, token, params) => get(api, token, '/games/shabad-le/puzzle/', params),
+  shabadGuess: (api, token, body) => post(api, token, '/games/shabad-le/guess/', body),
+  shabadHint: (api, token, body) => post(api, token, '/games/shabad-le/hint/', body),
 };
 
 export default learningApi;

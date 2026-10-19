@@ -1,0 +1,284 @@
+/*
+ * pages/Learning/Arcade/games/ShabadLe.module.css
+ * Shabad-le on a takhti: the wooden writing board Punjabi children practised
+ * on, its face coated with clay (gachni). The tiles turn over to show their
+ * colour.
+ */
+.game {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.topic {
+  background: color-mix(in srgb, var(--accent-2) 16%, var(--paper));
+}
+
+.topicLater {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.hintButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffcf3a;
+  color: #4a3300;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow: 0 3px 0 #c99400;
+}
+
+.hintButton small {
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.hintButton:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.played {
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent-2) 15%, transparent);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* The takhti: a wooden board with a handle, its face coated with clay */
+.takhti {
+  position: relative;
+  margin: 26px auto 18px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 16px;
+  border-radius: 26px;
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 255, 255, 0.06) 0 3px, transparent 3px 11px),
+    repeating-linear-gradient(88deg, rgba(0, 0, 0, 0.07) 0 2px, transparent 2px 17px),
+    linear-gradient(160deg, #b27a43, #8b5a2b 60%, #7a4c22);
+  box-shadow: 0 8px 0 #5d3a17, 0 22px 40px -18px rgba(60, 30, 0, 0.6);
+}
+
+.handle {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  width: 64px;
+  height: 40px;
+  transform: translateX(-50%);
+  border-radius: 16px 16px 6px 6px;
+  background: linear-gradient(160deg, #b27a43, #8b5a2b);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+}
+
+.handle::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--background-color, #fff);
+}
+
+.slate {
+  --tile-size: clamp(50px, calc((100vw - 120px) / var(--cols)), 70px);
+  padding: 16px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.5), transparent 40%),
+    #eadbb4;
+  box-shadow: inset 0 2px 8px rgba(90, 60, 20, 0.25);
+}
+
+.hintRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.hintChip {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--gold-bg);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold-ink);
+}
+
+.hintChip b {
+  font-size: 18px;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--tile-size));
+  gap: 8px;
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  border-radius: 12px;
+  border: 3px dashed rgba(120, 90, 50, 0.35);
+  background: rgba(255, 255, 255, 0.35);
+  color: #2a1e14;
+  font-family: 'Baloo Paaji 2', 'Mukta Mahee', 'Noto Sans Gurmukhi', sans-serif;
+  font-size: calc(var(--tile-size) * 0.5);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.filled {
+  border: 3px solid #6b5236;
+  background: #fffaf0;
+  animation: press 0.12s ease;
+}
+
+@keyframes press {
+  50% { transform: scale(1.08); }
+}
+
+.s_correct { background: #3e9b46; border-color: #2f7a35; color: #fff; }
+.s_close { background: #ef8a1d; border-color: #c96f10; color: #fff; }
+.s_present { background: #e9b824; border-color: #c49612; color: #2a1e00; }
+.s_absent { background: #9c917f; border-color: #847a69; color: #f3efe6; }
+
+.flip {
+  animation: flip 0.55s ease both;
+}
+
+@keyframes flip {
+  0% { transform: rotateX(0); filter: brightness(1.2) saturate(0); }
+  50% { transform: rotateX(90deg); filter: brightness(1.2) saturate(0); }
+  51% { filter: none; }
+  100% { transform: rotateX(0); }
+}
+
+.shake { animation: shake 0.42s ease; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  50% { transform: translateX(9px); }
+  75% { transform: translateX(-5px); }
+}
+
+.keyHelp {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.answerCard {
+  margin: 0 auto 16px;
+  padding: 14px 18px;
+  max-width: 420px;
+  border-radius: 20px;
+  background: var(--paper);
+  text-align: center;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--shade) 12%, transparent);
+}
+
+.answerLabel {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.answerWord {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1.25;
+  font-weight: 800;
+  color: var(--accent-2);
+}
+
+.answerRoman {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.answerMeaning {
+  margin: 2px 0 0;
+  font-size: 16px;
+}
+
+.resultExtra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.resultExtra .answerCard {
+  margin: 0;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+/* Dark mode: the clay face of the takhti at night */
+[data-theme='dark'] .takhti {
+  box-shadow: 0 8px 0 #3a230d, 0 22px 40px -18px rgba(0, 0, 0, 0.8);
+}
+
+[data-theme='dark'] .slate {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.05), transparent 40%),
+    #2a0e17;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .tile {
+  border-color: rgba(242, 179, 194, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-color);
+}
+
+[data-theme='dark'] .filled {
+  border-color: #c4a3ab;
+  background: #3a1520;
+}
+
+[data-theme='dark'] .s_correct { background: #3e9b46; border-color: #57b85f; color: #fff; }
+[data-theme='dark'] .s_close { background: #e07f15; border-color: #f39a3c; color: #fff; }
+[data-theme='dark'] .s_present { background: #d9a91c; border-color: #efc443; color: #241800; }
+[data-theme='dark'] .s_absent { background: #4a2a33; border-color: #5e3743; color: #e9d8dc; }
+
+@media (max-width: 480px) {
+  .takhti { padding: 10px; border-radius: 20px; }
+  .slate { padding: 10px; --tile-size: clamp(42px, calc((100vw - 90px) / var(--cols)), 48px); }
+  .row, .grid { gap: 6px; }
+  /* one HUD row on phones: the icons say "topic" and "hint" */
+  .wideOnly { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip, .filled, .shake { animation: none; }
+}

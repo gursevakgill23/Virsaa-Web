@@ -1,0 +1,207 @@
+/*
+ * pages/Learning/Arcade/games/AkhaanJor.module.css
+ * Akhaan Jor: proverb cards in a village courtyard, joined with parandi
+ * ribbons (the coloured tassels braided into hair).
+ */
+.game {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.instructions {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.timeLow {
+  background: #ffe1e6;
+  color: #b0122f;
+}
+
+.board {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(28px, 8vw, 110px);
+  padding: calc(clamp(14px, 3vw, 26px) + 10px);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 0 0, rgba(242, 177, 52, 0.25), transparent 30%),
+    radial-gradient(circle at 100% 100%, rgba(226, 71, 126, 0.18), transparent 35%),
+    repeating-linear-gradient(0deg, rgba(201, 119, 74, 0.08) 0 2px, transparent 2px 26px),
+    #fff3e6;
+  box-shadow: inset 0 0 0 4px rgba(201, 119, 74, 0.25), 0 16px 30px -18px rgba(60, 20, 0, 0.45);
+}
+
+/* A phulkari border, like the embroidered dupattas of Punjab */
+.board::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 10px;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, #f6b73c 25%, transparent 25%) -8px 0 / 16px 16px,
+    linear-gradient(225deg, #f6b73c 25%, transparent 25%) -8px 0 / 16px 16px,
+    linear-gradient(315deg, #f6b73c 25%, transparent 25%) 0 0 / 16px 16px,
+    linear-gradient(45deg, #f6b73c 25%, transparent 25%) 0 0 / 16px 16px,
+    #b8123f;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+.ribbons {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.columnTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--accent-3);
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--tile);
+  color: var(--ink);
+  font-family: 'Baloo Paaji 2', 'Mukta Mahee', 'Noto Sans Gurmukhi', sans-serif;
+  font-size: clamp(17px, 2.2vw, 21px);
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--accent-3) 35%, transparent), inset 0 0 0 3px color-mix(in srgb, var(--accent-3) 18%, transparent);
+  transition: transform 0.1s ease;
+}
+
+.endCard {
+  text-align: right;
+}
+
+.card:hover:not(:disabled) { transform: translateY(-2px); }
+
+.selected {
+  background: color-mix(in srgb, var(--accent-2) 25%, var(--tile));
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--accent-2) 70%, #000), inset 0 0 0 3px var(--accent-2);
+  transform: translateY(-2px);
+}
+
+.matched {
+  background: color-mix(in srgb, var(--ribbon) 18%, var(--tile));
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--ribbon) 70%, #000), inset 0 0 0 3px var(--ribbon);
+}
+
+.matched:disabled {
+  cursor: default;
+}
+
+.wrong { animation: shake 0.42s ease; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-9px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-4px); }
+}
+
+.meanings {
+  padding: clamp(18px, 3vw, 30px);
+  border-radius: 30px;
+  background: var(--paper);
+  box-shadow: 0 16px 30px -18px rgba(60, 20, 0, 0.45);
+}
+
+.meaningsTitle {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.timeUp {
+  margin: 0 0 10px;
+  font-weight: 700;
+  color: #b0122f;
+}
+
+.meanings ul {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.meanings li {
+  margin: 0 0 12px;
+  padding: 12px 16px 12px 22px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--ribbon) 12%, var(--tile));
+  border-left: 8px solid var(--ribbon);
+}
+
+.meanings li p {
+  margin: 2px 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.meanings .proverb {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* Dark mode: the courtyard at dusk */
+[data-theme='dark'] .timeLow {
+  background: #5a1426;
+  color: #ffd0da;
+}
+
+[data-theme='dark'] .board {
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 195, 77, 0.1), transparent 30%),
+    radial-gradient(circle at 100% 100%, rgba(255, 111, 160, 0.1), transparent 35%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 26px),
+    var(--card-bg-color);
+  box-shadow: inset 0 0 0 4px rgba(242, 179, 194, 0.12), 0 16px 30px -18px rgba(0, 0, 0, 0.75);
+}
+
+[data-theme='dark'] .meanings {
+  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.75);
+}
+
+[data-theme='dark'] .timeUp {
+  color: #ff8fa6;
+}
+
+@media (max-width: 560px) {
+  .board { gap: 18px; padding: 18px 16px; }
+  .board::before { padding: 7px; }
+  .card { padding: 10px 12px; min-height: 58px; font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrong { animation: none; }
+}

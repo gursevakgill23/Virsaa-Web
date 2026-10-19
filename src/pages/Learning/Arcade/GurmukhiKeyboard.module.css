@@ -1,0 +1,113 @@
+/*
+ * pages/Learning/Arcade/GurmukhiKeyboard.module.css
+ * The on-screen Gurmukhi keyboard: big soft keys that press down, with the
+ * Shabad-le colours on letters already tried.
+ */
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--ink, #222) 8%, transparent);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.key {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 54px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--paper, #fff);
+  color: var(--ink, #222);
+  font-family: 'Baloo Paaji 2', 'Mukta Mahee', 'Noto Sans Gurmukhi', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--shade, #222) 22%, transparent);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
+.key:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--shade, #222) 22%, transparent);
+}
+
+.key:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.key:focus-visible {
+  outline: 3px solid var(--accent-2, #3d7af5);
+  outline-offset: 2px;
+}
+
+.gapBefore {
+  margin-left: 10px;
+}
+
+.sign {
+  max-width: 48px;
+  font-size: 22px;
+  background: color-mix(in srgb, var(--accent-2, #3d7af5) 14%, var(--paper, #fff));
+}
+
+.signRow {
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.actionRow .action {
+  flex: 1 1 0;
+  max-width: none;
+  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: color-mix(in srgb, var(--ink, #222) 14%, var(--paper, #fff));
+}
+
+.actionRow .enter {
+  flex: 2 1 0;
+  background: var(--accent, #e2477e);
+  color: #fff;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--accent, #e2477e) 60%, #000);
+}
+
+.state_correct { background: #3e9b46; color: #fff; }
+.state_close { background: #ef8a1d; color: #fff; }
+.state_present { background: #e9b824; color: #2a1e00; }
+.state_absent { background: #9c917f; color: #f3efe6; }
+
+[data-theme='dark'] .state_absent { background: #4a2a33; color: #e9d8dc; }
+
+.small .key {
+  max-width: 64px;
+  height: 56px;
+  font-size: 28px;
+}
+
+@media (max-width: 480px) {
+  .keyboard { padding: 8px 6px; gap: 5px; border-radius: 18px; }
+  .row { gap: 4px; }
+  .key { height: 42px; font-size: 21px; border-radius: 10px; }
+  .gapBefore { margin-left: 6px; }
+  .sign { font-size: 19px; flex-basis: calc(100% / 6 - 4px); max-width: none; }
+}

@@ -1,0 +1,87 @@
+/*
+ * pages/Learning/Arcade/games/PatangBaazi.module.css
+ * Patang Baazi: the Basant sky over rooftops and mustard fields (drawn on
+ * the canvas), with a start card over it.
+ */
+.game {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.heartOn { color: #e2405f; }
+.heartOff { color: color-mix(in srgb, var(--ink) 18%, transparent); }
+
+.low {
+  background: #ffe1e6;
+  color: #b0122f;
+}
+
+.skyWrap {
+  position: relative;
+  border-radius: 30px;
+  overflow: hidden;
+  box-shadow: 0 16px 30px -18px rgba(60, 40, 0, 0.6), inset 0 0 0 3px rgba(255, 255, 255, 0.4);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: min(64vh, 580px);
+  min-height: 360px;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: rgba(45, 42, 31, 0.28);
+  text-align: center;
+}
+
+.overlay p {
+  margin: 0;
+  max-width: 30ch;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.overlay button { width: auto; }
+
+.overlay small {
+  max-width: 40ch;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #3a3220;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Dark mode (the night sky itself is drawn on the canvas) */
+[data-theme='dark'] .low {
+  background: #5a1426;
+  color: #ffd0da;
+}
+
+[data-theme='dark'] .skyWrap {
+  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.8), inset 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .overlay {
+  background: rgba(14, 4, 8, 0.5);
+}
+
+@media (max-width: 480px) {
+  .wideOnly { display: none; }
+  .canvas { min-height: 320px; height: 56vh; }
+  .skyWrap { border-radius: 22px; }
+}

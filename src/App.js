@@ -57,6 +57,9 @@ const AudiobookDetail = lazy(() => import('./pages/Collections/AudiobookDetail/A
 const WordSearchGamePlay = lazy(() => import('./pages/Learning/Games/WordSearch/WordSearch')
   .then((module) => ({ default: module.WordSearchGamePlay })));
 const MemoryMatch = lazy(() => import('./pages/Learning/Games/MemoryMatch/MemoryMatch'));
+// The Khed Mela (all games) and the ten map games (pages/Learning/Arcade)
+const ArcadeHub = lazy(() => import('./pages/Learning/Arcade/ArcadeHub'));
+const ArcadeRoute = lazy(() => import('./pages/Learning/Arcade/ArcadeRoute'));
 // /my-profile shows CompleteProfile until every required detail is filled in,
 // then MyProfile (see pages/Profile/ProfileRoute.jsx).
 const ProfileRoute = lazy(() => import('./pages/Profile/ProfileRoute'));
@@ -178,7 +181,14 @@ const App = () => {
     setIsSidebarOpen(false);
   };
 
-  const isGamePage = GAME_PATHS.includes(location.pathname);
+  // Games fill the page without the footer, the floating button or the phone tab bar (the Khed Mela list keeps them)
+  const isGamePage = GAME_PATHS.includes(location.pathname) || location.pathname.startsWith('/learning/games/');
+
+  // ...so the room kept at the bottom for the tab bar isn't needed there (App.css)
+  useEffect(() => {
+    document.body.classList.toggle('game-page', isGamePage);
+    return () => document.body.classList.remove('game-page');
+  }, [isGamePage]);
 
   // Every page gets the same two props
   const pageProps = { isDarkMode, apiString: API_STRING };
@@ -208,6 +218,7 @@ const App = () => {
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
             apiString={API_STRING}
+            showTabs={!isGamePage}
           />
 
           {/* Quick Virsaa loader on each page change */}
@@ -245,6 +256,8 @@ const App = () => {
                 <Route path="/learning-material/:id" element={<LearningMaterial {...pageProps} />} />
                 <Route path="/learning/games/shabd-khoj" element={<WordSearchGamePlay {...pageProps} />} />
                 <Route path="/learning/games/memory-match" element={<MemoryMatch {...pageProps} />} />
+                <Route path="/learning/games" element={<ArcadeHub {...pageProps} />} />
+                <Route path="/learning/games/:slug" element={<ArcadeRoute {...pageProps} />} />
 
                 {/* Account */}
                 <Route path="/login" element={<Login {...pageProps} />} />
@@ -277,7 +290,8 @@ const App = () => {
           </ErrorBoundary>
 
           {!isGamePage && <Footer isDarkMode={isDarkMode} apiString={API_STRING} />}
-          <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />
+          {/* The floating button would cover game pieces and buttons */}
+          {!isGamePage && <GurdwaraAccessButton isDarkMode={isDarkMode} apiString={API_STRING} />}
         </>
       )}
     </AuthProvider>

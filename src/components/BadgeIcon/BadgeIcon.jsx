@@ -10,7 +10,11 @@ import {
   FaBookOpen, FaGraduationCap, FaUniversity, FaQuestionCircle, FaCompass, FaCrown, FaStar, FaGem,
   FaBolt, FaGamepad, FaDiceD6, FaFont, FaSearch, FaBrain, FaMedal, FaFlag, FaTrophy, FaFire,
   FaCalendarCheck, FaChartLine, FaCoins, FaAward,
+  // the map games' badges
+  FaPenNib, FaSpellCheck, FaSun, FaLightbulb, FaQuoteLeft, FaCloudRain, FaKeyboard, FaHistory, FaUserSecret,
+  FaMapMarkedAlt, FaPuzzlePiece, FaLandmark, FaWind, FaHandsHelping,
 } from 'react-icons/fa';
+import { GiKite } from 'react-icons/gi';
 
 /*
  * Badges store an icon name (e.g. "FaTrophy") in the database.
@@ -21,6 +25,8 @@ const ICONS = {
   FaBookOpen, FaGraduationCap, FaUniversity, FaQuestionCircle, FaCompass, FaCrown, FaStar, FaGem,
   FaBolt, FaGamepad, FaDiceD6, FaFont, FaSearch, FaBrain, FaMedal, FaFlag, FaTrophy, FaFire,
   FaCalendarCheck, FaChartLine, FaCoins, FaAward,
+  FaPenNib, FaSpellCheck, FaSun, FaLightbulb, FaQuoteLeft, FaCloudRain, FaKeyboard, FaHistory, FaUserSecret,
+  FaMapMarkedAlt, FaPuzzlePiece, FaLandmark, FaWind, FaHandsHelping, GiKite,
 };
 
 // Props: name (icon name from the database), image (optional picture URL),

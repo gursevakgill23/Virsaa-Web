@@ -81,7 +81,7 @@ const formatDate = (iso) => {
 };
 
 // Props: open (is the panel showing), closeSidebar(), apiString (API base URL)
-const Sidebar = ({ open, closeSidebar, apiString }) => {
+const Sidebar = ({ open, closeSidebar, apiString, showTabs = true }) => {
   const { isLoggedIn, accessToken } = useAuth();
   const [activeMenu, setActiveMenu] = useState(null);
   const [view, setView] = useState('home'); // 'home' | 'form' | 'calendar'
@@ -675,7 +675,8 @@ const Sidebar = ({ open, closeSidebar, apiString }) => {
         </div>
       </aside>
 
-      {/* Section tab bar for phones and tablets (below 992px) */}
+      {/* Section tab bar for phones and tablets (below 992px); games hide it to use the whole screen */}
+      {showTabs && (
       <nav className={styles.tabNavigation} aria-label="Sections">
         {!activeMenu ? (
           mainTabs.map((tab) => (
@@ -723,6 +724,7 @@ const Sidebar = ({ open, closeSidebar, apiString }) => {
           </>
         )}
       </nav>
+      )}
     </>
   );
 };

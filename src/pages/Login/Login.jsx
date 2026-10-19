@@ -169,13 +169,17 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
         formData.rememberMe
       );
 
-      toast.success('Signed in. Taking you home…', {
+      // ?next=/learning/games/akhar-sikho sends the player back to the game they came from
+      // (only paths on this site: "/..." but not "//other-site")
+      const next = new URLSearchParams(window.location.search).get('next') || '';
+      const backTo = /^\/(?!\/)/.test(next) && !next.includes('\\') ? next : '/';
+      toast.success(backTo === '/' ? 'Signed in. Taking you home…' : 'Signed in. Taking you back…', {
         position: 'top-center',
         autoClose: 2000,
         theme: isDarkMode ? 'dark' : 'light',
       });
 
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate(backTo), 2000);
     } catch (error) {
       // Right password, but the email address isn't confirmed yet: offer a new link
       if (error.response?.data?.code === 'email_not_verified') {

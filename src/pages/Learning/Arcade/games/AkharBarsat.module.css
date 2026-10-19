@@ -1,0 +1,321 @@
+/*
+ * pages/Learning/Arcade/games/AkharBarsat.module.css
+ * Akhar Barsat: a monsoon sky, raindrops carrying letters, green fields and
+ * a frog that hops when a drop is caught.
+ */
+.game {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.heartOn { color: #e2405f; }
+.heartOff { color: color-mix(in srgb, var(--ink) 18%, transparent); }
+
+.combo {
+  background: var(--accent-2);
+  color: #fff;
+}
+
+.sky {
+  position: relative;
+  height: min(56vh, 520px);
+  min-height: 340px;
+  border-radius: 30px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(105deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 22px),
+    linear-gradient(180deg, #5f87b6 0%, #8db8de 45%, #c9e4f5 100%);
+  box-shadow: 0 16px 30px -18px rgba(14, 47, 79, 0.6);
+}
+
+.clouds {
+  position: absolute;
+  top: -30px;
+  left: 0;
+  right: 0;
+  height: 90px;
+  z-index: 3;
+}
+
+.clouds span {
+  position: absolute;
+  top: 0;
+  width: 34%;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 70%, #f3f7fb, #c9d6e4);
+  box-shadow: 0 8px 18px -8px rgba(30, 50, 80, 0.4);
+}
+
+.clouds span:nth-child(1) { left: -6%; }
+.clouds span:nth-child(2) { left: 22%; top: 12px; }
+.clouds span:nth-child(3) { left: 48%; top: -4px; }
+.clouds span:nth-child(4) { left: 74%; top: 10px; }
+
+.drop {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-width: 64px;
+  height: 78px;
+  padding: 16px 10px 4px;
+  border-radius: 50% 50% 50% 50% / 62% 62% 40% 40%;
+  background: radial-gradient(circle at 35% 35%, #7fb3ff, var(--accent-2) 70%);
+  color: #fff;
+  box-shadow: inset -6px -8px 0 rgba(0, 0, 0, 0.12), 0 6px 14px -6px rgba(14, 47, 79, 0.6);
+  will-change: top, transform;
+}
+
+.drop::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 4px 0 0 0;
+  background: inherit;
+  z-index: -1;
+}
+
+.dropWide {
+  min-width: 96px;
+  border-radius: 36px 36px 30px 30px;
+}
+
+.dropFit {
+  background: radial-gradient(circle at 35% 35%, #ffe58a, #f2a71b 70%);
+  color: #3a2400;
+}
+
+.dropText {
+  font-family: 'Baloo Paaji 2', 'Mukta Mahee', 'Noto Sans Gurmukhi', sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tileDone {
+  opacity: 0.45;
+}
+
+.ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46px;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 40px 10px at 30% 30%, rgba(42, 91, 215, 0.35), transparent 70%),
+    radial-gradient(ellipse 50px 10px at 75% 40%, rgba(42, 91, 215, 0.3), transparent 70%),
+    linear-gradient(180deg, #7cc35f, var(--accent-3));
+}
+
+.ground::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: repeating-linear-gradient(90deg, transparent 0 8px, #7cc35f 8px 10px, transparent 10px 16px);
+  clip-path: polygon(0 100%, 2% 0, 4% 100%, 6% 10%, 8% 100%, 10% 0, 12% 100%, 100% 100%);
+}
+
+.frog {
+  position: absolute;
+  bottom: 18px;
+  width: 42px;
+  height: 30px;
+  border-radius: 50% 50% 40% 40%;
+  background: #3f9b38;
+  box-shadow: inset 0 -6px 0 #2f7a2a;
+  transition: left 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.frog i {
+  position: absolute;
+  top: -8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset -4px -2px 0 0 #222, 0 0 0 3px #3f9b38;
+}
+
+.frog i:first-child { left: 4px; }
+.frog i:last-child { right: 4px; }
+
+.pop {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -100%);
+  color: #ffd23f;
+  font-size: 40px;
+  text-shadow: 0 0 12px rgba(255, 210, 63, 0.9);
+  animation: pop 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes pop {
+  from { opacity: 1; transform: translate(-50%, -100%) scale(0.6); }
+  to { opacity: 0; transform: translate(-50%, -160%) scale(1.6); }
+}
+
+.splash {
+  position: absolute;
+  z-index: 2;
+  width: 70px;
+  height: 18px;
+  margin-top: -40px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  animation: splash 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes splash {
+  from { opacity: 1; transform: translateX(-50%) scale(0.4); }
+  to { opacity: 0; transform: translateX(-50%) scale(1.6); }
+}
+
+.startPanel,
+.pausedPanel {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  background: rgba(14, 47, 79, 0.35);
+  text-align: center;
+}
+
+.startPanel p {
+  margin: 0;
+  max-width: 30ch;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.startPanel button { width: auto; }
+
+.pausedPanel {
+  color: #fff;
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.buffer {
+  min-height: 46px;
+  margin: 12px auto 10px;
+  padding: 4px 18px;
+  width: fit-content;
+  border-radius: 999px;
+  background: var(--paper);
+  font-family: 'Baloo Paaji 2', 'Mukta Mahee', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent-2);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--shade) 12%, transparent);
+}
+
+.buffer small {
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.buffer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Nothing typed yet: a quiet reminder of what to do */
+.bufferEmpty {
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+  box-shadow: none;
+}
+
+.bufferEmpty small {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.bufferWrong {
+  animation: shake 0.35s ease;
+  color: #c62839;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+/* Dark mode: rain at night, with a moon behind the clouds */
+[data-theme='dark'] .sky {
+  background:
+    radial-gradient(circle at 82% 22%, rgba(255, 244, 214, 0.35) 0 26px, rgba(255, 244, 214, 0.08) 27px 60px, transparent 61px),
+    repeating-linear-gradient(105deg, rgba(255, 220, 230, 0.08) 0 1px, transparent 1px 22px),
+    linear-gradient(180deg, #14050a 0%, #22091a 55%, #2f1024 100%);
+  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.8);
+}
+
+[data-theme='dark'] .clouds span {
+  background: radial-gradient(circle at 50% 70%, #4a2a38, #2a1520);
+  box-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme='dark'] .drop {
+  background: radial-gradient(circle at 35% 35%, #9cc2ff, #3f6fe8 70%);
+  box-shadow: inset -6px -8px 0 rgba(0, 0, 0, 0.18), 0 0 18px -2px rgba(107, 147, 255, 0.55);
+}
+
+[data-theme='dark'] .dropFit {
+  background: radial-gradient(circle at 35% 35%, #ffe58a, #f2a71b 70%);
+  box-shadow: 0 0 20px rgba(255, 210, 63, 0.6);
+}
+
+[data-theme='dark'] .ground {
+  background:
+    radial-gradient(ellipse 40px 10px at 30% 30%, rgba(107, 147, 255, 0.35), transparent 70%),
+    radial-gradient(ellipse 50px 10px at 75% 40%, rgba(107, 147, 255, 0.3), transparent 70%),
+    linear-gradient(180deg, #2b5a30, #1b3c20);
+}
+
+[data-theme='dark'] .ground::before {
+  background: repeating-linear-gradient(90deg, transparent 0 8px, #2b5a30 8px 10px, transparent 10px 16px);
+}
+
+[data-theme='dark'] .startPanel,
+[data-theme='dark'] .pausedPanel {
+  background: rgba(14, 4, 8, 0.6);
+}
+
+[data-theme='dark'] .bufferWrong {
+  color: #ff7d8f;
+}
+
+@media (max-width: 480px) {
+  .sky { min-height: 300px; height: 42vh; border-radius: 22px; }
+  .wideOnly { display: none; }
+  .drop { min-width: 54px; height: 66px; }
+  .dropText { font-size: 25px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop, .splash, .bufferWrong { animation: none; }
+  .frog { transition: none; }
+}

@@ -1,0 +1,202 @@
+/*
+ * pages/Learning/Arcade/games/MapQuest.module.css
+ * Punjab Map Quest: the map in a folded paper frame, a banner naming the
+ * place to find, and a result card with the distance and a fact.
+ */
+.game {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px 14px;
+  margin: 0 auto 14px;
+  padding: 12px 22px;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 20px;
+  background: var(--paper);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--shade) 15%, transparent);
+  text-align: center;
+}
+
+.bannerLabel {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.placeName {
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--accent);
+}
+
+.placeOther {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-2);
+}
+
+.mapFrame {
+  position: relative;
+  height: min(62vh, 560px);
+  min-height: 340px;
+  padding: 10px;
+  border-radius: 26px;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px) 0 0 / 33.33% 100%,
+    #f6edd6;
+  box-shadow: 0 16px 30px -18px rgba(29, 59, 42, 0.6), inset 0 0 0 3px rgba(150, 120, 60, 0.25);
+}
+
+.map {
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.map:global(.leaflet-container) {
+  font-family: 'Baloo Paaji 2', 'Mukta Mahee', sans-serif;
+}
+
+.map :global(.leaflet-tooltip) {
+  font-family: 'Baloo Paaji 2', 'Mukta Mahee', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 10px;
+}
+
+.compass {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--accent-2);
+  font-weight: 800;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.compass::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 9px solid var(--accent-2);
+}
+
+.controls,
+.resultCard {
+  max-width: 460px;
+  margin: 16px auto 0;
+  text-align: center;
+}
+
+.tip {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.resultCard {
+  padding: 18px 22px 22px;
+  border-radius: 24px;
+  background: var(--paper);
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--shade) 12%, transparent);
+}
+
+.verdict {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent-3);
+}
+
+.distance {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 8px;
+  font-size: 17px;
+}
+
+.distance span,
+.distance b {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.distance b {
+  background: var(--gold-bg);
+  color: var(--gold-ink);
+}
+
+.fact {
+  margin: 0 0 14px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+/* Dark mode: a night map (the tiles switch to CARTO's dark map in MapQuest.jsx) */
+[data-theme='dark'] .mapFrame {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 33.33% 100%,
+    var(--card-bg-color);
+  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.8), inset 0 0 0 3px rgba(242, 179, 194, 0.12);
+}
+
+[data-theme='dark'] .compass {
+  background: var(--card-bg-color);
+  color: #ff8a80;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .map :global(.leaflet-tooltip) {
+  background: var(--card-bg-color);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+[data-theme='dark'] .map :global(.leaflet-tooltip-top::before) {
+  border-top-color: var(--card-bg-color);
+}
+
+[data-theme='dark'] .map :global(.leaflet-control-attribution) {
+  background: rgba(20, 5, 10, 0.75);
+  color: var(--secondary-text-color);
+}
+
+[data-theme='dark'] .map :global(.leaflet-control-attribution a) {
+  color: var(--primary-color, #f2b3c2);
+}
+
+[data-theme='dark'] .map :global(.leaflet-bar a) {
+  background: var(--card-bg-color);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+@media (max-width: 480px) {
+  .mapFrame { padding: 6px; border-radius: 20px; min-height: 300px; height: 52vh; }
+  .map { border-radius: 14px; }
+}

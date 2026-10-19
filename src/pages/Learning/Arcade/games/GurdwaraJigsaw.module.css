@@ -1,0 +1,194 @@
+/*
+ * pages/Learning/Arcade/games/GurdwaraJigsaw.module.css
+ * Gurdwara Jigsaw: a gold frame on a marble table, real jigsaw pieces with a
+ * soft edge, and the story card at the end.
+ */
+.game {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.late { background: #ffe9d6; }
+
+.target {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.title h2 {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 800;
+}
+
+.table {
+  position: relative;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.9), transparent 35%),
+    repeating-linear-gradient(125deg, rgba(195, 146, 42, 0.05) 0 2px, transparent 2px 40px),
+    #f3eee3;
+  box-shadow: inset 0 0 0 3px rgba(195, 146, 42, 0.2);
+  touch-action: pan-y;     /* the page still scrolls; the pieces themselves don't (.piece) */
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+}
+
+.board {
+  position: absolute;
+  border-radius: 6px;
+  background: #fffdf7;
+  box-shadow: 0 0 0 8px var(--accent), 0 0 0 11px #8a6418, 0 18px 30px -14px rgba(60, 40, 0, 0.5);
+  overflow: hidden;
+}
+
+.boardDone {
+  animation: shine 1.2s ease;
+}
+
+@keyframes shine {
+  0% { box-shadow: 0 0 0 8px var(--accent), 0 0 0 11px #8a6418, 0 0 0 0 rgba(255, 210, 63, 0.9); }
+  100% { box-shadow: 0 0 0 8px var(--accent), 0 0 0 11px #8a6418, 0 0 0 40px rgba(255, 210, 63, 0); }
+}
+
+.ghost {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.gridLines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.gridLines line {
+  stroke: rgba(138, 100, 24, 0.35);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 6;
+}
+
+.piece {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;   /* only the piece's own shape can be picked up (.outline) */
+  cursor: grab;
+  filter: drop-shadow(0 4px 4px rgba(40, 30, 0, 0.35));
+  transition: filter 0.15s ease;
+  touch-action: none;
+}
+
+.piece image,
+.piece path {
+  pointer-events: none;
+}
+
+.piece .outline {
+  pointer-events: visiblePainted;
+  cursor: grab;
+}
+
+.placed .outline {
+  pointer-events: none;
+}
+
+.dragging {
+  cursor: grabbing;
+  filter: drop-shadow(0 12px 10px rgba(40, 30, 0, 0.4));
+}
+
+.placed {
+  cursor: default;
+  filter: none;
+}
+
+.outline {
+  fill: transparent;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1.6;
+}
+
+.placed .outline {
+  stroke: rgba(255, 255, 255, 0.25);
+}
+
+.finish {
+  max-width: 420px;
+  margin: 18px auto 0;
+}
+
+.storyCard {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--tile));
+  text-align: left;
+}
+
+.storyImage {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.storyCard h3 {
+  margin: 10px 0 4px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.storyCard p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+
+.storyCard .credit {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.credit a {
+  color: inherit;
+}
+
+/* Dark mode: a dark marble table; the gold frame still shines */
+[data-theme='dark'] .late {
+  background: #5a2a14;
+  color: #ffd9bf;
+}
+
+[data-theme='dark'] .table {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.08), transparent 35%),
+    repeating-linear-gradient(125deg, rgba(226, 176, 74, 0.05) 0 2px, transparent 2px 40px),
+    var(--card-bg-color);
+  box-shadow: inset 0 0 0 3px rgba(226, 176, 74, 0.22);
+}
+
+[data-theme='dark'] .board {
+  background: var(--background-color);
+  box-shadow: 0 0 0 8px var(--accent), 0 0 0 11px #6e4f12, 0 18px 30px -14px rgba(0, 0, 0, 0.8);
+}
+
+[data-theme='dark'] .gridLines line {
+  stroke: rgba(226, 176, 74, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardDone { animation: none; }
+  .ghost, .piece { transition: none; }
+}

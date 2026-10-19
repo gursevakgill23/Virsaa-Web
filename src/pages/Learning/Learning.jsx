@@ -41,12 +41,36 @@ const getProductionImagePath = (imagePath) => {
 // First paragraph of a description, for the card
 const summary = (text = '') => String(text).split(/\n\s*\n/)[0].trim();
 
-// The two games that exist in the app (see the routes in App.js)
-// Game key → page
+// The games in the app (see the routes in App.js) and their pages
 const GAME_ROUTES = {
   wordSearch: '/learning/games/shabd-khoj',
   memoryMatch: '/learning/games/memory-match',
 };
+
+// The ten map games (pages/Learning/Arcade): game key -> card
+const MAP_GAMES = [
+  ['akhar_sikho', 'akhar-sikho', 'Akhar Sikho (Learn the Letters)', 'learn-alphabet',
+    'Find each Gurmukhi letter from its name, then trace it with your finger.'],
+  ['shabad_le', 'shabad-le', 'Shabad-le (Word of the Day)', 'home-learning',
+    'Guess the Punjabi word in six tries. A new word of the day for everyone, every day.'],
+  ['akhaan_jor', 'akhaan-jor', 'Akhaan Jor (Proverb Match)', 'game-phulkari',
+    'Join the two halves of each Punjabi proverb, then find out what it means.'],
+  ['akhar_barsat', 'akhar-barsat', 'Akhar Barsat (Letter Rain)', 'learning-default',
+    'Letters and words fall like monsoon rain. Type them before they land!'],
+  ['itihaas_timeline', 'itihaas-timeline', 'Itihaas Timeline (History Train)', 'home-history',
+    'Load the history train: put each event from Sikh history in the right order.'],
+  ['kaun_hai', 'kaun-hai', 'Kaun Hai? (Who Is It?)', 'history-inspiring',
+    'Light the diyas one by one. Each one shows a clue: who is it?'],
+  ['map_quest', 'map-quest', 'Punjab Map Quest', 'coming-3',
+    'Where is it? Tap the map. The closer you get, the more points you score.'],
+  ['gurdwara_jigsaw', 'gurdwara-jigsaw', 'Gurdwara Jigsaw', 'home-heritage',
+    'Put together photos of historic Gurdwaras and learn the story of each one.'],
+  ['patang_baazi', 'patang-baazi', 'Patang Baazi (Kite Flying)', 'game-basant',
+    'Basant is here! Fly your kite and cut the other kites’ strings.'],
+  ['langar_seva', 'langar-seva', 'Langar Seva', 'about-community',
+    'Make rotis and serve dal, water and kheer. Nobody loses: serve everyone.'],
+];
+const MAP_GAME_ROUTES = Object.fromEntries(MAP_GAMES.map(([key, slug]) => [key, `/learning/games/${slug}`]));
 
 // Shown in the Games section even when the database has no game rows yet
 // Games that always show, even before they're added in the admin
@@ -67,6 +91,9 @@ const BUILT_IN_GAMES = [
     category: 'Games',
     link: GAME_ROUTES.memoryMatch,
   },
+  ...MAP_GAMES.map(([key, slug, title, picture, description]) => ({
+    id: `game-${slug}`, title, description, picture, category: 'Games', link: MAP_GAME_ROUTES[key],
+  })),
 ];
 
 // Work out which game page a database item opens.
@@ -89,7 +116,8 @@ const cardStatus = (item) => {
 const gameRoute = (item) => {
   if (item.game_key === 'word_search') return GAME_ROUTES.wordSearch;
   if (item.game_key === 'memory_match') return GAME_ROUTES.memoryMatch;
-  const known = Object.values(GAME_ROUTES);
+  if (MAP_GAME_ROUTES[item.game_key]) return MAP_GAME_ROUTES[item.game_key];
+  const known = [...Object.values(GAME_ROUTES), ...Object.values(MAP_GAME_ROUTES)];
   let path = item.link || '';
   try {
     if (path && !path.startsWith('/')) path = new URL(path).pathname;
@@ -374,6 +402,11 @@ const Learning = ({ isDarkMode, apiString }) => {
         <section className={styles.section} aria-labelledby="games-title">
           <h2 id="games-title" className={styles.sectionTitle}>Top Interactive Games</h2>
           <p className={styles.lede}>Discover interactive games that help improve your Punjabi language skills.</p>
+          <p className={styles.lede}>
+            <Link to="/learning/games" className={styles.secondaryButton}>
+              <FaGamepad aria-hidden="true" /> Open the Khed Mela: all {BUILT_IN_GAMES.length} games
+            </Link>
+          </p>
 
           {isLoading || !game ? (
             <div className={`${styles.spotlight} ${styles.skeleton}`} aria-hidden="true" />

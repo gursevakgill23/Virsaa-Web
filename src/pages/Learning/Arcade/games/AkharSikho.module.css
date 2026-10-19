@@ -1,0 +1,248 @@
+/*
+ * pages/Learning/Arcade/games/AkharSikho.module.css
+ * Akhar Sikho: a phulkari-framed card (gold diamonds on red, like the
+ * embroidered shawls), big letter tiles and the tracing board.
+ */
+.game {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.dots {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dots li {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 15%, transparent);
+}
+
+.dots .dotNow {
+  background: var(--accent-2);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 30%, transparent);
+}
+
+.dots .dotDone { background: var(--accent); }
+
+/* A phulkari frame: rows of gold diamonds on red */
+.frame {
+  padding: 14px;
+  border-radius: 34px;
+  background:
+    linear-gradient(45deg, var(--accent-2) 25%, transparent 25%) 0 0 / 24px 24px,
+    linear-gradient(-45deg, var(--accent-2) 25%, transparent 25%) 0 0 / 24px 24px,
+    linear-gradient(45deg, transparent 75%, var(--accent-2) 75%) 0 0 / 24px 24px,
+    linear-gradient(-45deg, transparent 75%, var(--accent-2) 75%) 0 0 / 24px 24px,
+    var(--accent);
+  box-shadow: 0 16px 34px -18px rgba(74, 14, 30, 0.6);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: clamp(18px, 4vw, 34px);
+  border-radius: 24px;
+  background: var(--paper);
+  text-align: center;
+}
+
+.prompt {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 34px 12px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--accent-2) 20%, var(--tile));
+  border: 3px dashed var(--accent-2);
+}
+
+.nameText {
+  font-size: clamp(44px, 9vw, 64px);
+  line-height: 1.4;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.roman {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.soundHint {
+  margin: 0;
+  font-size: 17px;
+  color: var(--ink-soft);
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 120px));
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.options[data-count='4'] { grid-template-columns: repeat(4, minmax(0, 110px)); }
+
+.option {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 24px;
+  background: var(--tile);
+  color: var(--ink);
+  font-size: clamp(44px, 9vw, 64px);
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--accent) 45%, #000), inset 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent);
+  transition: transform 0.1s ease;
+}
+
+.option:hover:not(:disabled) { transform: translateY(-3px); }
+
+.option:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 45%, #000), inset 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.optionWrong {
+  opacity: 0.35;
+  box-shadow: inset 0 0 0 4px #c9c3b8;
+}
+
+.shake { animation: shake 0.42s ease; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(9px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(4px); }
+}
+
+.traceCanvas {
+  width: min(380px, 78vw);
+  aspect-ratio: 1;
+  border-radius: 26px;
+  background:
+    linear-gradient(color-mix(in srgb, var(--accent) 12%, transparent) 2px, transparent 2px) 0 0 / 100% 25%,
+    var(--tile);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.traceButtons {
+  display: flex;
+  gap: 12px;
+}
+
+.message {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent-3);
+}
+
+.learned {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.bigLetter {
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--tile), color-mix(in srgb, var(--accent-2) 35%, var(--tile)));
+  font-size: 92px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent);
+  box-shadow: 0 8px 0 color-mix(in srgb, var(--accent-2) 70%, #000);
+  animation: pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes pop {
+  from { transform: scale(0.4); }
+  to { transform: scale(1); }
+}
+
+.learnedName {
+  margin: 6px 0 0;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.learnedName small {
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.fact {
+  margin: 0;
+  font-size: 17px;
+  color: var(--ink-soft);
+}
+
+.example {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 6px 0 10px;
+  padding: 10px 26px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent-3) 12%, var(--tile));
+}
+
+.example span {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--accent-3);
+}
+
+.example small {
+  font-size: 16px;
+  color: var(--ink-soft);
+}
+
+/* Dark mode: the frame's shadow falls on a dark page */
+[data-theme='dark'] .frame {
+  box-shadow: 0 16px 34px -18px rgba(0, 0, 0, 0.8);
+}
+
+[data-theme='dark'] .optionWrong {
+  box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--ink) 25%, transparent);
+}
+
+@media (max-width: 480px) {
+  .options { gap: 10px; }
+  .options[data-count='4'] { grid-template-columns: repeat(2, minmax(0, 120px)); }
+  .options[data-count='6'] { grid-template-columns: repeat(3, minmax(0, 100px)); }
+  .frame { padding: 10px; border-radius: 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shake,
+  .bigLetter { animation: none; }
+}
