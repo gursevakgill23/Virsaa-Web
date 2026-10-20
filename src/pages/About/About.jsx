@@ -9,7 +9,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FaCalendarAlt, FaRocket, FaStar, FaBook, FaGlobeAmericas, FaHeart, FaSearch, FaHandshake,
+ FaRocket, FaCode, FaBook, FaGlobeAmericas, FaHeart, FaSearch, FaHandshake,
   FaLightbulb, FaBookOpen, FaSeedling, FaPalette, FaLock,
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
@@ -32,22 +32,22 @@ const useProductionImagePath = () => {
   };
 };
 
-// Milestones shown in the story section
+
 const TIMELINE = [
   {
-    icon: <FaCalendarAlt />,
-    year: '2015',
-    text: 'Founded with a vision to digitize Punjabi literature and history, we began our journey with a small team of passionate individuals.',
+    icon: <FaLightbulb />,
+    year: '2024',
+    text: 'The idea for Virsaa was born with a vision to digitize Punjabi literature and history, preserving our rich cultural heritage and making it accessible to future generations.',
+  },
+  {
+    icon: <FaCode />,
+    year: '2025',
+    text: 'Completed the design and development of the Virsaa platform as a solo developer, while organizing ebooks and audiobooks to create a rich digital library of Punjabi literature.',
   },
   {
     icon: <FaRocket />,
-    year: '2018',
-    text: 'Launched our first collection of ebooks and audiobooks, making Punjabi literature accessible to a global audience.',
-  },
-  {
-    icon: <FaStar />,
-    year: '2023',
-    text: 'Reached over 1 million users worldwide, and expanded our collection to include rare manuscripts, historical documents, and multimedia resources.',
+    year: '2026',
+    text: 'Deployed Virsaa for testing, bringing the vision closer to reality and taking the next step toward making Punjabi literature and cultural knowledge accessible to a wider audience.',
   },
 ];
 
@@ -77,10 +77,7 @@ const About = ({ isDarkMode }) => {
   // Team cards (replace with the real team when ready). Add `photo: 'https://…'` to show a
   // photo; without one, the person's initials are shown.
   const team = [
-    { name: 'John Doe', role: 'Founder & CEO' },
-    { name: 'Jane Smith', role: 'Content Curator' },
     { name: 'Gursevak Singh', role: 'Developer' },
-    { name: 'Navjot Singh', role: 'Community Manager' },
   ];
 
   return (
