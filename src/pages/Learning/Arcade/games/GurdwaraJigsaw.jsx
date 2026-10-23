@@ -7,7 +7,8 @@
  * gives the most points, and the story of the Gurdwara is shown at the end
  * (with the photo's credit, as its licence asks).
  * Pieces are SVG: the photo clipped to each piece's outline, so nothing is
- * redrawn on a canvas.
+ * redrawn on a canvas. A piece let go outside the table (or left outside it
+ * when the screen gets narrower) comes back onto it, so none can be lost.
  * Content: { picture: {image, title, title_pa, story, credit, width, height} }
  * + settings { grid, ghost: clear | faint | none, target_seconds }
  * -----------------------------------------------------------------------------
@@ -17,7 +18,7 @@ import { FaCheck, FaEye, FaPuzzlePiece } from 'react-icons/fa';
 import arcade from '../Arcade.module.css';
 import { sfx } from '../arcadeSound';
 import styles from './GurdwaraJigsaw.module.css';
-import { formatTime, useStopwatch } from './common';
+import { formatTime, shuffle, useStopwatch } from './common';
 
 const WORDS = {
   english: {
@@ -114,6 +115,14 @@ export default function GurdwaraJigsaw({ stage, content, language, onFinish }) {
   const perRow = Math.max(1, Math.floor((tableWidth - 12) / (pw * 1.18)));
   const tableHeight = trayTop + Math.ceil((grid * grid) / perRow) * ph * 1.14 + 24;
 
+  // Keep a piece (in piece units, from the board's corner) on the table
+  const onTable = useCallback((p) => {
+    if (!tableWidth) return p;
+    const x = Math.min(Math.max(p.x, -boardLeft / pw), (tableWidth - boardLeft) / pw - 1);
+    const y = Math.min(Math.max(p.y, -boardTop / ph), (tableHeight - boardTop) / ph - 1);
+    return x === p.x && y === p.y ? p : { ...p, x, y };
+  }, [tableWidth, tableHeight, boardLeft, boardTop, pw, ph]);
+
   // ------------------------------------------------------------ scatter the pieces (in piece units, from the board's corner)
   useEffect(() => {
     if (!tableWidth) return;
@@ -121,7 +130,7 @@ export default function GurdwaraJigsaw({ stage, content, language, onFinish }) {
       if (current.length) return current;
       const all = [];
       for (let row = 0; row < grid; row += 1) for (let col = 0; col < grid; col += 1) all.push({ id: `${row}-${col}`, row, col });
-      const shuffled = all.sort(() => Math.random() - 0.5);
+      const shuffled = shuffle(all);
       // rows under the frame, centred on the table
       const rowWidth = perRow * pw * 1.18;
       const startX = (tableWidth - rowWidth) / 2 + pw * 0.09;
@@ -134,6 +143,12 @@ export default function GurdwaraJigsaw({ stage, content, language, onFinish }) {
       }));
     });
   }, [tableWidth, grid, pw, ph, boardLeft, trayTop, perRow]);
+
+  // A narrower screen (a phone turned upright): pieces left outside the table come back onto it
+  useEffect(() => {
+    setPieces((list) => (list.some((p) => !p.placed && onTable(p) !== p)
+      ? list.map((p) => (p.placed ? p : onTable(p))) : list));
+  }, [onTable]);
 
   // ------------------------------------------------------------ dragging
   const down = (e, piece) => {
@@ -196,32 +211,32 @@ export default function GurdwaraJigsaw({ stage, content, language, onFinish }) {
     return () => cancelAnimationFrame(frame);
   }, [dragging, placeAt]);
 
-  const complete = useCallback(() => {
-    setFinished(true);
-    sfx.win();
-  }, []);
-
   const up = () => {
     const d = drag.current;
     if (!d) return;
     drag.current = null;
     setDragging(null);
-    setPieces((list) => {
-      const next = list.map((p) => {
-        if (p.id !== d.id) return p;
-        const close = Math.abs(p.x - p.col) < 0.22 && Math.abs(p.y - p.row) < 0.22;
-        if (close) {
-          sfx.snap();
-          return { ...p, x: p.col, y: p.row, placed: true, z: 1 };
-        }
-        return p;
-      });
-      if (next.every((p) => p.placed)) setTimeout(complete, 250);
-      return next;
-    });
+    const piece = pieces.find((p) => p.id === d.id);
+    const fits = piece && Math.abs(piece.x - piece.col) < 0.22 && Math.abs(piece.y - piece.row) < 0.22;
+    if (fits) sfx.snap();
+    setPieces((list) => list.map((p) => {
+      if (p.id !== d.id) return p;
+      if (Math.abs(p.x - p.col) < 0.22 && Math.abs(p.y - p.row) < 0.22) return { ...p, x: p.col, y: p.row, placed: true, z: 1 };
+      return onTable(p);
+    }));
   };
 
   const placedCount = pieces.filter((p) => p.placed).length;
+
+  // The last piece in: a moment later the frame shines and the story can be read
+  useEffect(() => {
+    if (finished || !pieces.length || placedCount < pieces.length) return undefined;
+    const id = setTimeout(() => {
+      setFinished(true);
+      sfx.win();
+    }, 250);
+    return () => clearTimeout(id);
+  }, [finished, placedCount, pieces.length]);
   const target = settings.target_seconds || 120;
 
   const done = () => {

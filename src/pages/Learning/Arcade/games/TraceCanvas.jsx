@@ -3,52 +3,17 @@
  * -----------------------------------------------------------------------------
  * Trace a Gurmukhi letter with a finger, a pen or the mouse. The letter is
  * drawn faintly (with dots to follow on "guided", only its outline on
- * "outline", very faint on "faint"); check() compares the ink with the
- * letter's shape and says how much of the letter was covered and how much
- * of the ink stayed on it.
+ * "outline", very faint on "faint"); measure() compares the drawing with the
+ * letter (traceCheck.js) and judgeTrace() says whether it passes.
  *
  *   const ref = useRef();  <TraceCanvas ref={ref} text="ਕ" mode="guided" onInk={...} />
- *   ref.current.check() -> { coverage: 0-1, precision: 0-1, spread }   ref.current.clear()
+ *   ref.current.measure('guided') -> { coverage, precision, spread, worstPart, ... }   ref.current.clear()
  * -----------------------------------------------------------------------------
  */
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
-import { GURMUKHI_FONT, fontsReady } from './common';
+import { fontsReady } from './common';
+import { INK_WIDTH, SIZE, drawLetter, measureTrace } from './traceCheck';
 import styles from './AkharSikho.module.css';
-
-const SIZE = 300;        // drawing units (the canvas is scaled to fit its box)
-const GRID = 100;        // the shapes are compared on a 100 x 100 grid
-const INK_WIDTH = 24;
-
-// The letter's font size so that it fills most of the box
-const fitFont = (ctx, text) => {
-  let size = 230;
-  ctx.font = `700 ${size}px ${GURMUKHI_FONT}`;
-  const width = ctx.measureText(text).width;
-  if (width > SIZE * 0.82) size = Math.floor(size * (SIZE * 0.82) / width);
-  return size;
-};
-
-const drawLetter = (ctx, text, scale, { fill, stroke, lineWidth = 0, dash = null }) => {
-  ctx.save();
-  ctx.scale(scale, scale);
-  const size = fitFont(ctx, text);
-  ctx.font = `700 ${size}px ${GURMUKHI_FONT}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const y = SIZE * 0.53;
-  if (fill) {
-    ctx.fillStyle = fill;
-    ctx.fillText(text, SIZE / 2, y);
-  }
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
-    ctx.lineJoin = 'round';
-    if (dash) ctx.setLineDash(dash);
-    ctx.strokeText(text, SIZE / 2, y);
-  }
-  ctx.restore();
-};
 
 // The guide and the ink, on the light and on the dark board
 const COLOURS = {
@@ -65,7 +30,8 @@ const COLOURS = {
 const TraceCanvas = forwardRef(({ text, mode = 'guided', onInk, dark = false }, ref) => {
   const canvasRef = useRef(null);
   const strokes = useRef([]);
-  const drawing = useRef(false);
+  const pen = useRef(null);          // the pointer that is drawing (a second finger is ignored)
+  const shown = useRef(text);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -86,7 +52,7 @@ const TraceCanvas = forwardRef(({ text, mode = 'guided', onInk, dark = false }, 
     ctx.save();
     ctx.scale(scale, scale);
     ctx.strokeStyle = c.ink;
-    ctx.lineWidth = INK_WIDTH * 0.62;
+    ctx.lineWidth = INK_WIDTH;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     strokes.current.forEach((line) => {
@@ -98,18 +64,22 @@ const TraceCanvas = forwardRef(({ text, mode = 'guided', onInk, dark = false }, 
     ctx.restore();
   }, [text, mode, dark]);
 
-  // Sharp on high-density screens
+  // Sharp on high-density screens. A new letter starts with a clean board
   useEffect(() => {
     const canvas = canvasRef.current;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = SIZE * dpr * 1.4;
     canvas.height = SIZE * dpr * 1.4;
-    strokes.current = [];
+    if (shown.current !== text) {
+      shown.current = text;
+      strokes.current = [];
+      pen.current = null;
+    }
     let live = true;
     paint();
     fontsReady().then(() => { if (live) paint(); });
     return () => { live = false; };
-  }, [paint]);
+  }, [paint, text]);
 
   const point = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
@@ -117,21 +87,22 @@ const TraceCanvas = forwardRef(({ text, mode = 'guided', onInk, dark = false }, 
   };
 
   const down = (e) => {
+    if (pen.current !== null) return;
     e.preventDefault();
-    canvasRef.current.setPointerCapture?.(e.pointerId);
-    drawing.current = true;
+    try { canvasRef.current.setPointerCapture?.(e.pointerId); } catch { /* the pointer is already gone */ }
+    pen.current = e.pointerId;
     strokes.current.push([point(e)]);
     paint();
   };
   const move = (e) => {
-    if (!drawing.current) return;
+    if (pen.current !== e.pointerId) return;
     e.preventDefault();
     strokes.current[strokes.current.length - 1].push(point(e));
     paint();
   };
-  const up = () => {
-    if (!drawing.current) return;
-    drawing.current = false;
+  const up = (e) => {
+    if (pen.current !== e.pointerId) return;
+    pen.current = null;
     const total = strokes.current.reduce((n, line) => n + line.length, 0);
     onInk?.(total);
   };
@@ -139,59 +110,12 @@ const TraceCanvas = forwardRef(({ text, mode = 'guided', onInk, dark = false }, 
   useImperativeHandle(ref, () => ({
     clear: () => {
       strokes.current = [];
+      pen.current = null;
       paint();
       onInk?.(0);
     },
-    check: () => {
-      const make = () => {
-        const c = document.createElement('canvas');
-        c.width = GRID;
-        c.height = GRID;
-        return c.getContext('2d', { willReadFrequently: true });
-      };
-      const scale = GRID / SIZE;
-      const shape = make();
-      drawLetter(shape, text, scale, { fill: '#000' });
-      const near = make();     // the letter with a margin, for "stayed on the letter"
-      drawLetter(near, text, scale, { fill: '#000', stroke: '#000', lineWidth: 18 });
-      const ink = make();
-      ink.save();
-      ink.scale(scale, scale);
-      ink.strokeStyle = '#000';
-      ink.lineWidth = INK_WIDTH;
-      ink.lineCap = 'round';
-      ink.lineJoin = 'round';
-      strokes.current.forEach((line) => {
-        ink.beginPath();
-        line.forEach(([x, y], i) => (i ? ink.lineTo(x, y) : ink.moveTo(x, y)));
-        if (line.length === 1) ink.lineTo(line[0][0] + 0.1, line[0][1]);
-        ink.stroke();
-      });
-      ink.restore();
-      const a = shape.getImageData(0, 0, GRID, GRID).data;
-      const b = near.getImageData(0, 0, GRID, GRID).data;
-      const c = ink.getImageData(0, 0, GRID, GRID).data;
-      let letter = 0;
-      let covered = 0;
-      let inked = 0;
-      let onLetter = 0;
-      for (let i = 3; i < a.length; i += 4) {
-        const isLetter = a[i] > 60;
-        const isInk = c[i] > 60;
-        if (isLetter) letter += 1;
-        if (isInk) {
-          inked += 1;
-          if (b[i] > 60) onLetter += 1;
-        }
-        if (isLetter && isInk) covered += 1;
-      }
-      return {
-        coverage: letter ? covered / letter : 0,
-        precision: inked ? onLetter / inked : 0,
-        spread: letter ? inked / letter : 0,     // much more ink than letter = scribbling
-      };
-    },
-  }), [paint, text, onInk]);
+    measure: (rules = mode) => measureTrace(text, strokes.current, rules),
+  }), [paint, text, onInk, mode]);
 
   return (
     <canvas
@@ -202,6 +126,7 @@ const TraceCanvas = forwardRef(({ text, mode = 'guided', onInk, dark = false }, 
       onPointerUp={up}
       onPointerCancel={up}
       onPointerLeave={up}
+      onLostPointerCapture={up}
       role="img"
       aria-label={`Trace ${text}`}
     />

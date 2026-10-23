@@ -17,7 +17,10 @@
  * A game component gets: stage, content, t, language, dark, onFinish(result),
  * onQuit(), and for its own needs api, signedIn, wallet and arcade.
  * It calls onFinish({ score: 0-1000, completed, time_taken_seconds, details })
- * and the shell saves the result (useArcade) and shows the stars.
+ * and the shell saves the result (useArcade) and shows the stars. Each play
+ * is saved once (a second tap on Finish, or a slow connection, doesn't save
+ * it again), and a result that arrives after the player has left the stage
+ * isn't shown over the map.
  * -----------------------------------------------------------------------------
  */
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -90,6 +93,12 @@ export default function ArcadeShell({ gameKey, Game, apiString, isDarkMode = fal
   const profileRef = useRef(null);
   const playRef = useRef(null);
   const startedAt = useRef(0);
+  const plays = useRef(0);          // numbers each play (the game's key)
+  const livePlay = useRef(0);       // the play on screen (0 on the map)
+  const savedPlay = useRef(0);      // the last play whose result was sent
+  const stageRef = useRef(null);
+  const arcadeRef = useRef(arcade);
+  arcadeRef.current = arcade;
 
   const signedIn = arcade.signedIn;
   const playerName = wallet.name || userData?.first_name || userData?.username || t.player;
@@ -159,6 +168,10 @@ export default function ArcadeShell({ gameKey, Game, apiString, isDarkMode = fal
     const spec = number === 0 ? DAILY_STAGE : game.stages.find((s) => s.stage === number);
     if (!spec) return;
     sfx.pick();
+    const key = plays.current + 1;
+    plays.current = key;
+    livePlay.current = key;
+    stageRef.current = spec;
     setSheet(null);
     setResult(null);
     setExtra(null);
@@ -168,23 +181,24 @@ export default function ArcadeShell({ gameKey, Game, apiString, isDarkMode = fal
     window.scrollTo({ top: 0 });
     if (gameKey === 'shabad_le') {          // Shabad-le asks the server for its own puzzle
       setContent({ stage: number });
-      setPlayKey((k) => k + 1);
+      setPlayKey(key);
       startedAt.current = Date.now();
       return;
     }
     setLoadingStage(true);
     setContent(null);
     try {
-      const data = await arcade.loadStage(number);
+      const data = await arcadeRef.current.loadStage(number);
+      if (livePlay.current !== key) return;   // another stage was started, or the map opened
       setContent(data);
-      setPlayKey((k) => k + 1);
+      setPlayKey(key);
       startedAt.current = Date.now();
     } catch {
-      setStageError(t.couldNotLoad);
+      if (livePlay.current === key) setStageError(t.couldNotLoad);
     } finally {
-      setLoadingStage(false);
+      if (livePlay.current === key) setLoadingStage(false);
     }
-  }, [arcade, game.stages, gameKey, t.couldNotLoad]);
+  }, [game.stages, gameKey, t.couldNotLoad]);
 
   // On phones, scroll just enough to show the whole game (never past its top) when a stage starts
   useEffect(() => {
@@ -206,19 +220,35 @@ export default function ArcadeShell({ gameKey, Game, apiString, isDarkMode = fal
     setExtra(extraContent);
   }, []);
 
-  // A game finished: save it and show the stars
-  const finish = useCallback(async (res, extraContent = null) => {
-    const seconds = res.time_taken_seconds ?? Math.round((Date.now() - startedAt.current) / 1000);
-    const saved = await arcade.submitStage(stage.stage, { ...res, time_taken_seconds: seconds });
-    showResult(saved, extraContent);
-  }, [arcade, stage, showResult]);
+  // A game finished: save it (once per play) and show the stars, if the player is still there.
+  // These belong to one play, so a game left behind can't show its result later
+  const handlers = useMemo(() => {
+    const key = playKey;
+    return {
+      onFinish: async (res, extraContent = null) => {
+        if (!key || livePlay.current !== key || savedPlay.current === key) return;
+        savedPlay.current = key;
+        const seconds = res.time_taken_seconds ?? Math.round((Date.now() - startedAt.current) / 1000);
+        const saved = await arcadeRef.current.submitStage(stageRef.current.stage, { ...res, time_taken_seconds: seconds });
+        if (livePlay.current === key) showResult(saved, extraContent);
+      },
+      // Shabad-le saves its own result with the last guess
+      onResult: (saved, extraContent = null) => {
+        if (!key || livePlay.current !== key || savedPlay.current === key) return;
+        savedPlay.current = key;
+        showResult(saved, extraContent);
+      },
+    };
+  }, [playKey, showResult]);
 
   const backToMap = () => {
+    livePlay.current = 0;
     setScreen('map');
     setResult(null);
     setExtra(null);
     setStage(null);
     setContent(null);
+    setLoadingStage(false);
   };
 
   const hasNext = Boolean(stage && stage.stage > 0 && game.stages.some((s) => s.stage === stage.stage + 1));
@@ -492,8 +522,8 @@ export default function ArcadeShell({ gameKey, Game, apiString, isDarkMode = fal
                 t={t}
                 language={language}
                 dark={isDarkMode}
-                onFinish={finish}
-                onResult={showResult}
+                onFinish={handlers.onFinish}
+                onResult={handlers.onResult}
                 onQuit={backToMap}
                 api={{ apiString: api, token: signedIn ? accessToken : null }}
                 signedIn={signedIn}

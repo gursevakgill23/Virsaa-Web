@@ -5,7 +5,7 @@
  * left, then its ending on the right; a matched pair is tied with a coloured
  * parandi ribbon. When a board is done, each proverb's meaning is shown.
  * Each pair is worth full points first time, less after wrong tries; hard
- * stages have a timer per board.
+ * stages have a timer per board, which stops as soon as the last pair is tied.
  * Content: { boards: [[{start, end, literal, meaning}]], timer }
  * -----------------------------------------------------------------------------
  */
@@ -35,16 +35,20 @@ export default function AkhaanJor({ content, language, onFinish }) {
   const w = WORDS[language];
   const boards = useMemo(() => content.boards || [], [content.boards]);
   const [boardIndex, setBoardIndex] = useState(0);
-  const pairs = useMemo(() => boards[boardIndex] || [], [boards, boardIndex]);
+  // (two proverbs with the same ending can't share a board: either card would be right)
+  const pairs = useMemo(() => (boards[boardIndex] || []).filter((p, i, list) => list.findIndex((q) => q.end === p.end) === i),
+    [boards, boardIndex]);
   const endings = useMemo(() => shuffle(pairs.map((p, i) => ({ text: p.end, index: i }))), [pairs]);
   const [selected, setSelected] = useState(null);       // index of the chosen beginning
   const [matched, setMatched] = useState({});           // beginning index -> ribbon colour number
   const [misses, setMisses] = useState({});             // beginning index -> wrong tries
   const [wrongFlash, setWrongFlash] = useState(null);
   const [showMeanings, setShowMeanings] = useState(false);
+  const [boardDone, setBoardDone] = useState(false);       // every pair tied (the meanings follow)
   const [timeLeft, setTimeLeft] = useState(content.timer || null);
   const [timedOut, setTimedOut] = useState(false);
   const boardScores = useRef([]);
+  const mistakes = useRef(0);
   const boardRef = useRef(null);
   const startRefs = useRef([]);
   const endRefs = useRef([]);
@@ -53,10 +57,10 @@ export default function AkhaanJor({ content, language, onFinish }) {
 
   // ------------------------------------------------------------ the timer (hard stages)
   useEffect(() => {
-    if (!content.timer || showMeanings) return undefined;
+    if (!content.timer || showMeanings || boardDone) return undefined;
     const id = setInterval(() => setTimeLeft((t) => (t > 0 ? t - 1 : 0)), 1000);
     return () => clearInterval(id);
-  }, [content.timer, showMeanings, boardIndex]);
+  }, [content.timer, showMeanings, boardDone, boardIndex]);
 
   const closeBoard = useCallback((finalMatched, finalMisses, outOfTime) => {
     const score = pairs.reduce((sum, _, i) => {
@@ -69,11 +73,11 @@ export default function AkhaanJor({ content, language, onFinish }) {
   }, [pairs, boardIndex]);
 
   useEffect(() => {
-    if (content.timer && timeLeft === 0 && !showMeanings) {
+    if (content.timer && timeLeft === 0 && !showMeanings && !boardDone) {
       sfx.sad();
       closeBoard(matched, misses, true);
     }
-  }, [timeLeft, content.timer, showMeanings, closeBoard, matched, misses]);
+  }, [timeLeft, content.timer, showMeanings, boardDone, closeBoard, matched, misses]);
 
   // ------------------------------------------------------------ ribbons between matched cards
   const measure = useCallback(() => {
@@ -100,13 +104,13 @@ export default function AkhaanJor({ content, language, onFinish }) {
 
   // ------------------------------------------------------------ choosing
   const chooseStart = (i) => {
-    if (matched[i] !== undefined || showMeanings) return;
+    if (matched[i] !== undefined || showMeanings || boardDone) return;
     sfx.tap();
     setSelected(i);
   };
 
   const chooseEnd = (ending) => {
-    if (showMeanings || matched[ending.index] !== undefined) return;
+    if (showMeanings || boardDone || matched[ending.index] !== undefined) return;
     if (selected === null) {
       sfx.tap();
       return;
@@ -117,10 +121,12 @@ export default function AkhaanJor({ content, language, onFinish }) {
       setMatched(nextMatched);
       setSelected(null);
       if (Object.keys(nextMatched).length === pairs.length) {
+        setBoardDone(true);                 // the clock stops here, not when the meanings appear
         setTimeout(() => { sfx.win(); closeBoard(nextMatched, misses, false); }, 700);
       }
     } else {
       sfx.wrong();
+      mistakes.current += 1;
       const nextMisses = { ...misses, [selected]: (misses[selected] || 0) + 1 };
       setMisses(nextMisses);
       setWrongFlash({ start: selected, end: ending.index });
@@ -136,6 +142,7 @@ export default function AkhaanJor({ content, language, onFinish }) {
       setMatched({});
       setMisses({});
       setShowMeanings(false);
+      setBoardDone(false);
       setTimedOut(false);
       setTimeLeft(content.timer || null);
       setLines([]);
@@ -145,7 +152,7 @@ export default function AkhaanJor({ content, language, onFinish }) {
     onFinish({
       score: Math.round(total * 1000),
       completed: true,
-      details: { boards: boards.length, mistakes: Object.values(misses).reduce((a, b) => a + b, 0) },
+      details: { boards: boards.length, mistakes: mistakes.current },
     });
   };
 
@@ -186,8 +193,8 @@ export default function AkhaanJor({ content, language, onFinish }) {
                   ref={(el) => { startRefs.current[i] = el; }}
                   type="button"
                   lang="pa"
-                  className={[styles.card, styles.startCard, selected === i ? styles.selected : '',
-                    matched[i] !== undefined ? styles.matched : '', wrongFlash?.start === i ? styles.wrong : ''].join(' ')}
+                  className={[styles.card, selected === i ? styles.selected : '',
+                    matched[i] !== undefined ? styles.matched : '', wrongFlash?.start === i ? styles.wrong : ''].filter(Boolean).join(' ')}
                   style={matched[i] !== undefined ? { '--ribbon': RIBBONS[matched[i] % RIBBONS.length] } : undefined}
                   onClick={() => chooseStart(i)}
                   aria-pressed={selected === i}
@@ -207,7 +214,7 @@ export default function AkhaanJor({ content, language, onFinish }) {
                     type="button"
                     lang="pa"
                     className={[styles.card, styles.endCard, colour !== undefined ? styles.matched : '',
-                      wrongFlash?.end === e.index ? styles.wrong : ''].join(' ')}
+                      wrongFlash?.end === e.index ? styles.wrong : ''].filter(Boolean).join(' ')}
                     style={colour !== undefined ? { '--ribbon': RIBBONS[colour % RIBBONS.length] } : undefined}
                     onClick={() => chooseEnd(e)}
                     disabled={colour !== undefined}

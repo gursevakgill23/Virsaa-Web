@@ -9,7 +9,7 @@
  * Content: { rounds: [{name, name_pa, clues: [4], fact, options: [{name, name_pa}]}] }
  * -----------------------------------------------------------------------------
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { FaArrowRight, FaFire, FaLightbulb, FaQuestion } from 'react-icons/fa';
 import { toast } from '../../../../utils/notify';
 import arcade from '../Arcade.module.css';
@@ -50,10 +50,15 @@ export default function KaunHai({ content, language, onFinish, wallet }) {
   const [removed, setRemoved] = useState([]);
   const [solved, setSolved] = useState(false);
   const [scores, setScores] = useState([]);
+  const hinting = useRef(false);          // a hint is being paid for (a second tap waits)
+  const live = useRef({ index, wrong });
+  live.current = { index, wrong };
   const round = rounds[index];
   const pa = language === 'punjabi';
 
-  const value = () => Math.max(0.1, VALUE_BY_CLUES[shown - 1] - WRONG_COST * wrong.length);
+  const value = () => Math.max(0.1, VALUE_BY_CLUES[Math.min(shown, VALUE_BY_CLUES.length) - 1] - WRONG_COST * wrong.length);
+  // the wrong names a hint could still take away (it always leaves one wrong name)
+  const removable = round ? round.options.map((o) => o.name).filter((n) => n !== round.name && !wrong.includes(n) && !removed.includes(n)) : [];
 
   const lightNext = () => {
     if (solved || shown >= round.clues.length) return;
@@ -76,15 +81,20 @@ export default function KaunHai({ content, language, onFinish, wallet }) {
   };
 
   const hint = async () => {
-    const left = round.options.map((o) => o.name).filter((n) => n !== round.name && !wrong.includes(n) && !removed.includes(n));
-    if (left.length <= 1) return;
+    if (solved || hinting.current || removable.length <= 1) return;
+    hinting.current = true;
     const paid = await wallet.spend(HINT_COST, 'Kaun Hai hint');
+    hinting.current = false;
     if (!paid.ok) {
       toast.error(paid.reason === 'coins' ? `A hint costs ${HINT_COST} ${w.coins}.` : paid.message);
       return;
     }
+    if (live.current.index !== index) return;            // the round moved on while paying
     sfx.pop();
-    setRemoved((list) => [...list, left[Math.floor(Math.random() * left.length)]]);
+    setRemoved((list) => {
+      const left = removable.filter((n) => !list.includes(n) && !live.current.wrong.includes(n));
+      return left.length > 1 ? [...list, left[Math.floor(Math.random() * left.length)]] : list;
+    });
   };
 
   const next = () => {
@@ -111,7 +121,7 @@ export default function KaunHai({ content, language, onFinish, wallet }) {
         {!solved && <span className={arcade.hudPill}><FaFire aria-hidden="true" /> {pointsNow} {w.points}</span>}
         <span className={arcade.hudSpacer} />
         {!solved && (
-          <button type="button" className={styles.hintButton} onClick={hint}>
+          <button type="button" className={styles.hintButton} onClick={hint} disabled={removable.length <= 1}>
             <FaLightbulb aria-hidden="true" /> {w.hint} <small>{HINT_COST}</small>
           </button>
         )}
@@ -121,7 +131,7 @@ export default function KaunHai({ content, language, onFinish, wallet }) {
         <h2 className={styles.question}>{solved ? w.itWas(pa ? round.name_pa : round.name) : w.who}</h2>
         <div className={styles.diyas}>
           {round.clues.map((clue, i) => (
-            <div key={clue} className={styles.clueColumn}>
+            <div key={i} className={styles.clueColumn}>
               <Diya
                 lit={i < shown}
                 onClick={i === shown ? lightNext : undefined}

@@ -17,7 +17,7 @@ import { toast } from '../../../../utils/notify';
 import arcade from '../Arcade.module.css';
 import { sfx } from '../arcadeSound';
 import GurmukhiKeyboard from '../GurmukhiKeyboard';
-import { isCombining, isWord, scoreGuess, tiles } from '../gurmukhi';
+import { isWord, scoreGuess, tiles, typeKey } from '../gurmukhi';
 import { localShabadWord } from '../localGames';
 import styles from './ShabadLe.module.css';
 
@@ -87,7 +87,12 @@ export default function ShabadLe({ stage, language, onResult, api, signedIn, wal
   const [finished, setFinished] = useState(false);
   const [solved, setSolved] = useState(false);
   const [hints, setHints] = useState([]);           // [{ position, tile }]
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusyState] = useState(false);
+  const busyRef = useRef(false);            // a guess or hint is on its way (a held Enter key sends nothing twice)
+  const setBusy = useCallback((value) => {
+    busyRef.current = value;
+    setBusyState(value);
+  }, []);
   const [shakeRow, setShakeRow] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [alreadyPlayed, setAlreadyPlayed] = useState(false);
@@ -150,23 +155,18 @@ export default function ShabadLe({ stage, language, onResult, api, signedIn, wal
   }, [rows]);
 
   // ------------------------------------------------------------ typing
+  // (a vowel sign takes the place of the tile's old one, a mark isn't added twice)
   const current = tiles(typed);
   const onKey = useCallback((ch) => {
-    if (finished || busy) return;
+    if (finished || busyRef.current) return;
     sfx.tap();
-    setTyped((text) => {
-      const parts = tiles(text);
-      const combining = [...ch].every((c) => isCombining(c));
-      if (combining) return parts.length ? text + ch : text;
-      if (parts.length >= length) return text;
-      return text + ch;
-    });
-  }, [finished, busy, length]);
+    setTyped((text) => typeKey(text, ch, length));
+  }, [finished, length]);
 
   const onBackspace = useCallback(() => {
-    if (finished || busy) return;
+    if (finished || busyRef.current) return;
     setTyped((text) => [...text].slice(0, -1).join(''));
-  }, [finished, busy]);
+  }, [finished]);
 
   const finishGame = useCallback((score, wasSolved, word, serverResult, finalRows) => {
     const seconds = Math.round((Date.now() - started.current) / 1000);
@@ -188,7 +188,7 @@ export default function ShabadLe({ stage, language, onResult, api, signedIn, wal
   }, [daily, puzzle, w, game, stage.stage, onResult]);
 
   const onEnter = useCallback(async () => {
-    if (finished || busy) return;
+    if (finished || busyRef.current) return;
     if (current.length !== length || !isWord(typed, length)) {
       sfx.wrong();
       setShakeRow(true);
@@ -239,18 +239,21 @@ export default function ShabadLe({ stage, language, onResult, api, signedIn, wal
     } finally {
       setBusy(false);
     }
-  }, [finished, busy, current, length, typed, w, puzzle, api, rows, offlineWord, hints.length, daily, signedIn, finishGame]);
+  }, [finished, current, length, typed, w, puzzle, api, rows, offlineWord, hints.length, daily, signedIn, finishGame, setBusy]);
 
   // ------------------------------------------------------------ hints
   const canHint = !finished && hints.length < (puzzle?.max_hints ?? 2);
   const hintCost = puzzle?.hint_cost ?? 15;
   const showHint = async () => {
-    if (!canHint || busy) return;
+    if (!canHint || busyRef.current) return;
     if (!puzzle) {                                           // offline: from the local word
       const answerTiles = tiles(offlineWord.word);
       const known = new Set(hints.map((h) => h.position));
       const left = answerTiles.map((_, i) => i).filter((i) => !known.has(i));
+      if (!left.length) return;
+      setBusy(true);
       const pay = await wallet.spend(hintCost, 'Shabad-le hint');
+      setBusy(false);
       if (!pay.ok) { toast.error(pay.reason === 'coins' ? `A hint costs ${hintCost} ${w.coins}.` : pay.message); return; }
       const position = left[Math.floor(Math.random() * left.length)];
       setHints((list) => [...list, { position, tile: answerTiles[position] }]);

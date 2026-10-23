@@ -38,6 +38,13 @@
   font-size: 12px;
 }
 
+/* Every carriage is already in its place */
+.hintButton:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
 .station {
   position: relative;
   padding: 62px 16px 34px;

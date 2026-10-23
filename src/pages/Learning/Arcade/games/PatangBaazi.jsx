@@ -135,6 +135,7 @@ export default function PatangBaazi({ stage, language, onFinish, dark = false })
   const [hud, setHud] = useState({ time: duration, cuts: 0, lives: maxLives, stars: 0 });
   const game = useRef(null);
   const raf = useRef(null);
+  const flying = useRef(false);        // the arrow keys steer only while the kite is up
 
   // ------------------------------------------------------------ set up the world
   const reset = useCallback(() => {
@@ -377,11 +378,12 @@ export default function PatangBaazi({ stage, language, onFinish, dark = false })
     const timeLeft = Math.max(0, duration - g.t);
     if (Math.floor(g.t * 10) % 2 === 0) setHud({ time: timeLeft, cuts: g.cuts, lives: g.lives, stars: g.starsCaught });
     if (g.lives <= 0 && k.down <= 0.2) { finish(false); return; }
-    if (timeLeft <= 0) { finish(true); return; }
+    if (timeLeft <= 0) { finish(g.lives > 0); return; }     // the last string cut as time ran out still loses
     raf.current = requestAnimationFrame(frame);
   }, [s, duration, finish, w.boKata, dark]);
 
   useEffect(() => {
+    flying.current = started && !paused;
     if (!started || paused) return undefined;
     if (game.current) game.current.last = null;
     raf.current = requestAnimationFrame(frame);
@@ -405,7 +407,7 @@ export default function PatangBaazi({ stage, language, onFinish, dark = false })
   useEffect(() => {
     const onHide = () => { if (document.hidden) setPaused(true); };
     const down = (e) => {
-      if (!game.current || !e.key.startsWith('Arrow')) return;
+      if (!game.current || game.current.over || !flying.current || !e.key.startsWith('Arrow')) return;
       e.preventDefault();
       game.current.keys[e.key] = true;
     };

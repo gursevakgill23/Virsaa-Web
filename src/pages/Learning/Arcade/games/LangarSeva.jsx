@@ -15,7 +15,7 @@ import { FaClock, FaFire, FaPlay, FaUsers } from 'react-icons/fa';
 import arcade from '../Arcade.module.css';
 import { sfx } from '../arcadeSound';
 import styles from './LangarSeva.module.css';
-import { formatTime } from './common';
+import { formatTime, shuffle } from './common';
 
 const COOK_SECONDS = 2.4;
 const EAT_SECONDS = 2.2;
@@ -141,12 +141,14 @@ export default function LangarSeva({ stage, language, onFinish }) {
   const [message, setMessage] = useState('');
   const timer = useRef({ elapsed: 0, nextArrival: 0.4, done: false });
 
-  // Who sits down next, and what they would like (a roti nearly always)
+  // Who sits down next, and what they would like (a roti nearly always; always something,
+  // or they could never be served and the seva would never end)
   const newPerson = useCallback((n) => {
     const want = Math.max(1, Math.min(s.wants || 1, items.length));
     const count = 1 + Math.floor(Math.random() * want);
-    const others = items.filter((i) => i !== 'roti').sort(() => Math.random() - 0.5);
-    const list = Math.random() < 0.85 && items.includes('roti') ? ['roti', ...others] : others;
+    const others = shuffle(items.filter((i) => i !== 'roti'));
+    let list = Math.random() < 0.85 && items.includes('roti') ? ['roti', ...others] : others;
+    if (!list.length) list = [...items];
     return { id: n, look: randomLook(n), wants: list.slice(0, count), got: [], eating: 0 };
   }, [items, s.wants]);
 
@@ -212,13 +214,15 @@ export default function LangarSeva({ stage, language, onFinish }) {
 
   // ------------------------------------------------------------ serving
   const pick = (item) => {
+    if (!started) return;
     sfx.pick();
     setHolding(item);
     setMessage('');
   };
 
   const serve = (index) => {
-    const person = seats[index];
+    if (!started) return;
+    const person = seatsRef.current[index];
     if (!person || person.eating || !holding) {
       if (!holding && person && !person.eating) { sfx.tap(); setMessage(w.nothing); }
       return;
@@ -240,7 +244,7 @@ export default function LangarSeva({ stage, language, onFinish }) {
     }
     sfx.correct();
     setSeats((list) => list.map((p, i) => {
-      if (i !== index) return p;
+      if (i !== index || !p || p.id !== person.id) return p;
       const got = [...p.got, holding];
       const full = p.wants.every((x) => got.includes(x));
       return { ...p, got, eating: full ? EAT_SECONDS : 0 };
@@ -248,7 +252,7 @@ export default function LangarSeva({ stage, language, onFinish }) {
   };
 
   const cook = () => {
-    if (tawaRef.current !== null) return;
+    if (!started || tawaRef.current !== null) return;
     sfx.tap();
     tawaRef.current = COOK_SECONDS;
     setTawa(COOK_SECONDS);

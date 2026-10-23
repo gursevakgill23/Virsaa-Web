@@ -4,7 +4,8 @@
  * Akhar Barsat: letters, syllables and words fall from the monsoon clouds as
  * raindrops. Type each one (on the on-screen keyboard or a Gurmukhi
  * keyboard) before it lands. A word is typed tile by tile: the letter, then
- * its vowel sign. Every drop that lands takes a life; the stage ends when
+ * its vowel sign (bindi, tippi and addak in any order; ੳ + ੁ for ਉ, ਅ + ਾ
+ * for ਆ). Only the exact drop is caught. Every drop that lands takes a life; the stage ends when
  * the rain stops (or the lives run out). Score: the share of drops caught,
  * out of 1000. The game pauses when the tab is hidden.
  * Content: { drops: [{text, tiles, roman?, meaning?}] } + stage settings
@@ -16,7 +17,7 @@ import { FaHeart, FaPause, FaPlay, FaTint } from 'react-icons/fa';
 import arcade from '../Arcade.module.css';
 import { sfx } from '../arcadeSound';
 import GurmukhiKeyboard, { LETTER_ROWS, SIGNS } from '../GurmukhiKeyboard';
-import { isCombining, tiles } from '../gurmukhi';
+import { isCombining, tileFits, tiles } from '../gurmukhi';
 import styles from './AkharBarsat.module.css';
 
 const WORDS = {
@@ -32,14 +33,15 @@ const WORDS = {
 
 // Does the typed text fit the start of this drop? (the last tile may be half typed)
 const fits = (typedTiles, target) => {
-  if (typedTiles.length > target.length) return false;
-  return typedTiles.every((t, i) => (i < typedTiles.length - 1 ? t === target[i] : target[i].startsWith(t)));
+  if (!typedTiles.length || typedTiles.length > target.length) return false;
+  return typedTiles.every((t, i) => (i < typedTiles.length - 1 ? t === target[i] : tileFits(t, target[i])));
 };
 
 export default function AkharBarsat({ stage, content, language, onFinish }) {
   const w = WORDS[language];
   const s = stage.settings || {};
-  const queue = useMemo(() => (content.drops || []).map((d, i) => ({ ...d, id: i, tiles: d.tiles || tiles(d.text) })), [content.drops]);
+  // (the drop's tiles are worked out here too, so they are spelt the way typing is)
+  const queue = useMemo(() => (content.drops || []).map((d, i) => ({ ...d, id: i, tiles: tiles(d.text) })), [content.drops]);
   const fall = (s.fall_seconds || 9) * 1000;
   const spawnEvery = (s.spawn_seconds || 2.5) * 1000;
   const maxLives = s.lives || 5;
@@ -47,7 +49,12 @@ export default function AkharBarsat({ stage, content, language, onFinish }) {
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
   const [, setFrame] = useState(0);
-  const [buffer, setBuffer] = useState('');
+  const [buffer, setBufferState] = useState('');
+  const bufferRef = useRef('');           // what has been typed (keys can come faster than the screen updates)
+  const setBuffer = useCallback((text) => {
+    bufferRef.current = text;
+    setBufferState(text);
+  }, []);
   const [bufferWrong, setBufferWrong] = useState(false);
   const [effects, setEffects] = useState([]);   // pops and splashes
   const game = useRef({ now: 0, last: null, spawned: 0, active: [], caught: 0, missed: 0, lives: maxLives, combo: 0, best: 0, over: false });
@@ -97,7 +104,7 @@ export default function AkharBarsat({ stage, content, language, onFinish }) {
         sfx.splash();
         addEffect('splash', d.x, 100, d.text);
       });
-      setBuffer('');
+      if (bufferRef.current) setBuffer('');
       if (g.lives <= 0) {
         setFrame((f) => f + 1);
         end(false);
@@ -111,7 +118,7 @@ export default function AkharBarsat({ stage, content, language, onFinish }) {
     }
     setFrame((f) => f + 1);
     raf.current = requestAnimationFrame(tick);
-  }, [queue, spawnEvery, fall, end, addEffect]);
+  }, [queue, spawnEvery, fall, end, addEffect, setBuffer]);
 
   useEffect(() => {
     if (!started || paused) return undefined;
@@ -142,8 +149,9 @@ export default function AkharBarsat({ stage, content, language, onFinish }) {
   const onKey = useCallback((ch) => {
     const g = game.current;
     if (!started || paused || g.over) return;
-    const next = buffer + ch;
+    const buffer = bufferRef.current;
     if (isCombining(ch) && !buffer) return;
+    const next = buffer + ch;
     const typed = tiles(next);
     // the drop nearest the ground that fits what has been typed
     const candidates = g.active.filter((d) => fits(typed, d.tiles)).sort((a, b) => a.born - b.born);
@@ -163,9 +171,9 @@ export default function AkharBarsat({ stage, content, language, onFinish }) {
       sfx.tap();
       setBuffer(next);
     }
-  }, [started, paused, buffer, catchDrop]);
+  }, [started, paused, catchDrop, setBuffer]);
 
-  const onBackspace = useCallback(() => setBuffer((b) => [...b].slice(0, -1).join('')), []);
+  const onBackspace = useCallback(() => setBuffer([...bufferRef.current].slice(0, -1).join('')), [setBuffer]);
 
   // ------------------------------------------------------------ keyboard keys for this stage
   const letters = useMemo(() => {

@@ -10,7 +10,7 @@
  * Content: { rounds: [[{year, title, title_pa, detail, slug}]] }
  * -----------------------------------------------------------------------------
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FaArrowLeft, FaArrowRight, FaCheck, FaLightbulb, FaTrain } from 'react-icons/fa';
 import { toast } from '../../../../utils/notify';
 import arcade from '../Arcade.module.css';
@@ -51,8 +51,12 @@ export default function ItihaasTimeline({ content, language, onFinish, wallet })
   const [leaving, setLeaving] = useState(false);
   const [message, setMessage] = useState('');
   const [scores, setScores] = useState([]);
+  const leaveTimer = useRef(null);      // the train leaving: cancelled if the next train comes first
+  const hinting = useRef(false);        // a hint is being paid for
 
   const sorted = useMemo(() => [...events].sort((a, b) => a.year - b.year), [events]);
+
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
 
   const swap = (a, b) => {
     if (a === b || locked.includes(a) || locked.includes(b)) return;
@@ -80,7 +84,8 @@ export default function ItihaasTimeline({ content, language, onFinish, wallet })
     setOrder(list);
     setDone(true);
     setScores((s) => [...s, value]);
-    setTimeout(() => { setLeaving(true); sfx.whoosh(); }, 900);
+    clearTimeout(leaveTimer.current);
+    leaveTimer.current = setTimeout(() => { setLeaving(true); sfx.whoosh(); }, 900);
   };
 
   const check = () => {
@@ -106,21 +111,33 @@ export default function ItihaasTimeline({ content, language, onFinish, wallet })
     setMessage(w.tryAgain(wrongCount));
   };
 
+  // A hint puts the right carriage in the first wrong place and fixes it there. It is
+  // worked out from the order as it is after paying (taps may have moved carriages meanwhile)
+  const orderRef = useRef(order);
+  orderRef.current = order;
+  const doneRef = useRef(done);
+  doneRef.current = done;
   const hint = async () => {
-    const slot = order.findIndex((e, i) => e.year !== sorted[i].year && !locked.includes(i));
-    if (slot < 0) return;
+    if (done || hinting.current) return;
+    if (!order.some((e, i) => e.year !== sorted[i].year && !locked.includes(i))) return;
+    hinting.current = true;
     const paid = await wallet.spend(HINT_COST, 'Itihaas Timeline hint');
+    hinting.current = false;
     if (!paid.ok) {
       toast.error(paid.reason === 'coins' ? `A hint costs ${HINT_COST} ${w.coins}.` : paid.message);
       return;
     }
-    const from = order.findIndex((e) => e.year === sorted[slot].year);
-    setOrder((list) => {
-      const next = [...list];
-      [next[slot], next[from]] = [next[from], next[slot]];
-      return next;
-    });
+    if (doneRef.current) return;
+    const list = orderRef.current;
+    const slot = list.findIndex((e, i) => e.year !== sorted[i].year && !locked.includes(i));
+    if (slot < 0) return;
+    const from = list.findIndex((e, i) => i !== slot && !locked.includes(i) && e.year === sorted[slot].year);
+    if (from < 0) return;
+    const next = [...list];
+    [next[slot], next[from]] = [next[from], next[slot]];
+    setOrder(next);
     setLocked((l) => [...l, slot]);
+    setPicked(null);
     setChecked(null);
     sfx.pop();
   };
@@ -128,6 +145,7 @@ export default function ItihaasTimeline({ content, language, onFinish, wallet })
   const nextRound = () => {
     sfx.pick();
     if (roundIndex + 1 < rounds.length) {
+      clearTimeout(leaveTimer.current);
       const nextEvents = rounds[roundIndex + 1];
       setRoundIndex((r) => r + 1);
       setOrder(shuffleUntilWrong(nextEvents));
@@ -153,7 +171,9 @@ export default function ItihaasTimeline({ content, language, onFinish, wallet })
         <span className={arcade.hudPill}><FaTrain aria-hidden="true" /> {w.round} {roundIndex + 1}/{rounds.length}</span>
         <span className={arcade.hudSpacer} />
         {!done && (
-          <button type="button" className={styles.hintButton} onClick={hint}>
+          <button type="button" className={styles.hintButton} onClick={hint}
+            disabled={!order.some((e, i) => e.year !== sorted[i].year && !locked.includes(i))}
+          >
             <FaLightbulb aria-hidden="true" /> {w.hint} <small>{HINT_COST}</small>
           </button>
         )}
@@ -167,7 +187,7 @@ export default function ItihaasTimeline({ content, language, onFinish, wallet })
           {order.map((e, i) => {
             const mark = checked ? checked[i] : null;
             return (
-              <div key={e.slug || e.year} className={styles.slot}>
+              <div key={e.slug || `${e.year}-${e.title}`} className={styles.slot}>
                 <button
                   type="button"
                   className={[styles.carriage, styles[`era_${ERA(e.year)}`], picked === i ? styles.picked : '',

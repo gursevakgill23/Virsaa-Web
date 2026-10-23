@@ -29,6 +29,13 @@
   font-size: 12px;
 }
 
+/* No wrong name left to take away */
+.hintButton:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
 .night {
   position: relative;
   padding: clamp(18px, 3vw, 30px);

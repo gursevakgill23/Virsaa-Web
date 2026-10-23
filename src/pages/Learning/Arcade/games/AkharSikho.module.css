@@ -160,6 +160,38 @@
   color: var(--accent-3);
 }
 
+/* A tracing that didn't pass: what to fix */
+.messageRetry {
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent-3) 10%, var(--tile));
+}
+
+/* After two tries: go on without the tracing points */
+.skip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.skip:hover { color: var(--accent); }
+
+.skip:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
 .learned {
   display: flex;
   flex-direction: column;
