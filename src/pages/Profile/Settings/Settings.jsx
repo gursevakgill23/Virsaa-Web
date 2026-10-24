@@ -438,7 +438,7 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
   // Security: sign-in codes, above the password form
   const twoStepBlock = (
     <div className={styles.block}>
-      <h3 className={styles.blockTitle}><FaShieldAlt aria-hidden="true" /> Sign-in codes</h3>
+      <h3 className={styles.blockTitle}><FaShieldAlt aria-hidden="true" /> Two Factor Authentication </h3>
       <p className={styles.hint}>
         After your password, we email you a 6-digit code to finish signing in, so nobody can get into your account with your password alone.
       </p>
