@@ -173,8 +173,60 @@
   cursor: pointer;
 }
 
-.editLink:hover {
+.editLink:hover:not(:disabled) {
   background: rgba(var(--primary-rgb), 0.14);
+}
+
+.editLink:disabled {
+  color: var(--secondary-text-color);
+  background: transparent;
+  cursor: default;
+}
+
+/* Sign-in codes: the code / password box under the switch */
+.twoStepForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(var(--primary-rgb), 0.22);
+  background: var(--card-bg-color);
+}
+
+.page .twoStepText {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-color);
+}
+
+.codeInput {
+  max-width: 220px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.codeInput::placeholder {
+  letter-spacing: 0.3em;
+  opacity: 0.35;
+}
+
+.twoStepActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.twoStepButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 /* Form controls */

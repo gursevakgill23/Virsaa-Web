@@ -5,18 +5,20 @@
  *   - General: theme (light / dark / match the device) and language
  *   - Notifications: which kinds of notification to receive
  *   - Privacy: save history on/off, clear history, delete the account
- *   - Security: change password
+ *   - Security: sign-in codes (two-step sign-in) on / off, change password
  *   - Storage: how much this site stores on the device, and clearing it
  * Switches save straight away (and switch back if the server refuses).
- * Data: /api/auth/settings/, change-password/, delete-account/ (api/accountApi.js).
+ * Data: /api/auth/settings/, two-factor/, change-password/, delete-account/
+ * (api/accountApi.js). Admin accounts always use sign-in codes: their switch
+ * stays on.
  * -----------------------------------------------------------------------------
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from '../../../utils/notify';
 import {
   FaMoon, FaSun, FaLanguage, FaBell, FaLock,
-  FaDatabase, FaTrash, FaPalette, FaUserShield, FaDesktop, FaKey, FaCheck, FaHistory,
+  FaDatabase, FaTrash, FaPalette, FaUserShield, FaDesktop, FaKey, FaCheck, FaHistory, FaShieldAlt,
 } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import AccountTabs from '../AccountTabs/AccountTabs';
@@ -24,6 +26,7 @@ import { useAuth } from '../../../context/AuthContext';
 import accountApi from '../../../api/accountApi';
 import { describeApiError } from '../../../utils/apiError';
 import { refreshUnread } from '../../../hooks/useUnreadNotifications';
+import useCountdown from '../../../hooks/useCountdown';
 import { LANGUAGES, getLanguage, setLanguage as setSiteLanguage } from '../../../i18n/siteLanguage';
 import styles from './Settings.module.css';
 
@@ -83,6 +86,9 @@ const SwitchRow = ({ id, title, description, checked, onChange, disabled }) => (
 // After a language change the page reloads; this flag shows "Settings saved" afterwards
 const SAVED_FLAG = 'virsaa:settings-saved';
 
+// The first message of a field error list (the API sends ["..."])
+const firstOf = (value) => (Array.isArray(value) ? value[0] : value);
+
 const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
   const { isLoggedIn, accessToken, logout, updateUserData, replaceTokens } = useAuth();
@@ -103,6 +109,17 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
   const [prefsError, setPrefsError] = useState(null);
 
   // Security
+  // Sign-in codes: the status, and the open step (turning on: the emailed code; off: the password)
+  const [twoFactor, setTwoFactor] = useState(null);
+  const [twoFactorError, setTwoFactorError] = useState('');
+  const [tfStep, setTfStep] = useState(null); // { mode: 'enable', challenge, hint } | { mode: 'disable' }
+  const [tfCode, setTfCode] = useState('');
+  const [tfPassword, setTfPassword] = useState('');
+  const [tfError, setTfError] = useState('');
+  const [tfInfo, setTfInfo] = useState('');
+  const [tfBusy, setTfBusy] = useState(false);
+  const { left: tfResendIn, restart: tfRestart } = useCountdown(0);
+  const tfInputRef = useRef(null);
   // Password form
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [pwErrors, setPwErrors] = useState({});
@@ -224,6 +241,115 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
     }
   };
 
+  // ---------- Sign-in codes (two-step sign-in) ----------
+  const loadTwoFactor = useCallback(async () => {
+    if (!isLoggedIn || !accessToken) return;
+    try {
+      setTwoFactor(await accountApi.twoFactor(apiString, accessToken));
+      setTwoFactorError('');
+    } catch (err) {
+      setTwoFactorError(err.response?.status === 401 ? 'Your session has ended. Log in again.' : describeApiError(err, 'Sign-in codes couldn’t be loaded right now.'));
+    }
+  }, [apiString, accessToken, isLoggedIn]);
+
+  useEffect(() => { if (activeTab === 'security') loadTwoFactor(); }, [activeTab, loadTwoFactor]);
+  // The code or password box gets the focus when it opens
+  useEffect(() => { if (tfStep) tfInputRef.current?.focus(); }, [tfStep]);
+
+  const closeTwoStep = () => {
+    setTfStep(null);
+    setTfCode('');
+    setTfPassword('');
+    setTfError('');
+    setTfInfo('');
+  };
+
+  // The switch: turning on emails a code to confirm; turning off asks for the password
+  const toggleTwoFactor = async () => {
+    if (!twoFactor || twoFactor.required || tfBusy) return;
+    setTfError('');
+    setTfInfo('');
+    if (twoFactor.enabled) {
+      setTfStep({ mode: 'disable' });
+      return;
+    }
+    setTfBusy(true);
+    try {
+      const data = await accountApi.enableTwoFactor(apiString, accessToken);
+      if (data.challenge) {
+        setTfStep({ mode: 'enable', challenge: data.challenge, hint: data.email_hint });
+        tfRestart(data.resend_in ?? 60);
+      } else {
+        setTwoFactor(data); // already on
+      }
+    } catch (err) {
+      say('error', err.response?.data?.error || describeApiError(err, 'The code couldn’t be sent. Try again.'));
+    } finally {
+      setTfBusy(false);
+    }
+  };
+
+  const confirmEnable = async (e) => {
+    e.preventDefault();
+    const digits = tfCode.replace(/\D/g, '');
+    if (digits.length !== 6) { setTfError('Enter the 6-digit code from the email.'); return; }
+    setTfBusy(true);
+    setTfError('');
+    try {
+      const data = await accountApi.confirmTwoFactor(apiString, accessToken, tfStep.challenge, digits);
+      setTwoFactor(data);
+      closeTwoStep();
+      say('success', data.message || 'Sign-in codes are on.');
+      refreshUnread();
+    } catch (err) {
+      const d = err.response?.data || {};
+      if (d.reason === 'expired' || d.reason === 'locked') {
+        closeTwoStep();
+        say('error', firstOf(d.code) || d.error);
+      } else {
+        setTfError(firstOf(d.code) || d.error || describeApiError(err, 'The code couldn’t be checked. Try again.'));
+      }
+    } finally {
+      setTfBusy(false);
+    }
+  };
+
+  const resendEnableCode = async () => {
+    if (tfResendIn > 0 || !tfStep?.challenge) return;
+    setTfError('');
+    try {
+      const data = await accountApi.resendLoginCode(apiString, tfStep.challenge);
+      setTfInfo(data.message || 'We sent a new code.');
+      tfRestart(data.resend_in ?? 60);
+      setTfCode('');
+      tfInputRef.current?.focus();
+    } catch (err) {
+      const d = err.response?.data || {};
+      if (d.reason === 'expired') { closeTwoStep(); say('error', d.error); return; }
+      if (d.reason === 'wait') tfRestart(d.resend_in ?? 30);
+      setTfError(d.error || describeApiError(err, 'A new code couldn’t be sent. Try again.'));
+    }
+  };
+
+  const confirmDisable = async (e) => {
+    e.preventDefault();
+    if (!tfPassword) { setTfError('Enter your password to turn sign-in codes off.'); return; }
+    setTfBusy(true);
+    setTfError('');
+    try {
+      const data = await accountApi.disableTwoFactor(apiString, accessToken, tfPassword);
+      setTwoFactor(data);
+      closeTwoStep();
+      say('success', data.message || 'Sign-in codes are off.');
+      refreshUnread();
+    } catch (err) {
+      const d = err.response?.data || {};
+      setTfError(firstOf(d.password) || d.error || describeApiError(err, 'Sign-in codes couldn’t be turned off. Try again.'));
+    } finally {
+      setTfBusy(false);
+    }
+  };
+
   // ---------- Password ----------
   const submitPassword = async (e) => {
     e.preventDefault();
@@ -307,6 +433,101 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
   // Shown instead of server settings when signed out, or while they load
   const needLogin = (
     <p className={styles.emptyNote}><Link to="/login">Log in</Link> to change this setting.</p>
+  );
+
+  // Security: sign-in codes, above the password form
+  const twoStepBlock = (
+    <div className={styles.block}>
+      <h3 className={styles.blockTitle}><FaShieldAlt aria-hidden="true" /> Sign-in codes</h3>
+      <p className={styles.hint}>
+        After your password, we email you a 6-digit code to finish signing in, so nobody can get into your account with your password alone.
+      </p>
+      {twoFactorError ? (
+        <p className={styles.errorText} role="alert">
+          {twoFactorError} <button type="button" className={styles.editLink} onClick={loadTwoFactor}>Try again</button>
+        </p>
+      ) : !twoFactor ? <p className={styles.hint}>Loading…</p> : (
+        <>
+          <SwitchRow
+            id="s-two-step"
+            title="Email me a code when I sign in"
+            description={twoFactor.required
+              ? `Always on for admin accounts. Codes go to ${twoFactor.email_hint}.`
+              : twoFactor.enabled ? `On. Codes go to ${twoFactor.email_hint}.` : 'Off. Your password is enough to sign in.'}
+            checked={Boolean(twoFactor.enabled)}
+            onChange={toggleTwoFactor}
+            disabled={twoFactor.required || tfBusy || Boolean(tfStep)}
+          />
+
+          {tfStep?.mode === 'enable' && (
+            <form className={styles.twoStepForm} onSubmit={confirmEnable} noValidate>
+              <p className={styles.twoStepText} role="status">
+                {tfInfo || <>We emailed a 6-digit code to <strong>{tfStep.hint}</strong>. Enter it to turn sign-in codes on.</>}
+              </p>
+              <label className={styles.field} htmlFor="tf-code">
+                <span className={styles.fieldLabel}>Code from the email</span>
+                <input
+                  ref={tfInputRef}
+                  id="tf-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="123 456"
+                  maxLength={7}
+                  value={tfCode}
+                  onChange={(e) => { setTfCode(e.target.value.replace(/[^\d ]/g, '').slice(0, 7)); if (tfError) setTfError(''); }}
+                  className={`${styles.input} ${styles.codeInput} ${tfError ? styles.inputError : ''}`}
+                  aria-invalid={Boolean(tfError)}
+                  aria-describedby={tfError ? 'tf-code-err' : undefined}
+                />
+                {tfError && <span id="tf-code-err" className={styles.errorText}>{tfError}</span>}
+              </label>
+              <div className={styles.twoStepActions}>
+                <button type="button" className={styles.editLink} onClick={resendEnableCode} disabled={tfResendIn > 0}>
+                  {tfResendIn > 0 ? `Send a new code in ${tfResendIn}s` : 'Send a new code'}
+                </button>
+                <span className={styles.twoStepButtons}>
+                  <button type="button" className={styles.secondaryButton} onClick={closeTwoStep}>Cancel</button>
+                  <button type="submit" className={styles.primaryButton} disabled={tfBusy}>
+                    {tfBusy ? 'Turning on…' : 'Turn on'}
+                  </button>
+                </span>
+              </div>
+            </form>
+          )}
+
+          {tfStep?.mode === 'disable' && (
+            <form className={styles.twoStepForm} onSubmit={confirmDisable} noValidate>
+              <label className={styles.field} htmlFor="tf-password">
+                <span className={styles.fieldLabel}>Enter your password to turn sign-in codes off</span>
+                <input
+                  ref={tfInputRef}
+                  id="tf-password"
+                  type="password"
+                  autoComplete="current-password"
+                  maxLength={128}
+                  value={tfPassword}
+                  onChange={(e) => { setTfPassword(e.target.value); if (tfError) setTfError(''); }}
+                  className={`${styles.input} ${tfError ? styles.inputError : ''}`}
+                  aria-invalid={Boolean(tfError)}
+                  aria-describedby={tfError ? 'tf-password-err' : undefined}
+                />
+                {tfError && <span id="tf-password-err" className={styles.errorText}>{tfError}</span>}
+              </label>
+              <div className={styles.twoStepActions}>
+                <span />
+                <span className={styles.twoStepButtons}>
+                  <button type="button" className={styles.secondaryButton} onClick={closeTwoStep}>Keep them on</button>
+                  <button type="submit" className={styles.primaryButton} disabled={tfBusy}>
+                    {tfBusy ? 'Turning off…' : 'Turn off'}
+                  </button>
+                </span>
+              </div>
+            </form>
+          )}
+        </>
+      )}
+    </div>
   );
 
   const prefsState = !isLoggedIn ? needLogin
@@ -432,36 +653,39 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
 
           {activeTab === 'security' && (
             !isLoggedIn ? needLogin : (
-              <form className={styles.block} onSubmit={submitPassword} noValidate>
-                <h3 className={styles.blockTitle}><FaKey aria-hidden="true" /> Change password</h3>
-                {[
-                  { key: 'current', label: 'Current password', auto: 'current-password' },
-                  { key: 'next', label: 'New password', auto: 'new-password' },
-                  { key: 'confirm', label: 'Confirm new password', auto: 'new-password' },
-                ].map((f) => (
-                  <label key={f.key} className={styles.field} htmlFor={`pw-${f.key}`}>
-                    <span className={styles.fieldLabel}>{f.label}</span>
-                    <input
-                      id={`pw-${f.key}`}
-                      type="password"
-                      autoComplete={f.auto}
-                      value={pw[f.key]}
-                      maxLength={128}
-                      onChange={(e) => { setPw((p) => ({ ...p, [f.key]: e.target.value })); if (pwErrors[f.key]) setPwErrors((er) => ({ ...er, [f.key]: undefined })); }}
-                      className={`${styles.input} ${pwErrors[f.key] ? styles.inputError : ''}`}
-                      aria-invalid={Boolean(pwErrors[f.key])}
-                      aria-describedby={pwErrors[f.key] ? `pw-${f.key}-err` : undefined}
-                    />
-                    {pwErrors[f.key] && <span id={`pw-${f.key}-err`} className={styles.errorText}>{pwErrors[f.key]}</span>}
-                  </label>
-                ))}
-                <div className={styles.actions}>
-                  <button type="submit" className={styles.primaryButton} disabled={pwSaving}>
-                    {pwSaving ? 'Changing…' : 'Change password'}
-                  </button>
-                  <Link to="/forgot-password" className={styles.editLink}>Forgot your current password?</Link>
-                </div>
-              </form>
+              <>
+                {twoStepBlock}
+                <form className={styles.block} onSubmit={submitPassword} noValidate>
+                  <h3 className={styles.blockTitle}><FaKey aria-hidden="true" /> Change password</h3>
+                  {[
+                    { key: 'current', label: 'Current password', auto: 'current-password' },
+                    { key: 'next', label: 'New password', auto: 'new-password' },
+                    { key: 'confirm', label: 'Confirm new password', auto: 'new-password' },
+                  ].map((f) => (
+                    <label key={f.key} className={styles.field} htmlFor={`pw-${f.key}`}>
+                      <span className={styles.fieldLabel}>{f.label}</span>
+                      <input
+                        id={`pw-${f.key}`}
+                        type="password"
+                        autoComplete={f.auto}
+                        value={pw[f.key]}
+                        maxLength={128}
+                        onChange={(e) => { setPw((p) => ({ ...p, [f.key]: e.target.value })); if (pwErrors[f.key]) setPwErrors((er) => ({ ...er, [f.key]: undefined })); }}
+                        className={`${styles.input} ${pwErrors[f.key] ? styles.inputError : ''}`}
+                        aria-invalid={Boolean(pwErrors[f.key])}
+                        aria-describedby={pwErrors[f.key] ? `pw-${f.key}-err` : undefined}
+                      />
+                      {pwErrors[f.key] && <span id={`pw-${f.key}-err`} className={styles.errorText}>{pwErrors[f.key]}</span>}
+                    </label>
+                  ))}
+                  <div className={styles.actions}>
+                    <button type="submit" className={styles.primaryButton} disabled={pwSaving}>
+                      {pwSaving ? 'Changing…' : 'Change password'}
+                    </button>
+                    <Link to="/forgot-password" className={styles.editLink}>Forgot your current password?</Link>
+                  </div>
+                </form>
+              </>
             )
           )}
 
