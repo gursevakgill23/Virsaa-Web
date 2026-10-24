@@ -35,6 +35,9 @@ const Home = lazy(() => import('./pages/HomePage/Home'));
 const Collections = lazy(() => import('./pages/Collections/Collections'));
 const SikhHistory = lazy(() => import('./pages/SikhHistory/SikhHistory'));
 const SikhHistoryArticle = lazy(() => import('./pages/SikhHistory/SikhHistoryArticle'));
+// Sakhis & Kahaniyaan: the list of stories and one story (pages/Sakhis)
+const Sakhis = lazy(() => import('./pages/Sakhis/Sakhis'));
+const SakhiStory = lazy(() => import('./pages/Sakhis/SakhiStory'));
 const Login = lazy(() => import('./pages/Login/Login'));
 const Signup = lazy(() => import('./pages/Signup/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword/ForgotPassword'));
@@ -247,6 +250,8 @@ const App = () => {
                 {/* Sikhism */}
                 <Route path="/sikh-history" element={<SikhHistory {...pageProps} />} />
                 <Route path="/sikh-history/:slug" element={<SikhHistoryArticle {...pageProps} />} />
+                <Route path="/sakhis" element={<Sakhis {...pageProps} />} />
+                <Route path="/sakhis/:slug" element={<SakhiStory {...pageProps} />} />
                 <Route path="/gurbani" element={<Gurbani {...pageProps} />} />
                 <Route path="/gurdwara-access" element={<GurdwaraAccess {...pageProps} />} />
                 <Route path="/gurdwara-access/locate/:id" element={<GurdwaraLocate {...pageProps} />} />

@@ -1,0 +1,1004 @@
+/*
+ * pages/Sakhis/Sakhis.module.css
+ * -----------------------------------------------------------------------------
+ * The Sakhis & Kahaniyaan page and one story (SakhiStory): the Sakhis /
+ * Kahaniyaan switch and search in the header, today's story, the story cards
+ * and their arches (maroon for sakhis, gold for kahaniyaan), and the reading
+ * page with English / ਪੰਜਾਬੀ, read aloud, ਸਿੱਖਿਆ and the next story.
+ * Colours come from the site's theme variables (App.css), so dark mode follows.
+ * -----------------------------------------------------------------------------
+ */
+
+/* ---------- Page base (as on the other content pages) ---------- */
+.page {
+  --kahani-gold: linear-gradient(160deg, #f6dc98, #e3b552 55%, #c58f2b);
+  --kahani-gold-rgb: 201, 150, 47;
+  background: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
+/* App.css sets p/h1-h3 to serif globally; use the body face here */
+.page p,
+.page li {
+  font-family: var(--font-body);
+}
+
+.section {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 72px) clamp(16px, 4vw, 32px) 0;
+}
+
+.section:last-child {
+  padding-bottom: clamp(56px, 8vw, 96px);
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--headline-color);
+  margin: 0 0 8px;
+}
+
+.page .lede {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--secondary-text-color);
+  max-width: 62ch;
+  margin: 0;
+}
+
+.rowHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.page .count {
+  margin: 0;
+  color: var(--secondary-text-color);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.primaryButton {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: var(--button-border);
+}
+
+.primaryButton:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+}
+
+.secondaryButton {
+  background: transparent;
+  color: var(--primary-color);
+  border: 2px solid rgba(var(--primary-rgb), 0.35);
+}
+
+.secondaryButton:hover {
+  border-color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.chip:focus-visible,
+.kind:focus-visible,
+.langSwitch button:focus-visible,
+.readAloud:focus-visible,
+.today:focus-visible,
+.card:focus-visible,
+.next:focus-visible,
+.backLink:focus-visible,
+.clearSearch:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 3px;
+}
+
+
+/* =========================================================================
+   Header: Sakhis / Kahaniyaan and search (on the photo)
+   ========================================================================= */
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  width: min(720px, 100%);
+  margin-top: 22px;
+}
+
+.kinds {
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.kind {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 150px;
+  padding: 7px 22px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.kind:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.kindPa {
+  font-family: var(--font-body);
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.kindEn {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.kindOn,
+.kindOn:hover {
+  background: #fff;
+  color: var(--maroon);
+}
+
+.searchBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 18px;
+  color: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+.searchBar input {
+  width: 100%;
+  height: 50px;
+  padding: 0 48px 0 46px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.searchBar input::placeholder {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.searchBar input:focus {
+  outline: none;
+  border-color: #f1d58c;
+  box-shadow: 0 0 0 3px rgba(241, 213, 140, 0.35);
+}
+
+.clearSearch {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+
+/* =========================================================================
+   The arch: a picture, or the first letter of the Gurmukhi title
+   ========================================================================= */
+.arch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  border-radius: 50% 50% 14px 14px / 38% 38% 14px 14px;
+}
+
+.archSakhi {
+  background: linear-gradient(160deg, var(--maroon-bright), var(--maroon) 60%, var(--maroon-deep));
+  color: #f6e7c1;
+}
+
+.archKahani {
+  background: var(--kahani-gold);
+  color: var(--maroon-deep);
+}
+
+.arch img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.archLetter {
+  font-family: var(--font-body);
+  font-weight: 700;
+  line-height: 1;
+  padding-top: 14%;
+}
+
+.arch_card {
+  width: 74px;
+}
+
+.arch_card .archLetter {
+  font-size: 2.5rem;
+}
+
+.arch_small {
+  width: 52px;
+}
+
+.arch_small .archLetter {
+  font-size: 1.7rem;
+}
+
+.arch_large {
+  width: clamp(112px, 16vw, 176px);
+  box-shadow: 0 22px 40px -22px rgba(var(--primary-rgb), 0.65);
+}
+
+.arch_large .archLetter {
+  font-size: clamp(3.6rem, 2.4rem + 4vw, 6.2rem);
+}
+
+/* An inner line, like the edge of an arched window */
+.arch_large::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: inherit;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+.archKahani.arch_large::after {
+  border-color: rgba(63, 2, 18, 0.22);
+}
+
+
+/* =========================================================================
+   Today's story
+   ========================================================================= */
+.today {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(20px, 4vw, 48px);
+  padding: clamp(18px, 3vw, 30px);
+  border-radius: 34px;
+  color: inherit;
+  text-decoration: none;
+  background:
+    radial-gradient(80% 120% at 0% 0%, rgba(var(--primary-rgb), 0.09), transparent 60%),
+    var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-deep);
+}
+
+.todayKahani {
+  background:
+    radial-gradient(80% 120% at 0% 0%, rgba(var(--kahani-gold-rgb), 0.18), transparent 60%),
+    var(--glass-bg);
+}
+
+.todayBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.todayLabel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.todayLabelPa {
+  color: var(--primary-color);
+}
+
+.todayPa {
+  font-size: clamp(1.9rem, 1.3rem + 2.2vw, 2.9rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--primary-color);
+}
+
+.todayTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.6rem);
+  line-height: 1.2;
+  color: var(--headline-color);
+}
+
+.todayAbout {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--secondary-text-color);
+}
+
+.todaySummary {
+  margin-top: 8px;
+  max-width: 60ch;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--text-color);
+}
+
+.todayCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  min-height: 46px;
+  padding: 0 8px 0 22px;
+  border-radius: 999px;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: var(--button-border);
+  font-weight: 700;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.todayMinutes {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.82rem;
+}
+
+[data-theme='dark'] .todayMinutes {
+  background: rgba(101, 4, 29, 0.1);
+}
+
+.today:hover .todayCta {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+}
+
+.todaySkeleton {
+  height: 250px;
+  border-radius: 34px;
+}
+
+
+/* =========================================================================
+   Categories and story cards
+   ========================================================================= */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+
+.chip {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(var(--primary-rgb), 0.25);
+  background: transparent;
+  color: var(--primary-color);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.chip:hover {
+  border-color: var(--primary-color);
+}
+
+.chipOn,
+.chipOn:hover {
+  background: var(--button-bg-color);
+  border-color: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cardsCompact {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  height: 100%;
+  padding: 14px 18px 16px 14px;
+  border-radius: 24px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card:hover {
+  border-color: rgba(var(--primary-rgb), 0.35);
+  box-shadow: var(--glass-highlight), var(--shadow-deep);
+}
+
+.cardCompact {
+  align-items: center;
+  padding: 12px 16px 12px 12px;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cardPa {
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--primary-color);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.12rem;
+  line-height: 1.25;
+  color: var(--headline-color);
+}
+
+.cardMeta {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--secondary-text-color);
+}
+
+.cardMeta:empty {
+  display: none;
+}
+
+.cardSummary {
+  margin-top: 4px;
+  font-size: 0.93rem;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardFoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.cardMedia {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skeleton-bg-color) 0%, var(--skeleton-shine-color) 50%, var(--skeleton-bg-color) 100%);
+  background-size: 200% 100%;
+  animation: storyShimmer 1.4s infinite linear;
+}
+
+@keyframes storyShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.cardSkeleton {
+  height: 150px;
+  border-radius: 24px;
+}
+
+.page .empty {
+  margin: 0 0 18px;
+  color: var(--secondary-text-color);
+}
+
+.problem {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 36px 16px;
+  text-align: center;
+  border-radius: 24px;
+  border: 1px dashed rgba(var(--primary-rgb), 0.35);
+  color: var(--secondary-text-color);
+}
+
+.problem p {
+  margin: 0;
+  max-width: 50ch;
+}
+
+.problemActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+
+/* =========================================================================
+   One story
+   ========================================================================= */
+.story {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 52px) clamp(16px, 4vw, 32px) 0;
+}
+
+.storyHead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'arch title'
+    'arch meta'
+    'arch summary';
+  align-content: end;
+  column-gap: clamp(18px, 3vw, 32px);
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.storyArch {
+  grid-area: arch;
+  align-self: end;
+}
+
+.page .storyPaTitle {
+  grid-area: title;
+  align-self: end;
+  margin: 0 0 4px;
+  font-size: clamp(2rem, 1.4rem + 2.6vw, 3.1rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--primary-color);
+}
+
+.page .storyMeta {
+  grid-area: meta;
+  margin: 0 0 12px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.page .storySummary {
+  grid-area: summary;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1rem + 0.4vw, 1.3rem);
+  line-height: 1.55;
+  color: var(--headline-color);
+}
+
+/* English / ਪੰਜਾਬੀ and read aloud */
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 4px;
+}
+
+.langSwitch {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(var(--primary-rgb), 0.25);
+}
+
+.langSwitch button {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary-color);
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.langSwitch .langOn {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+.readAloud {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(var(--primary-rgb), 0.3);
+  background: transparent;
+  color: var(--primary-color);
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.readAloud:hover {
+  border-color: var(--primary-color);
+}
+
+.readAloudOn {
+  background: var(--accent-soft);
+  border-color: var(--primary-color);
+}
+
+/* A recording or a video */
+.recording {
+  margin: 18px 0 4px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(var(--primary-rgb), 0.05);
+}
+
+.page .recordingLabel {
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.recording audio {
+  display: block;
+  width: 100%;
+}
+
+.video {
+  position: relative;
+  margin: 18px 0 4px;
+  aspect-ratio: 16 / 9;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* The story itself */
+.storyText {
+  padding-top: 18px;
+}
+
+.page .storyText p {
+  margin: 0 -12px 12px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-size: 1.14rem;
+  line-height: 1.85;
+  color: var(--text-color);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.page .storyTextPa p {
+  font-size: 1.24rem;
+  line-height: 2;
+}
+
+.page .storyText .reading {
+  background: rgba(var(--primary-rgb), 0.08);
+  box-shadow: inset 4px 0 0 var(--primary-color);
+}
+
+/* ਸਿੱਖਿਆ: what the story teaches */
+.lesson {
+  margin-top: 26px;
+  padding: 20px 24px 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(var(--kahani-gold-rgb), 0.5);
+  background: linear-gradient(135deg, rgba(var(--kahani-gold-rgb), 0.16), rgba(var(--primary-rgb), 0.05));
+}
+
+.lessonTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0 0 6px;
+  font-family: var(--font-body);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--primary-color);
+}
+
+.lessonTitleEn {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.page .lesson p {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.12rem, 1.05rem + 0.3vw, 1.28rem);
+  line-height: 1.55;
+  color: var(--headline-color);
+}
+
+.page .lesson .lessonPa {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  line-height: 1.8;
+}
+
+.page .source {
+  margin: 18px 0 0;
+  font-size: 0.92rem;
+  color: var(--secondary-text-color);
+}
+
+.source a {
+  color: var(--link-color, var(--primary-color));
+  font-weight: 600;
+}
+
+.source svg {
+  font-size: 0.7rem;
+  margin-left: 2px;
+}
+
+/* The next story */
+.next {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 30px;
+  padding: 14px 20px 14px 14px;
+  border-radius: 24px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.next:hover {
+  border-color: rgba(var(--primary-rgb), 0.35);
+  box-shadow: var(--glass-highlight), var(--shadow-deep);
+}
+
+.nextText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nextLabel {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--secondary-text-color);
+}
+
+.nextPa {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.nextTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  line-height: 1.25;
+  color: var(--headline-color);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 26px;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+
+/* =========================================================================
+   Smaller screens
+   ========================================================================= */
+@media (max-width: 720px) {
+  .rowHead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .today {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .today .arch_large {
+    width: 104px;
+  }
+
+  .today .arch_large .archLetter {
+    font-size: 3.6rem;
+  }
+
+  .storyHead {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'arch title'
+      'meta meta'
+      'summary summary';
+    row-gap: 4px;
+  }
+
+  .storyHead .arch_large {
+    width: 78px;
+    margin-bottom: 8px;
+  }
+
+  .storyHead .arch_large::after {
+    inset: 6px;
+  }
+
+  .storyHead .arch_large .archLetter {
+    font-size: 2.7rem;
+  }
+
+  .page .storyPaTitle {
+    align-self: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .kinds {
+    display: flex;
+    width: 100%;
+  }
+
+  .kind {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 10px 8px;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .arch_card {
+    width: 62px;
+  }
+
+  .arch_card .archLetter {
+    font-size: 2.1rem;
+  }
+
+  .page .storyText p {
+    font-size: 1.08rem;
+  }
+
+  .page .storyTextPa p {
+    font-size: 1.18rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+
+  .card,
+  .next,
+  .page .storyText p {
+    transition: none;
+  }
+}

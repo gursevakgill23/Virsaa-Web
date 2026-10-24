@@ -16,7 +16,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  FaTimes, FaHome, FaBook, FaHistory, FaGraduationCap, FaNewspaper, FaRegFileAudio,
+  FaTimes, FaHome, FaBook, FaBookOpen, FaHistory, FaGraduationCap, FaNewspaper, FaRegFileAudio,
   FaUsers, FaPlus, FaCalendarAlt, FaMapMarkerAlt, FaImage, FaTrashAlt, FaArrowLeft, FaClock, FaChevronRight, FaExclamationCircle,
 } from 'react-icons/fa';
 import { FaHandsPraying, FaHouseFlag } from 'react-icons/fa6';
@@ -119,6 +119,7 @@ const Sidebar = ({ open, closeSidebar, apiString, showTabs = true }) => {
       label: 'Sikhism',
       subItems: [
         { id: 'history', icon: <FaHistory />, label: 'History', path: '/sikh-history' },
+        { id: 'sakhis', icon: <FaBookOpen />, label: 'Sakhis', path: '/sakhis' },
         { id: 'gurbani', icon: <FaHandsPraying />, label: 'Gurbani', path: '/gurbani' },
         { id: 'gurdwara-access', icon: <FaHouseFlag />, label: 'Gurdwara Access', path: '/gurdwara-access' },
       ],

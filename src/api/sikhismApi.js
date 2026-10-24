@@ -1,7 +1,8 @@
 /**
  * api/sikhismApi.js
  * -----------------------------------------------------------------------------
- * Calls to the Django Sikhism API (/api/sikhism/...): Gurbani and Sikh History.
+ * Calls to the Django Sikhism API (/api/sikhism/...): Gurbani, Sikh History and
+ * Sakhis & Kahaniyaan.
  *
  * gurbaniApi (used by pages/Gurbani)
  *   list(api, token, params)        -> [item]                           anyone (guests too)
@@ -16,6 +17,12 @@
  *   list(api, params)               -> { categories: [{ id, label }], results: [card] }
  *   timeline(api)                   -> [card] oldest first
  *   entry(api, slug)                -> one article with sections, sources and related
+ *
+ * sakhiApi (used by pages/Sakhis)
+ *   list(api, params)               -> { kinds, categories: [{ id, label, kind }], results: [card] }
+ *   story(api, slug, token)         -> one sakhi or kahani: story / story_pa paragraphs, lesson,
+ *                                      audioUrl, youtubeId, sourceUrl (all checked before use)
+ *   kind is 'sakhi' (the Gurus, Gursikhs, Bhagats) or 'kahani' (childhood and folk tales).
  * -----------------------------------------------------------------------------
  */
 import axios from 'axios';
@@ -113,5 +120,39 @@ export const historyApi = {
   entry: (api, slug) => axios.get(`${root(api)}/history/${seg(slug)}/`, { timeout: TIMEOUT_MS }).then((r) => r.data),
 };
 
-const sikhismApi = { gurbani: gurbaniApi, history: historyApi };
+// ---------------------------------------------------------------- Sakhis & Kahaniyaan
+// Text paragraphs only, so a bad response can't put anything else on the page
+const paragraphs = (list) => (Array.isArray(list) ? list.filter((p) => typeof p === 'string' && p.trim()) : []);
+
+// A card: its picture must be a full http(s) link (S3), like the library covers
+const cleanCard = (card) => ({ ...card, image: safeUrl(card?.image, { allowRelative: false }) || null });
+
+// A whole story: the reading, the video and the source link are checked before the page uses them
+const cleanStory = (data) => {
+  if (!data || typeof data !== 'object') return null;
+  return {
+    ...cleanCard(data),
+    story: paragraphs(data.story),
+    story_pa: paragraphs(data.story_pa),
+    audioUrl: safeUrl(data.audio_url, { allowRelative: false }) || '',
+    youtubeId: YOUTUBE_ID.test(data.youtube_id || '') ? data.youtube_id : '',
+    sourceUrl: safeExternalUrl(data.source_url) || '',
+  };
+};
+
+export const sakhiApi = {
+  // Every published sakhi and kahani, with the kinds and categories. params: { kind, category, q } (optional)
+  list: (api, params = {}) =>
+    axios.get(`${root(api)}/sakhis/`, { timeout: TIMEOUT_MS, params }).then((r) => ({
+      kinds: Array.isArray(r.data?.kinds) ? r.data.kinds : [],
+      categories: Array.isArray(r.data?.categories) ? r.data.categories : [],
+      results: Array.isArray(r.data?.results) ? r.data.results.map(cleanCard) : [],
+    })),
+
+  // One story (staff, signed in, also see unpublished ones)
+  story: (api, slug, token) =>
+    axios.get(`${root(api)}/sakhis/${seg(slug)}/`, auth(token)).then((r) => cleanStory(r.data)),
+};
+
+const sikhismApi = { gurbani: gurbaniApi, history: historyApi, sakhis: sakhiApi };
 export default sikhismApi;

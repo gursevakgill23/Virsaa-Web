@@ -63,6 +63,7 @@ const GUEST_ROUTES = [
   '/collections/audiobooks',
   '/collections/authors',
   '/sikh-history',
+  '/sakhis',
   '/gurbani',
   '/learning',
   '/gurdwara-access',
