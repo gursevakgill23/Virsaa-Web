@@ -21,7 +21,9 @@
  * sakhiApi (used by pages/Sakhis)
  *   list(api, params)               -> { kinds, categories: [{ id, label, kind }], results: [card] }
  *   story(api, slug, token)         -> one sakhi or kahani: story / story_pa paragraphs, lesson,
- *                                      audioUrl, youtubeId, sourceUrl (all checked before use)
+ *                                      audioUrl, youtubeId, sourceUrl (all checked before use),
+ *                                      speech: { en: [part], pa: [part] } or null
+ *   speechUrl(api, slug, lang, part) -> the address of one part read aloud by Google's voice
  *   kind is 'sakhi' (the Gurus, Gursikhs, Bhagats) or 'kahani' (childhood and folk tales).
  * -----------------------------------------------------------------------------
  */
@@ -127,6 +129,15 @@ const paragraphs = (list) => (Array.isArray(list) ? list.filter((p) => typeof p 
 // A card: its picture must be a full http(s) link (S3), like the library covers
 const cleanCard = (card) => ({ ...card, image: safeUrl(card?.image, { allowRelative: false }) || null });
 
+// What Google's voices can read aloud, by language: { en: ['title', '0', '1', 'lesson'], pa: [...] }.
+// null when read aloud with Google's voices isn't set up on the server (the page then uses the device's voices).
+const SPEECH_PART = /^(title|lesson|\d{1,3})$/;
+const cleanSpeech = (speech) => {
+  if (!speech || typeof speech !== 'object') return null;
+  const parts = (list) => (Array.isArray(list) ? list.filter((p) => SPEECH_PART.test(String(p))).map(String) : []);
+  return { en: parts(speech.en), pa: parts(speech.pa) };
+};
+
 // A whole story: the reading, the video and the source link are checked before the page uses them
 const cleanStory = (data) => {
   if (!data || typeof data !== 'object') return null;
@@ -137,6 +148,7 @@ const cleanStory = (data) => {
     audioUrl: safeUrl(data.audio_url, { allowRelative: false }) || '',
     youtubeId: YOUTUBE_ID.test(data.youtube_id || '') ? data.youtube_id : '',
     sourceUrl: safeExternalUrl(data.source_url) || '',
+    speech: cleanSpeech(data.speech),
   };
 };
 
@@ -152,6 +164,11 @@ export const sakhiApi = {
   // One story (staff, signed in, also see unpublished ones)
   story: (api, slug, token) =>
     axios.get(`${root(api)}/sakhis/${seg(slug)}/`, auth(token)).then((r) => cleanStory(r.data)),
+
+  // The address of one part read aloud ('title', '0', '1', ..., 'lesson'): an <audio> element plays it
+  // (the API sends it on to the MP3, made the first time anyone listens)
+  speechUrl: (api, slug, lang, part) =>
+    `${root(api)}/sakhis/${seg(slug)}/speech/${lang === 'pa' ? 'pa' : 'en'}/${seg(part)}/`,
 };
 
 const sikhismApi = { gurbani: gurbaniApi, history: historyApi, sakhis: sakhiApi };

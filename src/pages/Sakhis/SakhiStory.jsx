@@ -6,8 +6,11 @@
  *   - English / ਪੰਜਾਬੀ, when the story has a Punjabi version (the choice is
  *     remembered on this device; Punjabi is chosen first when the site is in
  *     Punjabi)
- *   - "Read aloud" with the device's own voice, highlighting each paragraph
- *     as it is read (shown only when the device has a voice for the language)
+ *   - "Listen": the story read by Google's voices (a native Punjabi voice, and Indian
+ *     English), highlighting the title, each paragraph and the lesson as they
+ *     are read, with pause, stop and three speeds (useStoryVoice.js). When the
+ *     server has no Google voice set up, the device's own voice reads instead,
+ *     if it has one for the language (useReadAloud.js)
  *   - the recording and the video, when the story has them
  *   - ਸਿੱਖਿਆ, what the story teaches, and where it comes from
  *   - the next story of the same kind, and three more after it
@@ -17,7 +20,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { FaArrowLeft, FaExternalLinkAlt, FaRedo, FaStop, FaVolumeUp } from 'react-icons/fa';
+import { FaArrowLeft, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaSpinner, FaStop } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
 import Loader from '../../components/VirsaaLoader/Loader';
 import { useAuth } from '../../context/AuthContext';
@@ -26,7 +29,10 @@ import { getLanguage } from '../../i18n/siteLanguage';
 import { describeApiError } from '../../utils/apiError';
 import StoryCard, { StoryArch } from './StoryCard';
 import useReadAloud from './useReadAloud';
+import useStoryVoice from './useStoryVoice';
 import styles from './Sakhis.module.css';
+
+const NO_PARTS = [];
 
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
@@ -62,6 +68,8 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
   const [others, setOthers] = useState([]); // stories of the same kind, in order
   const [lang, setLang] = useState(firstLanguage);
   const paragraphRefs = useRef([]);
+  const lessonRef = useRef(null);
+  const toolsRef = useRef(null);
   // Read when loading (staff see unpublished stories); a renewed token doesn't reload the story
   const tokenRef = useRef(accessToken);
   tokenRef.current = accessToken;
@@ -108,23 +116,35 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
     if (!story) return [];
     return showPunjabi ? story.story_pa : story.story;
   }, [story, showPunjabi]);
-  const reader = useReadAloud(paragraphs, showPunjabi ? 'pa' : 'en');
+  const readLang = showPunjabi ? 'pa' : 'en';
+  // Google's voice when the server has it for this story and language; otherwise the device's own
+  const googleVoice = useStoryVoice({
+    apiUrl,
+    slug, // the address's: opening another story stops this one straight away
+    lang: readLang,
+    parts: story?.speech?.[readLang] || NO_PARTS,
+    title: story ? (showPunjabi && story.title_pa) || story.title : '',
+  });
+  const deviceVoice = useReadAloud(paragraphs, readLang);
+  const reader = googleVoice.available ? googleVoice : deviceVoice;
   const readingAt = reader.current; // the paragraph being read, or -1
+  const readingPart = reader.part; // 'title', a paragraph number, 'lesson' or ''
 
   const chooseLanguage = (next) => {
     setLang(next);
     rememberLanguage(next);
   };
 
-  // Keep the paragraph being read in view
+  // Keep the paragraph (or the lesson) being read in view, below the menu bar and the reading controls
   useEffect(() => {
-    const el = paragraphRefs.current[readingAt];
+    const el = readingPart === 'lesson' ? lessonRef.current : paragraphRefs.current[readingAt];
     if (!el) return;
     const box = el.getBoundingClientRect();
-    if (box.top < 90 || box.bottom > window.innerHeight - 24) {
+    const covered = Math.max(90, (toolsRef.current?.getBoundingClientRect().bottom || 0) + 12);
+    if (box.top < covered || box.bottom > window.innerHeight - 24) {
       el.scrollIntoView({ block: 'center', behavior: prefersLessMotion() ? 'auto' : 'smooth' });
     }
-  }, [readingAt]);
+  }, [readingAt, readingPart]);
 
   const headerImage = isDarkMode ? header_image_dark : header_image_light;
   const crumbs = [{ label: 'Home', to: '/' }, { label: 'Sakhis & Kahaniyaan', to: '/sakhis' }];
@@ -179,16 +199,24 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
       <article className={styles.story}>
         <header className={styles.storyHead}>
           <StoryArch story={story} size="large" className={styles.storyArch} />
-          {story.title_pa && <p className={`${styles.storyPaTitle} notranslate`} lang="pa" translate="no">{story.title_pa}</p>}
+          {story.title_pa && (
+            <p
+              className={`${styles.storyPaTitle} ${readingPart === 'title' ? styles.titleReading : ''} notranslate`}
+              lang="pa"
+              translate="no"
+            >
+              {story.title_pa}
+            </p>
+          )}
           <p className={styles.storyMeta}>
             {[story.category_label, story.read_minutes ? `${story.read_minutes} min read` : ''].filter(Boolean).join(', ')}
           </p>
           <p className={styles.storySummary}>{story.summary}</p>
         </header>
 
-        {/* English / ਪੰਜਾਬੀ and read aloud */}
+        {/* English / ਪੰਜਾਬੀ and Listen (while it plays, the row stays in view under the menu bar) */}
         {(hasPunjabi || reader.available) && (
-          <div className={styles.tools}>
+          <div ref={toolsRef} className={`${styles.tools} ${reader.speaking ? styles.toolsReading : ''}`}>
             {hasPunjabi && (
               <div className={styles.langSwitch} role="group" aria-label="Language of the story">
                 <button type="button" aria-pressed={!showPunjabi} className={!showPunjabi ? styles.langOn : ''}
@@ -201,23 +229,48 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
                 </button>
               </div>
             )}
-            {reader.available && (
-              <button
-                type="button"
-                className={`${styles.readAloud} ${reader.speaking ? styles.readAloudOn : ''}`}
-                onClick={() => (reader.speaking ? reader.stop() : reader.start(0))}
-              >
-                {reader.speaking ? <FaStop aria-hidden="true" /> : <FaVolumeUp aria-hidden="true" />}
-                {reader.speaking ? 'Stop reading' : 'Read aloud'}
+            {reader.available && !reader.speaking && (
+              <button type="button" className={styles.readAloud} onClick={() => reader.start(0)}>
+                <FaHeadphones aria-hidden="true" /> Listen
+              </button>
+            )}
+            {/* Google's voice: pause or resume, stop, and the speed */}
+            {reader.available && reader.speaking && reader.pause && (
+              <div className={styles.voice} role="group" aria-label="Listening">
+                <button
+                  type="button"
+                  className={`${styles.readAloud} ${styles.readAloudOn}`}
+                  aria-busy={reader.state === 'loading'}
+                  onClick={() => (reader.state === 'paused' ? reader.resume() : reader.pause())}
+                >
+                  {reader.state === 'paused' && <FaPlay aria-hidden="true" />}
+                  {reader.state === 'loading' && <FaSpinner aria-hidden="true" className={styles.spin} />}
+                  {reader.state === 'playing' && <FaPause aria-hidden="true" />}
+                  <span className={styles.voiceLabel}>{reader.state === 'paused' ? 'Resume' : 'Pause'}</span>
+                </button>
+                <button type="button" className={styles.voiceStop} onClick={reader.stop} aria-label="Stop" title="Stop">
+                  <FaStop aria-hidden="true" />
+                </button>
+                <button type="button" className={styles.voiceSpeed} onClick={reader.nextSpeed}
+                  aria-label={`Speed ${reader.speed}×. Change the speed`} title="Speed">
+                  {reader.speed}×
+                </button>
+              </div>
+            )}
+            {/* The device's own voice: just stop */}
+            {reader.available && reader.speaking && !reader.pause && (
+              <button type="button" className={`${styles.readAloud} ${styles.readAloudOn}`} onClick={reader.stop}>
+                <FaStop aria-hidden="true" /> Stop
               </button>
             )}
           </div>
         )}
+        {reader.error && <p className={styles.voiceError} role="status">{reader.error}</p>}
 
         {/* A recording or a video of the story */}
         {story.audioUrl && (
           <div className={styles.recording}>
-            <p className={styles.recordingLabel}>Listen to the story</p>
+            <p className={styles.recordingLabel}>Listen to the recording</p>
             <audio controls preload="none" src={story.audioUrl}>
               Your browser can’t play this recording.
             </audio>
@@ -253,7 +306,11 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
         </div>
 
         {lesson && (
-          <aside className={styles.lesson} aria-labelledby="lesson-title">
+          <aside
+            ref={lessonRef}
+            className={`${styles.lesson} ${readingPart === 'lesson' ? styles.lessonReading : ''}`}
+            aria-labelledby="lesson-title"
+          >
             <h2 id="lesson-title" className={styles.lessonTitle}>
               <span className="notranslate" lang="pa" translate="no">ਸਿੱਖਿਆ</span>
               {!showPunjabi && <span className={styles.lessonTitleEn}>What it teaches</span>}

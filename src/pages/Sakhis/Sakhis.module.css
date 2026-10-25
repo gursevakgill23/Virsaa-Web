@@ -4,7 +4,7 @@
  * The Sakhis & Kahaniyaan page and one story (SakhiStory): the Sakhis /
  * Kahaniyaan switch and search in the header, today's story, the story cards
  * and their arches (maroon for sakhis, gold for kahaniyaan), and the reading
- * page with English / ਪੰਜਾਬੀ, read aloud, ਸਿੱਖਿਆ and the next story.
+ * page with English / ਪੰਜਾਬੀ, Listen, ਸਿੱਖਿਆ and the next story.
  * Colours come from the site's theme variables (App.css), so dark mode follows.
  * -----------------------------------------------------------------------------
  */
@@ -17,6 +17,7 @@
   color: var(--text-color);
   font-family: var(--font-body);
   overflow-x: hidden;
+  overflow-x: clip; /* cuts off the same, but lets the reading controls stick under the menu bar */
 }
 
 .page *,
@@ -119,6 +120,8 @@
 .kind:focus-visible,
 .langSwitch button:focus-visible,
 .readAloud:focus-visible,
+.voiceStop:focus-visible,
+.voiceSpeed:focus-visible,
 .today:focus-visible,
 .card:focus-visible,
 .next:focus-visible,
@@ -643,11 +646,20 @@
 .page .storyPaTitle {
   grid-area: title;
   align-self: end;
+  justify-self: start;
   margin: 0 0 4px;
+  border-radius: 12px;
   font-size: clamp(2rem, 1.4rem + 2.6vw, 3.1rem);
   font-weight: 700;
   line-height: 1.25;
   color: var(--primary-color);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* The title while it is being read */
+.page .titleReading {
+  background: rgba(var(--primary-rgb), 0.08);
+  box-shadow: 0 0 0 8px rgba(var(--primary-rgb), 0.08);
 }
 
 .page .storyMeta {
@@ -667,7 +679,7 @@
   color: var(--headline-color);
 }
 
-/* English / ਪੰਜਾਬੀ and read aloud */
+/* English / ਪੰਜਾਬੀ and Listen */
 .tools {
   display: flex;
   flex-wrap: wrap;
@@ -724,6 +736,109 @@
 .readAloudOn {
   background: var(--accent-soft);
   border-color: var(--primary-color);
+}
+
+/* While the story plays: the row stays in view under the menu bar, as a small glass player */
+.tools.toolsReading {
+  position: sticky;
+  top: 66px;
+  z-index: 20;
+  width: fit-content;
+  max-width: calc(100% + 20px);
+  margin-right: -10px;
+  margin-left: -10px;
+  padding: 6px 10px;
+  border-radius: 28px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+/* While Google's voice reads: Pause / Resume, Stop and the speed */
+.voice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.voiceStop,
+.voiceSpeed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(var(--primary-rgb), 0.3);
+  background: transparent;
+  color: var(--primary-color);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.voiceSpeed {
+  min-width: 64px;
+}
+
+.voiceStop:hover,
+.voiceSpeed:hover {
+  border-color: var(--primary-color);
+}
+
+.spin {
+  animation: voiceSpin 0.9s linear infinite;
+}
+
+@keyframes voiceSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.page .voiceError {
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #c62839;
+}
+
+[data-theme='dark'] .page .voiceError {
+  color: #ff9aa5;
+}
+
+/* Phones: the player fits on one line (Pause / Resume keeps its name for screen readers) */
+@media (max-width: 480px) {
+  .tools.toolsReading {
+    gap: 8px;
+  }
+
+  .toolsReading .voiceLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .toolsReading .readAloud {
+    padding: 0 15px;
+  }
+
+  .toolsReading .langSwitch button {
+    padding: 0 10px;
+  }
+
+  .toolsReading .voiceSpeed {
+    min-width: 54px;
+  }
 }
 
 /* A recording or a video */
@@ -794,6 +909,12 @@
   border-radius: 24px;
   border: 1px solid rgba(var(--kahani-gold-rgb), 0.5);
   background: linear-gradient(135deg, rgba(var(--kahani-gold-rgb), 0.16), rgba(var(--primary-rgb), 0.05));
+  transition: box-shadow 0.3s ease;
+}
+
+/* The lesson while it is being read */
+.lessonReading {
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.45);
 }
 
 .lessonTitle {
@@ -992,13 +1113,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton {
+  .skeleton,
+  .spin {
     animation: none;
   }
 
   .card,
   .next,
-  .page .storyText p {
+  .page .storyText p,
+  .page .storyPaTitle,
+  .lesson {
     transition: none;
   }
 }

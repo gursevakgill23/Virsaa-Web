@@ -3,12 +3,13 @@
  * -----------------------------------------------------------------------------
  * Reads a story aloud with the browser's own voices (Web Speech API), one
  * sentence at a time, and says which paragraph is being read so the page can
- * highlight it.
+ * highlight it. The story page uses this only when Google's voices aren't set
+ * up on the server (useStoryVoice.js is the one with the real Punjabi voice).
  *
  *   const reader = useReadAloud(paragraphs, 'en' | 'pa');
  *   reader.available   a voice for that language exists on this device
- *   reader.speaking    reading now
- *   reader.current     index of the paragraph being read, or -1
+ *   reader.speaking    reading now (reader.state: 'playing' or 'idle')
+ *   reader.current     index of the paragraph being read, or -1 (reader.part: the same as text)
  *   reader.start(i)    read from paragraph i (default 0); call it from a click
  *   reader.stop()
  *
@@ -105,7 +106,15 @@ const useReadAloud = (paragraphs, lang) => {
   // A new story or language: stop reading the old one. Leaving the page stops it too.
   useEffect(() => stop, [paragraphs, lang, stop]);
 
-  return { available: Boolean(synth() && voice), speaking, current, start, stop };
+  return {
+    available: Boolean(synth() && voice),
+    speaking,
+    state: speaking ? 'playing' : 'idle',
+    current,
+    part: current >= 0 ? String(current) : '',
+    start,
+    stop,
+  };
 };
 
 export default useReadAloud;
