@@ -331,6 +331,261 @@
   border-color: var(--primary-color);
 }
 
+/* ---------- Listen: the book read by Google's Punjabi voice (EbookListen.jsx) ---------- */
+.listenButtonOn {
+  border-color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.1);
+}
+
+.listenPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 16px 18px 14px;
+  border-radius: 22px;
+}
+
+.listenTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.listenTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--headline-color);
+}
+
+.listenClose {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+}
+
+.listenClose:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+  color: var(--primary-color);
+}
+
+.listenNote {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--secondary-text-color);
+}
+
+.listenNote .moreButton {
+  margin-top: 0;
+}
+
+.listenPlayer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.listenPlay {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: var(--button-border);
+  border-radius: 50%;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 12px 22px -12px rgba(101, 4, 29, 0.7);
+}
+
+.listenPlay:hover {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+}
+
+/* the triangle looks centred a touch to the right */
+.listenPlayNudge {
+  margin-left: 3px;
+}
+
+.listenTrack {
+  min-width: 0;
+}
+
+.listenSeek {
+  --progress: 0%;
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 8px 0;
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(90deg, var(--primary-color) var(--progress), rgba(var(--primary-rgb), 0.15) var(--progress));
+  cursor: pointer;
+}
+
+.listenSeek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--primary-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.listenSeek::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--primary-color);
+}
+
+.listenBelow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+
+.listenTimes {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondary-text-color);
+}
+
+.listenButtons {
+  display: flex;
+  gap: 2px;
+}
+
+.listenSmall {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+.listenSmall:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.listenFoot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+}
+
+/* "The audiobook is being made" */
+.audioNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--secondary-text-color);
+}
+
+.audioNote svg {
+  flex: none;
+  color: var(--primary-color);
+}
+
+/* English word by word: not available yet (Premium, coming soon); dashed = not here yet */
+.soonCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed rgba(var(--primary-rgb), 0.3);
+  border-radius: 18px;
+}
+
+.soonIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 1rem;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.soonTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.premiumPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #7a5200;
+  background: rgba(201, 138, 18, 0.16);
+}
+
+.premiumPill svg {
+  color: #c98a12;
+}
+
+[data-theme='dark'] .premiumPill {
+  color: #f6d68a;
+  background: rgba(242, 193, 78, 0.16);
+}
+
+[data-theme='dark'] .premiumPill svg {
+  color: #f2c14e;
+}
+
+.soonNote {
+  margin: 3px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--secondary-text-color);
+}
+
 /* ---------- Sections ---------- */
 .section {
   min-width: 0;
@@ -687,8 +942,27 @@
     padding: 0 14px 16px 14px;
   }
 
+  .actions {
+    gap: 8px;
+  }
+
   .actions .primaryButton {
     flex: 1 1 100%;
+  }
+
+  /* Read now and Listen side by side, then Download and the round buttons */
+  .actions:has(.listenButton) .primaryButton,
+  .actions .listenButton {
+    flex: 1 1 0;
+    padding: 0 14px;
+  }
+
+  .actions .secondaryButton:not(.listenButton) {
+    padding: 0 16px;
+  }
+
+  .listenPanel {
+    padding: 14px 14px 12px;
   }
 
 }

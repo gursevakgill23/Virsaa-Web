@@ -3,9 +3,8 @@
  * -----------------------------------------------------------------------------
  * One sakhi or kahani (/sakhis/:slug), loaded from /api/sikhism/sakhis/<slug>/:
  *   - the Gurmukhi title with its arch, who it is about and the reading time
- *   - English / ਪੰਜਾਬੀ, when the story has a Punjabi version (the choice is
- *     remembered on this device; Punjabi is chosen first when the site is in
- *     Punjabi)
+ *   - in the site's language (the menu bar's language switch): the Punjabi
+ *     version when the site is in Punjabi and the story has one, else English
  *   - "Listen": the story read by Google's voices (a native Punjabi voice, and Indian
  *     English), highlighting the title, each paragraph and the lesson as they
  *     are read, with pause, stop and three speeds (useStoryVoice.js). When the
@@ -37,17 +36,21 @@ const NO_PARTS = [];
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
 
-// The reader's last choice of English or Punjabi, kept on this device
-const LANG_KEY = 'virsaa:story-language';
-const firstLanguage = () => {
-  try {
-    const saved = localStorage.getItem(LANG_KEY);
-    if (saved === 'en' || saved === 'pa') return saved;
-  } catch { /* storage blocked */ }
-  return getLanguage() === 'pa' ? 'pa' : 'en';
-};
-const rememberLanguage = (lang) => {
-  try { localStorage.setItem(LANG_KEY, lang); } catch { /* storage blocked: the choice lasts until the page closes */ }
+// The site's language, from the menu bar's switch (switching reloads the page)
+const siteLanguage = () => (getLanguage() === 'pa' ? 'pa' : 'en');
+
+/**
+ * What Google's voice reads, from the API (`speech`). If the API lists no parts for
+ * the language the page shows (an older server, say), they are worked out from
+ * the story itself, so Listen is there in Punjabi too.
+ */
+const speechParts = (story, lang, paragraphs) => {
+  if (!story?.speech) return NO_PARTS; // Google's voice is off: the device's own voice reads
+  if (story.speech[lang]?.length) return story.speech[lang];
+  if (!paragraphs.length) return NO_PARTS;
+  const title = lang === 'pa' ? story.title_pa : story.title;
+  const lesson = lang === 'pa' ? story.lesson_pa : story.lesson;
+  return [...(title ? ['title'] : []), ...paragraphs.map((_, i) => String(i)), ...(lesson ? ['lesson'] : [])];
 };
 
 const KIND_WORDS = {
@@ -66,7 +69,7 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
   const [status, setStatus] = useState('loading'); // loading | ready | missing | error
   const [error, setError] = useState('');
   const [others, setOthers] = useState([]); // stories of the same kind, in order
-  const [lang, setLang] = useState(firstLanguage);
+  const [lang] = useState(siteLanguage);
   const paragraphRefs = useRef([]);
   const lessonRef = useRef(null);
   const toolsRef = useRef(null);
@@ -117,23 +120,19 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
     return showPunjabi ? story.story_pa : story.story;
   }, [story, showPunjabi]);
   const readLang = showPunjabi ? 'pa' : 'en';
-  // Google's voice when the server has it for this story and language; otherwise the device's own
+  const parts = useMemo(() => speechParts(story, readLang, paragraphs), [story, readLang, paragraphs]);
+  // Google's voice when the server has it; otherwise the device's own
   const googleVoice = useStoryVoice({
     apiUrl,
     slug, // the address's: opening another story stops this one straight away
     lang: readLang,
-    parts: story?.speech?.[readLang] || NO_PARTS,
+    parts,
     title: story ? (showPunjabi && story.title_pa) || story.title : '',
   });
   const deviceVoice = useReadAloud(paragraphs, readLang);
   const reader = googleVoice.available ? googleVoice : deviceVoice;
   const readingAt = reader.current; // the paragraph being read, or -1
   const readingPart = reader.part; // 'title', a paragraph number, 'lesson' or ''
-
-  const chooseLanguage = (next) => {
-    setLang(next);
-    rememberLanguage(next);
-  };
 
   // Keep the paragraph (or the lesson) being read in view, below the menu bar and the reading controls
   useEffect(() => {
@@ -214,28 +213,16 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
           <p className={styles.storySummary}>{story.summary}</p>
         </header>
 
-        {/* English / ਪੰਜਾਬੀ and Listen (while it plays, the row stays in view under the menu bar) */}
-        {(hasPunjabi || reader.available) && (
+        {/* Listen (while it plays, the row stays in view under the menu bar) */}
+        {reader.available && (
           <div ref={toolsRef} className={`${styles.tools} ${reader.speaking ? styles.toolsReading : ''}`}>
-            {hasPunjabi && (
-              <div className={styles.langSwitch} role="group" aria-label="Language of the story">
-                <button type="button" aria-pressed={!showPunjabi} className={!showPunjabi ? styles.langOn : ''}
-                  onClick={() => chooseLanguage('en')}>
-                  English
-                </button>
-                <button type="button" aria-pressed={showPunjabi} className={`${showPunjabi ? styles.langOn : ''} notranslate`}
-                  lang="pa" translate="no" onClick={() => chooseLanguage('pa')}>
-                  ਪੰਜਾਬੀ
-                </button>
-              </div>
-            )}
-            {reader.available && !reader.speaking && (
+            {!reader.speaking && (
               <button type="button" className={styles.readAloud} onClick={() => reader.start(0)}>
                 <FaHeadphones aria-hidden="true" /> Listen
               </button>
             )}
             {/* Google's voice: pause or resume, stop, and the speed */}
-            {reader.available && reader.speaking && reader.pause && (
+            {reader.speaking && reader.pause && (
               <div className={styles.voice} role="group" aria-label="Listening">
                 <button
                   type="button"
@@ -258,7 +245,7 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
               </div>
             )}
             {/* The device's own voice: just stop */}
-            {reader.available && reader.speaking && !reader.pause && (
+            {reader.speaking && !reader.pause && (
               <button type="button" className={`${styles.readAloud} ${styles.readAloudOn}`} onClick={reader.stop}>
                 <FaStop aria-hidden="true" /> Stop
               </button>

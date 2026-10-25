@@ -13,6 +13,7 @@
  *                  for signed-in visitors) in our player: play/pause, ±15 s, seek
  *   - chapters / parts, description, ratings and reviews (components/Reviews),
  *     related audiobooks
+ *   - "Read the book" for audiobooks made from one of our ebooks (the API's `ebook`)
  * Listening is saved to History. While loading, the Virsaa loader is shown.
  * -----------------------------------------------------------------------------
  */
@@ -21,7 +22,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight,
   FaStar, FaRegStar, FaPlay, FaPause, FaHeadphones, FaClock, FaLock, FaChevronDown,
-  FaUndoAlt, FaRedoAlt, FaYoutube, FaExternalLinkAlt, FaMicrophone, FaHandHoldingHeart } from 'react-icons/fa';
+  FaUndoAlt, FaRedoAlt, FaYoutube, FaExternalLinkAlt, FaMicrophone, FaHandHoldingHeart, FaBookOpen } from 'react-icons/fa';
 import styles from './AudiobookDetail.module.css';
 import PageHero from '../../../components/PageHero/PageHero';
 import Loader from '../../../components/VirsaaLoader/Loader';
@@ -112,6 +113,8 @@ const toAudiobook = (data, authorName) => {
     chapters,
     tags: Array.isArray(data.tags) ? data.tags : [],
     sharedBy: data.shared_by?.name || '',
+    // made from one of our ebooks by Google's Punjabi voice: {id, title}
+    ebook: Number.isInteger(data.ebook?.id) ? { id: data.ebook.id, title: data.ebook.title || '' } : null,
   };
 };
 
@@ -535,6 +538,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                       <span>{formatTime(currentTime)}</span>
                       <span>{formatTime(duration)}</span>
                     </div>
+                    {audiobook.narrator && <p className={styles.narrator}><FaMicrophone aria-hidden="true" /> Read by {audiobook.narrator}</p>}
                   </div>
                 </div>
               ) : (
@@ -542,6 +546,11 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
               )}
 
               <div className={styles.actions}>
+                {audiobook.ebook && (
+                  <Link to={`/collections/ebooks/ebook/${audiobook.ebook.id}`} className={styles.bookLink}>
+                    <FaBookOpen aria-hidden="true" /> Read the book
+                  </Link>
+                )}
                 <button
                   type="button"
                   className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
