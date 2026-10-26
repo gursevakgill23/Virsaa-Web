@@ -255,60 +255,6 @@
   cursor: pointer;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-/* "Read the book": the ebook this audiobook was made from */
-.bookLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 0 22px;
-  border-radius: 999px;
-  border: 2px solid rgba(var(--primary-rgb), 0.35);
-  font-family: var(--font-body);
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  text-decoration: none;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.bookLink:hover {
-  border-color: var(--primary-color);
-  background: rgba(var(--primary-rgb), 0.08);
-}
-
-.iconButton {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 1px solid var(--border-color);
-  background: var(--glass-bg);
-  color: var(--primary-color);
-  font-size: 1.05rem;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.iconButton:hover {
-  background: rgba(var(--primary-rgb), 0.1);
-  border-color: rgba(var(--primary-rgb), 0.35);
-}
-
-.iconButtonOn {
-  background: rgba(var(--primary-rgb), 0.12);
-  border-color: var(--primary-color);
-}
-
 /* ---------- Sections ---------- */
 .section {
   min-width: 0;
@@ -433,8 +379,16 @@
   color: var(--button-text-color);
 }
 
-.smallButton:hover {
+.smallButton:hover:not(:disabled) {
   opacity: 0.9;
+}
+
+/* A chapter of an audiobook that isn't open yet ("Coming soon") */
+.smallButton:disabled {
+  border: 1.5px dashed rgba(var(--primary-rgb), 0.35);
+  background: transparent;
+  color: var(--secondary-text-color);
+  cursor: not-allowed;
 }
 
 .lockedButton {

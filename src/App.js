@@ -6,7 +6,8 @@
  *   - keeps the light/dark theme (saved in the "theme" cookie),
  *   - renders the navbar, side panel, footer and floating Gurdwara button,
  *   - maps every URL to its page (the <Routes> list below),
- *   - plays the quick Virsaa loader on every page change,
+ *   - plays the quick Virsaa loader on every page change, and opens every new
+ *     page at the top (Back and Forward return to where you were),
  *   - catches page crashes with <ErrorBoundary> so one broken page never
  *     blanks the whole site,
  *   - mounts <NotificationLayer>, which draws all toast.*() messages.
@@ -17,7 +18,7 @@
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import Cookies from 'js-cookie';
 import Navbar from './components/Navbar/Navbar';
@@ -103,6 +104,71 @@ const RouteLoader = () => {
 
   if (!playing) return null;
   return <Loader key={playing} variant="quick" onLoadingComplete={() => setPlaying(0)} />;
+};
+
+// Try `step` until it returns true (the page may still be drawing), for up to 2 seconds;
+// the visitor scrolling or pressing a key stops it. Returns the function that stops it.
+const USER_SCROLLS = ['wheel', 'touchstart', 'keydown'];
+const keepTrying = (step) => {
+  let tries = 0;
+  let timer = null;
+  const stop = () => {
+    clearTimeout(timer);
+    USER_SCROLLS.forEach((name) => window.removeEventListener(name, stop));
+  };
+  const run = () => {
+    tries += 1;
+    if (step() || tries >= 20) stop();
+    else timer = setTimeout(run, 100);
+  };
+  USER_SCROLLS.forEach((name) => window.addEventListener(name, stop, { passive: true }));
+  run();
+  return stop;
+};
+
+/**
+ * Opens every new page at the top. (The router keeps the scroll position by
+ * itself, so a link near the bottom of one page used to open the next page
+ * near its bottom too.) Back and Forward return to where you were on that
+ * page once it has drawn; an address with #part goes to that part. Changing
+ * only the ?query (filters) keeps the place.
+ */
+const ScrollToTop = () => {
+  const { pathname, hash, key } = useLocation();
+  const navigationType = useNavigationType();
+  const positions = useRef({}); // how far down each visited page was (by history entry)
+  const entry = useRef(key);
+  const lastPath = useRef(pathname);
+
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+    const remember = () => { positions.current[entry.current] = window.scrollY; };
+    window.addEventListener('scroll', remember, { passive: true });
+    return () => window.removeEventListener('scroll', remember);
+  }, []);
+
+  useEffect(() => {
+    entry.current = key;
+    const newPage = lastPath.current !== pathname;
+    lastPath.current = pathname;
+    const saved = positions.current[key];
+    if (navigationType === 'POP' && saved) {
+      return keepTrying(() => {
+        window.scrollTo(0, saved);
+        return Math.abs(window.scrollY - saved) < 2;
+      });
+    }
+    if (!newPage) return undefined;
+    window.scrollTo(0, 0);
+    if (!hash) return undefined;
+    return keepTrying(() => {
+      const target = document.getElementById(decodeURIComponent(hash.slice(1)));
+      target?.scrollIntoView();
+      return Boolean(target);
+    });
+  }, [key, pathname, hash, navigationType]);
+
+  return null;
 };
 
 /**
@@ -207,6 +273,8 @@ const App = () => {
       {/* Use the theme saved on the account when someone signs in */}
       <ThemeFromProfile setTheme={setTheme} />
       <CleanPath />
+      {/* Every new page opens at the top */}
+      <ScrollToTop />
 
       {isLoading ? (
         <Loader onLoadingComplete={handleLoadingComplete} />

@@ -14,7 +14,9 @@
  *       fails to load, the website picture `fallback` is shown instead.
  *
  * Both take the usual <img> props (loading, sizes, onLoad...). The class
- * name is put on the placeholder too, so it fills the same frame.
+ * name is put on the placeholder too, so it fills the same frame. Pictures
+ * get a paper-coloured backing, so dark writing on a see-through background
+ * still shows on the dark theme.
  * -----------------------------------------------------------------------------
  */
 import React, { useEffect, useState } from 'react';
@@ -45,7 +47,7 @@ export const SitePicture = ({ name, alt, className, loading = 'lazy', ...imgProp
       height={picture.height || undefined}
       loading={loading}
       decoding="async"
-      className={className}
+      className={`${styles.picture} ${className || ''}`}
       onError={() => setFailed(true)}
       {...imgProps}
     />
@@ -59,7 +61,7 @@ export const CoverPicture = ({ src, fallback = 'fallback-book', alt = '', classN
 
   if (!own || failed) return <SitePicture name={fallback} alt={alt} className={className} loading={loading} {...imgProps} />;
   return (
-    <img src={own} alt={alt} loading={loading} decoding="async" className={className}
+    <img src={own} alt={alt} loading={loading} decoding="async" className={`${styles.picture} ${className || ''}`}
       onError={() => setFailed(true)} {...imgProps} />
   );
 };

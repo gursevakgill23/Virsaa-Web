@@ -2,7 +2,8 @@
  * pages/Collections/AudiobookDetail/AudiobookDetail.jsx
  * -----------------------------------------------------------------------------
  * One audiobook (/collections/audiobooks/audiobook/:id):
- *   - cover (a real picture, credited), details, Like / Save for later, Share
+ *   - cover (a real picture, credited), details, and the actions
+ *     (components/DetailActions): Like / Save for later / Share
  *   - where it plays from (the API's `media`):
  *       "youtube"  a recording on YouTube, played in YouTube's own player (its
  *                  terms allow embedding, not copying). The player loads only
@@ -13,7 +14,9 @@
  *                  for signed-in visitors) in our player: play/pause, ±15 s, seek
  *   - chapters / parts, description, ratings and reviews (components/Reviews),
  *     related audiobooks
- *   - "Read the book" for audiobooks made from one of our ebooks (the API's `ebook`)
+ *   - audiobooks made from one of our ebooks by Google's voice (the API's
+ *     `ebook`): "Read the book", and Listen shows "Coming soon" until they
+ *     have been checked (utils/features.js; staff accounts can already play them)
  * Listening is saved to History. While loading, the Virsaa loader is shown.
  * -----------------------------------------------------------------------------
  */
@@ -33,6 +36,8 @@ import useLibraryItem from '../../../hooks/useLibraryItem';
 import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import { useAuth } from '../../../context/AuthContext';
 import { safeExternalUrl, safeUrl } from '../../../utils/safeUrl';
+import DetailActions, { ActionLink, ListenSoon } from '../../../components/DetailActions/DetailActions';
+import { canPlayEbookAudio } from '../../../utils/features';
 
 const HEADER_LIGHT = '/images/header-image.png';
 const HEADER_DARK = '/images/header-image-dark.png';
@@ -120,7 +125,10 @@ const toAudiobook = (data, authorName) => {
 
 const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
-  const { accessToken, isLoggedIn } = useAuth();
+  const { accessToken, isLoggedIn, userData } = useAuth();
+  const mayListen = canPlayEbookAudio(userData); // staff check the audiobooks made from ebooks before everyone
+  const tokenRef = useRef(accessToken); // a renewed token mustn't fetch the audio link again
+  tokenRef.current = accessToken;
   // Audiobook data, loading/error state and the audio link
   const [audiobook, setAudiobook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -277,15 +285,6 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
         if (!cancelled) setIsLoading(false);
       }
 
-      // Our own mp3s are private on S3; stream_audio returns a temporary link (signed in only)
-      if (book?.media === 'file' && accessToken) {
-        axios.get(`${apiUrl}/collections/audiobooks/${safeId}/stream_audio/`, {
-          timeout: 20000, headers: { Authorization: `Bearer ${accessToken}` },
-        })
-          .then((r) => { if (!cancelled) setAudioUrl(safeUrl(r.data?.audio_url) || null); })
-          .catch(() => { if (!cancelled) setAudioUrl(null); });
-      }
-
       const all = await axios.get(`${apiUrl}/collections/audiobooks/`, { timeout: 20000 }).catch(() => ({ data: [] }));
       if (cancelled) return;
       const list = Array.isArray(all.data) ? all.data : all.data?.results || [];
@@ -297,9 +296,23 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
     load();
     return () => { cancelled = true; };
-    // accessToken is read once per audiobook: a renewed token mustn't reload the page
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, safeId, apiUrl, reloadKey]);
+
+  // Made from an ebook by Google's voice and not checked yet: "Coming soon" (staff can play it)
+  const comingSoon = Boolean(audiobook?.ebook) && !mayListen;
+  const playsFile = audiobook?.media === 'file' && !comingSoon;
+
+  // Our own mp3s are private on S3; stream_audio returns a temporary link (signed in only)
+  useEffect(() => {
+    if (!playsFile || !isLoggedIn) return undefined;
+    let cancelled = false;
+    axios.get(`${apiUrl}/collections/audiobooks/${safeId}/stream_audio/`, {
+      timeout: 20000, headers: { Authorization: `Bearer ${tokenRef.current}` },
+    })
+      .then((r) => { if (!cancelled) setAudioUrl(safeUrl(r.data?.audio_url) || null); })
+      .catch(() => { if (!cancelled) setAudioUrl(null); });
+    return () => { cancelled = true; };
+  }, [playsFile, isLoggedIn, apiUrl, safeId, reloadKey]);
 
   // Share sheet on phones, otherwise copy the link
   const handleShare = async () => {
@@ -390,7 +403,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
   return (
     <div className={styles.page}>
-      {audiobook.media === 'file' && (
+      {playsFile && (
         <audio
           ref={audioRef}
           src={audioUrl || undefined}
@@ -480,8 +493,8 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                 )}
               </div>
 
-              {/* Player: YouTube's (below) or ours */}
-              {isYouTube ? (
+              {/* Player: YouTube's (below) or ours ("coming soon": the Listen button below instead) */}
+              {comingSoon ? null : isYouTube ? (
                 <div className={styles.player}>
                   <button
                     type="button"
@@ -545,36 +558,22 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                 <p className={styles.sectionNote}>This audiobook’s recording is being prepared.</p>
               )}
 
-              <div className={styles.actions}>
+              <DetailActions
+                quick={[
+                  { key: 'like', label: 'Like', icon: <FaRegHeart />, onIcon: <FaHeart />, on: liked,
+                    onClick: library.toggleLike, busy: library.busy === 'like' },
+                  { key: 'save', label: 'Save', icon: <FaRegBookmark />, onIcon: <FaBookmark />, on: saved,
+                    onClick: library.toggleSave, busy: library.busy === 'save' },
+                  { key: 'share', label: 'Share', icon: <FaShareAlt />, onClick: handleShare, pressable: false },
+                ]}
+              >
+                {comingSoon && <ListenSoon />}
                 {audiobook.ebook && (
-                  <Link to={`/collections/ebooks/ebook/${audiobook.ebook.id}`} className={styles.bookLink}>
-                    <FaBookOpen aria-hidden="true" /> Read the book
-                  </Link>
+                  <ActionLink to={`/collections/ebooks/ebook/${audiobook.ebook.id}`} icon={<FaBookOpen aria-hidden="true" />}>
+                    Read the book
+                  </ActionLink>
                 )}
-                <button
-                  type="button"
-                  className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
-                  onClick={library.toggleLike}
-                  disabled={library.busy === 'like'}
-                  aria-pressed={liked}
-                  aria-label={liked ? 'Unlike' : 'Like'}
-                >
-                  {liked ? <FaHeart /> : <FaRegHeart />}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
-                  onClick={library.toggleSave}
-                  disabled={library.busy === 'save'}
-                  aria-pressed={saved}
-                  aria-label={saved ? 'Remove from saved' : 'Save for later'}
-                >
-                  {saved ? <FaBookmark /> : <FaRegBookmark />}
-                </button>
-                <button type="button" className={styles.iconButton} onClick={handleShare} aria-label="Share">
-                  <FaShareAlt />
-                </button>
-              </div>
+              </DetailActions>
             </div>
           </section>
 
@@ -626,9 +625,9 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
               <div>
                 <h3 id="chapters-title" className={styles.sectionTitle}>{partsAreVideos ? 'Parts' : 'Chapters'}</h3>
                 <p className={styles.sectionNote}>
-                  {isYouTube
-                    ? `${audiobook.chapters.length} to listen to, free`
-                    : `${audiobook.chapters.length - lockedCount} free, ${lockedCount} with Premium`}
+                  {comingSoon ? 'Listening opens soon'
+                    : isYouTube ? `${audiobook.chapters.length} to listen to, free`
+                      : `${audiobook.chapters.length - lockedCount} free${lockedCount ? `, ${lockedCount} with Premium` : ''}`}
                 </p>
               </div>
             </div>
@@ -652,7 +651,11 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                     {open && (
                       <div className={styles.chapterBody}>
                         <p className={styles.chapterText}>{chapter.title}{chapter.duration ? `, ${chapter.duration}` : ''}.</p>
-                        {chapter.locked ? (
+                        {comingSoon ? (
+                          <button type="button" className={styles.smallButton} disabled>
+                            <FaHeadphones aria-hidden="true" /> Coming soon
+                          </button>
+                        ) : chapter.locked ? (
                           <Link to="/premium" className={`${styles.smallButton} ${styles.lockedButton}`}>
                             <FaLock aria-hidden="true" /> Unlock with Premium
                           </Link>

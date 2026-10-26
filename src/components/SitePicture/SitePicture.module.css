@@ -1,9 +1,16 @@
 /*
  * components/SitePicture/SitePicture.module.css
  * The placeholder shown while a picture is loading or missing: a quiet tint
- * in the site's colours, filling whatever frame the page gives it. Wrapped in
+ * in the site's colours, filling whatever frame the page gives it. And a
+ * paper-coloured backing for every picture: some (Gurmukhi writing, emblems)
+ * are dark ink on a see-through background, which vanished on the dark
+ * theme's dark pages. Photos cover it completely. Both are wrapped in
  * :where() so the page's own class (size, position, shape) always wins.
  */
+:where(.picture) {
+  background-color: #efe6d6;
+}
+
 :where(.placeholder) {
   display: block;
   width: 100%;

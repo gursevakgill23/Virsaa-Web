@@ -1,7 +1,7 @@
 /*
  * pages/Collections/EbookDetail/EbookDetail.module.css
  * -----------------------------------------------------------------------------
- * One ebook: book card with actions, chapters, description and the
+ * One ebook: book card (its actions: components/DetailActions), chapters, description and the
  * related/recommended rows. Ratings and reviews are styled by
  * components/Reviews.
  * -----------------------------------------------------------------------------
@@ -254,16 +254,8 @@
   cursor: pointer;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.primaryButton,
-.secondaryButton {
+/* "Try again" and "Browse all ebooks" when the book can't be shown */
+.primaryButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -290,53 +282,7 @@
   color: var(--button-hover-text-color);
 }
 
-.primaryButton:disabled,
-.secondaryButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.secondaryButton {
-  background: transparent;
-  color: var(--primary-color);
-  border: 2px solid rgba(var(--primary-rgb), 0.35);
-}
-
-.secondaryButton:hover:not(:disabled) {
-  border-color: var(--primary-color);
-  background: rgba(var(--primary-rgb), 0.08);
-}
-
-.iconButton {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 1px solid var(--border-color);
-  background: var(--glass-bg);
-  color: var(--primary-color);
-  font-size: 1.05rem;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.iconButton:hover {
-  background: rgba(var(--primary-rgb), 0.1);
-  border-color: rgba(var(--primary-rgb), 0.35);
-}
-
-.iconButtonOn {
-  background: rgba(var(--primary-rgb), 0.12);
-  border-color: var(--primary-color);
-}
-
 /* ---------- Listen: the book read by Google's Punjabi voice (EbookListen.jsx) ---------- */
-.listenButtonOn {
-  border-color: var(--primary-color);
-  background: rgba(var(--primary-rgb), 0.1);
-}
-
 .listenPanel {
   display: flex;
   flex-direction: column;
@@ -940,25 +886,6 @@
 
   .chapterBody {
     padding: 0 14px 16px 14px;
-  }
-
-  .actions {
-    gap: 8px;
-  }
-
-  .actions .primaryButton {
-    flex: 1 1 100%;
-  }
-
-  /* Read now and Listen side by side, then Download and the round buttons */
-  .actions:has(.listenButton) .primaryButton,
-  .actions .listenButton {
-    flex: 1 1 0;
-    padding: 0 14px;
-  }
-
-  .actions .secondaryButton:not(.listenButton) {
-    padding: 0 16px;
   }
 
   .listenPanel {

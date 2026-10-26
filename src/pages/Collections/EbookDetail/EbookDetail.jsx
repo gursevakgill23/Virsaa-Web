@@ -2,11 +2,13 @@
  * pages/Collections/EbookDetail/EbookDetail.jsx
  * -----------------------------------------------------------------------------
  * One ebook (/collections/ebooks/ebook/:id):
- *   - cover, details, Read now (opens the flip-book reader full screen),
- *     Like / Save for later / Download (useLibraryItem), Share
- *   - Listen: the book read by Google's Punjabi voice (EbookListen), once its
- *     audiobook is made (`audio` from the API; while it is being made the page
- *     shows how far it has got and checks again every 20 seconds)
+ *   - cover, details and the actions (components/DetailActions): Read now
+ *     (opens the flip-book reader full screen) and Listen side by side, then
+ *     Like / Save for later / Download (useLibraryItem) / Share
+ *   - Listen: "Coming soon" for now (utils/features.js). The audiobooks Google's
+ *     Punjabi voice makes from the ebooks are checked first: staff accounts can
+ *     already play them (EbookListen), and see how far one being made has got
+ *     (`audio` from the API, checked again every 20 seconds)
  *   - English word by word: Premium, coming soon (a placeholder for now)
  *   - chapters, description, ratings and reviews (components/Reviews)
  *   - related and recommended books
@@ -24,6 +26,8 @@ import {
 import { toast } from '../../../utils/notify';
 import styles from './EbookDetail.module.css';
 import EbookListen from './EbookListen';
+import DetailActions, { ActionButton, ListenSoon } from '../../../components/DetailActions/DetailActions';
+import { canPlayEbookAudio } from '../../../utils/features';
 import PageHero from '../../../components/PageHero/PageHero';
 import Loader from '../../../components/VirsaaLoader/Loader';
 import axios from 'axios';
@@ -108,7 +112,8 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
   const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
   const headerImage = isDarkMode ? HEADER_DARK : HEADER_LIGHT;
-  const { accessToken, isLoggedIn } = useAuth(); // reading or listening needs an account
+  const { accessToken, isLoggedIn, userData } = useAuth(); // reading or listening needs an account
+  const mayListen = canPlayEbookAudio(userData); // staff check the audiobooks before everyone can listen
 
   // Ebook, its author and related books. These endpoints are public, so no token
   // is sent (an expired token would make them fail with 401). Reviews load
@@ -174,7 +179,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   // While the audiobook is being made, check how far it has got (and show Listen when it is ready)
   const audioStatus = ebook?.audio?.status;
   useEffect(() => {
-    if (!BEING_MADE.includes(audioStatus)) return undefined;
+    if (!mayListen || !BEING_MADE.includes(audioStatus)) return undefined;
     let cancelled = false;
     const timer = setInterval(async () => {
       if (document.hidden) return; // not while the tab is in the background
@@ -186,7 +191,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
       }
     }, AUDIO_CHECK_MS);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [audioStatus, apiUrl, safeId]);
+  }, [mayListen, audioStatus, apiUrl, safeId]);
 
   // PDFs are private on S3; read_pdf returns a temporary link.
   // The reader opens straight away (full screen, from the click) and shows
@@ -316,11 +321,11 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     );
   }
 
-  // The audiobook: ready (Listen), being made (a note), or none
+  // The audiobook: staff can play it once it is made; everyone else sees "Coming soon" for now
   const audio = ebook.audio;
-  const canListen = audio?.status === 'done' && Boolean(audio.audiobook);
-  const beingMade = BEING_MADE.includes(audio?.status);
-  const showWordByWord = audio?.status !== 'not_punjabi'; // English meanings of a Punjabi book
+  const canListen = mayListen && audio?.status === 'done' && Boolean(audio.audiobook);
+  const beingMade = mayListen && BEING_MADE.includes(audio?.status);
+  const punjabi = audio?.status !== 'not_punjabi'; // only Punjabi books are read aloud (and translated)
 
   const description = ebook.description || '';
   const isLong = description.length > 420;
@@ -432,49 +437,33 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                 </div>
               )}
 
-              <div className={styles.actions}>
-                <button type="button" className={styles.primaryButton} onClick={handleReadNow} disabled={pdfLoading}>
-                  <FaBookOpen aria-hidden="true" /> {pdfLoading ? 'Opening…' : 'Read now'}
-                </button>
-                {canListen && (
-                  <button
-                    type="button"
-                    className={`${styles.secondaryButton} ${styles.listenButton} ${listening ? styles.listenButtonOn : ''}`}
+              <DetailActions
+                quick={[
+                  { key: 'like', label: 'Like', icon: <FaRegHeart />, onIcon: <FaHeart />, on: liked,
+                    onClick: library.toggleLike, busy: library.busy === 'like' },
+                  { key: 'save', label: 'Save', icon: <FaRegBookmark />, onIcon: <FaBookmark />, on: saved,
+                    onClick: library.toggleSave, busy: library.busy === 'save' },
+                  { key: 'download', label: library.downloading ? 'Preparing…' : 'Download', icon: <FaDownload />,
+                    onClick: library.download, busy: library.downloading, pressable: false },
+                  { key: 'share', label: 'Share', icon: <FaShareAlt />, onClick: handleShare, pressable: false },
+                ]}
+              >
+                <ActionButton icon={<FaBookOpen aria-hidden="true" />} onClick={handleReadNow} disabled={pdfLoading}>
+                  {pdfLoading ? 'Opening…' : 'Read now'}
+                </ActionButton>
+                {canListen ? (
+                  <ActionButton
+                    quiet
+                    on={listening}
+                    icon={<FaHeadphones aria-hidden="true" />}
                     onClick={() => setListening((open) => !open)}
                     aria-expanded={listening}
                     aria-controls="ebook-listen"
                   >
-                    <FaHeadphones aria-hidden="true" /> Listen
-                  </button>
-                )}
-                <button type="button" className={styles.secondaryButton} onClick={library.download} disabled={library.downloading}>
-                  <FaDownload aria-hidden="true" /> {library.downloading ? 'Preparing…' : 'Download'}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
-                  onClick={library.toggleLike}
-                  disabled={library.busy === 'like'}
-                  aria-pressed={liked}
-                  aria-label={liked ? 'Unlike this book' : 'Like this book'}
-                >
-                  {liked ? <FaHeart /> : <FaRegHeart />}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
-                  onClick={library.toggleSave}
-                  disabled={library.busy === 'save'}
-                  aria-pressed={saved}
-                  aria-label={saved ? 'Remove from saved' : 'Save for later'}
-                  title={saved ? 'Saved for later' : 'Save for later'}
-                >
-                  {saved ? <FaBookmark /> : <FaRegBookmark />}
-                </button>
-                <button type="button" className={styles.iconButton} onClick={handleShare} aria-label="Share this book">
-                  <FaShareAlt />
-                </button>
-              </div>
+                    Listen
+                  </ActionButton>
+                ) : punjabi && <ListenSoon />}
+              </DetailActions>
 
               {canListen && listening && (
                 <EbookListen
@@ -497,7 +486,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
               )}
 
               {/* Not available yet: Premium, coming soon */}
-              {showWordByWord && (
+              {punjabi && (
                 <div className={styles.soonCard}>
                   <span className={styles.soonIcon} aria-hidden="true"><FaLanguage /></span>
                   <div>

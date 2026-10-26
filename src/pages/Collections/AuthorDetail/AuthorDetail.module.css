@@ -165,70 +165,6 @@
   color: var(--primary-color);
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.primaryButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 0 24px;
-  border-radius: 999px;
-  font-family: var(--font-body);
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.primaryButton {
-  background: var(--button-bg-color);
-  color: var(--button-text-color);
-  border: var(--button-border);
-  box-shadow: 0 14px 26px -14px rgba(101, 4, 29, 0.7);
-}
-
-.primaryButton:hover:not(:disabled) {
-  background: var(--button-hover-bg-color);
-  color: var(--button-hover-text-color);
-}
-
-.primaryButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.iconButton {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 1px solid var(--border-color);
-  background: var(--glass-bg);
-  color: var(--primary-color);
-  font-size: 1.05rem;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.iconButton:hover {
-  background: rgba(var(--primary-rgb), 0.1);
-  border-color: rgba(var(--primary-rgb), 0.35);
-}
-
-.iconButtonOn {
-  background: rgba(var(--primary-rgb), 0.12);
-  border-color: var(--primary-color);
-}
-
 /* ---------- Sections ---------- */
 .section {
   min-width: 0;
@@ -447,10 +383,6 @@
   .productCard {
     grid-template-columns: 1fr;
     border-radius: 28px;
-  }
-
-  .actions .primaryButton {
-    flex: 1 1 100%;
   }
 }
 

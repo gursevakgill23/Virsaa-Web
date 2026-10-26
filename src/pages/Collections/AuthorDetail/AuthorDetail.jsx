@@ -2,7 +2,8 @@
  * pages/Collections/AuthorDetail/AuthorDetail.jsx
  * -----------------------------------------------------------------------------
  * One author (/collections/authors/author/:id):
- *   - portrait, life dates, genre, rating, Like / Save for later, Share
+ *   - portrait, life dates, genre, rating, and the actions (components/DetailActions):
+ *     View all works, then Like / Save for later / Share
  *   - tabs: Biography, Works (their ebooks), Awards, Reviews (components/Reviews:
  *     ratings and reviews saved on the server)
  *   - related authors (same genre first)
@@ -25,6 +26,7 @@ import Avatar from '../../../components/Avatar/Avatar';
 import { CoverPicture } from '../../../components/SitePicture/SitePicture';
 import { safeExternalUrl } from '../../../utils/safeUrl';
 import styles from './AuthorDetail.module.css';
+import DetailActions, { ActionButton } from '../../../components/DetailActions/DetailActions';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -281,34 +283,17 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
                 )}
               </div>
 
-              <div className={styles.actions}>
-                <button type="button" className={styles.primaryButton} onClick={openWorks}>
-                  <FaBook aria-hidden="true" /> View all works
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.iconButton} ${liked ? styles.iconButtonOn : ''}`}
-                  onClick={library.toggleLike}
-                  disabled={library.busy === 'like'}
-                  aria-pressed={liked}
-                  aria-label={liked ? 'Unlike' : 'Like'}
-                >
-                  {liked ? <FaHeart /> : <FaRegHeart />}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.iconButton} ${saved ? styles.iconButtonOn : ''}`}
-                  onClick={library.toggleSave}
-                  disabled={library.busy === 'save'}
-                  aria-pressed={saved}
-                  aria-label={saved ? 'Remove from saved' : 'Save for later'}
-                >
-                  {saved ? <FaBookmark /> : <FaRegBookmark />}
-                </button>
-                <button type="button" className={styles.iconButton} onClick={handleShare} aria-label="Share">
-                  <FaShareAlt />
-                </button>
-              </div>
+              <DetailActions
+                quick={[
+                  { key: 'like', label: 'Like', icon: <FaRegHeart />, onIcon: <FaHeart />, on: liked,
+                    onClick: library.toggleLike, busy: library.busy === 'like' },
+                  { key: 'save', label: 'Save', icon: <FaRegBookmark />, onIcon: <FaBookmark />, on: saved,
+                    onClick: library.toggleSave, busy: library.busy === 'save' },
+                  { key: 'share', label: 'Share', icon: <FaShareAlt />, onClick: handleShare, pressable: false },
+                ]}
+              >
+                <ActionButton icon={<FaBook aria-hidden="true" />} onClick={openWorks}>View all works</ActionButton>
+              </DetailActions>
             </div>
           </section>
 
