@@ -1,9 +1,9 @@
 /**
  * api/libraryApi.js
  * -----------------------------------------------------------------------------
- * Calls to the Django library API (/api/library/...): likes, "save for later"
- * and ebook downloads. Used by hooks/useLibraryItem.js, the detail pages and
- * My Favorites.
+ * Calls to the Django library API (/api/library/...): likes, "save for later",
+ * ebook downloads and the reader's bookmark. Used by hooks/useLibraryItem.js,
+ * hooks/useBookmark.js, the detail pages and My Favorites.
  *
  * `type` is 'ebook', 'audiobook' or 'author'; `kind` is 'like' or 'save'.
  * -----------------------------------------------------------------------------
@@ -40,6 +40,13 @@ const libraryApi = {
   downloads: (api, token) => axios.get(`${base(api)}/downloads/`, auth(token)).then((r) => r.data),
   downloadEbook: (api, token, id) =>
     axios.post(`${base(api)}/ebooks/${seg(id)}/download/`, {}, auth(token)).then((r) => r.data),
+  // The reader's bookmark in an ebook: { page, pages, updated_at } (page is null when there is none)
+  bookmark: (api, token, id) =>
+    axios.get(`${base(api)}/bookmarks/ebook/${seg(id)}/`, auth(token)).then((r) => r.data),
+  setBookmark: (api, token, id, page, pages) =>
+    axios.put(`${base(api)}/bookmarks/ebook/${seg(id)}/`, { page, pages }, auth(token)).then((r) => r.data),
+  removeBookmark: (api, token, id) =>
+    axios.delete(`${base(api)}/bookmarks/ebook/${seg(id)}/`, auth(token)).then((r) => r.data),
 };
 
 /**

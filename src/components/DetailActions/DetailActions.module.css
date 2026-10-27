@@ -74,6 +74,20 @@
   background: rgba(var(--primary-rgb), 0.1);
 }
 
+/* A main action with a note under its name ("Continue" / "From page 23") */
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.stack small {
+  font-size: 0.74rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
 /* Listen, coming soon: a dashed edge (not here yet), the note under the word */
 .soon {
   border-style: dashed;

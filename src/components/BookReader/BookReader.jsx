@@ -12,6 +12,12 @@
  *     page instead of turning it
  *   - turn pages by dragging, tapping either half, the arrow buttons, the
  *     slider or the keyboard (arrows, Page Up/Down, Space, Home, End, Esc)
+ *   - opens at startPage (the reader's bookmark, or a chapter's first page)
+ *   - the bookmark: the ribbon button (or B) puts it on the page on screen, or
+ *     takes it off; a ribbon hangs from that page, and a mark on the slider
+ *     jumps back to it from anywhere in the book
+ *   - chapters (the book's own, with their pages): the list button at the
+ *     bottom shows the chapter on screen and jumps to any other
  *   - reports the current page through onProgress (used for History)
  *   - shows a clear message with "Try again" / "Open PDF" if the book can't load
  * -----------------------------------------------------------------------------
@@ -19,7 +25,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   FaTimes, FaExpand, FaCompress, FaChevronLeft, FaChevronRight, FaExternalLinkAlt, FaRedo,
-  FaSearchPlus, FaSearchMinus,
+  FaSearchPlus, FaSearchMinus, FaBookmark, FaRegBookmark, FaListUl,
 } from 'react-icons/fa';
 import styles from './BookReader.module.css';
 import { safeUrl } from '../../utils/safeUrl';
@@ -70,6 +76,13 @@ const RENDER_DELAY_MS = 250; // wait for zooming to settle before drawing sharpe
 const leftOf = (s) => (s === 0 ? null : 2 * s);
 const rightOf = (s, n) => (2 * s + 1 <= n ? 2 * s + 1 : null);
 
+const NOTE_MS = 2800; // how long "Page 12 bookmarked" stays
+const RIBBON_DROP_MS = 700;
+
+// "Pages 4–5" / "Page 4"
+const pagesOf = (chapter) => (chapter.last_page && chapter.last_page !== chapter.first_page
+  ? `${chapter.first_page}–${chapter.last_page}` : `${chapter.first_page}`);
+
 /**
  * Full-screen flip-book reader for a PDF.
  *
@@ -80,8 +93,16 @@ const rightOf = (s, n) => (2 * s + 1 <= n ? 2 * s + 1 : null);
  *  - onRetry(): fetch the link again
  *  - onClose()
  *  - onProgress(page, numPages): optional, called when the page changes (for History)
+ *  - startPage: the page to open at (default 1)
+ *  - bookmarkPage: the reader's bookmarked page, or null
+ *  - onBookmark(page | null, numPages): optional; puts the bookmark on that page (null: takes it
+ *    off) and resolves true when it saved. Without it there is no bookmark button.
+ *  - chapters: optional [{ id, title, first_page, last_page }]; those with a first page are listed
  */
-const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => {
+const BookReader = ({
+  url, title, linkError, onRetry, onClose, onProgress,
+  startPage = 1, bookmarkPage = null, onBookmark, chapters = [],
+}) => {
   // DOM nodes and the open PDF document
   const rootRef = useRef(null);
   const stageRef = useRef(null);
@@ -161,6 +182,9 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   }, [status, current, spread, numPages]);
 
   /* ---------- Open the PDF ---------- */
+  const startRef = useRef(startPage); // read when the book has opened
+  startRef.current = startPage;
+
   useEffect(() => {
     if (!url) return undefined;
     let cancelled = false;
@@ -189,7 +213,9 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
         if (cancelled) return;
         setAspect(vp.width / vp.height);
         setNumPages(pdf.numPages);
-        setIndex(spreadRef.current ? 0 : 1);
+        // Open at the start page (the bookmark or a chapter): the spread or page that shows it
+        const opening = clamp(Math.round(Number(startRef.current) || 1), 1, pdf.numPages);
+        setIndex(spreadRef.current ? Math.floor(opening / 2) : opening);
         setStatus('ready');
       })
       .catch((err) => {
@@ -408,6 +434,91 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
 
+  // Jump to a page: the spread or page that shows it
+  const goToPage = (page) => {
+    if (flipRef.current || !numPages) return;
+    const p = clamp(Math.round(Number(page) || 1), 1, numPages);
+    setIndex(spread ? Math.floor(p / 2) : p);
+  };
+
+  // The pages on screen; the first is the one a bookmark goes on
+  const visible = status !== 'ready' ? []
+    : spread ? [leftOf(current), rightOf(current, numPages)].filter(Boolean) : [current];
+  const readingPage = visible[0] || 1;
+
+  /* ---------- The bookmark ---------- */
+  const aliveRef = useRef(true);
+  useEffect(() => () => { aliveRef.current = false; }, []);
+  const [markBusy, setMarkBusy] = useState(false);
+  const [dropping, setDropping] = useState(false); // the ribbon was just put in: it falls onto the page
+  const [note, setNote] = useState('');
+  const noteTimer = useRef(0);
+  const dropTimer = useRef(0);
+  useEffect(() => () => { clearTimeout(noteTimer.current); clearTimeout(dropTimer.current); }, []);
+
+  const showNote = (text) => {
+    clearTimeout(noteTimer.current);
+    setNote(text);
+    noteTimer.current = setTimeout(() => setNote(''), NOTE_MS);
+  };
+
+  const hasMark = Number(bookmarkPage) > 0 && Number(bookmarkPage) <= numPages;
+  const markHere = hasMark && visible.includes(Number(bookmarkPage));
+
+  // On the page on screen: take it off. Anywhere else (or none): put it here.
+  const toggleBookmark = async () => {
+    if (!onBookmark || markBusy || status !== 'ready') return;
+    const removing = markHere;
+    const page = readingPage;
+    setMarkBusy(true);
+    if (!removing) {
+      setDropping(true);
+      clearTimeout(dropTimer.current);
+      dropTimer.current = setTimeout(() => setDropping(false), RIBBON_DROP_MS);
+    }
+    let saved = false;
+    try {
+      saved = await onBookmark(removing ? null : page, numPages);
+    } catch {
+      saved = false;
+    }
+    if (!aliveRef.current) return;
+    setMarkBusy(false);
+    if (!saved) showNote('The bookmark didn’t save. Try again.');
+    else showNote(removing ? 'Bookmark removed.' : `Page ${page} bookmarked. The book opens here next time.`);
+  };
+
+  /* ---------- Chapters ---------- */
+  const listed = chapters
+    .filter((c) => Number(c.first_page) > 0 && Number(c.first_page) <= (numPages || Infinity))
+    .sort((a, b) => a.first_page - b.first_page);
+  // The chapter on screen: the one the last page on screen is in (a chapter that starts on the
+  // right-hand page is the one just opened)
+  const lastShown = visible[visible.length - 1] || readingPage;
+  const chapterNow = [...listed].reverse().find((c) => c.first_page <= lastShown) || null;
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelButtonRef = useRef(null);
+  const panelRef = useRef(null);
+
+  const closePanel = (giveFocusBack = true) => {
+    setPanelOpen(false);
+    if (giveFocusBack) panelButtonRef.current?.focus();
+  };
+
+  // The list opens at the chapter on screen
+  useEffect(() => {
+    if (!panelOpen) return;
+    const now = panelRef.current?.querySelector('[aria-current="true"]') || panelRef.current?.querySelector('button');
+    now?.scrollIntoView?.({ block: 'nearest' });
+    now?.focus();
+  }, [panelOpen]);
+
+  const openChapter = (chapter) => {
+    closePanel(false);
+    goToPage(chapter.first_page);
+    rootRef.current?.focus();
+  };
+
   // Zoomed in and the page changes: start reading the new page from its top
   useEffect(() => {
     if (zoomRef.current > 1 && areaRef.current) areaRef.current.scrollTop = 0;
@@ -522,7 +633,16 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
   /* ---------- Keyboard, full screen, scroll lock ---------- */
   useEffect(() => {
     const onKey = (e) => {
+      // The chapter list is open: Escape closes it; the keys stay with the list
+      if (panelOpen) {
+        if (e.key === 'Escape') { e.preventDefault(); closePanel(); }
+        return;
+      }
       if (e.target instanceof HTMLInputElement && e.key !== 'Escape') return;
+      if ((e.key === 'b' || e.key === 'B') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (onBookmark && status === 'ready') { e.preventDefault(); toggleBookmark(); }
+        return;
+      }
       if (e.ctrlKey || e.metaKey || e.altKey) {
         // Ctrl + / Ctrl − zoom the book rather than the whole website
         if (['+', '=', '-', '0'].includes(e.key) && status === 'ready') {
@@ -579,14 +699,23 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
     return `Page ${l || r} of ${numPages}`;
   })();
 
-  // One sheet of paper: the rendered page, or its number while it renders
-  const pageFace = (num, extra = '') => (
+  // One sheet of paper: the rendered page, or its number while it renders. The bookmarked
+  // page has the ribbon, near its outer top corner (`side`: which half of the book it is on).
+  const pageFace = (num, extra = '', side = 'right') => (
     <div className={`${styles.paper} ${extra}`}>
       {num && images[num] ? (
         <img src={images[num].src} alt={`Page ${num}`} className={styles.pageImage} draggable="false" />
       ) : num ? (
         <span className={styles.pagePending} aria-hidden="true">{num}</span>
       ) : null}
+      {num && hasMark && num === Number(bookmarkPage) && (
+        <span
+          className={`${styles.ribbon} ${side === 'left' ? styles.ribbonLeft : ''} ${dropping ? styles.ribbonDrop : ''}`}
+          aria-hidden="true"
+        >
+          <span />
+        </span>
+      )}
     </div>
   );
 
@@ -609,7 +738,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
             className={`${styles.half} ${styles.halfLeft} ${baseLeft ? '' : styles.halfEmpty}`}
             style={{ '--stack': `${Math.round(read * 7)}px` }}
           >
-            {baseLeft && pageFace(baseLeft)}
+            {baseLeft && pageFace(baseLeft, '', 'left')}
             {baseLeft && <div className={styles.gutterLeft} aria-hidden="true" />}
             {f && f.x > 0.5 && baseLeft && (
               <div className={styles.castLeft} style={{ opacity: s * 0.9 }} aria-hidden="true" />
@@ -637,7 +766,7 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
                 <div className={styles.shadeFront} style={{ opacity: s }} aria-hidden="true" />
               </div>
               <div className={`${styles.face} ${styles.faceBack}`}>
-                {pageFace(leftOf(f.a + 1))}
+                {pageFace(leftOf(f.a + 1), '', 'left')}
                 <div className={styles.gutterLeft} aria-hidden="true" />
                 <div className={styles.shadeBack} style={{ opacity: s }} aria-hidden="true" />
               </div>
@@ -775,26 +904,108 @@ const BookReader = ({ url, title, linkError, onRetry, onClose, onProgress }) => 
         )}
       </div>
 
-      {/* Page controls */}
+      {/* "Page 12 bookmarked" and the like (always there, so screen readers hear it) */}
+      <p className={note ? styles.note : styles.srOnly} role="status" aria-live="polite">{note}</p>
+
+      {/* Page controls: chapters, turning, the slider (with the bookmark on it), the bookmark */}
       {status === 'ready' && !errorMessage && (
         <footer className={styles.bottomBar}>
+          {listed.length > 0 && (
+            <div className={styles.chaptersWrap}>
+              <button
+                type="button"
+                ref={panelButtonRef}
+                className={`${styles.chaptersButton} ${panelOpen ? styles.chaptersButtonOpen : ''}`}
+                onClick={() => (panelOpen ? closePanel() : setPanelOpen(true))}
+                aria-expanded={panelOpen}
+                aria-controls="reader-chapters"
+                aria-label={chapterNow ? `Chapters. On screen: ${chapterNow.title}` : 'Chapters'}
+                title="Chapters"
+              >
+                <FaListUl aria-hidden="true" />
+                <span className={styles.chaptersLabel} aria-hidden="true">{chapterNow ? chapterNow.title : 'Chapters'}</span>
+              </button>
+
+              {/* The chapters, the one on screen marked; a tap anywhere else closes the list */}
+              {panelOpen && (
+                <>
+                  <div className={styles.panelScrim} onPointerDown={() => closePanel()} aria-hidden="true" />
+                  <nav id="reader-chapters" ref={panelRef} className={styles.chapterPanel} aria-label="Chapters">
+                    <p className={styles.panelTitle}>Chapters</p>
+                    <ol className={styles.chapterRows}>
+                      {listed.map((chapter, i) => {
+                        const isNow = chapterNow?.id === chapter.id;
+                        const last = chapter.last_page || chapter.first_page;
+                        const marked = hasMark && bookmarkPage >= chapter.first_page && bookmarkPage <= last;
+                        return (
+                          <li key={chapter.id ?? chapter.first_page}>
+                            <button
+                              type="button"
+                              className={`${styles.chapterRow} ${isNow ? styles.chapterRowNow : ''}`}
+                              aria-current={isNow ? 'true' : undefined}
+                              onClick={() => openChapter(chapter)}
+                            >
+                              <span className={styles.rowIndex}>{i + 1}</span>
+                              <span className={styles.rowTitle}>{chapter.title}</span>
+                              <span className={styles.rowPages}>
+                                {marked && <span className={styles.rowMark} role="img" aria-label="Your bookmark is in this chapter" />}
+                                {pagesOf(chapter)}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </nav>
+                </>
+              )}
+            </div>
+          )}
           <button type="button" className={styles.roundButton} onClick={goPrev} disabled={!canPrev} aria-label="Previous page">
             <FaChevronLeft />
           </button>
-          <label className={styles.scrubber}>
-            <span className={styles.srOnly}>Go to page</span>
-            <input
-              type="range"
-              min={minIndex}
-              max={Math.max(minIndex, maxIndex)}
-              value={current}
-              onChange={(e) => jumpTo(e.target.value)}
-              aria-valuetext={shownPages}
-            />
-          </label>
+          <div className={styles.scrubber}>
+            <label className={styles.scrubberLabel}>
+              <span className={styles.srOnly}>Go to page</span>
+              <input
+                type="range"
+                min={minIndex}
+                max={Math.max(minIndex, maxIndex)}
+                value={current}
+                onChange={(e) => jumpTo(e.target.value)}
+                aria-valuetext={shownPages}
+              />
+            </label>
+            {hasMark && !markHere && (
+              <button
+                type="button"
+                className={styles.trackMark}
+                style={{
+                  '--at': (clamp(spread ? Math.floor(bookmarkPage / 2) : bookmarkPage, minIndex, maxIndex) - minIndex)
+                    / Math.max(1, maxIndex - minIndex),
+                }}
+                onClick={() => goToPage(bookmarkPage)}
+                aria-label={`Go to your bookmark, page ${bookmarkPage}`}
+                title={`Your bookmark: page ${bookmarkPage}`}
+              />
+            )}
+          </div>
           <button type="button" className={styles.roundButton} onClick={goNext} disabled={!canNext} aria-label="Next page">
             <FaChevronRight />
           </button>
+          {onBookmark && (
+            <button
+              type="button"
+              className={`${styles.roundButton} ${markHere ? styles.markOn : ''}`}
+              onClick={toggleBookmark}
+              disabled={markBusy}
+              aria-pressed={markHere}
+              aria-label="Bookmark this page"
+              title={markHere ? 'Remove the bookmark (B)' : hasMark ? 'Move the bookmark to this page (B)' : 'Bookmark this page (B)'}
+            >
+              {markHere ? <FaBookmark aria-hidden="true" /> : <FaRegBookmark aria-hidden="true" />}
+            </button>
+          )}
         </footer>
       )}
     </div>

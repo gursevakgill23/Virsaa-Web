@@ -5,6 +5,11 @@
  *   - cover, details and the actions (components/DetailActions): Read now
  *     (opens the flip-book reader full screen) and Listen side by side, then
  *     Like / Save for later / Download (useLibraryItem) / Share
+ *   - the reader's bookmark (useBookmark): put in while reading; the book opens
+ *     there next time ("Continue, from page 23"), or from the start if asked.
+ *     Its little crimson ribbon is the reader's, not the Save button's icon
+ *   - chapters with their pages (made from the PDF on the server): "Read this
+ *     chapter" opens the book at its first page; the reader lists them too
  *   - Listen: "Coming soon" for now (utils/features.js). The audiobooks Google's
  *     Punjabi voice makes from the ebooks are checked first: staff accounts can
  *     already play them (EbookListen), and see how far one being made has got
@@ -35,6 +40,7 @@ import BookReader from '../../../components/BookReader/BookReader';
 import Reviews from '../../../components/Reviews/Reviews';
 import useLibraryItem from '../../../hooks/useLibraryItem';
 import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
+import useBookmark from '../../../hooks/useBookmark';
 import { useAuth } from '../../../context/AuthContext';
 import { CoverPicture } from '../../../components/SitePicture/SitePicture';
 
@@ -77,6 +83,17 @@ const RelatedSkeleton = () => (
 // Lists may come back plain or paginated ({ results: [...] })
 const toList = (data) => (Array.isArray(data) ? data : data?.results || []);
 
+// A chapter's pages in the PDF: "Pages 4–5", "Page 4", or '' when not known
+const chapterPages = (chapter) => {
+  if (!chapter.first_page) return '';
+  return chapter.last_page && chapter.last_page !== chapter.first_page
+    ? `Pages ${chapter.first_page}–${chapter.last_page}` : `Page ${chapter.first_page}`;
+};
+
+// Is this page in the chapter?
+const holds = (chapter, page) => Boolean(chapter.first_page && page
+  && page >= chapter.first_page && page <= (chapter.last_page || chapter.first_page));
+
 // The book's audiobook (Google's Punjabi voice), from the API's `audio`
 const BEING_MADE = ['waiting', 'working'];
 const AUDIO_CHECK_MS = 20000; // while it is being made
@@ -84,6 +101,7 @@ const AUDIO_CHECK_MS = 20000; // while it is being made
 const EbookDetail = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
   const library = useLibraryItem(apiString, 'ebook', id);
+  const bookmark = useBookmark(apiString, id); // the reader's bookmark: the book opens there
   const recordHistory = useHistoryRecorder(apiString);
   const readingRef = useRef(null); // last page reached, saved to History when the reader closes
   const { liked, saved } = library;
@@ -102,6 +120,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState(null);
+  const [readerStart, setReaderStart] = useState(1); // the page the reader opens at
   const [listening, setListening] = useState(false); // the Listen player is open
 
   // Average rating and number of reviews, reported by the Reviews section
@@ -217,12 +236,14 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     }
   };
 
-  // Read now: open the reader (full screen) and record the visit
-  const handleReadNow = () => {
+  // Read now: open the reader (full screen) and record the visit. It opens at `startAt`
+  // (a chapter, or 1 for "from the start"), else at the bookmark, else at the first page.
+  const openReader = (startAt) => {
     // Must run inside the click, or the browser refuses full screen
     if (document.fullscreenEnabled && !document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().catch(() => {});
     }
+    setReaderStart(Number(startAt) > 0 ? Number(startAt) : bookmark.page || 1);
     setShowPdfModal(true);
     fetchPdfLink(); // links expire after an hour, so get a fresh one each time
     if (ebook) recordHistory(historyEntry());
@@ -278,12 +299,11 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // The reader's bookmark button: on that page, or off (null). Resolves true when it saved.
+  const handleBookmark = (page, numPages) => (page ? bookmark.save(page, numPages) : bookmark.remove());
+
   const toggleChapter = (chapterId) => {
     setExpandedChapter(expandedChapter === chapterId ? null : chapterId);
-  };
-
-  const handleReadChapter = () => {
-    handleReadNow();
   };
 
   const scrollRow = (ref, direction) => {
@@ -326,6 +346,10 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const canListen = mayListen && audio?.status === 'done' && Boolean(audio.audiobook);
   const beingMade = mayListen && BEING_MADE.includes(audio?.status);
   const punjabi = audio?.status !== 'not_punjabi'; // only Punjabi books are read aloud (and translated)
+
+  // Where the bookmark is (and in which chapter)
+  const markedPage = bookmark.available ? bookmark.page : null;
+  const markedChapter = markedPage ? ebook.chapters.find((c) => holds(c, markedPage)) : null;
 
   const description = ebook.description || '';
   const isLong = description.length > 420;
@@ -448,8 +472,13 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                   { key: 'share', label: 'Share', icon: <FaShareAlt />, onClick: handleShare, pressable: false },
                 ]}
               >
-                <ActionButton icon={<FaBookOpen aria-hidden="true" />} onClick={handleReadNow} disabled={pdfLoading}>
-                  {pdfLoading ? 'Opening…' : 'Read now'}
+                <ActionButton
+                  icon={<FaBookOpen aria-hidden="true" />}
+                  onClick={() => openReader()}
+                  disabled={pdfLoading}
+                  note={markedPage && !pdfLoading ? `From page ${markedPage}` : undefined}
+                >
+                  {pdfLoading ? 'Opening…' : markedPage ? 'Continue' : 'Read now'}
                 </ActionButton>
                 {canListen ? (
                   <ActionButton
@@ -464,6 +493,21 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                   </ActionButton>
                 ) : punjabi && <ListenSoon />}
               </DetailActions>
+
+              {/* The bookmark: "Continue" opens there */}
+              {markedPage && (
+                <p className={styles.bookmarkNote}>
+                  <span className={styles.ribbonMark} aria-hidden="true" />
+                  <span>
+                    {markedChapter
+                      ? <>Bookmarked in “<span className={styles.bookmarkChapter}>{markedChapter.title}</span>”.</>
+                      : `Bookmarked on page ${markedPage}.`}
+                  </span>
+                  <button type="button" className={styles.moreButton} onClick={() => openReader(1)} disabled={pdfLoading}>
+                    Read from the start
+                  </button>
+                </p>
+              )}
 
               {canListen && listening && (
                 <EbookListen
@@ -515,6 +559,8 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
               <ol className={styles.chapterList}>
                 {ebook.chapters.map((chapter, index) => {
                   const open = expandedChapter === chapter.id;
+                  const pages = chapterPages(chapter);
+                  const marked = markedChapter?.id === chapter.id;
                   return (
                     <li key={chapter.id} className={`${styles.chapter} ${styles.glass} ${open ? styles.chapterOpen : ''}`}>
                       <button
@@ -525,15 +571,34 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                       >
                         <span className={styles.chapterIndex}>{index + 1}</span>
                         <span className={styles.chapterName}>{chapter.title}</span>
-                        <span className={styles.chapterMeta}>Chapter {index + 1}</span>
+                        <span className={styles.chapterMeta}>
+                          {marked && <span className={styles.ribbonMark} role="img" aria-label="Your bookmark is in this chapter" />}
+                          {pages || `Chapter ${index + 1}`}
+                        </span>
                         <FaChevronDown className={styles.chapterChevron} aria-hidden="true" />
                       </button>
                       {open && (
                         <div className={styles.chapterBody}>
-                          <p className={styles.chapterText}>Open the book to start reading “{chapter.title}”.</p>
-                          <button type="button" className={styles.smallButton} onClick={() => handleReadChapter(chapter.id)}>
-                            <FaBookOpen aria-hidden="true" /> Read this chapter
-                          </button>
+                          <p className={styles.chapterText}>
+                            {pages
+                              ? `Opens the book at page ${chapter.first_page}.${marked ? ` Your bookmark is on page ${markedPage}.` : ''}`
+                              : `Open the book to start reading “${chapter.title}”.`}
+                          </p>
+                          <div className={styles.chapterActions}>
+                            <button
+                              type="button"
+                              className={styles.smallButton}
+                              onClick={() => openReader(chapter.first_page || undefined)}
+                              disabled={pdfLoading}
+                            >
+                              <FaBookOpen aria-hidden="true" /> Read this chapter
+                            </button>
+                            {marked && markedPage !== chapter.first_page && (
+                              <button type="button" className={styles.moreButton} onClick={() => openReader(markedPage)} disabled={pdfLoading}>
+                                Continue from page {markedPage}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </li>
@@ -574,6 +639,10 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
           onRetry={fetchPdfLink}
           onClose={closeReader}
           onProgress={handleReaderProgress}
+          startPage={readerStart}
+          bookmarkPage={markedPage}
+          onBookmark={bookmark.available ? handleBookmark : undefined}
+          chapters={ebook.chapters}
         />
       )}
     </div>

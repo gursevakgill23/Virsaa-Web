@@ -15,6 +15,8 @@
  *     <ListenSoon />
  *   </DetailActions>
  *
+ * A main action can carry a note under its name: <ActionButton note="From page 23">Continue</ActionButton>
+ *
  * A quick item: label (stays the same; `on` fills the icon and colours it),
  * icon, onIcon, on, onClick, busy (disabled while saving), pressable (a
  * toggle such as Like: aria-pressed; false for Download and Share).
@@ -25,15 +27,23 @@ import { Link } from 'react-router-dom';
 import { FaHeadphones } from 'react-icons/fa';
 import styles from './DetailActions.module.css';
 
-/** A main action. quiet: outlined instead of filled; on: shown as switched on (an open player). */
-export const ActionButton = ({ icon, children, quiet = false, on = false, ...props }) => (
+/**
+ * A main action. quiet: outlined instead of filled; on: shown as switched on (an open player);
+ * note: a few words under its name ("Continue" / "From page 23").
+ */
+export const ActionButton = ({ icon, children, note, quiet = false, on = false, ...props }) => (
   <button
     type="button"
     {...props}
     className={`${quiet ? styles.quiet : styles.go} ${on ? styles.quietOn : ''}`}
   >
     {icon}
-    <span>{children}</span>
+    {note ? (
+      <span className={styles.stack}>
+        {children}
+        <small>{note}</small>
+      </span>
+    ) : <span>{children}</span>}
   </button>
 );
 

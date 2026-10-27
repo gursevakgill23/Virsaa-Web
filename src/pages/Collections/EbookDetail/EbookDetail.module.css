@@ -628,7 +628,24 @@
   align-items: center;
   gap: 6px;
   font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
   color: var(--secondary-text-color);
+  white-space: nowrap;
+}
+
+/* The reader's bookmark: the same crimson ribbon that hangs from the page in the reader
+   (a different mark from the Save button's) */
+.ribbonMark {
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 14px;
+  background: linear-gradient(90deg, #6e0a24, #b0193f 45%, #cf3459 55%, #6e0a24);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+}
+
+[data-theme='dark'] .ribbonMark {
+  background: linear-gradient(90deg, #b0193f, #e8607f 50%, #b0193f);
 }
 
 .chapterChevron {
@@ -648,6 +665,49 @@
   margin: 0 0 12px;
   line-height: 1.6;
   color: var(--secondary-text-color);
+}
+
+.chapterActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+
+.chapterActions .moreButton {
+  margin-top: 0;
+}
+
+/* "Your bookmark is on page 23 · Read from the start", under the actions */
+.bookmarkNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+}
+
+.bookmarkNote .ribbonMark {
+  align-self: center;
+}
+
+.bookmarkChapter {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.bookmarkNote .moreButton {
+  margin-top: 0;
+  font-size: 0.92rem;
+}
+
+.moreButton:disabled,
+.smallButton:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .smallButton {
@@ -875,13 +935,31 @@
     margin: 0 auto;
   }
 
+  /* The chapter's pages go under its name */
   .chapterHead {
     grid-template-columns: 36px minmax(0, 1fr) 18px;
+    grid-template-areas:
+      'index name chevron'
+      'index meta chevron';
+    row-gap: 2px;
     padding: 12px 14px;
   }
 
+  .chapterIndex {
+    grid-area: index;
+  }
+
+  .chapterName {
+    grid-area: name;
+  }
+
   .chapterMeta {
-    display: none;
+    grid-area: meta;
+    font-size: 0.82rem;
+  }
+
+  .chapterChevron {
+    grid-area: chevron;
   }
 
   .chapterBody {
