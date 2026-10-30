@@ -1,8 +1,8 @@
 /*
  * pages/GurdwaraAccess/GurdwaraLocate/GurdwaraLocate.module.css
  * -----------------------------------------------------------------------------
- * Directions to one Gurdwara: travel mode buttons, the route map with a
- * floating summary, and the numbered directions.
+ * Directions to one Gurdwara: travel mode buttons, the map with a floating
+ * summary, and the links that open turn-by-turn directions in a maps app.
  * -----------------------------------------------------------------------------
  */
 
@@ -204,15 +204,16 @@
   isolation: isolate;
 }
 
+/* At the top, so Google's logo and credits at the bottom of the map stay visible */
 .mapCard {
   position: absolute;
   left: 16px;
-  bottom: 16px;
+  top: 16px;
   z-index: 500;
   display: flex;
   align-items: center;
   gap: 14px;
-  max-width: calc(100% - 32px);
+  max-width: calc(100% - 80px); /* clear of Google's full-screen button, top right */
   padding: 12px 18px 12px 12px;
   border-radius: 20px;
   background: var(--glass-bg-strong);
@@ -294,53 +295,48 @@
   margin: 0 0 12px;
 }
 
-/* Directions are a real sequence, so they're numbered */
-.directionsList {
-  list-style: none;
-  counter-reset: step;
-  margin: 0 0 20px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* The maps apps that give turn-by-turn directions */
+.directionsContainer .lede {
+  margin-bottom: 16px;
+  font-size: 0.95rem;
 }
 
-.directionsList li {
-  position: relative;
-  counter-increment: step;
-  padding: 8px 0 8px 42px;
-  line-height: 1.45;
-}
-
-.directionsList li::before {
-  content: counter(step);
-  position: absolute;
-  left: 0;
-  top: 6px;
+.linkList {
   display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 0.82rem;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.linkList a {
+  width: 100%;
+}
+
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
   font-weight: 700;
-  color: var(--primary-color);
-  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
-.directionsList li:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  left: 13px;
-  top: 36px;
-  bottom: -6px;
-  width: 2px;
-  background: rgba(var(--primary-rgb), 0.15);
+.textButton:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
-.directionsList li:last-child::before {
-  color: #fff;
-  background: var(--maroon);
+.note {
+  margin: -8px 0 18px;
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
 }
 
 @media (max-width: 991.98px) {

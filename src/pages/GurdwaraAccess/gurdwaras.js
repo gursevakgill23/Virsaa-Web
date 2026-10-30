@@ -1,69 +1,86 @@
 /**
  * pages/GurdwaraAccess/gurdwaras.js
  * -----------------------------------------------------------------------------
- * The Gurdwaras the finder knows about, shared by the finder
- * (GurdwaraAccess.jsx), the directions page (GurdwaraLocate) and the history
- * page (GurdwaraHistory), so an id in a link always means the same Gurdwara.
+ * Small helpers shared by the Gurdwara pages (finder, directions, services,
+ * history). The Gurdwaras themselves are not stored here: they come live
+ * from Google Maps (api/googleMaps.js), so any Gurdwara in the world can be
+ * found.
  *
- * Each Gurdwara: id, name, city (sent with the name when its history is
- * looked up), address, coordinates [lat, lng], website, phone, services.
- * Their history is not stored here: it is loaded live from Wikipedia through
- * the server (api/gurdwaraApi.js, hooks/useGurdwaraHistory.js), so it comes
- * from a public, sourced article and stays current.
+ *   distanceKm(a, b)              straight-line distance between [lat, lng] points
+ *   travelEstimate(km, mode)      "about 25 min" by 'walk' | 'bus' | 'car'
+ *   directionsLink(from, gurdwara, mode)  turn-by-turn directions in Google Maps
+ *   placeLabel(gurdwara)          the address, or the town, or ''
+ *   gurdwaraLink(kind, gurdwara, origin)  { pathname, state } for <Link to=...>
  * -----------------------------------------------------------------------------
  */
-export const GURDWARAS = [
-  {
-    id: 1,
-    name: 'Gurdwara Sikh Sangat Brampton',
-    city: 'Brampton',
-    address: '32 Regan Rd, Brampton, ON, Canada',
-    coordinates: [43.7156, -79.7607],
-    website: 'https://www.gssbrampton.com',
-    phone: '(905) 495-1200',
-    services: ['Langar', 'Accommodation', 'Religious Classes'],
-  },
-  {
-    id: 2,
-    name: 'Gurudwara Nanaksar-Brampton',
-    city: 'Brampton',
-    address: '64 Timberlane Dr, Brampton, ON, Canada',
-    coordinates: [43.7089, -79.7631],
-    website: 'https://www.nanaksar.com',
-    phone: '(905) 452-1313',
-    services: ['Langar', 'Medical Camps', 'Library'],
-  },
-  {
-    id: 3,
-    name: 'Sri Guru Nanak Sikh Centre Brampton',
-    city: 'Brampton',
-    address: '99 Glidden Rd, Brampton, ON, Canada',
-    coordinates: [43.7023, -79.7665],
-    website: 'https://www.sgnsc.com',
-    phone: '(905) 457-5757',
-    services: ['Langar', 'Religious Classes', 'Youth Programs'],
-  },
-  {
-    id: 4,
-    name: 'Gurdwara Sahib Malton',
-    city: 'Mississauga',
-    address: '7085 Airport Rd, Mississauga, ON, Canada',
-    coordinates: [43.6921, -79.6428],
-    website: 'https://www.gsmalton.com',
-    phone: '(905) 677-1111',
-    services: ['Langar', 'Senior Programs', 'Community Services'],
-  },
-  {
-    id: 5,
-    name: 'Ontario Khalsa Darbar',
-    city: 'Mississauga',
-    address: '7080 Dixie Rd, Mississauga, ON, Canada',
-    coordinates: [43.6845, -79.6553],
-    website: 'https://www.ontariokhalsadarbar.com',
-    phone: '(905) 670-1771',
-    services: ['Langar', 'Accommodation', 'Library', 'Medical Camps'],
-  },
-];
 
-/** The Gurdwara with this id (a number, or the string from a URL), or null. */
-export const findGurdwara = (id) => GURDWARAS.find((g) => String(g.id) === String(id)) || null;
+const toRad = (deg) => deg * (Math.PI / 180);
+
+/** Kilometres between two [lat, lng] points, as the crow flies (haversine). */
+export const distanceKm = (a, b) => {
+  if (!Array.isArray(a) || !Array.isArray(b)) return null;
+  const [lat1, lng1] = a;
+  const [lat2, lng2] = b;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+};
+
+// Average speeds (km/h) and how much longer roads are than a straight line
+const SPEEDS = { walk: 4.8, bus: 22, car: 38 };
+const ROAD_FACTOR = 1.3;
+
+/** A rough travel time, e.g. "about 25 min" or "about 1 hr 10 min" ('' without a distance). */
+export const travelEstimate = (km, mode) => {
+  if (km == null || Number.isNaN(km)) return '';
+  const minutes = Math.max(1, Math.round(((km * ROAD_FACTOR) / (SPEEDS[mode] || 30)) * 60));
+  if (minutes < 60) return `about ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `about ${hours} hr${rest ? ` ${rest} min` : ''}`;
+};
+
+/** "1.2 km" / "450 m" */
+export const formatDistance = (km) => {
+  if (km == null || Number.isNaN(km)) return '';
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
+};
+
+const point = (p) => `${Number(p[0]).toFixed(6)},${Number(p[1]).toFixed(6)}`;
+
+/**
+ * Turn-by-turn directions in Google Maps (the app on phones), to the
+ * Gurdwara's own Google listing.
+ * from: [lat, lng] or null (Google Maps then starts from where the visitor is)
+ * mode: 'walk' | 'car' | 'bus'
+ * (Google's terms keep its places to Google maps, so there are no Apple Maps
+ * or OpenStreetMap links.)
+ */
+export const directionsLink = (from, gurdwara, mode = 'car') => {
+  const to = gurdwara?.coordinates;
+  if (!Array.isArray(to)) return '';
+  const params = new URLSearchParams({
+    api: '1',
+    destination: gurdwara.name ? `${gurdwara.name}${gurdwara.address ? `, ${gurdwara.address}` : ''}` : point(to),
+    travelmode: { walk: 'walking', car: 'driving', bus: 'transit' }[mode] || 'driving',
+  });
+  if (gurdwara.source === 'google' && gurdwara.id) params.set('destination_place_id', gurdwara.id);
+  if (Array.isArray(from)) params.set('origin', point(from));
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+};
+
+/** The address, or else the town and country, or '' */
+export const placeLabel = (gurdwara) => gurdwara?.address
+  || [gurdwara?.city, gurdwara?.country].filter(Boolean).join(', ');
+
+/**
+ * Where a Gurdwara's own pages live, with the Gurdwara (and the visitor's
+ * starting point) handed over so the page opens without asking again.
+ *   kind:  'locate' | 'services' | 'history'
+ *   extra: more for the page, e.g. { mode: 'walk' } for the directions page
+ */
+export const gurdwaraLink = (kind, gurdwara, origin = null, extra = {}) => ({
+  pathname: `/gurdwara-access/${kind}/${encodeURIComponent(gurdwara.id)}`,
+  state: { ...extra, gurdwara, origin },
+});

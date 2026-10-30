@@ -5,10 +5,13 @@
  *   - header slideshow (changes every 3 s, or with the up/down arrows) with the
  *     "Play Now" video link
  *   - quick dock of shortcuts, shelf of the newest ebooks, today's Hukamnama
- *     (a small prompt appears after 2 s; the full text opens in a modal),
+ *     live from Sri Harmandir Sahib, Amritsar (through our server from BaniDB;
+ *     a small prompt appears once it has loaded; the full text opens in a
+ *     modal, its translations for signed-in readers),
  *     "Listen, learn and play", featured authors, heritage, Gurdwara + Premium
  *   - the "Ask about Sikhism" chat button
- * Data: /collections/ebooks/ and /collections/authors/ (public, no token).
+ * Data: /collections/ebooks/ (the newest 12), /collections/authors/ and
+ * /api/sikhism/gurbani/hukamnama/ (all public, no token).
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -25,6 +28,7 @@ import styles from './Home.module.css';
 import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 import { CoverPicture, SitePicture } from '../../components/SitePicture/SitePicture';
 import Avatar from '../../components/Avatar/Avatar';
+import { gurbaniApi } from '../../api/sikhismApi';
 
 // Utility function to handle public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -70,6 +74,9 @@ const Home = ({ isDarkMode, apiString }) => {
   const [showHukamnamaModal, setShowHukamnamaModal] = useState(false);
   const [activeTab, setActiveTab] = useState('hukamnama');
   const toastTimer = useRef(null);
+  // Today's Hukamnama from Sri Harmandir Sahib: { status: 'loading' | 'ready' | 'error', data }
+  const [hukam, setHukam] = useState({ status: 'loading', data: null });
+  const [hukamAttempt, setHukamAttempt] = useState(0);
 
   // Books and authors are public, so they're fetched without a token.
   // (Sending an expired token would make the request fail with 401.)
@@ -82,7 +89,8 @@ const Home = ({ isDarkMode, apiString }) => {
     const load = async () => {
       setIsLoading(true);
       const [booksRes, authorsRes] = await Promise.allSettled([
-        axios.get(`${apiUrl}/collections/ebooks/`, { timeout: 20000 }),
+        // Just the newest 12 (one page of light cards, however big the library gets)
+        axios.get(`${apiUrl}/collections/ebooks/?page=1&page_size=12&ordering=-id`, { timeout: 20000 }),
         axios.get(`${apiUrl}/collections/authors/`, { timeout: 20000 }),
       ]);
       if (cancelled) return;
@@ -110,10 +118,26 @@ const Home = ({ isDarkMode, apiString }) => {
     [authors]
   );
   const authorOf = (book) =>
-    (typeof book.author === 'object' ? book.author?.name : authorNames[book.author]) || 'Unknown author';
+    (typeof book.author === 'object' ? book.author?.name : book.author_name || authorNames[book.author]) || 'Unknown author';
 
-  // Show toast when component mounts
+  // Today's Hukamnama, live (the server asks BaniDB, which has it from Sri Harmandir Sahib each morning)
   useEffect(() => {
+    let cancelled = false;
+    setHukam((current) => ({ ...current, status: 'loading' }));
+    gurbaniApi.hukamnama(apiString)
+      .then((data) => {
+        if (cancelled) return;
+        const ready = Array.isArray(data?.shabads) && data.shabads.some((s) => s?.lines?.length);
+        setHukam({ status: ready ? 'ready' : 'error', data: ready ? data : null });
+      })
+      .catch(() => { if (!cancelled) setHukam({ status: 'error', data: null }); });
+    return () => { cancelled = true; };
+  }, [apiString, hukamAttempt]);
+
+  // The "View today's Hukamnama" prompt: 2 s after it has loaded, for 8 s
+  const hukamReady = hukam.status === 'ready';
+  useEffect(() => {
+    if (!hukamReady) return undefined;
     const timer = setTimeout(() => {
       setShowHukamnamaToast(true);
       toastTimer.current = setTimeout(() => {
@@ -125,7 +149,7 @@ const Home = ({ isDarkMode, apiString }) => {
       clearTimeout(timer);
       clearTimeout(toastTimer.current);
     };
-  }, []);
+  }, [hukamReady]);
 
   // Open the Hukamnama from the prompt or the Hukamnama section
   const handleToastClick = () => {
@@ -144,40 +168,17 @@ const Home = ({ isDarkMode, apiString }) => {
     setShowHukamnamaModal(false);
   };
 
-  // Today's Hukamnama: Gurmukhi, English translation and explanation
-  const hukamnamaData = {
-    punjabi: `ਹੁਕਮਿ ਰਜਾਈ ਚਲਣਾ ਨਾਨਕ ਲਿਖਿਆ ਨਾਲਿ ॥
-    ਗਾਵੀਐ ਸੁਣੀਐ ਮਨਿ ਰਖੀਐ ਭਾਉ ॥
-    ਦੁਖੁ ਪਰਹਰਿ ਸੁਖੁ ਘਰਿ ਲੈ ਜਾਇ ॥
-    ਗੁਰਮੁਖਿ ਨਾਦੰ ਗੁਰਮੁਖਿ ਵੇਦੰ ਗੁਰਮੁਖਿ ਰਹਿਆ ਸਮਾਈ ॥
-    ਗੁਰੁ ਈਸਰੁ ਗੁਰੁ ਗੋਰਖੁ ਬਰਮਾ ਗੁਰੁ ਪਾਰਬਤੀ ਮਾਈ ॥
-    ਜੇ ਹਉ ਜਾਣਾ ਆਖਾ ਨਾਹੀ ਕਹਣਾ ਕਥਨੁ ਨ ਜਾਈ ॥`,
-
-    english: isLoggedIn
-      ? `By the Hukam of His Command, He leads us to walk on the Path; O Nanak, it is written in our destiny.
-      Sing, and listen, and let your mind be filled with love.
-      Your pain shall be sent far away, and peace shall come to your home.
-      The Guru's Word is the Sound-current of the Naad; the Guru's Word is the Wisdom of the Vedas; the Guru's Word is all-pervading.
-      The Guru is Shiva, the Guru is Vishnu and Brahma; the Guru is Paarvati and Lakhshmi.
-      Even knowing God, I cannot describe Him; He cannot be described in words.`
-      : `Sign in to view the full Hukamnama translation`,
-
-    arth: isLoggedIn
-      ? `The Almighty directs all beings according to His Will; O Nanak, our destiny is pre-ordained by Him.
-      We should sing the Lord's praises, listen to them, and cherish love for Him in our hearts.
-      By doing so, all sufferings will depart and tranquility will come to abide in our homes.
-      The Guru's teachings connect us with the divine sound current, contain the essence of all scriptures, and are all-pervading.
-      The Guru has the attributes of all deities - Shiva, Vishnu, Brahma, Parvati and Lakshmi.
-      Even if I try to describe God, I cannot - He is beyond all description and explanation.`
-      : `Sign in to view the detailed explanation`,
-
-    reference: {
-      source: 'Sri Guru Granth Sahib Ji',
-      ang: 2,
-      raag: 'Japji Sahib',
-      writer: 'Guru Nanak Dev Ji',
-    },
-  };
+  // Today's Hukamnama: its shabads, lines (Gurmukhi, English, Punjabi meaning) and where it is from
+  const shabads = (hukam.data?.shabads || []).filter((shabad) => shabad?.lines?.length);
+  const firstShabad = shabads[0];
+  const verseLines = (firstShabad?.lines || []).filter((line) => line.gurmukhi);
+  const firstLine = (verseLines.find((line) => !line.header) || verseLines[0])?.gurmukhi || '';
+  const hukamInfo = firstShabad?.info || {};
+  const hukamDate = hukam.data?.date
+    ? new Date(`${hukam.data.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+  const hukamReference = [hukamInfo.raag, hukamInfo.writer, hukamInfo.ang ? `Ang ${hukamInfo.ang}` : '']
+    .filter(Boolean).join(' · ');
 
   // Slides for the current theme, advanced every 3 s
   const bgImages = useMemo(() => {
@@ -279,8 +280,6 @@ const Home = ({ isDarkMode, apiString }) => {
     },
   ];
 
-  const firstLine = hukamnamaData.punjabi.split('\n')[0].trim();
-
   return (
     <div className={styles.homeContainer}>
       {/* "View today's Hukamnama" prompt */}
@@ -300,24 +299,34 @@ const Home = ({ isDarkMode, apiString }) => {
       )}
 
       {/* Hukamnama modal */}
-      {showHukamnamaModal && (
-        <div className={styles.hukamnamaModalOverlay}>
-          <div className={styles.hukamnamaModal}>
-            <button className={styles.modalCloseButton} onClick={closeModal}>
+      {showHukamnamaModal && hukamReady && (
+        <div className={styles.hukamnamaModalOverlay} onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }} role="presentation">
+          <div className={styles.hukamnamaModal} role="dialog" aria-modal="true" aria-labelledby="hukam-modal-title">
+            <button type="button" className={styles.modalCloseButton} onClick={closeModal} aria-label="Close">
               <MdClose />
             </button>
 
-            <h2 className={styles.modalTitle}>Today's Hukamnama</h2>
-            <h3 className={styles.modalSubtitle}>ਅੱਜ ਦਾ ਹੁਕਮਨਾਮਾ</h3>
+            <h2 id="hukam-modal-title" className={styles.modalTitle}>Today's Hukamnama</h2>
+            <h3 className={styles.modalSubtitle} lang="pa">ਅੱਜ ਦਾ ਹੁਕਮਨਾਮਾ</h3>
+            <p className={styles.modalWhere}>
+              Sri Harmandir Sahib, Amritsar{hukamDate ? ` · ${hukamDate}` : ''}
+              {hukamReference ? <><br />{hukamReference}</> : null}
+            </p>
 
-            <div className={styles.tabContainer}>
+            <div className={styles.tabContainer} role="tablist">
               <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'hukamnama'}
                 className={`${styles.tabButton} ${activeTab === 'hukamnama' ? styles.activeTab : ''}`}
                 onClick={() => setActiveTab('hukamnama')}
               >
                 Hukamnama
               </button>
               <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'arth'}
                 className={`${styles.tabButton} ${activeTab === 'arth' ? styles.activeTab : ''}`}
                 onClick={() => setActiveTab('arth')}
               >
@@ -325,28 +334,37 @@ const Home = ({ isDarkMode, apiString }) => {
               </button>
             </div>
 
-            <div className={styles.tabContent}>
-              {activeTab === 'hukamnama' ? (
-                <>
-                  <p className={styles.punjabiText}>{hukamnamaData.punjabi}</p>
-                  <p className={styles.englishText}>{hukamnamaData.english}</p>
-                </>
-              ) : (
-                <p className={styles.arthText}>{hukamnamaData.arth}</p>
+            <div className={styles.tabContent} role="tabpanel">
+              {shabads.map((shabad, s) => (
+                <div key={shabad.id || s} className={styles.hukamShabad}>
+                  {shabad.lines.filter((line) => line.gurmukhi).map((line, i) => (
+                    <div key={line.id || i} className={line.header ? styles.hukamHeaderLine : styles.hukamLine}>
+                      <p className={styles.punjabiText} lang="pa">{line.gurmukhi}</p>
+                      {activeTab === 'hukamnama' && isLoggedIn && !line.header && line.english && (
+                        <p className={styles.englishText}>{line.english}</p>
+                      )}
+                      {activeTab === 'arth' && isLoggedIn && !line.header && line.punjabi && (
+                        <p className={styles.arthText} lang="pa">{line.punjabi}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {!isLoggedIn && (
+                <p className={styles.signInNote}>
+                  {activeTab === 'hukamnama'
+                    ? 'Sign in to view the full Hukamnama translation'
+                    : 'Sign in to view the detailed explanation'}
+                </p>
               )}
             </div>
 
+            {hukam.data?.attribution && <p className={styles.hukamCredit}>{hukam.data.attribution}, from SGPC, Sri Harmandir Sahib.</p>}
+
             <div className={styles.modalFooter}>
-              {!isLoggedIn && (
-                <button className={styles.modalActionButton}>
-                  <Link to="/login">Sign In to View Full Translation</Link>
-                </button>
-              )}
-              {isLoggedIn && (
-                <button className={styles.modalActionButton}>
-                  <Link to="/gurbani">Read More Gurbani</Link>
-                </button>
-              )}
+              <Link to={isLoggedIn ? '/gurbani' : '/login'} className={styles.modalActionButton}>
+                {isLoggedIn ? 'Read More Gurbani' : 'Sign In to View Full Translation'}
+              </Link>
             </div>
           </div>
         </div>
@@ -415,7 +433,7 @@ const Home = ({ isDarkMode, apiString }) => {
         <div className={styles.sectionHead}>
           <div>
             <h2 id="shelf-title" className={styles.title}>Fresh on the shelf</h2>
-            <p className={styles.lede}>The newest Punjabi books in the Virsaa library. Pick one up and start reading.</p>
+            <p className={styles.lede}>The newest books in the Virsaa library, in Punjabi and English. Pick one up and start reading.</p>
           </div>
           <button className={styles.ghostButton} onClick={() => navigate('/collections/ebooks')}>
             See all books
@@ -451,18 +469,39 @@ const Home = ({ isDarkMode, apiString }) => {
         </div>
       </section>
 
-      {/* ===================== Today's Hukamnama ===================== */}
+      {/* ===================== Today's Hukamnama (live) ===================== */}
       <section className={styles.hukamSection} aria-labelledby="hukam-title">
-        <div className={styles.hukamPanel}>
+        <div className={styles.hukamPanel} aria-busy={hukam.status === 'loading'}>
           <div className={styles.hukamText}>
             <h2 id="hukam-title" className={styles.title}>Today’s Hukamnama</h2>
-            <p className={styles.hukamGurmukhi} lang="pa">{firstLine}</p>
-            <p className={styles.hukamRef}>
-              {hukamnamaData.reference.source}, Ang {hukamnamaData.reference.ang}, {hukamnamaData.reference.writer}
-            </p>
+            {hukam.status === 'loading' && (
+              <div className={styles.hukamSkeleton} role="status" aria-label="Loading today’s Hukamnama">
+                <span /><span />
+              </div>
+            )}
+            {hukamReady && (
+              <>
+                <p className={styles.hukamGurmukhi} lang="pa">{firstLine}</p>
+                <p className={styles.hukamRef}>
+                  Sri Harmandir Sahib, Amritsar{hukamDate ? ` · ${hukamDate}` : ''}
+                  {hukamReference ? ` · ${hukamReference}` : ''}
+                </p>
+              </>
+            )}
+            {hukam.status === 'error' && (
+              <p className={styles.hukamRef} role="alert">
+                Today’s Hukamnama couldn’t be loaded just now.
+              </p>
+            )}
           </div>
           <div className={styles.hukamActions}>
-            <button className={styles.solidButton} onClick={openHukamnama}>Read the Hukamnama</button>
+            {hukam.status === 'error' ? (
+              <button type="button" className={styles.solidButton} onClick={() => setHukamAttempt((n) => n + 1)}>Try again</button>
+            ) : (
+              <button type="button" className={styles.solidButton} onClick={openHukamnama} disabled={!hukamReady}>
+                Read the Hukamnama
+              </button>
+            )}
             <Link to="/gurbani" className={styles.textLink}>More Gurbani</Link>
           </div>
         </div>

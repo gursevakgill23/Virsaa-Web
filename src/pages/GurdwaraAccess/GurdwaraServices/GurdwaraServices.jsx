@@ -1,18 +1,26 @@
 /**
  * pages/GurdwaraAccess/GurdwaraServices/GurdwaraServices.jsx
  * -----------------------------------------------------------------------------
- * Services at one Gurdwara (/gurdwara-access/services/:id): langar,
- * accommodation, classes, medical camps and the library, each with timings
- * and capacity. Opened from the Gurdwara finder.
- * The Gurdwara comes from the shared list (../gurdwaras.js); the services are
- * sample data for now. An unknown id shows the first Gurdwara.
+ * Services at one Gurdwara (/gurdwara-access/services/:id), any Gurdwara in
+ * the world, opened from the Gurdwara finder (hooks/useGurdwara gets it from
+ * the finder or Google Maps).
+ *
+ * What most Gurdwaras offer (langar, the prayer hall, rooms, classes, health
+ * camps, the library), with a tip for each, and how to reach this Gurdwara:
+ * its phone, website and opening hours when Google Maps has them (credited,
+ * as Google asks), and directions. Services and times differ from one Gurdwara to another, so the
+ * page says so and points to the Gurdwara itself rather than inventing them.
  * -----------------------------------------------------------------------------
  */
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FaUtensils, FaBed, FaBook, FaClinicMedical, FaMusic } from 'react-icons/fa';
-import { toast } from '../../../utils/notify';
-import { GURDWARAS, findGurdwara } from '../gurdwaras';
+import {
+  FaUtensils, FaBed, FaBook, FaClinicMedical, FaMusic, FaPhoneAlt, FaGlobe, FaMapMarkedAlt, FaClock, FaRedo,
+} from 'react-icons/fa';
+import { FaHandsPraying } from 'react-icons/fa6';
+import useGurdwara from '../../../hooks/useGurdwara';
+import { safeExternalUrl } from '../../../utils/safeUrl';
+import { gurdwaraLink, placeLabel } from '../gurdwaras';
 import styles from './GurdwaraServices.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -38,56 +46,57 @@ const useProductionImagePath = () => {
 const HEADER_LIGHT = '/images/header-image.png';
 const HEADER_DARK = '/images/header-image-dark.png';
 
-// Services offered, with timings and capacity
+// What most Gurdwaras offer, with a tip for visitors
 const SERVICES = [
   {
-    id: 1,
+    id: 'langar',
     name: 'Langar (Free Community Kitchen)',
-    description: 'Experience the warmth of community through our free langar service. Everyone is welcome to join and share a meal regardless of background, religion, or social status. The langar is served daily from 7:00 AM to 9:00 PM.',
+    description: 'Every Gurdwara serves langar: a free vegetarian meal, cooked and served by volunteers, for everyone who comes, whatever their background or faith. People sit together, side by side.',
+    tip: 'Usually served after the morning and evening programmes, and all day at larger Gurdwaras.',
     icon: <FaUtensils size={40} />,
-    timing: 'Daily: 7:00 AM - 9:00 PM',
-    capacity: 'Serves 500+ people daily',
   },
   {
-    id: 2,
+    id: 'darbar',
+    name: 'Darbar Sahib (Prayer Hall)',
+    description: 'The main hall, where Sri Guru Granth Sahib Ji is kept. Kirtan, Ardas and the day’s Hukamnama take place here, and anyone may sit and listen.',
+    tip: 'Cover your head, take off your shoes and wash your hands before you go in.',
+    icon: <FaHandsPraying size={40} />,
+  },
+  {
+    id: 'stay',
     name: 'Accommodation (Stay Facilities)',
-    description: 'We provide comfortable accommodation facilities for visitors with separate dormitories for men and women. The rooms are clean, well-maintained and available for short-term stays (up to 3 nights).',
+    description: 'Many larger and historic Gurdwaras have a sarai, rooms where visitors and pilgrims can stay, often free or for a donation.',
+    tip: 'Ask the Gurdwara office before you plan to stay.',
     icon: <FaBed size={40} />,
-    timing: 'Check-in: 2:00 PM, Check-out: 11:00 AM',
-    capacity: '20 rooms available',
   },
   {
-    id: 3,
+    id: 'classes',
     name: 'Religious Classes',
-    description: 'Join our religious classes to learn Gurbani, Kirtan, and Sikh history. We offer classes for all age groups with experienced teachers. Children\'s classes are held on weekends while adult classes are available on weekday evenings.',
+    description: 'Classes in Gurmukhi, Gurbani, kirtan and Sikh history, and at some Gurdwaras gatka, often for children at weekends.',
+    tip: 'Class times change from term to term.',
     icon: <FaMusic size={40} />,
-    timing: 'Children: Sat-Sun 10AM-12PM, Adults: Mon-Fri 7PM-9PM',
-    capacity: '50 students per session',
   },
   {
-    id: 4,
+    id: 'health',
     name: 'Medical Camps',
-    description: 'Free health checkups and medical camps are organized monthly with volunteer doctors providing general checkups, blood pressure monitoring, and basic consultations. Specialized camps (eye checkups, diabetes screening) are held quarterly.',
+    description: 'Some Gurdwaras hold free health check-ups, blood drives and awareness camps with volunteer doctors.',
+    tip: 'Camps are usually announced on the Gurdwara’s website or notice board.',
     icon: <FaClinicMedical size={40} />,
-    timing: 'Monthly: First Sunday 10AM-4PM',
-    capacity: '100 patients per camp',
   },
   {
-    id: 5,
+    id: 'library',
     name: 'Library & Resource Center',
-    description: 'Our library contains an extensive collection of Sikh literature, history books, and religious texts in multiple languages. Members can borrow books for 2 weeks at a time. We also have a digital archive with rare manuscripts.',
+    description: 'Many have a library of Sikh literature and history, and a shop for gutkas, books and the five Ks.',
+    tip: 'Some lend books to the sangat; ask at the library.',
     icon: <FaBook size={40} />,
-    timing: 'Tue-Sun: 9:00 AM - 7:00 PM',
-    capacity: '1000+ books available',
   },
 ];
 
 const GurdwaraServices = ({ isDarkMode }) => {
   const getImagePath = useProductionImagePath();
   const { id } = useParams();
-
-  // The Gurdwara for this URL (the first one if the id is unknown)
-  const selectedGurdwara = findGurdwara(id) || GURDWARAS[0];
+  const place = useGurdwara(id, { contact: true });
+  const gurdwara = place.gurdwara;
 
   // If the header picture fails, try the light one once, then hide it
   const handleHeaderError = (e) => {
@@ -100,9 +109,25 @@ const GurdwaraServices = ({ isDarkMode }) => {
     img.src = getImagePath(HEADER_LIGHT);
   };
 
-  // Contact details aren't stored yet, so point people to the Gurdwara itself
-  const handleContact = (service) => {
-    toast.info(`For ${service.name.split(' (')[0].toLowerCase()} details, contact ${selectedGurdwara.name} at ${selectedGurdwara.address}.`);
+  const name = gurdwara?.name || 'the Gurdwara';
+  const website = safeExternalUrl(gurdwara?.website);
+  const phone = gurdwara?.phone || '';
+  const where = placeLabel(gurdwara);
+  const googleUrl = safeExternalUrl(gurdwara?.google_url);
+
+  // How to ask about a service: call, the website, or go there
+  const contactFor = (service) => {
+    if (phone) {
+      return <a className={styles.contactButton} href={`tel:${phone.replace(/[^\d+]/g, '')}`}><FaPhoneAlt aria-hidden="true" /> Call to ask</a>;
+    }
+    if (website) {
+      return <a className={styles.contactButton} href={website} target="_blank" rel="noopener noreferrer"><FaGlobe aria-hidden="true" /> Ask on its website</a>;
+    }
+    return gurdwara ? (
+      <Link className={styles.contactButton} to={gurdwaraLink('locate', gurdwara, place.origin)} aria-label={`Directions to ask about ${service.name}`}>
+        <FaMapMarkedAlt aria-hidden="true" /> Visit to ask
+      </Link>
+    ) : null;
   };
 
   return (
@@ -116,8 +141,8 @@ const GurdwaraServices = ({ isDarkMode }) => {
           onError={handleHeaderError}
         />
         <div className={styles.headerText}>
-          <h1>SERVICES AT {selectedGurdwara.name.toUpperCase()}</h1>
-          <p>Explore the spiritual and community services we offer</p>
+          <h1>SERVICES AT {name.toUpperCase()}</h1>
+          <p>What you’ll usually find, and how to ask</p>
         </div>
       </div>
 
@@ -125,14 +150,50 @@ const GurdwaraServices = ({ isDarkMode }) => {
       <nav className={styles.breadcrumb} aria-label="Breadcrumb">
         <Link to="/"><span>Home</span></Link> /
         <Link to="/gurdwara-access"><span> Gurdwara Access</span></Link> /
-        <span aria-current="page"> Services at {selectedGurdwara.name}</span>
+        <span aria-current="page"> Services at {name}</span>
       </nav>
 
       <div className={styles.mainContainer}>
-        {/* Which Gurdwara */}
+        {/* Which Gurdwara, and how to reach it */}
         <div className={styles.gurdwaraInfo}>
-          <h2>{selectedGurdwara.name}</h2>
-          <p>{selectedGurdwara.address}</p>
+          {place.status === 'loading' && <p role="status">Loading the Gurdwara…</p>}
+          {place.status === 'missing' && (
+            <>
+              <h2>Gurdwara not found</h2>
+              <p>The link may be out of date. <Link to="/gurdwara-access">Find a Gurdwara</Link></p>
+            </>
+          )}
+          {place.status === 'error' && (
+            <>
+              <p role="alert">{place.error}</p>
+              <button type="button" className={styles.contactButton} onClick={place.retry}>
+                <FaRedo aria-hidden="true" /> Try again
+              </button>
+            </>
+          )}
+          {gurdwara && (
+            <>
+              <h2>{gurdwara.name}</h2>
+              {where && <p>{where}</p>}
+              {gurdwara.opening_hours && <p><FaClock aria-hidden="true" /> Open: {gurdwara.opening_hours}</p>}
+              {!gurdwara.opening_hours && Array.isArray(gurdwara.hours_week) && gurdwara.hours_week.length > 0 && (
+                <p><FaClock aria-hidden="true" /> Opening hours differ by day; {googleUrl ? <a href={googleUrl} target="_blank" rel="noopener noreferrer">see them on Google Maps</a> : 'check before you go'}.</p>
+              )}
+              <p className={styles.infoNote}>
+                Services and times differ from one Gurdwara to another, so check with {gurdwara.name} before you go.
+              </p>
+              <div className={styles.infoActions}>
+                {phone && <a href={`tel:${phone.replace(/[^\d+]/g, '')}`}><FaPhoneAlt aria-hidden="true" /> {phone}</a>}
+                {website && <a href={website} target="_blank" rel="noopener noreferrer"><FaGlobe aria-hidden="true" /> Website</a>}
+                <Link to={gurdwaraLink('locate', gurdwara, place.origin)}><FaMapMarkedAlt aria-hidden="true" /> Directions</Link>
+              </div>
+              <p className={styles.credit}>
+                Details from {googleUrl
+                  ? <a href={googleUrl} target="_blank" rel="noopener noreferrer">Google Maps</a>
+                  : 'Google Maps'}.
+              </p>
+            </>
+          )}
         </div>
 
         {/* One card per service */}
@@ -146,12 +207,9 @@ const GurdwaraServices = ({ isDarkMode }) => {
                 <h3>{service.name}</h3>
                 <p className={styles.serviceDescription}>{service.description}</p>
                 <div className={styles.serviceDetails}>
-                  <p><strong>Timing:</strong> {service.timing}</p>
-                  <p><strong>Capacity:</strong> {service.capacity}</p>
+                  <p><strong>Good to know:</strong> {service.tip}</p>
                 </div>
-                <button type="button" className={styles.contactButton} onClick={() => handleContact(service)}>
-                  Contact for More Info
-                </button>
+                {contactFor(service)}
               </div>
             </div>
           ))}

@@ -1,37 +1,41 @@
 /**
  * pages/GurdwaraAccess/GurdwaraAccess.jsx
  * -----------------------------------------------------------------------------
- * The Gurdwara finder (/gurdwara-access):
- *   - search an address (with suggestions) or use the browser's location
- *   - lists Gurdwaras within 10 km with distance and walk/bus/car times, and
- *     shows them on a Leaflet map (OpenStreetMap tiles)
- *   - links to directions, services and history for each Gurdwara
- *   - the history of the nearest Gurdwara, loaded live from Wikipedia through
- *     our server (hooks/useGurdwaraHistory) with the credit its licence asks for
+ * The Gurdwara finder (/gurdwara-access), for anywhere in the world:
+ *   - search any address, town or postcode (suggestions as you type), or use
+ *     the browser's location
+ *   - the Gurdwaras around it, nearest first, live from Google Maps
+ *     (api/googleMaps.js), with the distance and rough walk / bus / car
+ *     times, on a Google map (components/GoogleMap)
+ *   - the history and photo of the Gurdwara you pick ("History" on a result
+ *     or on the map; the nearest one at first): the history from Wikipedia
+ *     (hooks/useGurdwaraHistory), the photo from Wikipedia or Wikimedia
+ *     Commons, or else from Google Maps, each with the credit it asks for
+ *   - links to each Gurdwara's directions, services and full history pages
  *   - the services Gurdwaras offer
- * Addresses are looked up with OpenStreetMap's Nominatim service (Canada only).
- * The Gurdwara list is shared with the other Gurdwara pages (gurdwaras.js).
+ * The last place searched is remembered for this visit, so coming back from
+ * a Gurdwara's page shows the same results.
  * -----------------------------------------------------------------------------
  */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import 'leaflet/dist/leaflet.css';
-import './mapIcons'; // Leaflet's marker pictures, from the leaflet package
 import styles from './GurdwaraAccess.module.css';
 import {
-  FaSearch, FaLocationArrow, FaWalking, FaBus, FaCar, FaGlobe, FaPhoneAlt, FaMapMarkedAlt,
+  FaSearch, FaLocationArrow, FaWalking, FaBus, FaCar, FaGlobe, FaMapMarkedAlt,
   FaHandsHelping, FaBook, FaUtensils, FaBed, FaHeartbeat, FaChevronDown, FaHistory, FaMapMarkerAlt, FaRedo,
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
+import GoogleMap from '../../components/GoogleMap/GoogleMap';
 import useGurdwaraHistory from '../../hooks/useGurdwaraHistory';
+import {
+  findGurdwaras, findPlace, googleMapsConfigured, googleMapsSearchUrl, newSearchSession, placeFromSuggestion,
+  suggestPlaces,
+} from '../../api/googleMaps';
 import { safeExternalUrl } from '../../utils/safeUrl';
-import { GURDWARAS } from './gurdwaras';
+import { formatDistance, travelEstimate, gurdwaraLink, placeLabel } from './gurdwaras';
 import WikipediaCredit from './WikipediaCredit';
-import { SitePicture } from '../../components/SitePicture/SitePicture';
 
-// Header pictures (public/images). A Gurdwara without a Wikipedia photo shows the
-// website picture 'gurdwara-history' (S3).
+// Header pictures (public/images)
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
 
@@ -50,26 +54,37 @@ const useProductionImagePath = () => {
   };
 };
 
-// Straight-line distance in km between two coordinates (haversine formula)
-function deg2rad(deg) {
-  return deg * (Math.PI / 180);
-}
+// Where the finder starts before anyone searches
+const DEFAULT_PLACE = { lat: 43.7315, lng: -79.7624, label: 'Brampton, Ontario, Canada' };
+const LAST_PLACE_KEY = 'virsaa.gurdwaraSearch';
+const ORIGIN_PIN = '__origin';
 
-function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+const readLastPlace = () => {
+  try {
+    const place = JSON.parse(sessionStorage.getItem(LAST_PLACE_KEY) || 'null');
+    return place && Number.isFinite(place.lat) && Number.isFinite(place.lng)
+      ? { lat: place.lat, lng: place.lng, label: String(place.label || '').slice(0, 200) }
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeLastPlace = (place) => {
+  try {
+    sessionStorage.setItem(LAST_PLACE_KEY, JSON.stringify(place));
+  } catch {
+    // storage blocked: the finder starts at Brampton next time
+  }
+};
 
 // Services described at the bottom of the page
 const servicesList = [
-  { id: 1, icon: <FaUtensils />, name: 'Langar (Free Community Kitchen)', description: 'Experience the warmth of community through our free langar service. Everyone is welcome to join and share a meal.' },
-  { id: 2, icon: <FaBed />, name: 'Accommodation (Stay Facilities)', description: 'We provide comfortable accommodation facilities for visitors. Stay with us and feel at home.' },
-  { id: 3, icon: <FaHandsHelping />, name: 'Religious Classes (Gurbani and Kirtan)', description: 'Join our religious classes to learn Gurbani and Kirtan. Enhance your spiritual journey with us.' },
-  { id: 4, icon: <FaHeartbeat />, name: 'Medical Camps (Free Health Checkups)', description: 'Free health checkups and medical camps are organized regularly. Stay healthy with our medical services.' },
-  { id: 5, icon: <FaBook />, name: 'Library (Sikh Literature and History)', description: 'Explore our library filled with Sikh literature and history. Learn about our rich heritage.' },
+  { id: 1, icon: <FaUtensils />, name: 'Langar (Free Community Kitchen)', description: 'Every Gurdwara serves langar, a free vegetarian meal shared by everyone who comes, whoever they are.' },
+  { id: 2, icon: <FaBed />, name: 'Accommodation (Stay Facilities)', description: 'Many larger and historic Gurdwaras have rooms (sarai) where visitors and pilgrims can stay.' },
+  { id: 3, icon: <FaHandsHelping />, name: 'Religious Classes (Gurbani and Kirtan)', description: 'Classes in Gurmukhi, Gurbani, kirtan and Sikh history, often for children at weekends.' },
+  { id: 4, icon: <FaHeartbeat />, name: 'Medical Camps (Free Health Checkups)', description: 'Some Gurdwaras hold free health camps and blood drives with volunteer doctors.' },
+  { id: 5, icon: <FaBook />, name: 'Library (Sikh Literature and History)', description: 'Many have a library of Sikh literature and history, and sell gutkas and books.' },
 ];
 
 // The first paragraph of a Gurdwara's history, cut at a word if it's very long
@@ -80,89 +95,89 @@ const historyIntro = (data) => {
   return first.length > INTRO_MAX ? `${first.slice(0, first.lastIndexOf(' ', INTRO_MAX))}…` : first;
 };
 
+// "gurdwara in Southall, London" -> "Gurdwara in Southall, London."
+const sentence = (text) => {
+  const t = String(text || '').trim();
+  return t ? `${t[0].toUpperCase()}${t.slice(1)}${/[.!?]$/.test(t) ? '' : '.'}` : '';
+};
+
 // Props: isDarkMode, apiString (API base URL)
 const GurdwaraAccess = ({ isDarkMode, apiString }) => {
   const getImagePath = useProductionImagePath();
-  // Search box, location, results, loading/error and suggestions state
-  const [selectedService, setSelectedService] = useState(null);
-  const [userLocation, setUserLocation] = useState(null);
+  const startPlace = useRef(readLastPlace() || DEFAULT_PLACE).current;
+
+  // Where the Gurdwaras are looked for, and what to call that place
+  const [origin, setOrigin] = useState({ lat: startPlace.lat, lng: startPlace.lng });
+  const [originLabel, setOriginLabel] = useState(startPlace.label);
+  const [results, setResults] = useState({ status: 'loading', gurdwaras: [], error: '' });
+  const [attempt, setAttempt] = useState(0); // bumped by "Try again"
+  const [selectedId, setSelectedId] = useState('');
+
+  // Search box, suggestions, and the location button
   const [searchQuery, setSearchQuery] = useState('');
-  const [nearbyGurdwaras, setNearbyGurdwaras] = useState([]);
-  const [nearestGurdwara, setNearestGurdwara] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [locationError, setLocationError] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState([]);
-  const [searchAddress, setSearchAddress] = useState('');
-  const mapRef = useRef(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [selectedService, setSelectedService] = useState(null);
+
+  const mapApi = useRef(null);
   const searchInputRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
-  const suggestionRequest = useRef(0); // only the newest suggestions request may update the list
+  const suggestionRequest = useRef(0); // only the newest suggestions count
+  const searchSession = useRef(null); // groups one search's suggestions for Google's billing
+  const suggestedFor = useRef(''); // the text the suggestions shown were for
 
-  // Travel time estimate from distance and mode
-  const calculateTravelTime = useCallback((distanceKm, mode) => {
-    const speeds = { walk: 5, bus: 25, car: 40 };
-    const timeMinutes = Math.round((distanceKm / (speeds[mode] || 30)) * 60);
-    if (timeMinutes < 60) return `${timeMinutes} min`;
-    const hours = Math.floor(timeMinutes / 60);
-    const mins = timeMinutes % 60;
-    return `${hours} hr${mins > 0 ? ` ${mins} min` : ''}`;
+  // ---------------------------------------------------------------- the Gurdwaras around `origin`
+  useEffect(() => {
+    let cancelled = false;
+    setResults((prev) => ({ ...prev, status: 'loading', error: '' }));
+    findGurdwaras(origin)
+      .then((list) => {
+        if (cancelled) return;
+        setResults({ status: 'ready', gurdwaras: list, error: '' });
+        setSelectedId(list[0]?.id || '');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setResults({
+          status: 'error', gurdwaras: [],
+          error: googleMapsConfigured
+            ? 'Google Maps couldn’t be reached just now, so the Gurdwaras can’t be listed. Try again in a minute.'
+            : 'The Gurdwara search isn’t switched on for this site yet.',
+        });
+      });
+    return () => { cancelled = true; };
+  }, [origin, attempt]);
+
+  useEffect(() => () => {
+    clearTimeout(debounceTimeoutRef.current);
+    suggestionRequest.current += 1;
   }, []);
 
-  // Gurdwaras within 10 km
-  const findNearbyGurdwaras = useCallback((lat, lng) => {
-    const nearby = GURDWARAS
-      .map((g) => {
-        const distance = getDistance(lat, lng, g.coordinates[0], g.coordinates[1]);
-        return {
-          ...g,
-          km: distance,
-          distance: `${distance.toFixed(1)} km`,
-          timeByWalk: calculateTravelTime(distance, 'walk'),
-          timeByBus: calculateTravelTime(distance, 'bus'),
-          timeByCar: calculateTravelTime(distance, 'car'),
-        };
-      })
-      .filter((g) => g.km <= 10)
-      .sort((a, b) => a.km - b.km);
+  // ---------------------------------------------------------------- searching
+  // Look for Gurdwaras around a place ({ lat, lng, label })
+  const searchAround = useCallback((place) => {
+    setLocationError(null);
+    setOrigin({ lat: place.lat, lng: place.lng });
+    setOriginLabel(place.label);
+    writeLastPlace(place);
+  }, []);
 
-    setNearbyGurdwaras(nearby);
-    setNearestGurdwara(nearby[0] || null);
-    if (lat && lng) mapRef.current?.flyTo?.([lat, lng], 13);
-  }, [calculateTravelTime]);
-
-  // Reverse geocode coordinates to an address
-  // Coordinates → a readable address for the search box (best effort)
-  const reverseGeocode = async (lat, lng) => {
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
-      if (!response.ok) throw new Error('Reverse geocoding failed');
-      const data = await response.json();
-      if (data.display_name) {
-        setSearchAddress(data.display_name);
-        setSearchQuery(data.display_name);
-      }
-    } catch (error) {
-      console.error('Reverse geocoding error:', error.message);
-    }
-  };
-
-  // "Use my location": ask the browser, then list nearby Gurdwaras
+  // "Use my location": ask the browser
   const getUserLocation = () => {
-    setIsLoading(true);
     setLocationError(null);
     if (!navigator.geolocation) {
       setLocationError('Your browser can’t share your location. Type an address instead.');
-      setIsLoading(false);
       return;
     }
+    setIsSearching(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-        findNearbyGurdwaras(latitude, longitude);
-        setIsLoading(false);
-        reverseGeocode(latitude, longitude);
+        const { latitude: lat, longitude: lng } = position.coords;
+        searchAround({ lat, lng, label: 'your location' });
+        setSearchQuery('');
+        setIsSearching(false);
       },
       (error) => {
         // 1 = permission denied, 2 = position unavailable, 3 = timed out
@@ -171,111 +186,166 @@ const GurdwaraAccess = ({ isDarkMode, apiString }) => {
           2: 'Your location isn’t available right now. Type an address instead.',
           3: 'Finding your location took too long. Try again, or type an address instead.',
         };
-        setLocationError(messages[error.code] || 'Your location couldn’t be found. Allow location access, or type an address instead.');
-        setIsLoading(false);
-        console.error('Geolocation error:', error.message);
+        setLocationError(messages[error.code] || 'Your location couldn’t be found. Type an address instead.');
+        setIsSearching(false);
       },
       { timeout: 15000, maximumAge: 60000 }
     );
   };
 
-  // Address search with Nominatim
-  const geocodeAddress = async (address) => {
+  // Go to a suggestion (Google looks up where it is; that ends the search session)
+  const goToSuggestion = async (suggestion) => {
+    setSearchQuery(suggestion.label);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setIsSearching(true);
+    setLocationError(null);
     try {
-      setIsLoading(true);
-      setLocationError(null);
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=5&countrycodes=ca&addressdetails=1`);
-      if (!response.ok) throw new Error('Geocoding request failed');
-      const data = await response.json();
-      const first = Array.isArray(data) ? data[0] : null;
-      const lat = parseFloat(first?.lat);
-      const lng = parseFloat(first?.lon);
-      if (!first || Number.isNaN(lat) || Number.isNaN(lng)) {
-        setLocationError('That address wasn’t found. Try adding the city, e.g. “Main St, Brampton”.');
-        return null;
-      }
-      return { lat, lng, address: String(first.display_name || address) };
-    } catch (error) {
-      console.error('Geocoding error:', error.message);
+      const place = await placeFromSuggestion(suggestion);
+      if (place) searchAround(place);
+      else setLocationError('That place couldn’t be found on the map. Try another address.');
+    } catch {
       setLocationError('Search isn’t available right now. Try again in a moment.');
-      return null;
     } finally {
-      setIsLoading(false);
+      searchSession.current = null;
+      setIsSearching(false);
     }
   };
 
-  // Use a found location: remember it and list nearby Gurdwaras
-  const applyLocation = (location) => {
-    setUserLocation({ lat: location.lat, lng: location.lng });
-    setSearchAddress(location.address);
-    findNearbyGurdwaras(location.lat, location.lng);
-  };
-
-  // Search button / Enter
+  // Search button / Enter: the first suggestion for this text, or else look the text up (any country)
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchQuery.trim()) {
-      setLocationError('Type an address or area first, or use your location.');
+    const query = searchQuery.trim();
+    if (!query) {
+      setLocationError('Type an address, town or postcode first, or use your location.');
       searchInputRef.current?.focus();
       return;
     }
+    clearTimeout(debounceTimeoutRef.current);
+    suggestionRequest.current += 1;
+    if (suggestions.length && suggestedFor.current === query) {
+      goToSuggestion(suggestions[0]);
+      return;
+    }
     setShowSuggestions(false);
-    const location = await geocodeAddress(searchQuery);
-    if (location) applyLocation(location);
-  };
-
-  const fetchLocationSuggestions = async (query) => {
-    const request = ++suggestionRequest.current;
+    setIsSearching(true);
+    setLocationError(null);
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ca&addressdetails=1`);
-      if (!response.ok) throw new Error('Failed to fetch suggestions');
-      const data = await response.json();
-      if (request !== suggestionRequest.current) return; // a newer search has started
-      setFilteredSuggestions(Array.isArray(data) ? data.map((item) => String(item.display_name || '')).filter(Boolean) : []);
-    } catch (error) {
-      console.error('Suggestions error:', error.message);
-      if (request === suggestionRequest.current) setFilteredSuggestions([]);
+      const place = await findPlace(query);
+      if (place) searchAround({ ...place, label: place.label || query });
+      else setLocationError('That place wasn’t found. Try adding the town or country, e.g. “Southall, London”.');
+    } catch {
+      setLocationError('Search isn’t available right now. Try again in a moment.');
+    } finally {
+      searchSession.current = null;
+      setIsSearching(false);
     }
   };
 
-  // Typing: suggestions after 3 letters, with a 300 ms pause
+  // Typing: Google's suggestions after 3 letters, with a 300 ms pause (only the newest answer counts)
   const handleInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
     if (locationError) setLocationError(null);
-    setShowSuggestions(value.length > 2);
+    setShowSuggestions(value.trim().length > 2);
     clearTimeout(debounceTimeoutRef.current);
-    debounceTimeoutRef.current = setTimeout(() => {
-      if (value.length > 2) fetchLocationSuggestions(value);
-      else setFilteredSuggestions([]);
+    debounceTimeoutRef.current = setTimeout(async () => {
+      suggestionRequest.current += 1;
+      const request = suggestionRequest.current;
+      const query = value.trim();
+      if (query.length <= 2) {
+        setSuggestions([]);
+        return;
+      }
+      try {
+        if (!searchSession.current) searchSession.current = await newSearchSession();
+        const found = await suggestPlaces(query, searchSession.current);
+        if (request !== suggestionRequest.current) return;
+        suggestedFor.current = query;
+        setSuggestions(found);
+      } catch {
+        if (request === suggestionRequest.current) setSuggestions([]);
+      }
     }, 300);
   };
 
-  // Pick a suggestion
-  const handleSuggestionClick = async (suggestion) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-    const location = await geocodeAddress(suggestion);
-    if (location) applyLocation(location);
-  };
+  // ---------------------------------------------------------------- picking a Gurdwara
+  const showHistory = useCallback((gurdwara) => {
+    setSelectedId(gurdwara.id);
+    requestAnimationFrame(() => {
+      document.getElementById('gurdwara-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
 
-  useEffect(() => {
-    // Start with Brampton so the page isn't empty
-    findNearbyGurdwaras(43.7315, -79.7624); // Brampton by default
-  }, [findNearbyGurdwaras]);
-
-  useEffect(() => () => clearTimeout(debounceTimeoutRef.current), []);
-
-  // "Show on map": fly the map to a Gurdwara
   const focusOnMap = (gurdwara) => {
-    mapRef.current?.flyTo?.(gurdwara.coordinates, 15);
+    document.getElementById('gurdwara-map')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    mapApi.current?.focus(gurdwara.id);
   };
 
-  // History of the nearest Gurdwara, live from Wikipedia (reloads when the nearest changes)
-  const nearestHistory = useGurdwaraHistory(apiString, nearestGurdwara);
-  const historyFound = nearestHistory.status === 'found';
-  const historyPhoto = historyFound ? safeExternalUrl(nearestHistory.data.image) : '';
-  const historyPhotoPage = historyFound ? safeExternalUrl(nearestHistory.data.image_page) : '';
+  const gurdwaras = results.gurdwaras;
+  const selected = gurdwaras.find((g) => g.id === selectedId) || gurdwaras[0] || null;
+  const handover = { lat: origin.lat, lng: origin.lng, label: originLabel };
+
+  // ---------------------------------------------------------------- the map
+  const pins = useMemo(() => [
+    {
+      id: ORIGIN_PIN, kind: 'origin', position: { lat: origin.lat, lng: origin.lng },
+      title: originLabel === 'your location' ? 'Your location' : `You searched: ${originLabel}`,
+    },
+    ...gurdwaras.map((g) => ({
+      id: g.id, kind: 'gurdwara', title: g.name, selected: g.id === selected?.id,
+      position: { lat: g.coordinates[0], lng: g.coordinates[1] },
+    })),
+  ], [origin, originLabel, gurdwaras, selected?.id]);
+
+  // The search point and the nearest Gurdwaras in view, once they're found
+  const fit = useMemo(() => (results.status === 'ready'
+    ? [{ lat: origin.lat, lng: origin.lng }, ...gurdwaras.slice(0, 12).map((g) => ({ lat: g.coordinates[0], lng: g.coordinates[1] }))]
+    : null), [results.status, origin, gurdwaras]);
+
+  // A pin's popup: name, where, how far, and a button for its history (plain DOM, inside Google's map)
+  const popupFor = useCallback((id) => {
+    const gurdwara = gurdwaras.find((g) => g.id === id);
+    if (!gurdwara) return null;
+    const box = document.createElement('div');
+    box.className = styles.popup;
+    const title = document.createElement('strong');
+    title.textContent = gurdwara.name;
+    box.append(title);
+    [placeLabel(gurdwara), gurdwara.distance_km != null ? `${formatDistance(gurdwara.distance_km)} away` : '']
+      .filter(Boolean)
+      .forEach((line) => {
+        const p = document.createElement('p');
+        p.textContent = line;
+        box.append(p);
+      });
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = styles.popupButton;
+    button.textContent = 'History and photo';
+    button.addEventListener('click', () => showHistory(gurdwara));
+    box.append(button);
+    return box;
+  }, [gurdwaras, showHistory]);
+
+  // ---------------------------------------------------------------- the picked Gurdwara's history and photo
+  // History from Wikipedia; the photo from Wikipedia or Wikimedia Commons, or else Google Maps
+  const history = useGurdwaraHistory(apiString, selected);
+  const historyData = history.status === 'found' || history.status === 'missing' ? history.data : null;
+  const freePhoto = safeExternalUrl(historyData?.image);
+  const googlePhoto = !freePhoto ? safeExternalUrl(selected?.photo?.url) : '';
+  const photo = freePhoto || googlePhoto;
+  const googleUrl = safeExternalUrl(selected?.google_url);
+
+  // ---------------------------------------------------------------- results line
+  const resultsLine = () => {
+    const place = <strong>{originLabel}</strong>;
+    if (results.status === 'loading') return <>Looking for Gurdwaras near {place}…</>;
+    if (results.status !== 'ready') return null;
+    const count = gurdwaras.length;
+    if (!count) return <>No Gurdwaras were found near {place}. Try a nearby town.</>;
+    return count === 1 ? <>1 Gurdwara near {place}</> : <>{count} Gurdwaras near {place}, nearest first</>;
+  };
 
   return (
     <div className={styles.page}>
@@ -297,185 +367,225 @@ const GurdwaraAccess = ({ isDarkMode, apiString }) => {
                 type="text"
                 role="combobox"
                 aria-controls="address-suggestions"
-                placeholder="Enter an address or area, e.g. 123 Main St, Brampton"
+                placeholder="Any address, town or postcode, e.g. Southall, London"
                 maxLength={200}
                 className={styles.input}
                 value={searchQuery}
                 onChange={handleInputChange}
-                onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
+                onFocus={() => searchQuery.trim().length > 2 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                aria-label="Address or area"
+                aria-label="Address, town or postcode"
                 aria-autocomplete="list"
-                aria-expanded={showSuggestions && filteredSuggestions.length > 0}
+                aria-expanded={showSuggestions && suggestions.length > 0}
+                autoComplete="off"
               />
-              {showSuggestions && filteredSuggestions.length > 0 && (
+              {showSuggestions && suggestions.length > 0 && (
                 <ul id="address-suggestions" className={styles.suggestionsList} role="listbox">
-                  {filteredSuggestions.map((suggestion) => (
-                    <li key={suggestion} role="option" aria-selected="false">
-                      <button type="button" className={styles.suggestionItem} onMouseDown={() => handleSuggestionClick(suggestion)}>
-                        <FaMapMarkerAlt aria-hidden="true" /> <span>{suggestion}</span>
+                  {suggestions.map((suggestion) => (
+                    <li key={suggestion.id || suggestion.label} role="option" aria-selected="false">
+                      <button type="button" className={styles.suggestionItem} onMouseDown={() => goToSuggestion(suggestion)}>
+                        <FaMapMarkerAlt aria-hidden="true" /> <span>{suggestion.label}</span>
                       </button>
                     </li>
                   ))}
+                  <li className={styles.suggestionsCredit} aria-hidden="true">Suggestions from Google Maps</li>
                 </ul>
               )}
             </div>
-            <button type="submit" className={styles.searchButton} disabled={isLoading}>
-              {isLoading ? 'Searching…' : 'Search'}
+            <button type="submit" className={styles.searchButton} disabled={isSearching}>
+              {isSearching ? 'Searching…' : 'Search'}
             </button>
           </form>
-          <button type="button" className={styles.locationButton} onClick={getUserLocation} disabled={isLoading}>
+          <button type="button" className={styles.locationButton} onClick={getUserLocation} disabled={isSearching}>
             <FaLocationArrow aria-hidden="true" /> Use my location
           </button>
         </div>
 
         {locationError && <p className={styles.errorMessage} role="alert">{locationError}</p>}
-        {userLocation && searchAddress && (
-          <p className={styles.resultsInfo}>
-            {nearbyGurdwaras.length > 0
-              ? <>Showing {nearbyGurdwaras.length} Gurdwaras within 10 km of <strong>{searchAddress}</strong></>
-              : <>No Gurdwaras found within 10 km of <strong>{searchAddress}</strong>. Try a different location.</>}
-          </p>
+        {results.status === 'error' ? (
+          <div className={styles.errorMessage} role="alert">
+            {results.error}{' '}
+            {googleMapsConfigured && (
+              <button type="button" className={styles.inlineRetry} onClick={() => setAttempt((n) => n + 1)}>
+                <FaRedo aria-hidden="true" /> Try again
+              </button>
+            )}
+            {' '}
+            <a className={styles.inlineRetry} href={googleMapsSearchUrl(handover)} target="_blank" rel="noopener noreferrer">
+              Search Google Maps instead
+            </a>
+          </div>
+        ) : (
+          <p className={styles.resultsInfo} aria-live="polite">{resultsLine()}</p>
         )}
       </section>
 
       {/* ---------- Results + map ---------- */}
-      <section className={styles.resultsSection} aria-label="Nearby Gurdwaras">
+      <section className={styles.resultsSection} aria-label="Gurdwaras near the place searched" aria-busy={results.status === 'loading'}>
         <ul className={styles.list}>
-          {nearbyGurdwaras.map((gurdwara, index) => (
-            <li key={gurdwara.id} className={`${styles.listItem} ${index === 0 ? styles.nearest : ''}`}>
-              <div className={styles.itemHeader}>
-                <div>
-                  {index === 0 && <span className={styles.nearestTag}>Nearest</span>}
-                  <h3>{gurdwara.name}</h3>
-                  <p className={styles.address}>{gurdwara.address}</p>
-                </div>
-                <span className={styles.distance}>{gurdwara.distance}</span>
-              </div>
-
-              <div className={styles.travel}>
-                <Link to={`/gurdwara-access/locate/${gurdwara.id}`} className={styles.travelPill}>
-                  <FaWalking aria-hidden="true" /> {gurdwara.timeByWalk}
-                </Link>
-                <Link to={`/gurdwara-access/locate/${gurdwara.id}`} className={styles.travelPill}>
-                  <FaBus aria-hidden="true" /> {gurdwara.timeByBus}
-                </Link>
-                <Link to={`/gurdwara-access/locate/${gurdwara.id}`} className={styles.travelPill}>
-                  <FaCar aria-hidden="true" /> {gurdwara.timeByCar}
-                </Link>
-              </div>
-
-              <div className={styles.itemActions}>
-                <Link to={`/gurdwara-access/locate/${gurdwara.id}`} className={styles.actionPrimary}>
-                  <FaMapMarkedAlt aria-hidden="true" /> Directions
-                </Link>
-                <Link to={`/gurdwara-access/services/${gurdwara.id}`} className={styles.actionLink}>Services</Link>
-                <Link to={`/gurdwara-access/history/${gurdwara.id}`} className={styles.actionLink}>History</Link>
-                <button type="button" className={styles.actionLink} onClick={() => focusOnMap(gurdwara)}>Show on map</button>
-              </div>
-
-              <div className={styles.contact}>
-                {/* Only real http(s) links are shown (see utils/safeUrl.js) */}
-                {safeExternalUrl(gurdwara.website) && (
-                  <a href={safeExternalUrl(gurdwara.website)} target="_blank" rel="noopener noreferrer"><FaGlobe aria-hidden="true" /> Website</a>
-                )}
-                <a href={`tel:${gurdwara.phone}`}><FaPhoneAlt aria-hidden="true" /> {gurdwara.phone}</a>
-              </div>
+          {results.status === 'loading' && gurdwaras.length === 0 && Array.from({ length: 3 }).map((_, i) => (
+            <li key={`skeleton-${i}`} className={`${styles.listItem} ${styles.listSkeleton}`} aria-hidden="true">
+              <span /><span /><span />
             </li>
           ))}
+
+          {gurdwaras.map((gurdwara, index) => {
+            const km = gurdwara.distance_km;
+            const isSelected = selected?.id === gurdwara.id;
+            const where = placeLabel(gurdwara);
+            return (
+              <li
+                key={gurdwara.id}
+                className={`${styles.listItem} ${index === 0 ? styles.nearest : ''} ${isSelected ? styles.selected : ''}`}
+              >
+                <div className={styles.itemHeader}>
+                  <div>
+                    {index === 0 && <span className={styles.nearestTag}>Nearest</span>}
+                    <h3>{gurdwara.name}</h3>
+                    {where && <p className={styles.address}>{where}</p>}
+                  </div>
+                  <span className={styles.distance}>{formatDistance(km)}</span>
+                </div>
+
+                <div className={styles.travel} aria-label="Rough travel times">
+                  <Link to={gurdwaraLink('locate', gurdwara, handover, { mode: 'walk' })} className={styles.travelPill}>
+                    <FaWalking aria-hidden="true" /> {travelEstimate(km, 'walk')}
+                  </Link>
+                  <Link to={gurdwaraLink('locate', gurdwara, handover, { mode: 'bus' })} className={styles.travelPill}>
+                    <FaBus aria-hidden="true" /> {travelEstimate(km, 'bus')}
+                  </Link>
+                  <Link to={gurdwaraLink('locate', gurdwara, handover, { mode: 'car' })} className={styles.travelPill}>
+                    <FaCar aria-hidden="true" /> {travelEstimate(km, 'car')}
+                  </Link>
+                </div>
+
+                <div className={styles.itemActions}>
+                  <Link to={gurdwaraLink('locate', gurdwara, handover)} className={styles.actionPrimary}>
+                    <FaMapMarkedAlt aria-hidden="true" /> Directions
+                  </Link>
+                  <button type="button" className={styles.actionLink} onClick={() => showHistory(gurdwara)} aria-pressed={isSelected}>
+                    History
+                  </button>
+                  <Link to={gurdwaraLink('services', gurdwara, handover)} className={styles.actionLink}>Services</Link>
+                  <button type="button" className={styles.actionLink} onClick={() => focusOnMap(gurdwara)}>Show on map</button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
 
-        <div className={styles.mapColumn}>
+        <div className={styles.mapColumn} id="gurdwara-map">
           <div className={styles.mapContainer}>
-            <MapContainer center={[43.7156, -79.7607]} zoom={12} style={{ height: '100%', width: '100%' }} ref={mapRef}>
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              {userLocation && (
-                <Marker position={[userLocation.lat, userLocation.lng]}>
-                  <Popup>Your location</Popup>
-                </Marker>
-              )}
-              {nearbyGurdwaras.map((gurdwara) => (
-                <Marker key={gurdwara.id} position={gurdwara.coordinates}>
-                  <Popup>
-                    <strong>{gurdwara.name}</strong>
-                    <br />
-                    {gurdwara.address}
-                    <br />
-                    {gurdwara.distance} away
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+            <GoogleMap
+              ref={mapApi}
+              center={{ lat: startPlace.lat, lng: startPlace.lng }}
+              zoom={12}
+              markers={pins}
+              fit={fit}
+              maxZoom={15}
+              singleZoom={12}
+              onMarkerClick={setSelectedId}
+              popup={popupFor}
+              dark={isDarkMode}
+              label={`Map of Gurdwaras near ${originLabel}`}
+              fallbackUrl={googleMapsSearchUrl(handover)}
+            />
           </div>
           <p className={styles.mapAttribution}>
-            Location data © <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors
+            Gurdwaras, photos and map from Google Maps. Missing one? It can be added in the Google Maps app.
           </p>
         </div>
       </section>
 
-      {/* ---------- History of the nearest (live from Wikipedia) ---------- */}
-      {nearestGurdwara && (
-        <section className={styles.section} aria-labelledby="history-title">
+      {/* ---------- History and photo of the picked Gurdwara ---------- */}
+      {selected && (
+        <section id="gurdwara-history" className={styles.section} aria-labelledby="history-title">
           <div className={styles.history}>
-            {/* Wikipedia's photo of this Gurdwara when it has one, otherwise our own picture */}
             <figure className={styles.historyImageWrap}>
-              {historyPhoto ? (
-                <img src={historyPhoto} alt={nearestHistory.data.title} className={styles.historyImage} loading="lazy" />
-              ) : (
-                <SitePicture name="gurdwara-history" alt="" className={styles.historyImage} />
+              {history.status === 'loading' && <span className={styles.photoSkeleton} aria-hidden="true" />}
+              {history.status !== 'loading' && photo && (
+                <img key={photo} src={photo} alt={selected.name} className={styles.historyImage} loading="lazy" />
               )}
-              {historyPhoto && historyPhotoPage && (
+              {history.status !== 'loading' && !photo && (
+                <div className={styles.photoPlaceholder}>
+                  <FaMapMarkerAlt aria-hidden="true" />
+                  <p>There’s no photo of {selected.name} yet.</p>
+                </div>
+              )}
+              {history.status !== 'loading' && freePhoto && (
                 <figcaption className={styles.photoCredit}>
-                  <a href={historyPhotoPage} target="_blank" rel="noopener noreferrer">Photo: Wikipedia</a>
+                  {safeExternalUrl(historyData?.image_page) ? (
+                    <a href={safeExternalUrl(historyData.image_page)} target="_blank" rel="noopener noreferrer">
+                      Photo: {historyData?.image_credit || 'Wikipedia'}
+                    </a>
+                  ) : `Photo: ${historyData?.image_credit || 'Wikipedia'}`}
+                </figcaption>
+              )}
+              {history.status !== 'loading' && googlePhoto && (
+                <figcaption className={styles.photoCredit}>
+                  Photo{selected.photo.credit ? ': ' : ' '}
+                  {selected.photo.credit && safeExternalUrl(selected.photo.credit_url) ? (
+                    <a href={safeExternalUrl(selected.photo.credit_url)} target="_blank" rel="noopener noreferrer">{selected.photo.credit}</a>
+                  ) : selected.photo.credit}
+                  {selected.photo.credit ? ', ' : ''}from Google Maps
                 </figcaption>
               )}
             </figure>
 
-            <div className={styles.historyText} aria-busy={nearestHistory.status === 'loading'}>
+            <div className={styles.historyText} aria-busy={history.status === 'loading'}>
               <span className={styles.eyebrowIcon} aria-hidden="true"><FaHistory /></span>
-              <h2 id="history-title" className={styles.sectionTitle}>History of {nearestGurdwara.name}</h2>
+              <h2 id="history-title" className={styles.sectionTitle}>History of {selected.name}</h2>
 
-              {nearestHistory.status === 'loading' && (
+              {history.status === 'loading' && (
                 <div className={styles.historySkeleton} role="status" aria-label="Loading the history from Wikipedia">
                   <span /><span /><span /><span />
                 </div>
               )}
 
-              {historyFound && (
+              {history.status === 'found' && (
                 <>
-                  <p>{historyIntro(nearestHistory.data)}</p>
-                  <WikipediaCredit data={nearestHistory.data} className={styles.credit} />
-                  <Link to={`/gurdwara-access/history/${nearestGurdwara.id}`} className={styles.primaryButton}>
+                  <p>{historyIntro(history.data)}</p>
+                  <WikipediaCredit data={history.data} className={styles.credit} />
+                  <Link to={gurdwaraLink('history', selected, handover)} className={styles.primaryButton}>
                     Read the full history
                   </Link>
                 </>
               )}
 
-              {nearestHistory.status === 'missing' && (
+              {history.status === 'missing' && (
                 <>
-                  <p>Wikipedia doesn’t have an article about this Gurdwara yet, so there’s no history to show here.</p>
+                  {sentence(history.data?.description) && <p>{sentence(history.data.description)}</p>}
+                  <p>
+                    Wikipedia doesn’t have an article about {selected.name} yet, so there’s no history to show here.
+                    {googleUrl ? ' Its Google Maps page has more about it.' : ''}
+                  </p>
+                  {placeLabel(selected) && (
+                    <dl className={styles.facts}>
+                      <dt>Address</dt><dd>{placeLabel(selected)}</dd>
+                    </dl>
+                  )}
                   <div className={styles.historyActions}>
-                    {safeExternalUrl(nearestGurdwara.website) && (
-                      <a href={safeExternalUrl(nearestGurdwara.website)} className={styles.primaryButton} target="_blank" rel="noopener noreferrer">
-                        <FaGlobe aria-hidden="true" /> Visit its website
+                    {googleUrl && (
+                      <a href={googleUrl} className={styles.primaryButton} target="_blank" rel="noopener noreferrer">
+                        <FaGlobe aria-hidden="true" /> See it on Google Maps
                       </a>
                     )}
-                    {safeExternalUrl(nearestHistory.data?.search_url) && (
-                      <a href={safeExternalUrl(nearestHistory.data.search_url)} className={styles.secondaryButton} target="_blank" rel="noopener noreferrer">
+                    {safeExternalUrl(history.data?.search_url) && (
+                      <a href={safeExternalUrl(history.data.search_url)} className={styles.secondaryButton} target="_blank" rel="noopener noreferrer">
                         Search Wikipedia
                       </a>
                     )}
+                    <Link to={gurdwaraLink('locate', selected, handover)} className={styles.secondaryButton}>
+                      <FaMapMarkedAlt aria-hidden="true" /> Directions
+                    </Link>
                   </div>
                 </>
               )}
 
-              {nearestHistory.status === 'error' && (
+              {history.status === 'error' && (
                 <>
-                  <p role="alert">{nearestHistory.error}</p>
-                  <button type="button" className={styles.secondaryButton} onClick={nearestHistory.retry}>
+                  <p role="alert">{history.error}</p>
+                  <button type="button" className={styles.secondaryButton} onClick={history.retry}>
                     <FaRedo aria-hidden="true" /> Try again
                   </button>
                 </>
@@ -507,7 +617,11 @@ const GurdwaraAccess = ({ isDarkMode, apiString }) => {
                 {open && (
                   <div className={styles.serviceBody}>
                     <p>{service.description}</p>
-                    <button type="button" className={styles.secondaryButton}>Avail service</button>
+                    {selected && (
+                      <Link to={gurdwaraLink('services', selected, handover)} className={styles.secondaryButton}>
+                        Services at {selected.name}
+                      </Link>
+                    )}
                   </div>
                 )}
               </li>

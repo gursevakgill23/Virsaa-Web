@@ -2,8 +2,8 @@
  * pages/GurdwaraAccess/GurdwaraAccess.module.css
  * -----------------------------------------------------------------------------
  * The Gurdwara finder: search and location bar with suggestions, results list
- * with travel times, the map, the history of the nearest Gurdwara (from
- * Wikipedia, with its credit) and the services.
+ * with travel times, the map, the history and photo of the Gurdwara picked
+ * (from Wikipedia and Wikimedia Commons, with their credits) and the services.
  * -----------------------------------------------------------------------------
  */
 
@@ -258,6 +258,14 @@
   background: rgba(var(--primary-rgb), 0.08);
 }
 
+/* Google asks for its name under its suggestions */
+.suggestionsCredit {
+  padding: 6px 12px 4px;
+  font-size: 0.75rem;
+  text-align: right;
+  color: var(--secondary-text-color);
+}
+
 .errorMessage {
   margin: 12px 4px 0;
   padding: 10px 14px;
@@ -307,6 +315,98 @@
 
 .nearest {
   border-color: rgba(var(--primary-rgb), 0.35);
+}
+
+/* The Gurdwara whose history is shown below */
+.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.14), var(--glass-highlight), var(--shadow-soft);
+}
+
+.gurmukhiName {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--primary-color);
+}
+
+.hours {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--secondary-text-color);
+}
+
+/* Grey cards while the Gurdwaras load */
+.listSkeleton {
+  display: grid;
+  gap: 12px;
+  min-height: 150px;
+}
+
+.listSkeleton span {
+  height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.07), rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.07));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.listSkeleton span:first-child {
+  width: 70%;
+  height: 22px;
+}
+
+.listSkeleton span:last-child {
+  width: 45%;
+}
+
+.inlineRetry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* A map pin's popup, inside Google's bubble (its text keeps Google's colour, light or dark) */
+.popup {
+  max-width: 240px;
+  font-family: var(--font-body);
+  color: inherit;
+}
+
+.popup strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.popup p {
+  margin: 0;
+  font-size: 0.82rem;
+  opacity: 0.75;
+}
+
+/* "History and photo" inside a map pin's popup */
+.popupButton {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  font: 600 0.85rem var(--font-body);
+  color: #ffffff;
+  background: #65041d;
+  cursor: pointer;
 }
 
 .itemHeader {
@@ -476,15 +576,21 @@
   box-shadow: var(--shadow-deep);
 }
 
-/* Link to the photo's own Wikipedia page, which names its author and licence */
+/* The photo's credit: its Wikipedia / Commons page, or its author on Google Maps */
 .photoCredit {
   position: absolute;
+  z-index: 2;
   left: 16px;
   bottom: 16px;
+  max-width: calc(100% - 32px);
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 0.78rem;
+  color: #fff;
   background: rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .photoCredit a {
@@ -501,6 +607,60 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* No photo of it anywhere yet */
+.photoPlaceholder {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  background:
+    radial-gradient(120% 90% at 20% 10%, rgba(241, 213, 140, 0.18), transparent 60%),
+    linear-gradient(160deg, #7d0a27, #3a0211);
+}
+
+.photoPlaceholder svg {
+  font-size: 2.4rem;
+  color: #f1d58c;
+}
+
+.photoPlaceholder p {
+  margin: 0;
+  max-width: 26ch;
+  font-weight: 600;
+}
+
+.photoSkeleton {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.07), rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.07));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Address and opening hours under "no article yet" */
+.facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 14px;
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+}
+
+.facts dt {
+  font-weight: 700;
+  color: var(--headline-color);
+}
+
+.facts dd {
+  margin: 0;
+  color: var(--secondary-text-color);
 }
 
 .historyText {
@@ -566,7 +726,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .historySkeleton span {
+  .historySkeleton span,
+  .listSkeleton span,
+  .photoSkeleton {
     animation: none;
   }
 }
