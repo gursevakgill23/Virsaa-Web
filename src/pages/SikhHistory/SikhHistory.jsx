@@ -92,8 +92,13 @@ const SikhHistory = ({ isDarkMode, apiString }) => {
   useEffect(() => {
     let alive = true;
     historyApi.timeline(apiUrl).then((rows) => { if (alive) setTimeline(rows); }).catch(() => {});
-    axios.get(`${apiUrl}/collections/ebooks/`, { timeout: 20000 })
-      .then((r) => { if (alive && Array.isArray(r.data)) setBooks(r.data.slice(0, 10)); })
+    // History books first (the library's own topic filter); any books when it has none yet
+    const listOf = (data) => (Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []));
+    axios.get(`${apiUrl}/collections/ebooks/?page=1&page_size=10&genre=history`, { timeout: 20000 })
+      .then((r) => (listOf(r.data).length
+        ? r
+        : axios.get(`${apiUrl}/collections/ebooks/?page=1&page_size=10`, { timeout: 20000 })))
+      .then((r) => { if (alive) setBooks(listOf(r.data).slice(0, 10)); })
       .catch(() => {});
     return () => { alive = false; };
   }, [apiUrl]);

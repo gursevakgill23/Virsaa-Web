@@ -113,12 +113,17 @@ const SearchPalette = ({ onClose, apiString }) => {
     const timer = setTimeout(async () => {
       const q = encodeURIComponent(term);
       const [e, a, au] = await Promise.allSettled([
-        axios.get(`${apiUrl}/collections/ebooks/?search=${q}`, { timeout: TIMEOUT_MS }),
+        axios.get(`${apiUrl}/collections/ebooks/?search=${q}&page=1&page_size=5`, { timeout: TIMEOUT_MS }),
         axios.get(`${apiUrl}/collections/audiobooks/?search=${q}`, { timeout: TIMEOUT_MS }),
         axios.get(`${apiUrl}/collections/authors/?search=${q}`, { timeout: TIMEOUT_MS }),
       ]);
       if (cancelled) return;
-      const pick = (r) => (r.status === 'fulfilled' && Array.isArray(r.value.data) ? r.value.data.slice(0, 5) : []);
+      // Lists come back whole or as one page ({ results })
+      const pick = (r) => {
+        if (r.status !== 'fulfilled') return [];
+        const body = r.value.data;
+        return (Array.isArray(body) ? body : (Array.isArray(body?.results) ? body.results : [])).slice(0, 5);
+      };
       const allFailed = [e, a, au].every((r) => r.status === 'rejected');
       setResults({ ebooks: pick(e), audiobooks: pick(a), authors: pick(au) });
       setStatus(allFailed ? 'error' : 'done');
@@ -133,7 +138,7 @@ const SearchPalette = ({ onClose, apiString }) => {
   // One flat list so arrow keys can move through every group
   const flat = useMemo(() => {
     const authorOf = (item) =>
-      (typeof item.author === 'object' ? item.author?.name : authorNames[item.author]) || '';
+      (typeof item.author === 'object' ? item.author?.name : item.author_name || authorNames[item.author]) || '';
     return [
       ...results.ebooks.map((b) => ({
         key: `e${b.id}`, group: 'Books', title: b.title, meta: authorOf(b) || 'Ebook',

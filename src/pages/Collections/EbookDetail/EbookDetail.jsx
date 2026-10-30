@@ -29,6 +29,7 @@ import {
   FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown, FaDownload, FaHandHoldingHeart,
   FaHeadphones, FaLanguage, FaCrown } from 'react-icons/fa';
 import { toast } from '../../../utils/notify';
+import { safeExternalUrl } from '../../../utils/safeUrl';
 import styles from './EbookDetail.module.css';
 import EbookListen from './EbookListen';
 import DetailActions, { ActionButton, ListenSoon } from '../../../components/DetailActions/DetailActions';
@@ -170,8 +171,9 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
         });
         setIsLoading(false);
 
-        // Related: same author first, then other books
-        const allRes = await axios.get(`${apiUrl}/collections/ebooks/`, { timeout: 20000 }).catch(() => ({ data: [] }));
+        // Related: same author first, then other books (one page of light cards is plenty)
+        const allRes = await axios.get(`${apiUrl}/collections/ebooks/?page=1&page_size=40`, { timeout: 20000 })
+          .catch(() => ({ data: [] }));
         if (cancelled) return;
         const others = toList(allRes.data).filter((item) => item.id !== Number(id));
         const sameAuthor = others.filter((item) => data.author && item.author === data.author);
@@ -437,8 +439,34 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                   </span>
                 )}
                 {ebook.chapters.length > 0 && <span className={styles.metaPill}>{ebook.chapters.length} chapters</span>}
+                {ebook.language_label && (
+                  <span className={styles.metaPill}><FaLanguage aria-hidden="true" /> {ebook.language_label}</span>
+                )}
                 {ebook.genre && <span className={styles.metaPill}>{ebook.genre}</span>}
               </div>
+
+              {/* A free book: its licence and where it came from (the credit the licence asks for) */}
+              {ebook.source && (ebook.source.name || ebook.source.licence) && (
+                <p className={styles.sourceNote}>
+                  {ebook.source.licence || 'Free to read'}.
+                  {ebook.source.published ? ` First published in ${ebook.source.published}.` : ''}
+                  {ebook.source.name && (
+                    <>
+                      {' From '}
+                      {safeExternalUrl(ebook.source.url)
+                        ? <a href={safeExternalUrl(ebook.source.url)} target="_blank" rel="noopener noreferrer">{ebook.source.name}</a>
+                        : ebook.source.name}
+                      {ebook.source.credit ? ` (${ebook.source.credit})` : ''}.
+                    </>
+                  )}
+                  {safeExternalUrl(ebook.source.licence_url) && ebook.source.licence !== 'Public domain' && (
+                    <>
+                      {' '}
+                      <a href={safeExternalUrl(ebook.source.licence_url)} target="_blank" rel="noopener noreferrer">About the licence</a>
+                    </>
+                  )}
+                </p>
+              )}
 
               {/* Books shared by readers (My Rewards): their tags and who shared it */}
               {(ebook.shared_by || (ebook.tags || []).length > 0) && (

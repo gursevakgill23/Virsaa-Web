@@ -1,8 +1,9 @@
 /*
  * components/Navbar/Navbar.module.css
  * -----------------------------------------------------------------------------
- * The floating glass navbar, its Collections dropdown, the avatar with the
- * unread badge, and the account panel that slides in from the right.
+ * The navbar (solid, so nothing shows through it while the page scrolls
+ * underneath), its Collections dropdown, the avatar with the unread badge,
+ * and the account panel that slides in from the right.
  * -----------------------------------------------------------------------------
  */
 
@@ -17,7 +18,12 @@
   width: 100%;
   /* Above page content (which stays below 950); below the sidebar, panels and modals (1000+) */
   z-index: 950;
-  background-color: var(--section-bg-color, #ffffff) !important;
+  /* Solid page colour (no glass or blur): content scrolling underneath stays hidden */
+  background: var(--section-bg-color, #ffffff) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom: 1px solid var(--glass-edge);
+  box-shadow: 0 8px 24px -20px rgba(var(--primary-rgb), 0.4);
 }
 
 /* Ensure no parent interference */
@@ -558,7 +564,7 @@ body, html {
 }
 
 /* =========================================================================
-   Phones (< 768px): the navbar stays at the top as a slim glass bar
+   Phones (< 768px): the navbar stays at the top as a slim solid bar
    (logo, search, theme, menu, account). The section links live in the
    floating tab bar at the bottom of the screen (see Sidebar.module.css).
    ========================================================================= */
@@ -569,9 +575,9 @@ body, html {
     min-height: 58px;
     padding: 8px 14px;
     z-index: 1000;
-    background: var(--glass-bg-strong) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    background: var(--section-bg-color, #ffffff) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     border-bottom: 1px solid var(--glass-edge);
     box-shadow: 0 8px 24px -18px rgba(var(--primary-rgb), 0.45);
   }

@@ -973,6 +973,17 @@
 }
 
 /* Shared by a reader (rewards): tags and the credit */
+.sourceNote {
+  margin: -2px 0 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+}
+
+.sourceNote a {
+  color: var(--link-color);
+}
+
 .sharedRow {
   display: flex;
   flex-wrap: wrap;

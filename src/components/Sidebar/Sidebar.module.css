@@ -543,11 +543,10 @@
   gap: 4px;
   padding: 6px 8px;
   border-radius: 28px;
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
+  /* Solid, like the top navbar, so the page doesn't show through while scrolling */
+  background: var(--section-bg-color, #ffffff);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-highlight), 0 0 0 1px var(--glass-edge), var(--shadow-deep);
+  box-shadow: 0 0 0 1px var(--glass-edge), var(--shadow-deep);
   z-index: 999;
 }
 

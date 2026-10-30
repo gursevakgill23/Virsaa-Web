@@ -523,6 +523,58 @@
   border-color: transparent;
 }
 
+/* Previous / Next */
+.pagination .pageArrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.pagination button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  border-color: var(--border-color);
+}
+
+.pageGap {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 44px;
+  color: var(--secondary-text-color);
+  font-weight: 700;
+}
+
+/* The next page is on its way: the cards stay, a little faded */
+.gridBusy {
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+@media (max-width: 575.98px) {
+  .pagination {
+    gap: 6px;
+  }
+
+  .pagination button {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 10px;
+  }
+
+  /* Phones: arrows only, so a row of numbers still fits */
+  .pagination .pageArrow span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 /* Featured rows: horizontal scroll */
 .rowHead {
   display: flex;

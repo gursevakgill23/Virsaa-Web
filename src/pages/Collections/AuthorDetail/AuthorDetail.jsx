@@ -127,7 +127,9 @@ const AuthorDetail = ({ isDarkMode, apiString }) => {
     const load = async () => {
       try {
         const { data } = await axios.get(`${apiUrl}/collections/authors/${safeId}/`, { timeout: 20000 });
-        const booksRes = await axios.get(`${apiUrl}/collections/ebooks/`, { params: { author__name: data.name }, timeout: 20000 })
+        const booksRes = await axios.get(`${apiUrl}/collections/ebooks/`, {
+          params: { author__name: data.name, page: 1, page_size: 60 }, timeout: 20000,
+        })
           .catch(() => ({ data: [] }));
         if (cancelled) return;
         const books = asList(booksRes.data)
