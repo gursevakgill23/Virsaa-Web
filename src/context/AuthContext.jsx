@@ -8,8 +8,10 @@
  *   - restores the session when the site opens (tokens in cookies, the user's
  *     profile in localStorage) and checks it with /api/auth/profile/
  *   - renews the access token (it lasts 30 minutes) with the refresh token when
- *     it has expired (also when the access-token cookie has already gone, so
- *     "Remember me" keeps working for its full 7 days)
+ *     it has expired. The cookies last exactly as long as the session itself
+ *     (the refresh token's own expiry: 7 days, or 30 with "Remember me"), and
+ *     a "Remember me" session in use gets a new refresh token from the server
+ *     now and then, so it keeps going while it's used
  *   - adds the Bearer token to /api/auth/ requests and, when any request comes
  *     back 401, renews the token once and retries it
  *   - sends signed-out visitors to /login, except on the public pages below
@@ -24,8 +26,9 @@
  *   - cookies are SameSite=Lax (never sent with other sites' requests) and
  *     Secure on HTTPS. JavaScript can still read them; moving the tokens to
  *     httpOnly cookies set by Django would be the next step up.
- *   - a failed token renewal signs the user out cleanly
- *   - a temporary network problem doesn't sign anyone out
+ *   - only the server refusing the session (signed out, expired, account
+ *     switched off) signs the user out; no connection, a slow or restarting
+ *     server, or a rate limit never does (the request just fails)
  * -----------------------------------------------------------------------------
  */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -88,7 +91,7 @@ const AUTH_FREE_PATHS = [
   '/verify-reset-code/', '/reset-password/',
 ];
 
-// Whether "Remember me" was ticked at sign-in, so renewed tokens keep the same cookie lifetime
+// Whether "Remember me" was ticked at sign-in (for the cookies, if a token's expiry can't be read)
 const REMEMBER_KEY = 'virsaa:remember';
 const readRemember = () => {
   try { return localStorage.getItem(REMEMBER_KEY) === '1'; } catch { return false; }
@@ -101,8 +104,10 @@ const writeRemember = (on) => {
 };
 
 const TIMEOUT_MS = 20000; // give up on auth requests after 20 s
-const ACCESS_DAYS = 1; // access-token cookie lifetime
-const REMEMBER_DAYS = 7; // refresh-token cookie lifetime with "Remember me"
+// How long a session lasts on the server (auth_api): the cookies follow the refresh token's own
+// expiry, and these are only used if it can't be read
+const SESSION_DAYS = 7;
+const REMEMBER_DAYS = 30;
 
 // Signed-out state
 const SIGNED_OUT = {
@@ -131,13 +136,43 @@ const isPublicPath = (pathname) => {
 /** Is this URL one of the auth endpoints that work without a token? */
 const isAuthFreeUrl = (url) => AUTH_FREE_PATHS.some((path) => String(url || '').includes(path));
 
-/** Cookie options: whole site, Lax, Secure on HTTPS, expiring after `days` */
-const cookieOptions = (days) => ({
-  expires: days,
+/** Cookie options: whole site, Lax, Secure on HTTPS, expiring at `expires` (a Date, or a number of days) */
+const cookieOptions = (expires) => ({
+  expires,
   path: '/',
   sameSite: 'Lax',
   secure: typeof window !== 'undefined' && window.location.protocol === 'https:',
 });
+
+/**
+ * When a token expires (its `exp`), as a Date; null if it can't be read. The token is only read
+ * here, never trusted: the server checks every token it's sent.
+ */
+const tokenExpiry = (token) => {
+  try {
+    const part = String(token || '').split('.')[1];
+    if (!part) return null;
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=');
+    const payload = JSON.parse(window.atob(base64));
+    return typeof payload.exp === 'number' ? new Date(payload.exp * 1000) : null;
+  } catch {
+    return null;
+  }
+};
+
+/** Keeps both tokens in cookies until the session itself ends (the refresh token's expiry). */
+const saveTokenCookies = (accessToken, refreshToken) => {
+  const until = tokenExpiry(refreshToken) || (readRemember() ? REMEMBER_DAYS : SESSION_DAYS);
+  Cookies.set('accessToken', accessToken, cookieOptions(until));
+  Cookies.set('refreshToken', refreshToken, cookieOptions(until));
+};
+
+/**
+ * Did the server turn the session down (signed out, expired, or the account switched off)? It
+ * answers 400 for those; 401 and 403 count too. No answer at all, a server error or a rate limit
+ * isn't a refusal, and never signs anyone out.
+ */
+const isRefusal = (error) => [400, 401, 403].includes(error?.response?.status);
 
 /** Premium membership? Accepts "Premium", "premium_member", etc. */
 const isPremiumLevel = (level) => /premium/i.test(String(level || ''));
@@ -216,7 +251,11 @@ export const AuthProvider = ({ children, apiString }) => {
     });
   }, []);
 
-  /** Get a new access token with the refresh token. Resolves to the new token. */
+  /**
+   * Get a new access token with the refresh token. Resolves to the new access token. A "Remember me"
+   * session past half its life also gets a new refresh token: it's kept (cookies and state), so the
+   * session keeps going while it's used.
+   */
   const refreshAccessToken = useCallback((refreshToken) => {
     if (!refreshPromiseRef.current) {
       refreshPromiseRef.current = axios
@@ -224,8 +263,12 @@ export const AuthProvider = ({ children, apiString }) => {
         .then((response) => {
           const newAccessToken = response.data?.access;
           if (!newAccessToken) throw new Error('No access token in the refresh reply');
-          Cookies.set('accessToken', newAccessToken, cookieOptions(readRemember() ? REMEMBER_DAYS : ACCESS_DAYS));
-          tokensRef.current = { ...tokensRef.current, accessToken: newAccessToken };
+          const newRefreshToken = response.data?.refresh || refreshToken;
+          saveTokenCookies(newAccessToken, newRefreshToken);
+          tokensRef.current = { accessToken: newAccessToken, refreshToken: newRefreshToken };
+          if (newRefreshToken !== refreshToken) {
+            setAuthState((prev) => (prev.isLoggedIn ? { ...prev, refreshToken: newRefreshToken } : prev));
+          }
           return newAccessToken;
         })
         .finally(() => { refreshPromiseRef.current = null; });
@@ -265,15 +308,18 @@ export const AuthProvider = ({ children, apiString }) => {
           token = await refreshAccessToken(refreshToken); // expired: renew once, then retry
           response = await fetchProfile(token);
         }
-        if (!cancelled) applyUser(response.data, token, refreshToken);
+        // The cookies hold the latest refresh token (a renewal may have replaced it)
+        if (!cancelled) applyUser(response.data, token, Cookies.get('refreshToken') || refreshToken);
       } catch (error) {
         if (cancelled) return;
         logError('Session check failed:', error);
-        if (!error.response && accessToken) {
-          // Offline or server unreachable: keep the saved session instead of signing out
-          applyUser(storedUser, accessToken, refreshToken);
-        } else {
+        if (isRefusal(error)) {
           handleCleanup(); // the redirect effect below sends them to /login if needed
+        } else {
+          // Offline, or the server is slow, restarting or busy: keep the saved session instead of
+          // signing out (the next request renews the access token if it needs to)
+          applyUser(storedUser, Cookies.get('accessToken') || accessToken || null,
+            Cookies.get('refreshToken') || refreshToken);
         }
       }
     };
@@ -332,8 +378,11 @@ export const AuthProvider = ({ children, apiString }) => {
             return axios(original);
           } catch (refreshError) {
             logError('Token renewal failed:', refreshError);
-            handleCleanup();
-            navigateRef.current('/login');
+            // Only a refused session signs out; a network or server problem just fails this request
+            if (isRefusal(refreshError)) {
+              handleCleanup();
+              navigateRef.current('/login');
+            }
             return Promise.reject(refreshError);
           }
         }
@@ -358,9 +407,7 @@ export const AuthProvider = ({ children, apiString }) => {
     writeGuest(false); // a real account replaces guest mode
     setIsGuest(false);
     writeRemember(rememberMe);
-    const days = rememberMe ? REMEMBER_DAYS : ACCESS_DAYS;
-    Cookies.set('accessToken', accessToken, cookieOptions(days));
-    Cookies.set('refreshToken', refreshToken, cookieOptions(days));
+    saveTokenCookies(accessToken, refreshToken);
     applyUser(user, accessToken, refreshToken);
   }, [applyUser]);
 
@@ -370,9 +417,7 @@ export const AuthProvider = ({ children, apiString }) => {
    */
   const replaceTokens = useCallback((accessToken, refreshToken) => {
     if (!accessToken || !refreshToken) return;
-    const days = readRemember() ? REMEMBER_DAYS : ACCESS_DAYS;
-    Cookies.set('accessToken', accessToken, cookieOptions(days));
-    Cookies.set('refreshToken', refreshToken, cookieOptions(days));
+    saveTokenCookies(accessToken, refreshToken);
     tokensRef.current = { accessToken, refreshToken };
     setAuthState((prev) => (prev.isLoggedIn ? { ...prev, accessToken, refreshToken } : prev));
   }, []);
