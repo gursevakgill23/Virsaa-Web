@@ -26,6 +26,7 @@ import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 import Loader from '../../../components/VirsaaLoader/Loader';
 import { describeApiError } from '../../../utils/apiError';
+import usePlanAccess, { PLAN_LABELS } from '../../../hooks/usePlanAccess';
 
 // Utility function to handle public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -107,6 +108,7 @@ const Dialog = ({ labelledBy, onClose, children, className = '' }) => {
 const Quizzes = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
   const { isLoggedIn, isPremium, accessToken, API_STRING } = useAuth();
+  const { isLocked, levelOf, planMessage } = usePlanAccess();
   const apiUrl = (apiString || API_STRING || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
   const recordHistory = useHistoryRecorder(apiUrl);
   const headerImage = getProductionImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
@@ -235,7 +237,9 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     return undefined;
   }, [timerStarted, timerPaused, timeLeft]);
 
-  const isBlocked = quiz && ((quiz.is_restricted && !isLoggedIn) || (quiz.is_premium && !isPremium));
+  // Standard and Premium quizzes need that plan; some free ones an account
+  const planLocked = Boolean(quiz) && isLocked(quiz);
+  const isBlocked = quiz && ((quiz.is_restricted && !isLoggedIn) || planLocked);
   const quizDuration = quiz?.time_limit_seconds || QUIZ_DURATION;
   const perQuestionLimit = (q) => q?.time_limit_seconds || quiz?.time_per_question_seconds || null;
 
@@ -308,7 +312,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
   const handleStartQuiz = async (tournamentId = null) => {
     setNotice(null);
     if (!quiz || isBlocked) {
-      setNotice(quiz?.is_premium ? 'This quiz is for Premium members.' : 'Sign in to start this quiz.');
+      setNotice(planLocked ? planMessage(quiz, 'This quiz') : 'Sign in to start this quiz.');
       return;
     }
     if (timerStarted) {
@@ -571,10 +575,10 @@ const Quizzes = ({ isDarkMode, apiString }) => {
           <button type="button" className={styles.heroButton} onClick={() => handleStartQuiz()}>
             <FaPlay aria-hidden="true" /> Start quiz
           </button>
-          {(quiz.is_restricted || quiz.is_premium) && (
+          {(quiz.is_restricted || levelOf(quiz) !== 'free') && (
             <span className={styles.heroNote}>
-              {quiz.is_premium ? <FaCrown aria-hidden="true" /> : <FaLock aria-hidden="true" />}
-              {quiz.is_premium ? 'Premium quiz' : 'Sign in required'}
+              {levelOf(quiz) !== 'free' ? <FaCrown aria-hidden="true" /> : <FaLock aria-hidden="true" />}
+              {levelOf(quiz) !== 'free' ? `${PLAN_LABELS[levelOf(quiz)]} quiz` : 'Sign in required'}
             </span>
           )}
         </div>
@@ -585,7 +589,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
           <p className={styles.notice} role="alert">
             {notice}
             {isBlocked && (
-              <Link to={quiz.is_premium ? '/premium' : '/login'}>{quiz.is_premium ? 'See plans' : 'Sign in'}</Link>
+              <Link to={planLocked ? '/premium' : '/login'}>{planLocked ? 'See plans' : 'Sign in'}</Link>
             )}
             <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss"><FaTimes /></button>
           </p>

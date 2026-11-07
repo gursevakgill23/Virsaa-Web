@@ -17,6 +17,8 @@ import styles from './Learning.module.css';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { CoverPicture } from '../../components/SitePicture/SitePicture';
+import PlanBadge from '../../components/PlanBadge/PlanBadge';
+import usePlanAccess, { PLAN_LABELS } from '../../hooks/usePlanAccess';
 
 // Every card's picture comes from the API (a real photo in S3, chosen for its topic);
 // a card without one, or whose picture fails, shows this website picture instead
@@ -164,6 +166,7 @@ const shuffleArray = (array) => {
 
 const Learning = ({ isDarkMode, apiString }) => {
   const { isLoggedIn, isPremium, accessToken, API_STRING } = useAuth();
+  const { isLocked, levelOf } = usePlanAccess();
   // Tab, filters, games carousel, page, loading/error state and the loaded items
   const [activeTab, setActiveTab] = useState('all');
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -199,6 +202,8 @@ const Learning = ({ isDarkMode, apiString }) => {
           link,
           is_restricted: item.is_restricted,
           is_premium: item.is_premium,
+          access: item.access,
+          locked: item.locked,
           status: cardStatus(item),
         });
 
@@ -262,16 +267,16 @@ const Learning = ({ isDarkMode, apiString }) => {
   };
 
   // Can this user open the card? Otherwise say why and where to go
+  // Standard and Premium items need that plan; some free ones need an account
   const isCardAccessible = (card) => {
+    if (isLocked(card)) return false;
     if (card.type === 'game') return true;
     if (!card.is_restricted) return true;
-    if (!isLoggedIn) return false;
-    if (card.is_premium && !isPremium) return false;
-    return true;
+    return isLoggedIn;
   };
 
-  const lockLabel = (card) => (card.is_premium ? 'Premium required' : 'Sign in required');
-  const lockLink = (card) => (card.is_premium ? '/premium' : '/login');
+  const lockLabel = (card) => (isLocked(card) ? `${PLAN_LABELS[levelOf(card)]} plan` : 'Sign in required');
+  const lockLink = (card) => (isLocked(card) ? '/premium' : '/login');
 
   // Games spotlight: next / previous
   const nextGame = () => setGameIndex((i) => (i + 1) % games.length);
@@ -294,7 +299,7 @@ const Learning = ({ isDarkMode, apiString }) => {
         </span>
         <span className={styles.cardBody}>
           <span className={styles.cardCategory}>{card.category}</span>
-          <span className={styles.cardTitle}>{card.title}</span>
+          <span className={styles.cardTitle}>{card.title} <PlanBadge item={card} /></span>
           {card.description && <span className={styles.cardText}>{card.description}</span>}
           {card.status && <span className={`${styles.cardStatus} ${card.status === 'Completed' ? styles.cardStatusDone : ''}`}>{card.status}</span>}
         </span>

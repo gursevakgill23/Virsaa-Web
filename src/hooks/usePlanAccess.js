@@ -14,7 +14,7 @@
  *   if (isLocked(book)) navigate('/premium');
  *
  * Free opens for everyone, Standard for the Standard and Premium plans,
- * Premium for Premium only; staff open everything. A locked item's content
+ * Premium for Premium only, for staff accounts too. A locked item's content
  * answers 403 with code 'premium_required' (isPlanRequired(error)).
  * -----------------------------------------------------------------------------
  */
@@ -42,18 +42,16 @@ export const isPlanRequired = (error) => error?.response?.status === 403
 
 const usePlanAccess = () => {
   const { isLoggedIn, userData } = useAuth();
-  const isStaff = Boolean(userData?.is_staff || userData?.is_superuser);
   const rank = PLAN_RANK[normalizePlan(userData?.membership_level)] || 0;
 
-  // Paid items are locked for guests; for someone signed in, unless the server said it's
-  // open to them or their plan (or a staff account) opens it
+  // Paid items are locked for guests, and for anyone whose plan is below the item's level
+  // (the plan on the account, as the server counts it)
   const isLocked = useCallback((item) => {
     const level = levelOf(item);
     if (level === 'free') return false;
     if (!isLoggedIn) return true;
-    if (item?.locked === false || isStaff) return false;
     return rank < PLAN_RANK[level];
-  }, [isLoggedIn, isStaff, rank]);
+  }, [isLoggedIn, rank]);
 
   return { isLocked, levelOf, planMessage };
 };

@@ -34,7 +34,8 @@ import {
 } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
 import useHistoryRecorder from '../../hooks/useHistoryRecorder';
-import useMembership, { PLAN_NAMES, PLAN_RANK } from '../../hooks/useMembership';
+import usePlanAccess from '../../hooks/usePlanAccess';
+import { PLAN_NAMES } from '../../hooks/useMembership';
 import { gurbaniApi } from '../../api/sikhismApi';
 import { describeApiError } from '../../utils/apiError';
 import { safeUrl } from '../../utils/safeUrl';
@@ -139,9 +140,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   const recordHistory = useHistoryRecorder(apiString);
   const getImagePath = useProductionImagePath();
   const navigate = useNavigate();
-  const { isLoggedIn, accessToken, userData } = useAuth();
-  const { plan } = useMembership(apiString);
-  const isStaff = Boolean(userData?.is_staff);
+  const { isLoggedIn, accessToken } = useAuth();
 
   const header_image_light = '/images/header-image.png';
   const header_image_dark = '/images/header-image-dark.png';
@@ -184,11 +183,9 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   const tokenRef = useRef(accessToken);
   tokenRef.current = accessToken;
 
-  // Locked when the visitor's plan is below the item's level (staff can open everything)
-  const isLocked = useCallback(
-    (item) => item.access !== 'free' && !isStaff && (PLAN_RANK[plan] || 0) < PLAN_RANK[item.access],
-    [plan, isStaff],
-  );
+  // Locked when the visitor's plan is below the item's level (hooks/usePlanAccess.js: the plan
+  // on the account, as the server counts it, for staff accounts too)
+  const { isLocked } = usePlanAccess();
 
   // Button text for a row (unlock, read, listen, watch)
   const actionLabel = (item) => {

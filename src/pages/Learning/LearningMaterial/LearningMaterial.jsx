@@ -10,7 +10,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { FaLock, FaPlay, FaCrown, FaSignInAlt, FaCheckCircle, FaClock, FaStar } from 'react-icons/fa';
+import { FaLock, FaPlay, FaSignInAlt, FaCheckCircle, FaClock, FaStar } from 'react-icons/fa';
 import PageHero from '../../../components/PageHero/PageHero';
 import styles from './LearningMaterial.module.css';
 import { useAuth } from '../../../context/AuthContext';
@@ -20,6 +20,8 @@ import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 import Loader from '../../../components/VirsaaLoader/Loader';
 import { describeApiError } from '../../../utils/apiError';
+import PlanBadge, { LockedPanel } from '../../../components/PlanBadge/PlanBadge';
+import usePlanAccess from '../../../hooks/usePlanAccess';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -54,7 +56,8 @@ const formatDate = (value) => (value ? new Date(value).toLocaleString() : '');
 
 const LearningMaterial = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
-  const { isLoggedIn, isPremium, accessToken } = useAuth();
+  const { isLoggedIn, accessToken } = useAuth();
+  const { isLocked } = usePlanAccess();
   const getImagePath = useProductionImagePath();
   const contentRef = useRef(null);
   const headerImage = getImagePath(isDarkMode ? '/images/header-image-dark.png' : '/images/header-image.png');
@@ -130,12 +133,11 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
   }, [item, id, recordHistory]);
 
   // Can this user open the lesson?
+  // Standard and Premium lessons need that plan; some free ones need an account
   const isAccessible = () => {
-    if (!item) return false;
+    if (!item || isLocked(item)) return false;
     if (!item.is_restricted) return true;
-    if (!isLoggedIn) return false;
-    if (item.is_premium && !isPremium) return false;
-    return true;
+    return isLoggedIn;
   };
 
   // Opening a lesson marks it "in progress" (signed-in users only)
@@ -301,7 +303,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
               {item.difficulty && <span className={styles.chip}>{item.difficulty}</span>}
               {isDone && <span className={`${styles.chip} ${styles.chipDone}`}><FaCheckCircle aria-hidden="true" /> Completed</span>}
             </div>
-            <h2 className={styles.sectionTitle}>{item.title}</h2>
+            <h2 className={styles.sectionTitle}>{item.title} <PlanBadge item={item} /></h2>
             {embedUrl && (
               <div className={styles.videoFrame}>
                 <iframe
@@ -349,14 +351,18 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
             )}
           </article>
         ) : (
-          <div className={styles.locked}>
-            <span className={styles.lockIcon} aria-hidden="true">{item.is_premium ? <FaCrown /> : <FaLock />}</span>
-            <h2>{item.is_premium ? 'This lesson is for Premium members' : 'Sign in to open this lesson'}</h2>
-            <p>{item.is_premium ? 'Upgrade to Premium to watch this lesson and every other premium lesson.' : 'Create a free account or sign in to keep going.'}</p>
-            <Link to={item.is_premium ? '/premium' : '/login'} className={styles.primaryButton}>
-              {item.is_premium ? <><FaCrown aria-hidden="true" /> See Premium plans</> : <><FaSignInAlt aria-hidden="true" /> Sign in</>}
-            </Link>
-          </div>
+          isLocked(item) ? (
+            <LockedPanel item={item} what="This lesson" />
+          ) : (
+            <div className={styles.locked}>
+              <span className={styles.lockIcon} aria-hidden="true"><FaLock /></span>
+              <h2>Sign in to open this lesson</h2>
+              <p>Create a free account or sign in to keep going.</p>
+              <Link to="/login" className={styles.primaryButton}>
+                <FaSignInAlt aria-hidden="true" /> Sign in
+              </Link>
+            </div>
+          )
         )}
       </section>
 
