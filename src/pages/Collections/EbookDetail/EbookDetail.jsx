@@ -23,7 +23,7 @@
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   FaBookmark, FaRegBookmark, FaShareAlt, FaChevronLeft, FaChevronRight, FaStar, FaRegStar,
   FaHeart, FaRegHeart, FaBookOpen, FaFilePdf, FaChevronDown, FaDownload, FaHandHoldingHeart,
@@ -44,6 +44,8 @@ import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import useBookmark from '../../../hooks/useBookmark';
 import { useAuth } from '../../../context/AuthContext';
 import { CoverPicture } from '../../../components/SitePicture/SitePicture';
+import PlanBadge from '../../../components/PlanBadge/PlanBadge';
+import usePlanAccess, { isPlanRequired } from '../../../hooks/usePlanAccess';
 
 // Fisher-Yates shuffle
 // Random order for the recommendations
@@ -133,6 +135,15 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
   const headerImage = isDarkMode ? HEADER_DARK : HEADER_LIGHT;
   const { accessToken, isLoggedIn, userData } = useAuth(); // reading or listening needs an account
+  const navigate = useNavigate();
+  const { isLocked, planMessage } = usePlanAccess();
+  // A Standard or Premium book above the visitor's plan leads to the plans
+  const needsPlan = () => {
+    if (!ebook || !isLocked(ebook)) return false;
+    toast.info(planMessage(ebook, 'This book'));
+    navigate('/premium');
+    return true;
+  };
   const mayListen = canPlayEbookAudio(userData); // staff check the audiobooks before everyone can listen
 
   // Ebook, its author and related books. These endpoints are public, so no token
@@ -231,7 +242,8 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     } catch (error) {
       console.error('Error fetching PDF link:', error.response?.status || error.message);
       const code = error.response?.status;
-      setPdfError(code === 404 ? 'This book has no file yet.'
+      setPdfError(isPlanRequired(error) ? planMessage(ebook, 'This book')
+        : code === 404 ? 'This book has no file yet.'
         : code === 401 ? 'Sign in to read this book.' : 'The book couldn’t be opened right now.');
     } finally {
       setPdfLoading(false);
@@ -241,6 +253,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   // Read now: open the reader (full screen) and record the visit. It opens at `startAt`
   // (a chapter, or 1 for "from the start"), else at the bookmark, else at the first page.
   const openReader = (startAt) => {
+    if (needsPlan()) return;
     // Must run inside the click, or the browser refuses full screen
     if (document.fullscreenEnabled && !document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().catch(() => {});
@@ -422,7 +435,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                 </span>
               </div>
 
-              <h2 className={styles.title}>{ebook.title}</h2>
+              <h2 className={styles.title}>{ebook.title} <PlanBadge item={ebook} /></h2>
               <p className={styles.byline}>
                 by{' '}
                 {ebook.authorId ? (
@@ -496,7 +509,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
                   { key: 'save', label: 'Save', icon: <FaRegBookmark />, onIcon: <FaBookmark />, on: saved,
                     onClick: library.toggleSave, busy: library.busy === 'save' },
                   { key: 'download', label: library.downloading ? 'Preparing…' : 'Download', icon: <FaDownload />,
-                    onClick: library.download, busy: library.downloading, pressable: false },
+                    onClick: () => { if (!needsPlan()) library.download(); }, busy: library.downloading, pressable: false },
                   { key: 'share', label: 'Share', icon: <FaShareAlt />, onClick: handleShare, pressable: false },
                 ]}
               >

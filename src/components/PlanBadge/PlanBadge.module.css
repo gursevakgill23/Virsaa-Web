@@ -1,0 +1,73 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.standard {
+  background: var(--primary-color, #1f2a44);
+  color: #fff;
+}
+
+.premium {
+  background: #d4a017;
+  color: #1a1a1a;
+}
+
+.panel {
+  margin: 1.5rem 0;
+  padding: 1.75rem 1.25rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 160, 23, 0.4);
+  background: rgba(212, 160, 23, 0.08);
+  text-align: center;
+}
+
+.panel h3 {
+  margin: 0.5rem 0 0.4rem;
+}
+
+.panel p {
+  margin: 0 auto 1rem;
+  max-width: 34rem;
+}
+
+.panelIcon {
+  font-size: 1.8rem;
+  color: #d4a017;
+}
+
+.panelActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.primary {
+  background: #d4a017;
+  color: #1a1a1a;
+}
+
+.secondary {
+  border: 1px solid currentColor;
+  color: inherit;
+}

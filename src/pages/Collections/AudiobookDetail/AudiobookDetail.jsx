@@ -37,6 +37,8 @@ import useHistoryRecorder from '../../../hooks/useHistoryRecorder';
 import { useAuth } from '../../../context/AuthContext';
 import { safeExternalUrl, safeUrl } from '../../../utils/safeUrl';
 import DetailActions, { ActionLink, ListenSoon } from '../../../components/DetailActions/DetailActions';
+import PlanBadge, { LockedPanel } from '../../../components/PlanBadge/PlanBadge';
+import usePlanAccess from '../../../hooks/usePlanAccess';
 import { canPlayEbookAudio } from '../../../utils/features';
 
 const HEADER_LIGHT = '/images/header-image.png';
@@ -118,6 +120,9 @@ const toAudiobook = (data, authorName) => {
     chapters,
     tags: Array.isArray(data.tags) ? data.tags : [],
     sharedBy: data.shared_by?.name || '',
+    // Free, Standard or Premium (hooks/usePlanAccess.js)
+    access: data.access || 'free',
+    locked: data.locked,
     // made from one of our ebooks by Google's Punjabi voice: {id, title}
     ebook: Number.isInteger(data.ebook?.id) ? { id: data.ebook.id, title: data.ebook.title || '' } : null,
   };
@@ -126,6 +131,7 @@ const toAudiobook = (data, authorName) => {
 const AudiobookDetail = ({ isDarkMode, apiString }) => {
   const { id } = useParams();
   const { accessToken, isLoggedIn, userData } = useAuth();
+  const { isLocked } = usePlanAccess();
   const mayListen = canPlayEbookAudio(userData); // staff check the audiobooks made from ebooks before everyone
   const tokenRef = useRef(accessToken); // a renewed token mustn't fetch the audio link again
   tokenRef.current = accessToken;
@@ -300,7 +306,9 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
 
   // Made from an ebook by Google's voice and not checked yet: "Coming soon" (staff can play it)
   const comingSoon = Boolean(audiobook?.ebook) && !mayListen;
-  const playsFile = audiobook?.media === 'file' && !comingSoon;
+  // A Standard or Premium recording above the visitor's plan (YouTube ones are always Free)
+  const planLocked = Boolean(audiobook) && isLocked(audiobook);
+  const playsFile = audiobook?.media === 'file' && !comingSoon && !planLocked;
 
   // Our own mp3s are private on S3; stream_audio returns a temporary link (signed in only)
   useEffect(() => {
@@ -333,7 +341,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
       playOnYouTube(chapter);
       return;
     }
-    if (!audioRef.current) return;
+    if (planLocked || !audioRef.current) return;
     // Our own recordings: a chapter is a point in the one file (start_seconds)
     audioRef.current.currentTime = Number(chapter?.start_seconds) || 0;
     audioRef.current.play().then(handlePlayStarted).catch(() => setIsPlaying(false));
@@ -453,7 +461,7 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                 </span>
               </div>
 
-              <h2 className={styles.title}>{audiobook.title}</h2>
+              <h2 className={styles.title}>{audiobook.title} <PlanBadge item={audiobook} /></h2>
               {audiobook.titlePa && <p className={styles.titlePa} lang="pa">{audiobook.titlePa}</p>}
               {audiobook.author && (
                 <p className={styles.byline}>
@@ -511,6 +519,8 @@ const AudiobookDetail = ({ isDarkMode, apiString }) => {
                     {audiobook.narrator && <p className={styles.narrator}><FaMicrophone aria-hidden="true" /> Read by {audiobook.narrator}</p>}
                   </div>
                 </div>
+              ) : planLocked ? (
+                <LockedPanel item={audiobook} what="This audiobook" />
               ) : audiobook.media === 'file' ? (
                 <div className={styles.player}>
                   <button

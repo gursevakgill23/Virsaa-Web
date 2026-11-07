@@ -107,19 +107,21 @@ export const gurbaniApi = {
 
 // ---------------------------------------------------------------- Sikh History
 export const historyApi = {
-  // Cards + the categories. params: { category, q } (optional)
-  list: (api, params = {}) =>
-    axios.get(`${root(api)}/history/`, { timeout: TIMEOUT_MS, params }).then((r) => ({
+  // Cards + the categories. params: { category, q } (optional). With the visitor's token,
+  // each card's `locked` says whether their plan opens it.
+  list: (api, params = {}, token = null) =>
+    axios.get(`${root(api)}/history/`, { ...auth(token), params }).then((r) => ({
       categories: Array.isArray(r.data?.categories) ? r.data.categories : [],
       results: Array.isArray(r.data?.results) ? r.data.results : [],
     })),
 
   // Every dated article, oldest first
-  timeline: (api) =>
-    axios.get(`${root(api)}/history/timeline/`, { timeout: TIMEOUT_MS }).then((r) => (Array.isArray(r.data) ? r.data : [])),
+  timeline: (api, token = null) =>
+    axios.get(`${root(api)}/history/timeline/`, auth(token)).then((r) => (Array.isArray(r.data) ? r.data : [])),
 
-  // One article
-  entry: (api, slug) => axios.get(`${root(api)}/history/${seg(slug)}/`, { timeout: TIMEOUT_MS }).then((r) => r.data),
+  // One article, in English and Punjabi (the _pa fields), with its key facts. A Standard or
+  // Premium article the visitor's plan doesn't open comes with its opening only (preview: true).
+  entry: (api, slug, token = null) => axios.get(`${root(api)}/history/${seg(slug)}/`, auth(token)).then((r) => r.data),
 };
 
 // ---------------------------------------------------------------- Sakhis & Kahaniyaan

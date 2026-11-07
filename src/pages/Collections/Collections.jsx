@@ -27,6 +27,7 @@ import PageHero from '../../components/PageHero/PageHero';
 import { CoverPicture } from '../../components/SitePicture/SitePicture';
 import Avatar from '../../components/Avatar/Avatar';
 import RewardCoin from '../../components/RewardCoin/RewardCoin';
+import PlanBadge from '../../components/PlanBadge/PlanBadge';
 import styles from './Collections.module.css';
 
 // Public/static images
@@ -311,7 +312,7 @@ const Collections = ({ isDarkMode, apiString }) => {
       <span className={styles.bookCover}>
         <CoverPicture src={fileUrl(item.cover_image)} alt="" className={styles.coverImage} />
       </span>
-      <span className={styles.cardTitle}>{item.title}</span>
+      <span className={styles.cardTitle}>{item.title} <PlanBadge item={item} /></span>
       <span className={styles.cardMeta}>
         {item.author_name || authorNames[item.author] || (item.pages ? `${item.pages} pages` : 'Ebook')}
       </span>
@@ -324,7 +325,7 @@ const Collections = ({ isDarkMode, apiString }) => {
         <CoverPicture src={fileUrl(item.cover)} alt="" className={styles.coverImage} />
         <span className={styles.audioBadge}><FaRegFileAudio aria-hidden="true" /></span>
       </span>
-      <span className={styles.cardTitle}>{item.title}</span>
+      <span className={styles.cardTitle}>{item.title} <PlanBadge item={item} /></span>
       <span className={styles.cardMeta}>
         {authorNames[item.author] ? `${authorNames[item.author]} · ` : ''}
         {item.duration ? <><FaClock aria-hidden="true" /> {item.duration}</> : 'Audiobook'}
