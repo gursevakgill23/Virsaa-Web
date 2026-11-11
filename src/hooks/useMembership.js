@@ -16,7 +16,8 @@ import paymentsApi from '../api/paymentsApi';
  * Reads /api/payments/subscription/ first (it knows the billing period and end date).
  * If that has nothing active, it falls back to the user's membership_level.
  *
- * Returns { plan, planName, billing, periodEnd, status, isMember, isPremiumTier, rank, loading, refresh }
+ * Returns { plan, planName, billing, periodEnd, status, provider, isMember, isPremiumTier, rank, loading, refresh }
+ *   provider       'stripe' when Stripe renews it (changed with Manage billing), else '' / 'rewards'
  *   plan           'free' | 'basic' | 'standard' | 'premium'
  *   isMember       on any paid plan
  *   isPremiumTier  on Standard or Premium
@@ -42,7 +43,7 @@ export const normalizePlan = (value) => {
 };
 
 // What a signed-out or free user gets
-const FREE = { plan: 'free', billing: null, periodEnd: null, status: null };
+const FREE = { plan: 'free', billing: null, periodEnd: null, status: null, provider: '' };
 
 // Read a subscription from the payments API; null if it isn't usable today
 const fromSubscription = (sub) => {
@@ -51,7 +52,10 @@ const fromSubscription = (sub) => {
   const stillRunning = end && end.getTime() > Date.now();
   // A cancelled plan stays usable until its paid period ends
   if (!stillRunning || !['active', 'cancelled'].includes(sub.status)) return null;
-  return { plan: normalizePlan(sub.plan), billing: sub.billing || null, periodEnd: end, status: sub.status };
+  return {
+    plan: normalizePlan(sub.plan), billing: sub.billing || null, periodEnd: end, status: sub.status,
+    provider: sub.provider || '',
+  };
 };
 
 const useMembership = (apiString) => {

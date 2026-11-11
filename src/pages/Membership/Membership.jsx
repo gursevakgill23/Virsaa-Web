@@ -4,7 +4,9 @@
  * The membership page (/premium): plan cards with a monthly/yearly switch,
  * a comparison table, FAQs and a closing call to action.
  * The user's current plan is marked "Current", and other plans read as
- * Upgrade or Downgrade (useMembership). Choosing a plan opens Checkout.
+ * Upgrade or Downgrade (useMembership). Choosing a plan opens Checkout; a
+ * member who pays through Stripe changes plan, card or cancels on Stripe's
+ * billing page instead (Manage billing).
  * Plans that can also be taken with reward coins say how many and link to
  * My Rewards (reward_cost from /api/payments/products/).
  * -----------------------------------------------------------------------------
@@ -15,7 +17,9 @@ import { FaCheck, FaTimes, FaStar, FaDownload, FaAd, FaHeadset, FaBookOpen, FaCh
 import { toast } from '../../utils/notify';
 import PageHero from '../../components/PageHero/PageHero';
 import useMembership, { PLAN_RANK } from '../../hooks/useMembership';
-import paymentsApi from '../../api/paymentsApi';
+import paymentsApi, { openBillingPortal } from '../../api/paymentsApi';
+import { useAuth } from '../../context/AuthContext';
+import { describeApiError } from '../../utils/apiError';
 import { formatCoins } from '../../api/rewardsApi';
 import RewardCoin from '../../components/RewardCoin/RewardCoin';
 import styles from './Membership.module.css';
@@ -100,12 +104,13 @@ const comparison = [
 
 // Questions and answers
 const faqs = [
-  { question: 'What payment methods do you accept?', answer: 'We accept all major credit cards, PayPal, and Google Pay.' },
-  { question: 'Can I cancel my subscription anytime?', answer: 'Yes, you can cancel your subscription at any time.' },
-  { question: 'Is there a free trial available?', answer: 'Yes, we offer a 7-day free trial for all plans.' },
-  { question: 'How do I change my subscription plan?', answer: 'You can upgrade or downgrade your plan at any time from your account settings.' },
-  { question: 'Will I be charged immediately after the free trial?', answer: 'No, you will only be charged after the free trial ends if you do not cancel.' },
-  { question: 'Do you offer discounts for annual subscriptions?', answer: 'Yes, we offer a 20% discount for annual subscriptions.' },
+  { question: 'What payment methods do you accept?', answer: 'Credit and debit cards (Visa, Mastercard, American Express), Apple Pay and Google Pay. Payments are handled by Stripe: Virsaa never sees or stores your card details.' },
+  { question: 'Can I cancel my subscription anytime?', answer: 'Yes. Open Manage billing on this page and cancel. You keep your plan until the end of the time you’ve paid for, and you won’t be charged again.' },
+  { question: 'Is there a free trial available?', answer: 'Yes. Your first membership starts with a 7-day free trial on any plan.' },
+  { question: 'How do I change my subscription plan?', answer: 'Open Manage billing on this page to upgrade, downgrade or switch between monthly and yearly. Stripe adjusts the price for the time left.' },
+  { question: 'Will I be charged immediately after the free trial?', answer: 'You’re charged when the 7 days end, unless you cancel before then in Manage billing.' },
+  { question: 'Do you offer discounts for annual subscriptions?', answer: 'Yes, yearly plans are 20% cheaper than paying monthly.' },
+  { question: 'Where are my receipts?', answer: 'Stripe emails a receipt for every payment. Past invoices are in Manage billing.' },
 ];
 
 // A comparison table cell: tick, cross or text
@@ -127,6 +132,24 @@ const Membership = ({ isDarkMode, apiString }) => {
   const [billing, setBilling] = useState('monthly');
   const yearly = billing === 'yearly';
   const navigate = useNavigate();
+  const { accessToken } = useAuth();
+  const [openingBilling, setOpeningBilling] = useState(false);
+  // Memberships paid through Stripe are changed on Stripe's billing page
+  const billedByStripe = membership.isMember && membership.provider === 'stripe';
+
+  // Stripe's billing page: change plan, update the card, cancel, invoices
+  const manageBilling = async () => {
+    if (openingBilling) return;
+    setOpeningBilling(true);
+    try {
+      await openBillingPortal(apiString, accessToken);
+    } catch (err) {
+      toast.error(describeApiError(err, 'Billing couldn’t be opened. Try again.'), {
+        position: 'top-center', autoClose: 4000, theme: isDarkMode ? 'dark' : 'light',
+      });
+      setOpeningBilling(false);
+    }
+  };
 
   // Plans that can also be taken with reward coins (My Rewards): { 'standard_monthly': 1000 }
   const [rewardCosts, setRewardCosts] = useState({});
@@ -146,10 +169,14 @@ const Membership = ({ isDarkMode, apiString }) => {
   // Choosing a plan opens checkout with that plan and the selected billing period
   const handleChoosePlan = (planTitle) => {
     if (!planTitle) {
-      toast.info('Free trials are coming soon. Pick a plan below to get started.', {
+      toast.info('Pick a plan below: your first 7 days are free.', {
         position: 'top-center', autoClose: 3000, theme: isDarkMode ? 'dark' : 'light',
       });
       document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (billedByStripe) {
+      manageBilling();   // switching plans happens on Stripe's billing page
       return;
     }
     navigate(`/checkout?product=${planTitle.toLowerCase()}_${billing}&return=/premium`);
@@ -212,8 +239,13 @@ const Membership = ({ isDarkMode, apiString }) => {
                   ? ` It ends on ${formatDate(membership.periodEnd)}.`
                   : ` Active until ${formatDate(membership.periodEnd)}.`
               )}
-              {' '}Upgrade or downgrade below.
+              {' '}{billedByStripe ? 'Change plan, update your card or cancel in Manage billing.' : 'Upgrade or downgrade below.'}
             </p>
+            {billedByStripe && (
+              <button type="button" className={styles.secondaryButton} onClick={manageBilling} disabled={openingBilling}>
+                {openingBilling ? 'Opening…' : 'Manage billing'}
+              </button>
+            )}
           </div>
         )}
 

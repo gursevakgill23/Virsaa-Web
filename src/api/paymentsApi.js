@@ -2,10 +2,10 @@
  * api/paymentsApi.js
  * -----------------------------------------------------------------------------
  * Calls to the Django payments API (/api/payments/...): products, orders,
- * paying for an order and the current subscription. Used by Membership,
- * Checkout, Payment and the membership hook.
+ * Stripe's payment page and billing page, and the current subscription. Used
+ * by Membership, Checkout, Payment and the membership hook.
  *
- * Card numbers are never sent here: only the method, card brand and last 4 digits.
+ * Card details never pass through Virsaa: people pay on Stripe's own page.
  * -----------------------------------------------------------------------------
  */
 import axios from 'axios';
@@ -38,6 +38,28 @@ const paymentsApi = {
     axios.post(`${base(api)}/orders/${seg(reference)}/cancel/`, {}, auth(token)).then((r) => r.data),
   subscription: (api, token) =>
     axios.get(`${base(api)}/subscription/`, auth(token)).then((r) => r.data),
+  // Stripe: { url } of Stripe's payment page for a product, or of the person's billing page
+  stripeCheckout: (api, token, productCode) =>
+    axios.post(`${base(api)}/stripe/checkout/`, { product_code: productCode }, auth(token)).then((r) => r.data),
+  billingPortal: (api, token) =>
+    axios.post(`${base(api)}/stripe/portal/`, {}, auth(token)).then((r) => r.data),
+};
+
+// Only ever leave Virsaa for Stripe's own pages
+export const isStripeUrl = (url) => {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === 'https:' && (hostname === 'stripe.com' || hostname.endsWith('.stripe.com'));
+  } catch {
+    return false;
+  }
+};
+
+// Open Stripe's billing page (change plan, card, cancel, invoices). Throws with a readable message.
+export const openBillingPortal = async (api, token) => {
+  const data = await paymentsApi.billingPortal(api, token);
+  if (!isStripeUrl(data?.url)) throw new Error('No billing page address');
+  window.location.assign(data.url);
 };
 
 // ---------------------------------------------------------------- return address

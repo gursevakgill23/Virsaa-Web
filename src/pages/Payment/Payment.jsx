@@ -1,21 +1,20 @@
 /**
  * pages/Payment/Payment.jsx
  * -----------------------------------------------------------------------------
- * Payment (/payment/:reference): step 2 of 2.
- * Pay for an order with a credit/debit card, Apple Pay or PayPal, then see the
- * confirmation. A new membership takes effect at once (the profile and every
- * open screen are updated).
- * Security: card numbers are checked in the browser (Luhn, expiry, CVC) but
- * never sent; only the card brand and last 4 digits go to the server.
+ * Payment (/payment/:reference): where Stripe brings people back after paying
+ * on its own page. Stripe tells the Virsaa server about the payment directly
+ * (a signed webhook), usually within a few seconds, so this page waits for the
+ * order to show as paid, then shows the confirmation. A new membership takes
+ * effect at once (the profile and every open screen are updated).
+ * Card details never pass through Virsaa: Stripe handles them.
  * -----------------------------------------------------------------------------
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { FaCreditCard, FaApple, FaPaypal, FaLock, FaCheckCircle, FaCoins, FaCrown, FaUniversity } from 'react-icons/fa';
+import { FaLock, FaCheckCircle, FaCoins, FaCrown, FaClock } from 'react-icons/fa';
 import PageHero from '../../components/PageHero/PageHero';
 import { useAuth } from '../../context/AuthContext';
 import paymentsApi, { formatMoney, readReturnTo } from '../../api/paymentsApi';
-import { describeApiError } from '../../utils/apiError';
 import Loader from '../../components/VirsaaLoader/Loader';
 import { Steps, Summary } from '../Checkout/Checkout';
 import { announceMembershipChange } from '../../hooks/useMembership';
@@ -25,190 +24,75 @@ import styles from '../Checkout/Checkout.module.css';
 const headerLight = '/images/header-image.png';
 const headerDark = '/images/header-image-dark.png';
 
-// Payment methods offered
-const METHODS = [
-  { key: 'credit_card', label: 'Credit card', icon: <FaCreditCard /> },
-  { key: 'debit_card', label: 'Debit card', icon: <FaUniversity /> },
-  { key: 'apple_pay', label: 'Apple Pay', icon: <FaApple /> },
-  { key: 'paypal', label: 'PayPal', icon: <FaPaypal /> },
-];
+// How long to wait for Stripe's confirmation before saying it's taking longer than usual
+const POLL_MS = 2000;
+const POLL_TRIES = 30;   // one minute
 
-// ---------- Card helpers (nothing here leaves the browser except brand + last 4) ----------
-const digitsOnly = (v) => v.replace(/\D/g, '');
-
-// Card brand from the first digits
-export const cardBrand = (number) => {
-  const n = digitsOnly(number);
-  if (/^4/.test(n)) return 'Visa';
-  if (/^(5[1-5]|2(2[2-9]|[3-6]\d|7[01]|720))/.test(n)) return 'Mastercard';
-  if (/^3[47]/.test(n)) return 'Amex';
-  if (/^(6011|65|64[4-9])/.test(n)) return 'Discover';
-  return '';
-};
-
-// Luhn checksum: catches mistyped card numbers
-export const luhnValid = (number) => {
-  const n = digitsOnly(number);
-  if (n.length < 12 || n.length > 19) return false;
-  let sum = 0;
-  let double = false;
-  for (let i = n.length - 1; i >= 0; i -= 1) {
-    let d = Number(n[i]);
-    if (double) {
-      d *= 2;
-      if (d > 9) d -= 9;
-    }
-    sum += d;
-    double = !double;
-  }
-  return sum % 10 === 0;
-};
-
-// Format as you type: groups of 4 (Amex 4-6-5), MM/YY
-const formatCardNumber = (value) => {
-  const n = digitsOnly(value).slice(0, 19);
-  if (cardBrand(n) === 'Amex') return n.replace(/^(\d{0,4})(\d{0,6})(\d{0,5}).*/, (m, a, b, c) => [a, b, c].filter(Boolean).join(' '));
-  return n.replace(/(\d{4})(?=\d)/g, '$1 ');
-};
-
-const formatExpiry = (value) => {
-  const n = digitsOnly(value).slice(0, 4);
-  return n.length > 2 ? `${n.slice(0, 2)}/${n.slice(2)}` : n;
-};
-
-// MM/YY that is this month or later
-const expiryValid = (value) => {
-  const m = value.match(/^(\d{2})\/(\d{2})$/);
-  if (!m) return false;
-  const month = Number(m[1]);
-  const year = 2000 + Number(m[2]);
-  if (month < 1 || month > 12) return false;
-  const now = new Date();
-  return year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth() + 1);
-};
-
-// Can this browser use Apple Pay?
-const appleSupported = () => {
-  try {
-    return Boolean(window.ApplePaySession && window.ApplePaySession.canMakePayments());
-  } catch {
-    return false;
-  }
-};
-
-/** /payment/:reference  (the order created on the checkout page) */
+/** /payment/:reference  (the order made at checkout; Stripe sends people back here) */
 const Payment = ({ isDarkMode, apiString }) => {
   const { reference } = useParams();
   const { isLoggedIn, accessToken, userData, updateUserData } = useAuth();
   const headerImage = isDarkMode ? headerDark : headerLight;
-
-  // Order, test mode, load error, chosen method, card/PayPal fields, errors and result
-  const [order, setOrder] = useState(null);
-  const [testMode, setTestMode] = useState(false);
-  const [loadError, setLoadError] = useState(null);
-  const [method, setMethod] = useState('credit_card');
-  const [card, setCard] = useState({ name: '', number: '', expiry: '', cvc: '' });
-  const [paypalEmail, setPaypalEmail] = useState('');
-  const [errors, setErrors] = useState({});
-  const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState(null);
-  const [result, setResult] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0); // bumped by "Try again"
   const returnTo = readReturnTo();
 
+  // The order, a load error, and whether we gave up waiting for Stripe
+  const [order, setOrder] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [slow, setSlow] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0); // bumped by "Check again"
+  const announced = useRef(false);
+
+  // Load the order; while it's still pending, check again every 2 seconds for up to a minute
   useEffect(() => {
     if (!isLoggedIn || !accessToken) return undefined;
     let cancelled = false;
+    let timer = null;
+    let tries = 0;
     setLoadError(null);
-    Promise.all([paymentsApi.order(apiString, accessToken, reference), paymentsApi.products(apiString)])
-      .then(([o, catalog]) => {
-        if (cancelled) return;
-        if (!o || !o.reference) throw new Error('Unexpected order reply');
-        setOrder(o);
-        setTestMode(Boolean(catalog?.test_mode));
-        setCard((c) => ({ ...c, name: c.name || o.billing_name || '' }));
-        setPaypalEmail((e) => e || o.billing_email || '');
-        if (o.status === 'paid') setResult({ order: o });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setLoadError(err.response?.status === 404 ? 'This order wasn’t found.' : 'Your order couldn’t be loaded. Check your connection and try again.');
-      });
-    return () => { cancelled = true; };
+    setSlow(false);
+
+    const check = () => {
+      paymentsApi.order(apiString, accessToken, reference)
+        .then((o) => {
+          if (cancelled) return;
+          if (!o || !o.reference) throw new Error('Unexpected order reply');
+          setOrder(o);
+          tries += 1;
+          if (o.status === 'pending') {
+            if (tries < POLL_TRIES) timer = setTimeout(check, POLL_MS);
+            else setSlow(true);
+          }
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setLoadError(err.response?.status === 404
+            ? 'This order wasn’t found.'
+            : 'Your order couldn’t be loaded. Check your connection and try again.');
+        });
+    };
+    check();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [apiString, accessToken, isLoggedIn, reference, reloadKey]);
 
-  // Format card fields as they're typed and clear their errors
-  const changeCard = (e) => {
-    const { name, value } = e.target;
-    let v = value;
-    if (name === 'number') v = formatCardNumber(value);
-    if (name === 'expiry') v = formatExpiry(value);
-    if (name === 'cvc') v = digitsOnly(value).slice(0, 4);
-    setCard((c) => ({ ...c, [name]: v }));
-    setErrors((er) => ({ ...er, [name]: undefined }));
-  };
+  // Once paid: a membership changes what the person can open straight away
+  useEffect(() => {
+    if (!order || order.status !== 'paid' || order.kind !== 'membership' || announced.current) return;
+    announced.current = true;
+    const level = order.product?.plan_name;
+    if (level && updateUserData && userData) updateUserData({ ...userData, membership_level: level });
+    announceMembershipChange();
+  }, [order, updateUserData, userData]);
 
-  // Check the card before paying
-  const validateCard = () => {
-    const next = {};
-    if (!card.name.trim()) next.name = 'Enter the name on the card.';
-    if (!luhnValid(card.number)) next.number = 'Check the card number.';
-    if (!expiryValid(card.expiry)) next.expiry = 'Enter a valid expiry date (MM/YY).';
-    const cvcLength = cardBrand(card.number) === 'Amex' ? 4 : 3;
-    if (card.cvc.length !== cvcLength) next.cvc = `Enter the ${cvcLength}-digit security code.`;
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  // Pay. Validates the chosen method first; the button is locked while paying.
-  const pay = async (e) => {
-    e?.preventDefault();
-    if (paying) return; // never send the same payment twice
-    setPayError(null);
-    let body = { payment_method: method };
-    if (method === 'credit_card' || method === 'debit_card') {
-      if (!validateCard()) return;
-      body = { ...body, card_brand: cardBrand(card.number) || 'Card', card_last4: digitsOnly(card.number).slice(-4) };
-    } else if (method === 'paypal') {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(paypalEmail.trim())) {
-        setErrors({ paypal: 'Enter the email of your PayPal account.' });
-        return;
-      }
-      body = { ...body, payer_email: paypalEmail.trim() };
-    } else if (method === 'apple_pay' && !testMode && !appleSupported()) {
-      setPayError('Apple Pay isn’t available in this browser. Use Safari on an Apple device, or choose another method.');
-      return;
-    }
-
-    setPaying(true);
-    try {
-      const data = await paymentsApi.pay(apiString, accessToken, reference, body);
-      setResult(data);
-      if (data?.order) setOrder(data.order);
-      // A new membership changes what the user can open straight away
-      if (data.membership_level && updateUserData && userData) {
-        updateUserData({ ...userData, membership_level: data.membership_level });
-      }
-      if (data.membership_level) announceMembershipChange();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
-      const status = err.response?.status;
-      setPayError(
-        status === 401
-          ? 'Your sign-in has expired. Sign in again to pay.'
-          : describeApiError(err, 'The payment didn’t go through. No money was taken. Try again.')
-      );
-    } finally {
-      setPaying(false);
-    }
-  };
-
+  const paid = order?.status === 'paid';
   const hero = (
     <PageHero
       compact
       image={headerImage}
-      title={result ? 'Payment complete' : 'Payment'}
-      subtitle={result ? 'Thank you for supporting Virsaa.' : 'Choose how you’d like to pay.'}
+      title={paid ? 'Payment complete' : 'Payment'}
+      subtitle={paid ? 'Thank you for supporting Virsaa.' : 'Confirming your payment with Stripe.'}
       crumbs={[{ label: 'Home', to: '/' }, { label: 'Checkout', to: '/checkout' }, { label: 'Payment' }]}
     />
   );
@@ -220,7 +104,7 @@ const Payment = ({ isDarkMode, apiString }) => {
         {hero}
         <div className={styles.stateBox}>
           <FaLock aria-hidden="true" className={styles.stateIcon} />
-          <h2>Sign in to pay</h2>
+          <h2>Sign in to see your order</h2>
           <p>Your order is saved to your account.</p>
           <Link to="/login" className={styles.primaryButton}>Sign in</Link>
         </div>
@@ -257,11 +141,12 @@ const Payment = ({ isDarkMode, apiString }) => {
   }
 
   const product = order.product;
+  const coins = order.kind === 'coins';
+  const trial = !coins && Number(order.amount) === 0;
+  const receiptUrl = order.details?.receipt_url;
 
-  // ---------- Done ----------
-  if (result) {
-    const o = result.order || order;
-    const coins = o.kind === 'coins';
+  // ---------- Paid ----------
+  if (paid) {
     return (
       <div className={styles.page}>
         {hero}
@@ -274,15 +159,20 @@ const Payment = ({ isDarkMode, apiString }) => {
               {coins
                 ? `${(product?.coins || 0) + (product?.bonus || 0)} coins were added to your account.`
                 : `Your ${product?.plan_name || ''} membership is active.`}
-              {result.wallet && ` You now have ${result.wallet.coins.toLocaleString()} coins.`}
+              {trial && ' Your free trial has started: you won’t be charged until it ends, and you can cancel before then in Manage billing.'}
             </p>
             <dl className={styles.ticketLines}>
-              <div><dt>Order</dt><dd>{o.reference}</dd></div>
-              <div><dt>Item</dt><dd>{o.description}</dd></div>
-              <div><dt>Paid with</dt><dd>{o.payment_method_label}{o.card_last4 ? ` •••• ${o.card_last4}` : ''}</dd></div>
-              <div className={styles.ticketTotal}><dt>Total</dt><dd>{formatMoney(o.amount, o.currency)}</dd></div>
+              <div><dt>Order</dt><dd>{order.reference}</dd></div>
+              <div><dt>Item</dt><dd>{order.description}</dd></div>
+              <div><dt>Paid with</dt><dd>{order.payment_method_label || 'Stripe'}</dd></div>
+              <div className={styles.ticketTotal}><dt>Total</dt><dd>{formatMoney(order.amount, order.currency)}</dd></div>
             </dl>
-            {result.test_mode && <p className={styles.testBanner}>Test mode: no real money was taken.</p>}
+            <p className={styles.smallPrint}>
+              Stripe has emailed your receipt.
+              {receiptUrl && /^https:\/\/([a-z0-9-]+\.)*stripe\.com\//i.test(receiptUrl) && (
+                <> <a href={receiptUrl} target="_blank" rel="noopener noreferrer">View invoice</a></>
+              )}
+            </p>
             <div className={styles.stateActions}>
               {returnTo && (
                 <Link to={returnTo} className={styles.primaryButton}>
@@ -298,117 +188,56 @@ const Payment = ({ isDarkMode, apiString }) => {
     );
   }
 
-  // ---------- Pay ----------
-  const amount = formatMoney(order.amount, order.currency);
-  const isCard = method === 'credit_card' || method === 'debit_card';
-  const brand = cardBrand(card.number);
+  // ---------- Not paid ----------
+  if (order.status !== 'pending') {
+    return (
+      <div className={styles.page}>
+        {hero}
+        <div className={styles.stateBox}>
+          <h2>{order.status === 'failed' ? 'The payment didn’t go through' : 'This order wasn’t paid'}</h2>
+          <p>No money was taken. You can start again from checkout.</p>
+          <div className={styles.stateActions}>
+            {product && (
+              <Link to={`/checkout?product=${encodeURIComponent(product.code)}`} className={styles.primaryButton}>Back to checkout</Link>
+            )}
+            <Link to="/premium" className={styles.secondaryButton}>See membership plans</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  // ---------- Waiting for Stripe's confirmation ----------
   return (
     <div className={styles.page}>
       {hero}
       <div className={styles.section}>
         <Steps current={1} />
-        {testMode && (
-          <p className={styles.testBanner} role="note">
-            Test mode: no real money is taken. Use a test card such as 4242 4242 4242 4242, any future date and any 3-digit code.
-          </p>
-        )}
-
         <div className={styles.layout}>
-          <form className={`${styles.panel} ${styles.glass}`} onSubmit={pay} noValidate>
-            <h2 className={styles.panelTitle}>Payment method</h2>
-
-            <div className={styles.methods} role="radiogroup" aria-label="Payment method">
-              {METHODS.map((m) => (
-                <button
-                  key={m.key}
-                  type="button"
-                  role="radio"
-                  aria-checked={method === m.key}
-                  className={`${styles.method} ${method === m.key ? styles.methodOn : ''}`}
-                  onClick={() => { setMethod(m.key); setPayError(null); setErrors({}); }}
-                >
-                  <span className={styles.methodIcon} aria-hidden="true">{m.icon}</span>
-                  {m.label}
-                </button>
-              ))}
-            </div>
-
-            {isCard && (
-              <div className={styles.cardForm}>
-                {method === 'debit_card' && (
-                  <p className={styles.panelText}>Use a Visa Debit or Debit Mastercard. The amount comes straight from your bank account.</p>
-                )}
-                <div className={styles.field}>
-                  <label htmlFor="card-name">Name on card</label>
-                  <input id="card-name" name="name" autoComplete="cc-name" value={card.name} onChange={changeCard} maxLength={100}
-                    className={errors.name ? styles.inputError : ''} aria-invalid={!!errors.name} />
-                  {errors.name && <p className={styles.errorText} role="alert">{errors.name}</p>}
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="card-number">Card number {brand && <span className={styles.brand}>{brand}</span>}</label>
-                  <input id="card-number" name="number" inputMode="numeric" autoComplete="cc-number" placeholder="1234 5678 9012 3456"
-                    value={card.number} onChange={changeCard} className={errors.number ? styles.inputError : ''} aria-invalid={!!errors.number} />
-                  {errors.number && <p className={styles.errorText} role="alert">{errors.number}</p>}
-                </div>
-                <div className={styles.fieldRow}>
-                  <div className={styles.field}>
-                    <label htmlFor="card-expiry">Expiry</label>
-                    <input id="card-expiry" name="expiry" inputMode="numeric" autoComplete="cc-exp" placeholder="MM/YY"
-                      value={card.expiry} onChange={changeCard} className={errors.expiry ? styles.inputError : ''} aria-invalid={!!errors.expiry} />
-                    {errors.expiry && <p className={styles.errorText} role="alert">{errors.expiry}</p>}
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="card-cvc">Security code</label>
-                    <input id="card-cvc" name="cvc" inputMode="numeric" autoComplete="cc-csc" placeholder={brand === 'Amex' ? '4 digits' : '3 digits'}
-                      value={card.cvc} onChange={changeCard} className={errors.cvc ? styles.inputError : ''} aria-invalid={!!errors.cvc} />
-                    {errors.cvc && <p className={styles.errorText} role="alert">{errors.cvc}</p>}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {method === 'apple_pay' && (
-              <div className={styles.walletBox}>
+          <div className={`${styles.panel} ${styles.glass}`} role="status">
+            {slow ? (
+              <>
+                <FaClock aria-hidden="true" className={styles.receiptIcon} />
+                <h2 className={styles.panelTitle}>Still confirming your payment</h2>
                 <p className={styles.panelText}>
-                  {appleSupported()
-                    ? 'Pay with the card in your Apple Wallet. You’ll confirm with Face ID or Touch ID.'
-                    : 'Apple Pay works in Safari on iPhone, iPad and Mac.'}
-                  {testMode && !appleSupported() && ' In test mode you can still try it here.'}
+                  This is taking longer than usual. If you paid, your coins or membership will appear shortly and
+                  Stripe will email your receipt. If you closed Stripe’s page without paying, no money was taken.
                 </p>
-                <button type="button" className={styles.appleButton} onClick={pay} disabled={paying}>
-                  <FaApple aria-hidden="true" /> {paying ? 'Processing…' : 'Pay'}
-                </button>
-              </div>
-            )}
-
-            {method === 'paypal' && (
-              <div className={styles.walletBox}>
-                <div className={styles.field}>
-                  <label htmlFor="paypal-email">PayPal email</label>
-                  <input id="paypal-email" type="email" autoComplete="email" value={paypalEmail} maxLength={254}
-                    onChange={(e) => { setPaypalEmail(e.target.value); setErrors({}); }}
-                    className={errors.paypal ? styles.inputError : ''} aria-invalid={!!errors.paypal} />
-                  {errors.paypal && <p className={styles.errorText} role="alert">{errors.paypal}</p>}
+                <div className={styles.stateActions}>
+                  <button type="button" className={styles.primaryButton} onClick={() => setReloadKey((k) => k + 1)}>Check again</button>
+                  {product && (
+                    <Link to={`/checkout?product=${encodeURIComponent(product.code)}`} className={styles.secondaryButton}>Back to checkout</Link>
+                  )}
                 </div>
-                <button type="button" className={styles.paypalButton} onClick={pay} disabled={paying}>
-                  <FaPaypal aria-hidden="true" /> {paying ? 'Processing…' : 'Pay with PayPal'}
-                </button>
-              </div>
+              </>
+            ) : (
+              <>
+                <h2 className={styles.panelTitle}>Confirming your payment…</h2>
+                <p className={styles.panelText}>This usually takes a few seconds. Please keep this page open.</p>
+                <Loader />
+              </>
             )}
-
-            {payError && <p className={styles.formError} role="alert">{payError}</p>}
-
-            {isCard && (
-              <button type="submit" className={`${styles.primaryButton} ${styles.wide}`} disabled={paying}>
-                <FaLock aria-hidden="true" /> {paying ? 'Processing…' : `Pay ${amount}`}
-              </button>
-            )}
-            <p className={styles.smallPrint}>
-              By paying you agree to Virsaa’s terms. {order.kind === 'membership' && 'Memberships last for the period you pay for.'}
-            </p>
-          </form>
-
+          </div>
           <Summary product={product} />
         </div>
       </div>

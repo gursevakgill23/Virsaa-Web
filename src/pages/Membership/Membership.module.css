@@ -645,3 +645,20 @@
   color: #65041d;
   background: #f1d58c;
 }
+
+/* "Manage billing" at the end of the current-plan strip (Stripe members) */
+.currentStrip > button {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .currentStrip {
+    flex-wrap: wrap;
+  }
+
+  .currentStrip > button {
+    margin-left: 0;
+    width: 100%;
+  }
+}
