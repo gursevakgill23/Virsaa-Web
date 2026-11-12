@@ -188,6 +188,15 @@ const Sidebar = ({ open, closeSidebar, apiString, showTabs = true }) => {
     return () => clearInterval(timer);
   }, [open, loadToday]);
 
+  // While closed, the panel can't be focused or read by screen readers (inert). Focus inside it
+  // (say, on its close button) is let go first, so it isn't left on a hidden element.
+  useEffect(() => {
+    const panel = sidebarRef.current;
+    if (!panel) return;
+    if (!open && panel.contains(document.activeElement)) document.activeElement.blur();
+    panel.inert = !open;
+  }, [open]);
+
   // Free the image preview when it changes
   useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); }, [imagePreview]);
 
@@ -448,7 +457,6 @@ const Sidebar = ({ open, closeSidebar, apiString, showTabs = true }) => {
       <aside
         className={`${styles.sidebar} ${open ? styles.open : ''}`}
         ref={sidebarRef}
-        aria-hidden={!open}
         aria-label="Virsaa panel"
       >
         {/* Header: greeting and dates, or a back button inside the calendar/form views */}
