@@ -27,6 +27,7 @@ import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 import Loader from '../../../components/VirsaaLoader/Loader';
 import { describeApiError } from '../../../utils/apiError';
 import usePlanAccess, { PLAN_LABELS } from '../../../hooks/usePlanAccess';
+import { devError } from '../../../utils/devLog';
 
 // Utility function to handle public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -174,7 +175,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
         setTimeLeft(response.data.time_limit_seconds || QUIZ_DURATION);
       } catch (err) {
         if (cancelled) return;
-        console.error('Error fetching quiz:', err.response?.status || err.message);
+        devError('Error fetching quiz:', err.response?.status || err.message);
         setError(err.response?.status === 404 ? 'This quiz doesn’t exist.' : 'This quiz couldn’t be loaded.');
       }
     };
@@ -183,7 +184,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     const asList = (data) => (Array.isArray(data) ? data : data?.results || []);
     const quiet = (label, request, setter, map = (d) => d) => request
       .then((res) => { if (!cancelled) setter(map(asList(res.data))); })
-      .catch((err) => console.error(`Error fetching ${label}:`, err.response?.status || err.message));
+      .catch((err) => devError(`Error fetching ${label}:`, err.response?.status || err.message));
 
     const fetchData = async () => {
       setIsLoading(true);
@@ -328,7 +329,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
         const data = await learningApi.joinTournament(apiUrl, accessToken, tournamentId);
         setTournamentScores(Array.isArray(data?.scores) ? data.scores : []);
       } catch (err) {
-        console.error('Error joining tournament:', err.response?.status || err.message);
+        devError('Error joining tournament:', err.response?.status || err.message);
         setNotice(describeApiError(err, 'You couldn’t join the tournament. Try again.'));
         return;
       }
@@ -365,7 +366,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
       // Refresh the leaderboard with the new score
       learningApi.itemLeaderboard(apiUrl, id).then(setTopScorers).catch(() => {});
     } catch (err) {
-      console.error('Error submitting score:', err.response?.status || err.message);
+      devError('Error submitting score:', err.response?.status || err.message);
       setNotice(describeApiError(err, 'Your score couldn’t be saved.'));
     } finally {
       setIsSubmitting(false);
@@ -457,7 +458,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
       setDiscussionPosts([...discussionPosts, { ...response.data, replies: response.data.replies || [] }]);
       setNewPostContent('');
     } catch (err) {
-      console.error('Error posting discussion:', err.response?.status || err.message);
+      devError('Error posting discussion:', err.response?.status || err.message);
       setNotice(err.response?.status === 401
         ? 'Your session has ended. Log in again to post.'
         : describeApiError(err, 'Your post couldn’t be published. Try again.'));
@@ -484,7 +485,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
       ));
       setReplyContent({ ...replyContent, [postId]: '' });
     } catch (err) {
-      console.error('Error posting reply:', err.response?.status || err.message);
+      devError('Error posting reply:', err.response?.status || err.message);
       setNotice(err.response?.status === 401
         ? 'Your session has ended. Log in again to reply.'
         : describeApiError(err, 'Your reply couldn’t be published. Try again.'));
@@ -502,7 +503,7 @@ const Quizzes = ({ isDarkMode, apiString }) => {
     setShowTournamentModal(true);
     learningApi.tournamentLeaderboard(apiUrl, tournamentId)
       .then((rows) => setTournamentScores(Array.isArray(rows) ? rows : []))
-      .catch((err) => console.error('Error fetching tournament scores:', err.response?.status || err.message));
+      .catch((err) => devError('Error fetching tournament scores:', err.response?.status || err.message));
   };
 
   const closeTournamentModal = () => {

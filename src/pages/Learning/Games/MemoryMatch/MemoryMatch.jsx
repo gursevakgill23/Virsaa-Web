@@ -28,6 +28,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import { SOUND_URLS, HOW_TO_PLAY_VIDEO } from '../gameAssets';
 import { SitePicture } from '../../../../components/SitePicture/SitePicture';
 import Avatar from '../../../../components/Avatar/Avatar';
+import { devError } from '../../../../utils/devLog';
 
 // The card pictures are real photos from S3, by name (components/SitePicture);
 // players without a picture of their own show their initials (components/Avatar)
@@ -404,7 +405,7 @@ const MemoryMatch = ({ apiString }) => {
         }
         setLoadingAchievements(false);
       } catch (error) {
-        console.error('Error loading data:', error);
+        devError('Error loading data:', error);
         setLoadingTopScorers(false);
         setLoadingAchievements(false);
       }

@@ -22,6 +22,7 @@ import Loader from '../../../components/VirsaaLoader/Loader';
 import { describeApiError } from '../../../utils/apiError';
 import PlanBadge, { LockedPanel } from '../../../components/PlanBadge/PlanBadge';
 import usePlanAccess from '../../../hooks/usePlanAccess';
+import { devError } from '../../../utils/devLog';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -96,7 +97,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
         setError(null);
       } catch (err) {
         if (cancelled) return;
-        console.error('Error fetching learning item:', err.response?.status || err.message);
+        devError('Error fetching learning item:', err.response?.status || err.message);
         setError(err.response?.status === 404 ? 'Lesson not found' : 'This lesson couldn’t be loaded.');
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -110,7 +111,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
         const list = Array.isArray(response.data) ? response.data : response.data?.results || [];
         setDiscussionPosts(list.map((p) => ({ ...p, replies: Array.isArray(p.replies) ? p.replies : [] })));
       } catch (err) {
-        console.error('Error fetching discussions:', err.response?.status || err.message);
+        devError('Error fetching discussions:', err.response?.status || err.message);
       }
     };
 
@@ -146,7 +147,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
     if (progress) return;
     learningApi.saveProgress(apiUrl, accessToken, item.id, { progress_percent: 10 })
       .then((data) => setProgress({ status: data.progress.status, percent: data.progress.progress_percent }))
-      .catch((err) => console.error('Error saving progress:', err.response?.status || err.message));
+      .catch((err) => devError('Error saving progress:', err.response?.status || err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item, isLoggedIn, accessToken]);
 
@@ -162,7 +163,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       setProgress({ status: data.progress.status, percent: data.progress.progress_percent });
       setReward({ xp: data.xp_earned, coins: data.coins_earned, badges: data.new_badges || [] });
     } catch (err) {
-      console.error('Error completing lesson:', err.response?.status || err.message);
+      devError('Error completing lesson:', err.response?.status || err.message);
       setFormError(describeApiError(err, 'Your progress couldn’t be saved. Try again.'));
     } finally {
       setSavingProgress(false);
@@ -192,7 +193,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       setDiscussionPosts([...discussionPosts, { ...response.data, replies: response.data.replies || [] }]);
       setNewPostContent('');
     } catch (err) {
-      console.error('Post error:', err.response?.status || err.message);
+      devError('Post error:', err.response?.status || err.message);
       setFormError(err.response?.status === 401
         ? 'Your session has ended. Log in again to post.'
         : describeApiError(err, 'Your post couldn’t be published. Try again.'));
@@ -226,7 +227,7 @@ const LearningMaterial = ({ isDarkMode, apiString }) => {
       ));
       setReplyContent({ ...replyContent, [postId]: '' });
     } catch (err) {
-      console.error('Reply error:', err.response?.status || err.message);
+      devError('Reply error:', err.response?.status || err.message);
       setFormError(err.response?.status === 401
         ? 'Your session has ended. Log in again to reply.'
         : describeApiError(err, 'Your reply couldn’t be published. Try again.'));

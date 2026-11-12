@@ -29,6 +29,7 @@ import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 import { CoverPicture, SitePicture } from '../../components/SitePicture/SitePicture';
 import Avatar from '../../components/Avatar/Avatar';
 import { gurbaniApi } from '../../api/sikhismApi';
+import { devError } from '../../utils/devLog';
 
 // Utility function to handle public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -98,12 +99,12 @@ const Home = ({ isDarkMode, apiString }) => {
       if (booksRes.status === 'fulfilled') {
         setLatestBooks([...toList(booksRes.value.data)].sort((a, b) => b.id - a.id).slice(0, 12));
       } else {
-        console.error('Error fetching ebooks:', booksRes.reason?.response?.status);
+        devError('Error fetching ebooks:', booksRes.reason?.response?.status);
       }
       if (authorsRes.status === 'fulfilled') {
         setAuthors(toList(authorsRes.value.data));
       } else {
-        console.error('Error fetching authors:', authorsRes.reason?.response?.status);
+        devError('Error fetching authors:', authorsRes.reason?.response?.status);
       }
       setIsLoading(false);
     };

@@ -46,6 +46,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { CoverPicture } from '../../../components/SitePicture/SitePicture';
 import PlanBadge from '../../../components/PlanBadge/PlanBadge';
 import usePlanAccess, { isPlanRequired } from '../../../hooks/usePlanAccess';
+import { devError } from '../../../utils/devLog';
 
 // Fisher-Yates shuffle
 // Random order for the recommendations
@@ -194,7 +195,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
         setRelated(relatedList.map(toCard));
         setRecommended(rest.filter((item) => !relatedList.includes(item)).slice(0, 5).map(toCard));
       } catch (error) {
-        console.error('Error fetching ebook:', error.response?.status || error.message);
+        devError('Error fetching ebook:', error.response?.status || error.message);
         if (!cancelled) {
           setEbook(null);
           setLoadFailed(error.response?.status !== 404); // 404 = really not found
@@ -240,7 +241,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
       if (!response.data?.pdf_url) throw new Error('No PDF link returned');
       setPdfUrl(response.data.pdf_url);
     } catch (error) {
-      console.error('Error fetching PDF link:', error.response?.status || error.message);
+      devError('Error fetching PDF link:', error.response?.status || error.message);
       const code = error.response?.status;
       setPdfError(isPlanRequired(error) ? planMessage(ebook, 'This book')
         : code === 404 ? 'This book has no file yet.'

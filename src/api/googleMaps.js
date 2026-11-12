@@ -36,6 +36,7 @@
  * -----------------------------------------------------------------------------
  */
 import { distanceKm } from '../pages/GurdwaraAccess/gurdwaras';
+import { devWarn } from '../utils/devLog';
 
 const KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
 export const MAP_ID = process.env.REACT_APP_GOOGLE_MAP_ID || 'DEMO_MAP_ID';
@@ -58,7 +59,7 @@ export const onKeyRejected = (fn) => {
 export const loadGoogleMaps = () => {
   if (window.google?.maps?.importLibrary) return Promise.resolve(window.google.maps);
   if (!KEY) {
-    console.warn('Google Maps: set REACT_APP_GOOGLE_MAPS_API_KEY to show the Gurdwara map and search.');
+    devWarn('Google Maps: set REACT_APP_GOOGLE_MAPS_API_KEY to show the Gurdwara map and search.');
     return Promise.reject(new Error('no-key'));
   }
   if (!loading) {

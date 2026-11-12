@@ -21,6 +21,7 @@ import paymentsApi, { formatMoney, saveReturnTo, isStripeUrl, openBillingPortal 
 import { describeApiError } from '../../utils/apiError';
 import Loader from '../../components/VirsaaLoader/Loader';
 import styles from './Checkout.module.css';
+import { devError } from '../../utils/devLog';
 
 // Header pictures
 const headerLight = '/images/header-image.png';
@@ -120,7 +121,7 @@ const Checkout = ({ isDarkMode, apiString }) => {
       })
       .catch((err) => {
         if (isCancelled) return;
-        console.error('Products failed:', err.response?.status || err.message);
+        devError('Products failed:', err.response?.status || err.message);
         setLoadError('Checkout couldn’t be loaded. Check your connection and try again.');
       });
     return () => { isCancelled = true; };

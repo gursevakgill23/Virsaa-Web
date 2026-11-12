@@ -12,6 +12,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import learningApi from '../../../api/learningApi';
+import { devError } from '../../../utils/devLog';
 
 // Guest progress is stored under this localStorage key
 const GUEST_KEY = 'virsaa_game_guest';
@@ -100,7 +101,7 @@ export default function useGameWallet({ apiString, accessToken, isLoggedIn, game
       .then((w) => { if (!cancelled) { applyServer(w); setError(null); } })
       .catch((err) => {
         if (cancelled) return;
-        console.error('Wallet load failed:', err.response?.status || err.message);
+        devError('Wallet load failed:', err.response?.status || err.message);
         // Don't show the browser's guest coins as if they were the account's
         setWallet(fromServer({}));
         setError(err.response?.status === 401
@@ -124,7 +125,7 @@ export default function useGameWallet({ apiString, accessToken, isLoggedIn, game
       applyServer(data.wallet);
       return data.amount || 0;
     } catch (err) {
-      console.error('Welcome bonus failed:', err.response?.status || err.message);
+      devError('Welcome bonus failed:', err.response?.status || err.message);
       return 0;
     }
   }, [online, apiString, accessToken, applyServer, saveGuest]);
@@ -151,7 +152,7 @@ export default function useGameWallet({ apiString, accessToken, isLoggedIn, game
       if (err.response?.data?.wallet) applyServer(err.response.data.wallet);
       else setWallet(w);
       if (status === 402) return { ok: false, reason: 'coins' };
-      console.error('Spending coins failed:', status || err.message);
+      devError('Spending coins failed:', status || err.message);
       return {
         ok: false,
         reason: 'error',
@@ -199,7 +200,7 @@ export default function useGameWallet({ apiString, accessToken, isLoggedIn, game
       applyServer(data.wallet);
       return data;
     } catch (err) {
-      console.error('Saving the game failed:', err.response?.status || err.message);
+      devError('Saving the game failed:', err.response?.status || err.message);
       setWallet(w);
       setError('Your result couldn’t be saved.');
       return null;
@@ -219,7 +220,7 @@ export default function useGameWallet({ apiString, accessToken, isLoggedIn, game
       applyServer(await learningApi.updateWallet(apiString, accessToken, fields));
       return true;
     } catch (err) {
-      console.error('Saving the game profile failed:', err.response?.status || err.message);
+      devError('Saving the game profile failed:', err.response?.status || err.message);
       return false;
     }
   }, [online, apiString, accessToken, applyServer, saveGuest]);

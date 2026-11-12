@@ -19,6 +19,7 @@ import CompleteProfile from './CompleteProfile/CompleteProfile';
 import { isProfileComplete } from './profileStatus';
 import Loader from '../../components/VirsaaLoader/Loader';
 import styles from './ProfileRoute.module.css';
+import { devError } from '../../utils/devLog';
 
 const ProfileRoute = ({ isDarkMode, apiString }) => {
   const { accessToken, logout, updateUserData } = useAuth();
@@ -55,7 +56,7 @@ const ProfileRoute = ({ isDarkMode, apiString }) => {
       latest.current.updateUserData?.(data); // keep the navbar etc. in sync
       setStatus('ready');
     } catch (err) {
-      console.error('Profile check failed:', err.message);
+      devError('Profile check failed:', err.message);
       setStatus('error');
     }
   }, [accessToken, apiString]);

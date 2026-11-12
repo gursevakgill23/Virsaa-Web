@@ -19,6 +19,7 @@ import axios from 'axios';
 import { CoverPicture } from '../../components/SitePicture/SitePicture';
 import PlanBadge from '../../components/PlanBadge/PlanBadge';
 import usePlanAccess, { PLAN_LABELS } from '../../hooks/usePlanAccess';
+import { devError } from '../../utils/devLog';
 
 // Every card's picture comes from the API (a real photo in S3, chosen for its topic);
 // a card without one, or whose picture fails, shows this website picture instead
@@ -221,7 +222,7 @@ const Learning = ({ isDarkMode, apiString }) => {
         setQuizzes(quiz);
       } catch (err) {
         if (cancelled) return;
-        console.error('Error fetching learning items:', err.response?.status || err.message);
+        devError('Error fetching learning items:', err.response?.status || err.message);
         setError('Learning items couldn’t be loaded. Check your connection and try again.');
         const builtIns = BUILT_IN_GAMES.map((g) => ({ ...g, type: 'game', is_restricted: false, is_premium: false }));
         setAllCards(builtIns);

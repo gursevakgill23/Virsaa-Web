@@ -18,6 +18,7 @@ import learningApi from '../../../api/learningApi';
 import {
   GAMES, localStageContent, readGuestProgress, stageRewards, starsFor, unlockedUpTo, writeGuestProgress,
 } from './localGames';
+import { devError } from '../../../utils/devLog';
 
 const normalizeProgress = (raw = {}) => Object.fromEntries(
   Object.entries(raw).map(([stage, p]) => [Number(stage), {
@@ -55,7 +56,7 @@ export default function useArcade({ gameKey, apiString, accessToken, isLoggedIn,
       setProgress(signedIn ? normalizeProgress(data.progress) : guestProgressFor(gameKey));
       setServerDown(false);
     } catch (err) {
-      console.error('Game map failed to load:', err.response?.status || err.message);
+      devError('Game map failed to load:', err.response?.status || err.message);
       setGame(spec);
       setProgress(signedIn ? {} : guestProgressFor(gameKey));
       setServerDown(true);
@@ -73,7 +74,7 @@ export default function useArcade({ gameKey, apiString, accessToken, isLoggedIn,
       return { ...data, offline: false };
     } catch (err) {
       if (err.response?.status === 404) throw err;
-      console.error('Stage content failed to load:', err.response?.status || err.message);
+      devError('Stage content failed to load:', err.response?.status || err.message);
       const local = localStageContent(gameKey, stage, pictures);
       if (!local) throw err;
       return local;
@@ -141,7 +142,7 @@ export default function useArcade({ gameKey, apiString, accessToken, isLoggedIn,
       });
       return fromServer(data);
     } catch (err) {
-      console.error('Saving the stage failed:', err.response?.status || err.message);
+      devError('Saving the stage failed:', err.response?.status || err.message);
       const local = saveLocally(stage, score, completed, seconds);
       return { ...local, saveFailed: true };
     }

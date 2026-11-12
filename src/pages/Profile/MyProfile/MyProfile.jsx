@@ -26,6 +26,7 @@ import { useAuth } from '../../../context/AuthContext';
 import learningApi from '../../../api/learningApi';
 import BadgeIcon from '../../../components/BadgeIcon/BadgeIcon';
 import useMembership from '../../../hooks/useMembership';
+import { devError } from '../../../utils/devLog';
 
 // Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
@@ -179,7 +180,7 @@ const MyProfile = ({ isDarkMode, apiString }) => {
         setBadges(summaryRes.value.badges || []);
       }
       const allFailed = [summaryRes, achRes, badgeRes].every((r) => r.status === 'rejected');
-      if (allFailed) console.error('Learning summary failed:', summaryRes.reason?.response?.status || summaryRes.reason?.message);
+      if (allFailed) devError('Learning summary failed:', summaryRes.reason?.response?.status || summaryRes.reason?.message);
       setLearningState(allFailed ? 'error' : 'ready');
     });
     return () => { cancelled = true; };

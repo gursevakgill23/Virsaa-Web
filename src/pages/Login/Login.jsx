@@ -29,6 +29,7 @@ import ResendVerification from '../../components/ResendVerification/ResendVerifi
 import LoginCodeStep from './LoginCodeStep';
 import { SitePicture } from '../../components/SitePicture/SitePicture';
 import axios from 'axios';
+import { devError } from '../../utils/devLog';
 
 // Content for the side panel and the sections below the form
 const PERKS = [
@@ -228,7 +229,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
         error.response?.data?.error ||
         error.response?.data?.captcha?.[0] ||
         describeApiError(error, 'Sign in failed. Check your details and try again.');
-      console.error('Login error:', error.response?.status || error.message);
+      devError('Login error:', error.response?.status || error.message);
       toast.error(errorMessage, {
         position: 'top-center',
         autoClose: 5000,
@@ -331,7 +332,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
                       onChange={() => errors.captcha && setErrors((prev) => ({ ...prev, captcha: '' }))}
                       onExpired={() => setErrors((prev) => ({ ...prev, captcha: 'The reCAPTCHA expired. Tick the box again.' }))}
                       onErrored={() => {
-                        console.error('reCAPTCHA failed to load');
+                        devError('reCAPTCHA failed to load');
                         setErrors((prev) => ({ ...prev, captcha: 'The reCAPTCHA couldn’t load. Check your connection and reload the page.' }));
                       }}
                     />

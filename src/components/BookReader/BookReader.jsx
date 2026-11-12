@@ -29,6 +29,7 @@ import {
 } from 'react-icons/fa';
 import styles from './BookReader.module.css';
 import { safeUrl } from '../../utils/safeUrl';
+import { devError } from '../../utils/devLog';
 
 /* -------------------------------------------------------------------------
    pdf.js is loaded from a CDN only when someone opens a book, so it adds
@@ -220,7 +221,7 @@ const BookReader = ({
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error('Book reader:', err?.message || err);
+        devError('Book reader:', err?.message || err);
         setLoadError(
           err?.name === 'MissingPDFException'
             ? 'The book file wasn’t found.'
@@ -294,7 +295,7 @@ const BookReader = ({
         });
       }
     } catch (err) {
-      console.error('Book reader render:', err?.message || err);
+      devError('Book reader render:', err?.message || err);
     } finally {
       busyRef.current = false;
     }

@@ -20,6 +20,7 @@ import GurmukhiKeyboard from '../GurmukhiKeyboard';
 import { isWord, scoreGuess, tiles, typeKey } from '../gurmukhi';
 import { localShabadWord } from '../localGames';
 import styles from './ShabadLe.module.css';
+import { devError } from '../../../../utils/devLog';
 
 const MAX_GUESSES = 6;
 const SCORE_BY_GUESSES = { 1: 1000, 2: 950, 3: 880, 4: 760, 5: 620, 6: 480 };
@@ -132,7 +133,7 @@ export default function ShabadLe({ stage, language, onResult, api, signedIn, wal
         }
       } catch (err) {
         if (!live) return;
-        console.error('Shabad-le puzzle failed to load:', err.response?.status || err.message);
+        devError('Shabad-le puzzle failed to load:', err.response?.status || err.message);
         const word = localShabadWord(stage.stage, daily);
         if (word) setOfflineWord(word);
         else setLoadError(true);

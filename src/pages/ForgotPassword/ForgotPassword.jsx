@@ -15,6 +15,7 @@ import ReCAPTCHA from 'react-google-recaptcha';
 import { FaEye, FaEyeSlash, FaEnvelope, FaKey, FaLock, FaCheck, FaArrowLeft } from 'react-icons/fa';
 import axios from 'axios';
 import styles from './ForgotPassword.module.css';
+import { devError } from '../../utils/devLog';
 
 // The three steps shown in the progress indicator
 const STEPS = [
@@ -126,7 +127,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
       setCountdown(60); // the server sends at most one code a minute
       setStep(2);
     } catch (error) {
-      console.error('Forgot password error:', error.response?.status || error.message);
+      devError('Forgot password error:', error.response?.status || error.message);
       toast.error(errorMessageFrom(error, 'The code couldn’t be sent'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
       recaptchaRef.current?.reset();
@@ -144,7 +145,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
       toast.success(response.data?.message || 'Code accepted. Now choose a new password.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
       setStep(3);
     } catch (error) {
-      console.error('Verify code error:', error.response?.status || error.message);
+      devError('Verify code error:', error.response?.status || error.message);
       toast.error(errorMessageFrom(error, 'That code is wrong or has expired'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
       setIsSubmitting(false);
@@ -166,7 +167,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
       toast.success('Your password has been changed and any other devices signed out. You can sign in now.', { position: 'top-center', autoClose: 3000, theme: toastTheme });
       setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
-      console.error('Reset password error:', error.response?.status || error.message);
+      devError('Reset password error:', error.response?.status || error.message);
       toast.error(errorMessageFrom(error, 'Your password couldn’t be reset'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
       setIsSubmitting(false);
@@ -188,7 +189,7 @@ const ForgotPassword = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL 
       setCountdown(60); // the server sends at most one code a minute
       setErrors((prev) => ({ ...prev, captcha: '' }));
     } catch (error) {
-      console.error('Resend code error:', error.response?.status || error.message);
+      devError('Resend code error:', error.response?.status || error.message);
       toast.error(errorMessageFrom(error, 'The code couldn’t be re-sent'), { position: 'top-center', autoClose: 5000, theme: toastTheme });
     } finally {
       recaptchaRef.current?.reset();

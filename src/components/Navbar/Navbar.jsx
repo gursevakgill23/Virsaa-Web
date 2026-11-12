@@ -39,6 +39,7 @@ import useUnreadNotifications, { refreshUnread } from '../../hooks/useUnreadNoti
 import Avatar from '../Avatar/Avatar';
 import RewardCoin from '../RewardCoin/RewardCoin';
 import rewardsApi, { formatCoins } from '../../api/rewardsApi';
+import { devError } from '../../utils/devLog';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -150,7 +151,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
             email: data.email || user?.email || '',
           });
         } catch (error) {
-          console.error('Error fetching profile data:', error);
+          devError('Error fetching profile data:', error);
           toast.error('Failed to load profile data.', {
             position: 'top-center',
             autoClose: 3000,
@@ -223,7 +224,7 @@ const Navbar = ({ toggleSidebar, isDarkMode, toggleTheme, apiString }) => {
       setShowProfileSidebar(false);
       navigate('/login');
     } catch (error) {
-      console.error('Logout failed:', error);
+      devError('Logout failed:', error);
       toast.error('Logout failed. Please try again.', {
         position: 'top-center',
         autoClose: 5000,

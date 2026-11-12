@@ -33,6 +33,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import { SOUND_URLS, themeBackground } from '../gameAssets';
 import { backgroundOf, useSiteImages } from '../../../../hooks/useSiteImages';
 import Avatar from '../../../../components/Avatar/Avatar';
+import { devError, devWarn } from '../../../../utils/devLog';
 
 // Pictures are real photos from S3, by name (hooks/useSiteImages.js); players without
 // a picture of their own show their initials (components/Avatar)
@@ -109,7 +110,7 @@ const fetchWords = async (apiString, map, difficulty, language) => {
     }
     return words.map((w) => (language === 'punjabi' ? w.punjabi : w.word));
   } catch (error) {
-    console.error('Error fetching words:', error.response?.status || error.message);
+    devError('Error fetching words:', error.response?.status || error.message);
     return [];
   }
 };
@@ -404,7 +405,7 @@ const WordSearchGamePlay = ({ apiString }) => {
         }
         setLoadingAchievements(false);
       } catch (error) {
-        console.error('Error loading data:', error);
+        devError('Error loading data:', error);
         setLoadingTopScorers(false);
         setLoadingAchievements(false);
       }
@@ -441,7 +442,7 @@ const WordSearchGamePlay = ({ apiString }) => {
     const fetchedWords = await fetchWords(apiString, selectedMap, selectedMap.difficulty, selectedMap.language);
     if (fetchedWords.length === 0) {
       setErrorMessage('The words for this map couldn’t be loaded. Check your connection and try again.');
-      console.error('No words fetched for the map:', selectedMap);
+      devError('No words fetched for the map:', selectedMap);
       setGameState('select');
       return;
     }
@@ -502,7 +503,7 @@ const WordSearchGamePlay = ({ apiString }) => {
       }
 
       if (!placed) {
-        console.warn(`Could not place word "${word}" on map "${selectedMap.name}" after ${maxAttempts} attempts`);
+        devWarn(`Could not place word "${word}" on map "${selectedMap.name}" after ${maxAttempts} attempts`);
         setErrorMessage(`Unable to place word "${word}" on the board. Please try again or select a different map.`);
       }
     });
