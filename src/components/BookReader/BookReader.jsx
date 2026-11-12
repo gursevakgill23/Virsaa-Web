@@ -91,6 +91,7 @@ const pagesOf = (chapter) => (chapter.last_page && chapter.last_page !== chapter
  *  - url:       PDF link (null while it is being fetched)
  *  - title:     book title for the toolbar
  *  - linkError: message to show if the link couldn't be fetched
+ *  - planLocked: the server said the person's plan doesn't include this book (shows "See plans")
  *  - onRetry(): fetch the link again
  *  - onClose()
  *  - onProgress(page, numPages): optional, called when the page changes (for History)
@@ -101,7 +102,7 @@ const pagesOf = (chapter) => (chapter.last_page && chapter.last_page !== chapter
  *  - chapters: optional [{ id, title, first_page, last_page }]; those with a first page are listed
  */
 const BookReader = ({
-  url, title, linkError, onRetry, onClose, onProgress,
+  url, title, linkError, planLocked = false, onRetry, onClose, onProgress,
   startPage = 1, bookmarkPage = null, onBookmark, chapters = [],
 }) => {
   // DOM nodes and the open PDF document
@@ -864,8 +865,15 @@ const BookReader = ({
         {errorMessage ? (
           <div className={styles.message}>
             <h3>{errorMessage}</h3>
-            <p>Check your connection and try again{url ? ', or open the PDF in a new tab' : ''}.</p>
+            {planLocked ? (
+              <p>If you’ve just changed your plan, try again in a moment.</p>
+            ) : (
+              <p>Check your connection and try again{url ? ', or open the PDF in a new tab' : ''}.</p>
+            )}
             <div className={styles.messageActions}>
+              {planLocked && (
+                <a className={styles.primaryButton} href="/premium">See plans</a>
+              )}
               {onRetry && (
                 <button type="button" className={styles.primaryButton} onClick={onRetry}>
                   <FaRedo aria-hidden="true" /> Try again

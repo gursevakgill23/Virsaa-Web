@@ -124,6 +124,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState(null);
+  const [pdfPlanLocked, setPdfPlanLocked] = useState(false); // the server says the plan doesn't include it
   const [readerStart, setReaderStart] = useState(1); // the page the reader opens at
   const [listening, setListening] = useState(false); // the Listen player is open
 
@@ -135,7 +136,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const apiUrl = (apiString || process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
   const safeId = encodeURIComponent(id); // the id comes from the URL, so encode it before use in a path
   const headerImage = isDarkMode ? HEADER_DARK : HEADER_LIGHT;
-  const { accessToken, isLoggedIn, userData } = useAuth(); // reading or listening needs an account
+  const { accessToken, isLoggedIn, userData, updateUserData } = useAuth(); // reading or listening needs an account
   const navigate = useNavigate();
   const { isLocked, planMessage } = usePlanAccess();
   // A Standard or Premium book above the visitor's plan leads to the plans
@@ -232,6 +233,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
   const fetchPdfLink = async () => {
     setPdfLoading(true);
     setPdfError(null);
+    setPdfPlanLocked(false);
     setPdfUrl(null);
     try {
       const response = await axios.get(`${apiUrl}/collections/ebooks/${safeId}/read_pdf/`, {
@@ -243,6 +245,10 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
     } catch (error) {
       devError('Error fetching PDF link:', error.response?.status || error.message);
       const code = error.response?.status;
+      if (isPlanRequired(error)) {
+        setPdfPlanLocked(true);
+        updateUserData();   // the plan on this device may be out of date: take the server's
+      }
       setPdfError(isPlanRequired(error) ? planMessage(ebook, 'This book')
         : code === 404 ? 'This book has no file yet.'
         : code === 401 ? 'Sign in to read this book.' : 'The book couldn’t be opened right now.');
@@ -678,6 +684,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
           url={pdfUrl}
           title={ebook.title}
           linkError={pdfError}
+          planLocked={pdfPlanLocked}
           onRetry={fetchPdfLink}
           onClose={closeReader}
           onProgress={handleReaderProgress}

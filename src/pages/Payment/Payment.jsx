@@ -31,7 +31,7 @@ const POLL_TRIES = 30;   // one minute
 /** /payment/:reference  (the order made at checkout; Stripe sends people back here) */
 const Payment = ({ isDarkMode, apiString }) => {
   const { reference } = useParams();
-  const { isLoggedIn, accessToken, userData, updateUserData } = useAuth();
+  const { isLoggedIn, accessToken, updateUserData } = useAuth();
   const headerImage = isDarkMode ? headerDark : headerLight;
   const returnTo = readReturnTo();
 
@@ -77,14 +77,13 @@ const Payment = ({ isDarkMode, apiString }) => {
     };
   }, [apiString, accessToken, isLoggedIn, reference, reloadKey]);
 
-  // Once paid: a membership changes what the person can open straight away
+  // Once paid: reload the profile from the server (which sets the plan), so what the person
+  // can open changes straight away and always matches the server
   useEffect(() => {
     if (!order || order.status !== 'paid' || order.kind !== 'membership' || announced.current) return;
     announced.current = true;
-    const level = order.product?.plan_name;
-    if (level && updateUserData && userData) updateUserData({ ...userData, membership_level: level });
-    announceMembershipChange();
-  }, [order, updateUserData, userData]);
+    Promise.resolve(updateUserData?.()).finally(announceMembershipChange);
+  }, [order, updateUserData]);
 
   const paid = order?.status === 'paid';
   const hero = (
