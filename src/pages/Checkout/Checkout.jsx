@@ -145,7 +145,7 @@ const Checkout = ({ isDarkMode, apiString }) => {
       window.location.assign(data.url);   // leaves Virsaa for Stripe; the button stays locked
     } catch (err) {
       const status = err.response?.status;
-      if (status === 409) setAlreadyMember(true);
+      if (status === 409 && err.response?.data?.manage_billing) setAlreadyMember(true);
       setSubmitError(
         status === 401
           ? 'Your sign-in has expired. Sign in again to continue.'
