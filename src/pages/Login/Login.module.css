@@ -284,7 +284,7 @@
 
 .socialLogin {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
@@ -865,8 +865,7 @@
     border-radius: 28px;
   }
 
-  .row,
-  .socialLogin {
+  .row {
     grid-template-columns: 1fr;
   }
 

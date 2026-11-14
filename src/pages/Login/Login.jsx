@@ -19,7 +19,7 @@ import { toast } from '../../utils/notify';
 import ReCAPTCHA from 'react-google-recaptcha';
 import styles from './Login.module.css';
 import {
-  FaGoogle, FaFacebook, FaEye, FaEyeSlash, FaBook, FaRegFileAudio,
+  FaEye, FaEyeSlash, FaBook, FaRegFileAudio,
   FaHeart, FaHistory, FaGamepad, FaCompass,
 } from 'react-icons/fa';
 import { FaHandsPraying } from 'react-icons/fa6';
@@ -27,6 +27,7 @@ import { useAuth } from '../../context/AuthContext';
 import { describeApiError } from '../../utils/apiError';
 import ResendVerification from '../../components/ResendVerification/ResendVerification';
 import LoginCodeStep from './LoginCodeStep';
+import SocialSignIn, { authUser } from '../../components/SocialSignIn/SocialSignIn';
 import { SitePicture } from '../../components/SitePicture/SitePicture';
 import axios from 'axios';
 import { devError } from '../../utils/devLog';
@@ -138,23 +139,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
 
   // Signed in (straight away, or after the emailed code): keep the tokens and go on
   const finishSignIn = (data, rememberMe) => {
-    login(
-      data.access,
-      data.refresh,
-      {
-        id: data.user.id,
-        username: data.user.username,
-        email: data.user.email,
-        first_name: data.user.first_name,
-        last_name: data.user.last_name,
-        profile_photo: data.user.profile_photo,
-        membership_level: data.user.membership_level,
-        last_logined: data.user.last_logined,
-        joined_date: data.user.joined_date,
-        theme_preference: data.user.theme_preference,
-      },
-      rememberMe
-    );
+    login(data.access, data.refresh, authUser(data.user), rememberMe);
 
     // ?next=/learning/games/akhar-sikho sends the player back to the game they came from
     // (only paths on this site: "/..." but not "//other-site")
@@ -167,6 +152,15 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
     });
 
     setTimeout(() => navigate(backTo), 2000);
+  };
+
+  // Google or Facebook: signed in, or (sign-in codes on) the emailed code comes next
+  const handleSocial = (data, rememberMe) => {
+    if (data.two_factor_required && data.challenge) {
+      setCodeStep({ challenge: data.challenge, emailHint: data.email_hint, resendIn: data.resend_in, rememberMe });
+      return;
+    }
+    finishSignIn(data, rememberMe);
   };
 
   // Back from the code step to the password form (the email stays filled in)
@@ -356,15 +350,13 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
 
                   <div className={styles.divider}><span>or</span></div>
 
-                  <div className={styles.socialLogin}>
-                    {/* Social sign-in isn't connected yet; say so instead of doing nothing */}
-                    <button type="button" className={styles.socialButton} onClick={() => toast.info('Google sign-in is coming soon. Use your email or username for now.')}>
-                      <FaGoogle /> Google
-                    </button>
-                    <button type="button" className={styles.socialButton} onClick={() => toast.info('Facebook sign-in is coming soon. Use your email or username for now.')}>
-                      <FaFacebook /> Facebook
-                    </button>
-                  </div>
+                  <SocialSignIn
+                    apiString={apiString}
+                    onResult={handleSocial}
+                    rememberMe={formData.rememberMe}
+                    styles={styles}
+                    isDarkMode={isDarkMode}
+                  />
                 </form>
 
                 <p className={styles.switchText}>

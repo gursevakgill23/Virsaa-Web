@@ -38,6 +38,11 @@ const paymentsApi = {
     axios.post(`${base(api)}/orders/${seg(reference)}/cancel/`, {}, auth(token)).then((r) => r.data),
   subscription: (api, token) =>
     axios.get(`${base(api)}/subscription/`, auth(token)).then((r) => r.data),
+  // Stop renewing (the plan stays until the paid time ends), or keep renewing after all
+  cancelMembership: (api, token) =>
+    axios.post(`${base(api)}/subscription/cancel/`, {}, auth(token)).then((r) => r.data),
+  resumeMembership: (api, token) =>
+    axios.post(`${base(api)}/subscription/resume/`, {}, auth(token)).then((r) => r.data),
   // Stripe: { url } of Stripe's payment page for a product, or of the person's billing page
   stripeCheckout: (api, token, productCode) =>
     axios.post(`${base(api)}/stripe/checkout/`, { product_code: productCode }, auth(token)).then((r) => r.data),

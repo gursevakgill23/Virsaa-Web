@@ -10,17 +10,20 @@
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from '../../utils/notify';
 import ReCAPTCHA from 'react-google-recaptcha';
 import styles from './Signup.module.css';
 import {
-  FaGoogle, FaFacebook, FaEye, FaEyeSlash, FaBook, FaRegFileAudio,
+  FaEye, FaEyeSlash, FaBook, FaRegFileAudio,
   FaGamepad, FaHeart, FaCheck, FaHistory, FaEnvelopeOpenText, FaSignInAlt,
 } from 'react-icons/fa';
 import { FaHandsPraying } from 'react-icons/fa6';
 import ResendVerification from '../../components/ResendVerification/ResendVerification';
 import { SitePicture } from '../../components/SitePicture/SitePicture';
+import SocialSignIn, { authUser } from '../../components/SocialSignIn/SocialSignIn';
+import LoginCodeStep from '../Login/LoginCodeStep';
+import { useAuth } from '../../context/AuthContext';
 
 // Backend field names -> form field ids
 // Server field names → form field ids, for showing server errors in the right place
@@ -89,6 +92,10 @@ const passwordScore = (pw) => {
 const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 
 const Signup = ({ isDarkMode, apiString }) => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  // Google or Facebook for an account that uses sign-in codes: the emailed code comes next
+  const [codeStep, setCodeStep] = useState(null);
   // The reCAPTCHA widget (its token is sent with the form)
   const recaptchaRef = useRef(null);
 
@@ -229,6 +236,21 @@ const Signup = ({ isDarkMode, apiString }) => {
     }
   };
 
+  // Google or Facebook: signed in (the account is made the first time), or the emailed code comes next
+  const handleSocial = (data, rememberMe) => {
+    if (data.two_factor_required && data.challenge) {
+      setCodeStep({ challenge: data.challenge, emailHint: data.email_hint, resendIn: data.resend_in, rememberMe });
+      return;
+    }
+    login(data.access, data.refresh, authUser(data.user), rememberMe);
+    toast.success(data.created ? 'Welcome to Virsaa! Your account is ready.' : 'Signed in. Taking you home…', {
+      position: 'top-center',
+      autoClose: 2000,
+      theme: isDarkMode ? 'dark' : 'light',
+    });
+    setTimeout(() => navigate('/'), 1500);
+  };
+
   // One labelled input with its error message
   const field = (id, label, props = {}) => (
     <div className={styles.inputGroup}>
@@ -258,7 +280,14 @@ const Signup = ({ isDarkMode, apiString }) => {
 
         <div className={styles.heroInner}>
           <div className={styles.formCard}>
-            {sentTo ? (
+            {codeStep ? (
+              <LoginCodeStep
+                apiString={apiString}
+                step={codeStep}
+                onSignedIn={(data) => handleSocial(data, codeStep.rememberMe)}
+                onStartAgain={() => setCodeStep(null)}
+              />
+            ) : sentTo ? (
               <div className={styles.sentPanel} role="status" aria-live="polite">
                 <FaEnvelopeOpenText className={styles.sentIcon} aria-hidden="true" />
                 <h1 className={styles.formTitle}>Check your email</h1>
@@ -352,15 +381,13 @@ const Signup = ({ isDarkMode, apiString }) => {
 
               <div className={styles.divider}><span>or</span></div>
 
-              <div className={styles.socialLogin}>
-                {/* Social sign-up isn't connected yet; say so instead of doing nothing */}
-                <button type="button" className={styles.socialButton} onClick={() => toast.info('Google sign-up is coming soon. Use the form for now.')}>
-                  <FaGoogle /> Google
-                </button>
-                <button type="button" className={styles.socialButton} onClick={() => toast.info('Facebook sign-up is coming soon. Use the form for now.')}>
-                  <FaFacebook /> Facebook
-                </button>
-              </div>
+              <SocialSignIn
+                apiString={apiString}
+                onResult={handleSocial}
+                rememberMe
+                styles={styles}
+                isDarkMode={isDarkMode}
+              />
             </form>
 
             <p className={styles.switchText}>

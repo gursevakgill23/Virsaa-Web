@@ -6,7 +6,9 @@
  * The user's current plan is marked "Current", and other plans read as
  * Upgrade or Downgrade (useMembership). Choosing a plan opens Checkout; a
  * member who pays through Stripe changes plan, card or cancels on Stripe's
- * billing page instead (Manage billing).
+ * billing page instead (Manage billing). Cancel membership stops the renewal
+ * (the plan stays until the paid time ends); App Store memberships are
+ * cancelled on the iPhone.
  * Plans that can also be taken with reward coins say how many and link to
  * My Rewards (reward_cost from /api/payments/products/).
  * -----------------------------------------------------------------------------
@@ -16,7 +18,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaCheck, FaTimes, FaStar, FaDownload, FaAd, FaHeadset, FaBookOpen, FaChevronDown, FaCrown } from 'react-icons/fa';
 import { toast } from '../../utils/notify';
 import PageHero from '../../components/PageHero/PageHero';
-import useMembership, { PLAN_RANK } from '../../hooks/useMembership';
+import useMembership, { PLAN_RANK, announceMembershipChange } from '../../hooks/useMembership';
 import paymentsApi, { openBillingPortal } from '../../api/paymentsApi';
 import { useAuth } from '../../context/AuthContext';
 import { describeApiError } from '../../utils/apiError';
@@ -105,10 +107,10 @@ const comparison = [
 // Questions and answers
 const faqs = [
   { question: 'What payment methods do you accept?', answer: 'Credit and debit cards (Visa, Mastercard, American Express), Apple Pay and Google Pay. Payments are handled by Stripe: Virsaa never sees or stores your card details.' },
-  { question: 'Can I cancel my subscription anytime?', answer: 'Yes. Open Manage billing on this page and cancel. You keep your plan until the end of the time you’ve paid for, and you won’t be charged again.' },
+  { question: 'Can I cancel my subscription anytime?', answer: 'Yes. Choose Cancel membership on this page. You keep your plan until the end of the time you’ve paid for, and you won’t be charged again. If you joined in the iPhone app, cancel in your iPhone’s Settings > your name > Subscriptions.' },
   { question: 'Is there a free trial available?', answer: 'Yes. Your first membership starts with a 7-day free trial on any plan.' },
   { question: 'How do I change my subscription plan?', answer: 'Open Manage billing on this page to upgrade, downgrade or switch between monthly and yearly. Stripe adjusts the price for the time left.' },
-  { question: 'Will I be charged immediately after the free trial?', answer: 'You’re charged when the 7 days end, unless you cancel before then in Manage billing.' },
+  { question: 'Will I be charged immediately after the free trial?', answer: 'You’re charged when the 7 days end, unless you cancel before then with Cancel membership on this page.' },
   { question: 'Do you offer discounts for annual subscriptions?', answer: 'Yes, yearly plans are 20% cheaper than paying monthly.' },
   { question: 'Where are my receipts?', answer: 'Stripe emails a receipt for every payment. Past invoices are in Manage billing.' },
 ];
@@ -148,6 +150,32 @@ const Membership = ({ isDarkMode, apiString }) => {
         position: 'top-center', autoClose: 4000, theme: isDarkMode ? 'dark' : 'light',
       });
       setOpeningBilling(false);
+    }
+  };
+
+  // Cancel membership: asks first, then stops the renewal; "Keep my membership" undoes it
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [changingRenewal, setChangingRenewal] = useState(false);
+  const billedByApple = membership.isMember && membership.provider === 'apple';
+  const changeRenewal = async (cancel) => {
+    if (changingRenewal) return;
+    setChangingRenewal(true);
+    try {
+      if (cancel) await paymentsApi.cancelMembership(apiString, accessToken);
+      else await paymentsApi.resumeMembership(apiString, accessToken);
+      setConfirmingCancel(false);
+      announceMembershipChange();
+      toast.success(cancel
+        ? 'Your membership is cancelled. You keep it until the end of the time you’ve paid for, and you won’t be charged again.'
+        : 'Your membership will keep renewing.', {
+        position: 'top-center', autoClose: 5000, theme: isDarkMode ? 'dark' : 'light',
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.error || describeApiError(err, 'Your membership couldn’t be changed. Try again.'), {
+        position: 'top-center', autoClose: 5000, theme: isDarkMode ? 'dark' : 'light',
+      });
+    } finally {
+      setChangingRenewal(false);
     }
   };
 
@@ -231,21 +259,54 @@ const Membership = ({ isDarkMode, apiString }) => {
         {membership.isMember && (
           <div className={styles.currentStrip} role="status">
             <span className={styles.currentIcon} aria-hidden="true"><FaCrown /></span>
-            <p>
-              You're on the <strong>{membership.planName}</strong> plan
-              {membership.billing ? ` (${membership.billing})` : ''}.
-              {membership.periodEnd && (
-                membership.status === 'cancelled'
-                  ? ` It ends on ${formatDate(membership.periodEnd)}.`
-                  : ` Active until ${formatDate(membership.periodEnd)}.`
-              )}
-              {' '}{billedByStripe ? 'Change plan, update your card or cancel in Manage billing.' : 'Upgrade or downgrade below.'}
-            </p>
-            {billedByStripe && (
-              <button type="button" className={styles.secondaryButton} onClick={manageBilling} disabled={openingBilling}>
-                {openingBilling ? 'Opening…' : 'Manage billing'}
-              </button>
+            {confirmingCancel ? (
+              <p>
+                Cancel your <strong>{membership.planName}</strong> membership? You keep it
+                {membership.periodEnd ? ` until ${formatDate(membership.periodEnd)}` : ' until the end of the time you’ve paid for'},
+                and you won’t be charged again.
+              </p>
+            ) : (
+              <p>
+                You're on the <strong>{membership.planName}</strong> plan
+                {membership.billing ? ` (${membership.billing})` : ''}.
+                {membership.periodEnd && (
+                  membership.status === 'cancelled'
+                    ? ` Cancelled: it ends on ${formatDate(membership.periodEnd)} and won’t renew.`
+                    : ` Renews on ${formatDate(membership.periodEnd)}.`
+                )}
+                {billedByApple && ' It’s billed by the App Store: change or cancel it on your iPhone in Settings > your name > Subscriptions.'}
+              </p>
             )}
+            <div className={styles.stripActions}>
+              {confirmingCancel ? (
+                <>
+                  <button type="button" className={styles.dangerButton} onClick={() => changeRenewal(true)} disabled={changingRenewal}>
+                    {changingRenewal ? 'Cancelling…' : 'Yes, cancel'}
+                  </button>
+                  <button type="button" className={styles.secondaryButton} onClick={() => setConfirmingCancel(false)} disabled={changingRenewal}>
+                    Keep it
+                  </button>
+                </>
+              ) : (
+                <>
+                  {billedByStripe && (
+                    <button type="button" className={styles.secondaryButton} onClick={manageBilling} disabled={openingBilling}>
+                      {openingBilling ? 'Opening…' : 'Manage billing'}
+                    </button>
+                  )}
+                  {!billedByApple && membership.status === 'active' && (
+                    <button type="button" className={styles.textButton} onClick={() => setConfirmingCancel(true)}>
+                      Cancel membership
+                    </button>
+                  )}
+                  {!billedByApple && membership.status === 'cancelled' && (
+                    <button type="button" className={styles.secondaryButton} onClick={() => changeRenewal(false)} disabled={changingRenewal}>
+                      {changingRenewal ? 'Saving…' : 'Keep my membership'}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
 

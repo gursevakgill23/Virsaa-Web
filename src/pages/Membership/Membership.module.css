@@ -647,9 +647,64 @@
 }
 
 /* "Manage billing" at the end of the current-plan strip (Stripe members) */
-.currentStrip > button {
+.stripActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
   margin-left: auto;
   flex-shrink: 0;
+}
+
+.stripActions:empty {
+  display: none;
+}
+
+/* Cancel membership: quiet, so it's there but not pushed */
+.textButton {
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--secondary-text-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.textButton:hover {
+  color: var(--text-color);
+}
+
+.textButton:focus-visible,
+.dangerButton:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.dangerButton {
+  padding: 10px 18px;
+  border: 1px solid #b3261e;
+  border-radius: 999px;
+  background: #b3261e;
+  color: #fff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dangerButton:hover {
+  background: #8c1d18;
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 @media (max-width: 560px) {
@@ -657,8 +712,13 @@
     flex-wrap: wrap;
   }
 
-  .currentStrip > button {
+  .stripActions {
     margin-left: 0;
     width: 100%;
+    justify-content: stretch;
+  }
+
+  .stripActions > button {
+    flex: 1;
   }
 }
