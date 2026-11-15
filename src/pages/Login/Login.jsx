@@ -92,6 +92,8 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
     rememberMe: false,
   });
   const [errors, setErrors] = useState({});
+  // The Terms of Service box: required to sign in (the server checks it too)
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   // Set when the password was right but the email isn't verified yet: the address for a new link
@@ -128,6 +130,10 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
       newErrors.password = 'Enter your password';
     }
 
+    if (!acceptTerms) {
+      newErrors.acceptTerms = 'Agree to the Terms of Service and Privacy Policy to continue';
+    }
+
     const captchaToken = recaptchaRef.current?.getValue();
     if (!captchaToken) {
       newErrors.captcha = 'Tick the reCAPTCHA box to continue';
@@ -154,7 +160,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
     setTimeout(() => navigate(backTo), 2000);
   };
 
-  // Google or Facebook: signed in, or (sign-in codes on) the emailed code comes next
+  // Google: signed in, or (sign-in codes on) the emailed code comes next
   const handleSocial = (data, rememberMe) => {
     if (data.two_factor_required && data.challenge) {
       setCodeStep({ challenge: data.challenge, emailHint: data.email_hint, resendIn: data.resend_in, rememberMe });
@@ -188,6 +194,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
         login: formData.email.trim(),
         password: formData.password,
         captcha: captchaToken,
+        accept_terms: acceptTerms,
         remember_me: formData.rememberMe,
       };
 
@@ -220,6 +227,7 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
       // Server reasons first (wrong details, paused sign-in, captcha), then a clear general message
       const errorMessage =
         error.response?.data?.login?.[0] ||
+        error.response?.data?.accept_terms?.[0] ||
         error.response?.data?.error ||
         error.response?.data?.captcha?.[0] ||
         describeApiError(error, 'Sign in failed. Check your details and try again.');
@@ -317,6 +325,27 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
                     <Link to="/forgot-password" className={styles.inlineLink}>Forgot password?</Link>
                   </div>
 
+                  <div className={styles.inputGroup}>
+                    <label htmlFor="acceptTerms" className={`${styles.checkboxLabel} ${styles.termsLabel}`}>
+                      <input
+                        type="checkbox"
+                        id="acceptTerms"
+                        checked={acceptTerms}
+                        onChange={(e) => { setAcceptTerms(e.target.checked); if (errors.acceptTerms) setErrors((prev) => ({ ...prev, acceptTerms: '' })); }}
+                        className={styles.checkboxInput}
+                        aria-invalid={!!errors.acceptTerms}
+                        aria-describedby={errors.acceptTerms ? 'terms-error' : undefined}
+                      />
+                      <span>
+                        I agree to the{' '}
+                        <Link to="/terms" target="_blank" rel="noopener noreferrer" className={styles.inlineLink}>Terms of Service</Link>
+                        {' '}and{' '}
+                        <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" className={styles.inlineLink}>Privacy Policy</Link>
+                      </span>
+                    </label>
+                    {errors.acceptTerms && <div id="terms-error" className={styles.errorMessage} role="alert">{errors.acceptTerms}</div>}
+                  </div>
+
                   <div className={styles.captcha}>
                     <ReCAPTCHA
                       ref={recaptchaRef}
@@ -354,6 +383,8 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
                     apiString={apiString}
                     onResult={handleSocial}
                     rememberMe={formData.rememberMe}
+                    acceptedTerms={acceptTerms}
+                    onTermsMissing={() => setErrors((prev) => ({ ...prev, acceptTerms: 'Agree to the Terms of Service and Privacy Policy to continue' }))}
                     styles={styles}
                     isDarkMode={isDarkMode}
                   />

@@ -61,8 +61,10 @@ const loadGoogle = () => {
  * @param rememberMe    keep the person signed in on this device
  * @param styles        the page's CSS module (socialLogin, socialButton)
  * @param isDarkMode    for the toasts
+ * @param acceptedTerms the page's Terms of Service box is ticked (required, like the forms)
+ * @param onTermsMissing called instead of opening Google when it isn't
  */
-const SocialSignIn = ({ apiString, onResult, rememberMe = true, styles, isDarkMode }) => {
+const SocialSignIn = ({ apiString, onResult, rememberMe = true, styles, isDarkMode, acceptedTerms = false, onTermsMissing }) => {
   const [busy, setBusy] = useState('');
   const googleClient = useRef(null);
   const toastTheme = isDarkMode ? 'dark' : 'light';
@@ -76,7 +78,7 @@ const SocialSignIn = ({ apiString, onResult, rememberMe = true, styles, isDarkMo
     setBusy(provider);
     try {
       const response = await axios.post(`${apiString}/api/auth/login/${provider}/`,
-        { access_token: accessToken, remember_me: rememberMe }, { timeout: 20000 });
+        { access_token: accessToken, remember_me: rememberMe, accept_terms: true }, { timeout: 20000 });
       if (!response.data?.two_factor_required && !response.data?.access) throw new Error('Unexpected sign-in reply');
       onResult(response.data, rememberMe);
     } catch (error) {
@@ -92,6 +94,10 @@ const SocialSignIn = ({ apiString, onResult, rememberMe = true, styles, isDarkMo
     { position: 'top-center', theme: toastTheme });
 
   const google = () => {
+    if (!acceptedTerms) {
+      onTermsMissing?.();
+      return;
+    }
     const accounts = window.google?.accounts?.oauth2;
     if (!GOOGLE_CLIENT_ID) {
       notReady();

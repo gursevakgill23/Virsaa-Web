@@ -893,3 +893,15 @@
     transform: scale(0.88);
   }
 }
+
+/* "I agree to the Terms of Service and Privacy Policy" (the text can wrap) */
+.termsLabel {
+  align-items: flex-start;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.termsLabel input {
+  flex: none;
+  margin-top: 2px;
+}

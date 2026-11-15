@@ -37,6 +37,7 @@ const FIELD_MAP = {
   password: 'password',
   confirm_password: 'confirmPassword',
   captcha: 'captcha',
+  accept_terms: 'acceptTerms',
 };
 
 // Content for the side panel and the sections below the form
@@ -116,6 +117,8 @@ const Signup = ({ isDarkMode, apiString }) => {
     confirmPassword: '',
   });
   const [errors, setErrors] = useState({});
+  // The Terms of Service box: required to create an account (the server checks it too)
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   // The address the verification link went to (shows "Check your email" instead of the form)
@@ -158,6 +161,7 @@ const Signup = ({ isDarkMode, apiString }) => {
     if (formData.password && !passwordRegex.test(formData.password)) newErrors.password = 'Use 8+ characters with upper case, lower case and a number';
     if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords don’t match';
 
+    if (!acceptTerms) newErrors.acceptTerms = 'Agree to the Terms of Service and Privacy Policy to continue';
     if (!recaptchaRef.current?.getValue()) newErrors.captcha = 'Tick the reCAPTCHA box to continue';
 
     setErrors(newErrors);
@@ -193,6 +197,7 @@ const Signup = ({ isDarkMode, apiString }) => {
           password: formData.password,
           confirm_password: formData.confirmPassword,
           captcha: captchaToken,
+          accept_terms: acceptTerms,
         }),
         });
       } catch {
@@ -364,6 +369,27 @@ const Signup = ({ isDarkMode, apiString }) => {
                 maxLength: 128,
               })}
 
+              <div className={styles.inputGroup}>
+                <label htmlFor="acceptTerms" className={`${styles.checkboxLabel} ${styles.termsLabel}`}>
+                  <input
+                    type="checkbox"
+                    id="acceptTerms"
+                    checked={acceptTerms}
+                    onChange={(e) => { setAcceptTerms(e.target.checked); if (errors.acceptTerms) setErrors((prev) => ({ ...prev, acceptTerms: '' })); }}
+                    className={styles.checkboxInput}
+                    aria-invalid={!!errors.acceptTerms}
+                    aria-describedby={errors.acceptTerms ? 'terms-error' : undefined}
+                  />
+                  <span>
+                    I agree to the{' '}
+                    <Link to="/terms" target="_blank" rel="noopener noreferrer" className={styles.inlineLink}>Terms of Service</Link>
+                    {' '}and{' '}
+                    <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" className={styles.inlineLink}>Privacy Policy</Link>
+                  </span>
+                </label>
+                {errors.acceptTerms && <div id="terms-error" className={styles.errorMessage} role="alert">{errors.acceptTerms}</div>}
+              </div>
+
               <div className={styles.captcha}>
                 <ReCAPTCHA
                   ref={recaptchaRef}
@@ -387,6 +413,8 @@ const Signup = ({ isDarkMode, apiString }) => {
                 apiString={apiString}
                 onResult={handleSocial}
                 rememberMe
+                acceptedTerms={acceptTerms}
+                onTermsMissing={() => setErrors((prev) => ({ ...prev, acceptTerms: 'Agree to the Terms of Service and Privacy Policy to continue' }))}
                 styles={styles}
                 isDarkMode={isDarkMode}
               />
