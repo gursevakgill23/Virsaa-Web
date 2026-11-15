@@ -19,10 +19,12 @@ import {
   FaGamepad, FaHeart, FaCheck, FaHistory, FaEnvelopeOpenText, FaSignInAlt,
 } from 'react-icons/fa';
 import { FaHandsPraying } from 'react-icons/fa6';
+// Before ResendVerification: Login does it in this order too, and the CSS build needs
+// the same order everywhere (otherwise a "Conflicting order" warning fails the CI build)
+import LoginCodeStep from '../Login/LoginCodeStep';
 import ResendVerification from '../../components/ResendVerification/ResendVerification';
 import { SitePicture } from '../../components/SitePicture/SitePicture';
 import SocialSignIn, { authUser } from '../../components/SocialSignIn/SocialSignIn';
-import LoginCodeStep from '../Login/LoginCodeStep';
 import { useAuth } from '../../context/AuthContext';
 
 // Backend field names -> form field ids
@@ -94,7 +96,7 @@ const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 const Signup = ({ isDarkMode, apiString }) => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  // Google or Facebook for an account that uses sign-in codes: the emailed code comes next
+  // Google for an account that uses sign-in codes: the emailed code comes next
   const [codeStep, setCodeStep] = useState(null);
   // The reCAPTCHA widget (its token is sent with the form)
   const recaptchaRef = useRef(null);
@@ -236,7 +238,7 @@ const Signup = ({ isDarkMode, apiString }) => {
     }
   };
 
-  // Google or Facebook: signed in (the account is made the first time), or the emailed code comes next
+  // Google: signed in (the account is made the first time), or the emailed code comes next
   const handleSocial = (data, rememberMe) => {
     if (data.two_factor_required && data.challenge) {
       setCodeStep({ challenge: data.challenge, emailHint: data.email_hint, resendIn: data.resend_in, rememberMe });
