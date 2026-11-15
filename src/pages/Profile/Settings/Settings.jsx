@@ -136,6 +136,11 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  // Accounts made with Google or Apple have no password: they confirm with an emailed code
+  const [deleteMode, setDeleteMode] = useState('password');   // 'password' | 'code'
+  const [deleteStep, setDeleteStep] = useState(null);         // { challenge, emailHint } once the code is sent
+  const [deleteCode, setDeleteCode] = useState('');
+  const [sendingDeleteCode, setSendingDeleteCode] = useState(false);
 
   // Load saved settings
   const loadPrefs = useCallback(async () => {
@@ -408,19 +413,54 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
     }
   };
 
+  // Opening the form: ask the server whether this account has a password
+  const openDelete = async () => {
+    setDeleteOpen(true);
+    try {
+      const profile = await accountApi.profile(apiString, accessToken);
+      if (profile?.has_password === false) setDeleteMode('code');
+    } catch { /* the password form stays; "Use an emailed code" is there too */ }
+  };
+
+  const closeDelete = () => {
+    setDeleteOpen(false);
+    setDeletePassword('');
+    setDeleteError('');
+    setDeleteStep(null);
+    setDeleteCode('');
+  };
+
+  const sendDeleteCode = async () => {
+    setSendingDeleteCode(true);
+    setDeleteError('');
+    try {
+      const sent = await accountApi.sendDeleteCode(apiString, accessToken);
+      setDeleteStep({ challenge: sent.challenge, emailHint: sent.email_hint });
+      setDeleteCode('');
+    } catch (err) {
+      setDeleteError(err.response?.data?.error || describeApiError(err, 'The code couldn’t be sent. Try again.'));
+    } finally {
+      setSendingDeleteCode(false);
+    }
+  };
+
   const deleteAccount = async (e) => {
     e.preventDefault();
-    if (!deletePassword) { setDeleteError('Enter your password to confirm.'); return; }
+    const usingCode = deleteMode === 'code';
+    if (usingCode && !deleteStep) { sendDeleteCode(); return; }
+    if (usingCode && deleteCode.replace(/\D/g, '').length !== 6) { setDeleteError('Enter the 6-digit code from the email.'); return; }
+    if (!usingCode && !deletePassword) { setDeleteError('Enter your password to confirm.'); return; }
     setDeleting(true);
     setDeleteError('');
     try {
-      await accountApi.deleteAccount(apiString, accessToken, deletePassword);
+      if (usingCode) await accountApi.deleteAccountWithCode(apiString, accessToken, deleteStep.challenge, deleteCode);
+      else await accountApi.deleteAccount(apiString, accessToken, deletePassword);
       try { await logout?.(); } catch { /* already gone */ }
       say('info', 'Your account was deleted.');
       navigate('/');
     } catch (err) {
       const d = err.response?.data || {};
-      setDeleteError((Array.isArray(d.password) ? d.password[0] : d.password)
+      setDeleteError((Array.isArray(d.password) ? d.password[0] : d.password) || d.error
         || (err.response?.status === 401 ? 'Your session has ended. Log in again first.' : describeApiError(err, 'The account couldn’t be deleted. Try again.')));
       setDeleting(false);
     }
@@ -751,34 +791,67 @@ const Settings = ({ isDarkMode, toggleTheme, setTheme, apiString }) => {
                     <p>Permanently delete your account, profile, favorites, history, coins and badges. This can’t be undone.</p>
                   </div>
                   {!deleteOpen && (
-                    <button type="button" className={styles.dangerButton} onClick={() => setDeleteOpen(true)}>
+                    <button type="button" className={styles.dangerButton} onClick={openDelete}>
                       <FaTrash aria-hidden="true" /> Delete account
                     </button>
                   )}
                 </div>
                 {deleteOpen && (
                   <form className={styles.block} onSubmit={deleteAccount} noValidate>
-                    <label className={styles.field} htmlFor="delete-password">
-                      <span className={styles.fieldLabel}>Enter your password to confirm</span>
-                      <input
-                        id="delete-password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={deletePassword}
-                        maxLength={128}
-                        onChange={(e) => { setDeletePassword(e.target.value); if (deleteError) setDeleteError(''); }}
-                        className={`${styles.input} ${deleteError ? styles.inputError : ''}`}
-                        aria-invalid={Boolean(deleteError)}
-                        aria-describedby={deleteError ? 'delete-err' : undefined}
-                      />
-                      {deleteError && <span id="delete-err" className={styles.errorText}>{deleteError}</span>}
-                    </label>
+                    {deleteMode === 'password' ? (
+                      <label className={styles.field} htmlFor="delete-password">
+                        <span className={styles.fieldLabel}>Enter your password to confirm</span>
+                        <input
+                          id="delete-password"
+                          type="password"
+                          autoComplete="current-password"
+                          value={deletePassword}
+                          maxLength={128}
+                          onChange={(e) => { setDeletePassword(e.target.value); if (deleteError) setDeleteError(''); }}
+                          className={`${styles.input} ${deleteError ? styles.inputError : ''}`}
+                          aria-invalid={Boolean(deleteError)}
+                          aria-describedby={deleteError ? 'delete-err' : undefined}
+                        />
+                        {deleteError && <span id="delete-err" className={styles.errorText}>{deleteError}</span>}
+                        <button type="button" className={styles.editLink} onClick={() => { setDeleteMode('code'); setDeleteError(''); }}>
+                          No password? Use an emailed code instead
+                        </button>
+                      </label>
+                    ) : !deleteStep ? (
+                      <div className={styles.field}>
+                        <p className={styles.hint}>
+                          We’ll email you a 6-digit code to confirm it’s you. Accounts made with Google or Apple don’t have a password.
+                        </p>
+                        {deleteError && <span id="delete-err" className={styles.errorText} role="alert">{deleteError}</span>}
+                      </div>
+                    ) : (
+                      <label className={styles.field} htmlFor="delete-code">
+                        <span className={styles.fieldLabel}>Enter the code we emailed to {deleteStep.emailHint}</span>
+                        <input
+                          id="delete-code"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          value={deleteCode}
+                          maxLength={7}
+                          onChange={(e) => { setDeleteCode(e.target.value); if (deleteError) setDeleteError(''); }}
+                          className={`${styles.input} ${deleteError ? styles.inputError : ''}`}
+                          aria-invalid={Boolean(deleteError)}
+                          aria-describedby={deleteError ? 'delete-err' : undefined}
+                        />
+                        {deleteError && <span id="delete-err" className={styles.errorText}>{deleteError}</span>}
+                        <button type="button" className={styles.editLink} onClick={sendDeleteCode} disabled={sendingDeleteCode}>
+                          {sendingDeleteCode ? 'Sending…' : 'Send a new code'}
+                        </button>
+                      </label>
+                    )}
                     <div className={styles.actions}>
-                      <button type="button" className={styles.secondaryButton} onClick={() => { setDeleteOpen(false); setDeletePassword(''); setDeleteError(''); }}>
+                      <button type="button" className={styles.secondaryButton} onClick={closeDelete}>
                         Cancel
                       </button>
-                      <button type="submit" className={styles.dangerButton} disabled={deleting}>
-                        {deleting ? 'Deleting…' : 'Delete my account'}
+                      <button type="submit" className={styles.dangerButton} disabled={deleting || sendingDeleteCode}>
+                        {deleting ? 'Deleting…'
+                          : deleteMode === 'code' && !deleteStep ? (sendingDeleteCode ? 'Sending…' : 'Email me a code')
+                            : 'Delete my account'}
                       </button>
                     </div>
                   </form>

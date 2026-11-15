@@ -46,8 +46,15 @@ const accountApi = {
   // -> { message, access, refresh }: other devices are signed out, this one gets new tokens
   changePassword: (api, token, currentPassword, newPassword) =>
     axios.post(`${base(api)}/change-password/`, { current_password: currentPassword, new_password: newPassword }, auth(token)).then(data),
+  // The profile; has_password is false for accounts made with Google or Apple
+  profile: (api, token) => axios.get(`${base(api)}/profile/`, auth(token)).then(data),
+  // Delete with the password, or (no password) with a code: sendDeleteCode -> { challenge, email_hint }
   deleteAccount: (api, token, password) =>
     axios.post(`${base(api)}/delete-account/`, { password }, auth(token)).then(data),
+  sendDeleteCode: (api, token) =>
+    axios.post(`${base(api)}/delete-account/`, { send_code: true }, auth(token)).then(data),
+  deleteAccountWithCode: (api, token, challenge, code) =>
+    axios.post(`${base(api)}/delete-account/`, { challenge, code }, auth(token)).then(data),
 
   // Sign-in codes (two-step sign-in). Staff accounts always use them (required: true).
   //   twoFactor -> { enabled, switched_on, required, method: 'email', email_hint, enabled_at }

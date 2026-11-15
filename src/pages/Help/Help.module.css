@@ -1,0 +1,553 @@
+/*
+ * pages/Help/Help.module.css
+ * -----------------------------------------------------------------------------
+ * Help Center: search and topic filters, the answers as an accordion, then
+ * "Didn't find your answer?" with the message and refund forms.
+ * -----------------------------------------------------------------------------
+ */
+.page {
+  background: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-body);
+  overflow-x: clip;
+}
+
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 16px 72px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Search and topics ---------- */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  min-height: 54px;
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  color: var(--secondary-text-color);
+}
+
+.search:focus-within {
+  border-color: var(--primary-color);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  font-size: 1.02rem;
+  outline: none;
+}
+
+.topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+
+.topic {
+  padding: 8px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.topic:hover {
+  border-color: var(--primary-color);
+}
+
+.topicOn {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+/* ---------- Answers ---------- */
+.category {
+  margin-top: 28px;
+}
+
+.categoryTitle {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.35rem;
+  color: var(--headline-color);
+}
+
+.faqList {
+  border-radius: 18px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  overflow: hidden;
+}
+
+.faq + .faq {
+  border-top: 1px solid var(--border-color);
+}
+
+.faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  font-weight: 600;
+  color: var(--headline-color);
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: -3px;
+}
+
+.chevron {
+  flex: none;
+  color: var(--secondary-text-color);
+  transition: transform 0.2s ease;
+}
+
+.faq[open] .chevron {
+  transform: rotate(180deg);
+}
+
+.answer {
+  padding: 0 18px 16px;
+  line-height: 1.7;
+  color: var(--text-color);
+}
+
+.answer p {
+  margin: 0 0 10px;
+}
+
+.answer ul {
+  margin: 0 0 10px;
+  padding-left: 1.2em;
+}
+
+.answer a {
+  color: var(--link-color);
+  font-weight: 600;
+}
+
+.empty,
+.notice {
+  margin: 28px 0;
+  color: var(--secondary-text-color);
+}
+
+/* ---------- Didn't find your answer ---------- */
+.getHelp {
+  margin-top: 48px;
+  padding: 28px 24px;
+  border-radius: 24px;
+  background: var(--glass-bg-strong);
+  border: 1px solid rgba(201, 162, 74, 0.45);
+  box-shadow: var(--glass-highlight), var(--shadow-soft);
+  scroll-margin-top: 90px;
+}
+
+.getHelpTitle {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.8rem);
+  color: var(--headline-color);
+}
+
+.getHelpLede {
+  margin: 0 0 18px;
+  color: var(--secondary-text-color);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.action {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--background-color);
+  color: var(--text-color);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--primary-color);
+}
+
+.action span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+}
+
+.action strong {
+  font-size: 1rem;
+  color: var(--headline-color);
+}
+
+.action:hover,
+.actionOn {
+  border-color: var(--primary-color);
+}
+
+.actionOn {
+  background: rgba(var(--primary-rgb), 0.06);
+}
+
+.action:focus-visible,
+.topic:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}
+
+/* ---------- Forms ---------- */
+.form {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.twoCols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--headline-color);
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--input-border-color);
+  background: var(--input-bg-color);
+  color: var(--text-color);
+  font: inherit;
+  font-weight: 400;
+  font-size: 1rem;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--input-focus-border-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
+}
+
+.trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.formNote,
+.smallPrint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+}
+
+.smallPrint {
+  margin-top: 18px;
+}
+
+.formNote a,
+.smallPrint a {
+  color: var(--link-color);
+  font-weight: 600;
+}
+
+.error {
+  margin: 0;
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.panelNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.panelNote p {
+  margin: 0;
+}
+
+.done {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(46, 125, 50, 0.1);
+  color: var(--text-color);
+}
+
+.done svg {
+  flex: none;
+  margin-top: 3px;
+  color: #2e7d32;
+}
+
+.done p {
+  margin: 0;
+}
+
+.orders {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.orders legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--headline-color);
+}
+
+.orderRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.orderRow input {
+  margin-top: 4px;
+  accent-color: var(--primary-color);
+}
+
+.orderOn {
+  border-color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.06);
+}
+
+.orderOff {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.orderText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+}
+
+.orderText strong {
+  font-size: 1rem;
+  color: var(--headline-color);
+}
+
+.orderText em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: var(--button-border);
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--button-hover-bg-color);
+  color: var(--button-hover-text-color);
+}
+
+.secondaryButton {
+  background: transparent;
+  color: var(--primary-color);
+  border: 2px solid rgba(var(--primary-rgb), 0.35);
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 3px solid #c9a24a;
+  outline-offset: 2px;
+}
+
+/* ---------- Your messages ---------- */
+.mine {
+  margin-top: 40px;
+}
+
+.mineList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 18px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+}
+
+.mineList li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  padding: 14px 18px;
+}
+
+.mineList li + li {
+  border-top: 1px solid var(--border-color);
+}
+
+.mineSubject {
+  font-weight: 600;
+  color: var(--headline-color);
+}
+
+.mineMeta {
+  grid-column: 1;
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+}
+
+.status {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary-color);
+}
+
+.status_resolved,
+.status_closed {
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+}
+
+.policies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 40px;
+  font-size: 0.9rem;
+}
+
+.policies a {
+  color: var(--secondary-text-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.policies a:hover {
+  color: var(--primary-color);
+}
+
+@media (max-width: 640px) {
+  .actions,
+  .twoCols {
+    grid-template-columns: 1fr;
+  }
+
+  .getHelp {
+    padding: 22px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

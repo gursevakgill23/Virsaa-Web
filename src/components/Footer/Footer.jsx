@@ -3,16 +3,18 @@
  * -----------------------------------------------------------------------------
  * The site footer (hidden on the full-screen game pages, see App.js):
  *   - brand blurb with the logo
- *   - "Useful links" to the main pages, including About and Privacy Policy
- *   - newsletter sign-up and a feedback box (checked here; see the TODO below
- *     about connecting them to the backend)
- *   - bottom bar with the copyright and "Follow us" social links
+ *   - "Useful links" to the main pages, including About and FAQs (the Help Center)
+ *   - newsletter sign-up (checked here; not connected to the backend yet) and
+ *     a feedback box, sent to the team through the Help Center (/api/site/)
+ *   - bottom bar with the copyright, the policies and "Follow us" social links
  * -----------------------------------------------------------------------------
  */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaYoutube, FaPaperPlane } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
+import { useAuth } from '../../context/AuthContext';
+import siteApi, { POLICY_LINKS } from '../../api/siteApi';
 import styles from './Footer.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -38,8 +40,7 @@ const USEFUL_LINKS = [
   { label: 'Gurbani', to: '/gurbani' },
   { label: 'Premium', to: '/premium' },
   { label: 'About', to: '/about' },
-  { label: 'Privacy Policy', to: '/privacy-policy' },
-  { label: 'Picture credits', to: '/picture-credits' },
+  { label: 'FAQs', to: '/help' },
 ];
 
 // "Follow us" links. Replace these with Virsaa's real profile URLs
@@ -54,10 +55,11 @@ const SOCIAL_LINKS = [
 // Form limits: a simple email shape check (the server should check again) and feedback length
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const EMAIL_MAX = 254;
-const FEEDBACK_MIN = 5;
+const FEEDBACK_MIN = 10;   // the Help Center's shortest message
 const FEEDBACK_MAX = 1000;
 
-const Footer = () => {
+const Footer = ({ apiString }) => {
+  const { isLoggedIn, accessToken } = useAuth();
   const getImagePath = useProductionImagePath();
   const logo = '/images/logo.png';
 
@@ -68,8 +70,10 @@ const Footer = () => {
   const [feedbackDone, setFeedbackDone] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [feedbackError, setFeedbackError] = useState('');
+  const [feedbackEmail, setFeedbackEmail] = useState('');
+  const [sendingFeedback, setSendingFeedback] = useState(false);
 
-  // TODO: connect these to backend endpoints when they exist
+  // TODO: connect the newsletter to a mailing list when there is one
   const handleSubscribe = (e) => {
     e.preventDefault();
     const value = email.trim();
@@ -80,13 +84,30 @@ const Footer = () => {
     setEmail('');
   };
 
-  const handleFeedback = (e) => {
+  // Feedback goes to the team as a Help Center message (signed-out visitors add their email)
+  const handleFeedback = async (e) => {
     e.preventDefault();
     const value = feedback.trim();
     if (value.length < FEEDBACK_MIN) { setFeedbackError(`Write at least ${FEEDBACK_MIN} characters.`); return; }
+    const replyTo = feedbackEmail.trim();
+    if (!isLoggedIn && !EMAIL_PATTERN.test(replyTo)) { setFeedbackError('Enter your email so we can reply.'); return; }
     setFeedbackError('');
-    setFeedbackDone(true);
-    setFeedback('');
+    setSendingFeedback(true);
+    try {
+      await siteApi.sendRequest(apiString, isLoggedIn ? accessToken : null, {
+        category: 'feedback',
+        subject: value.length > 60 ? `${value.slice(0, 57)}…` : value,
+        message: value,
+        ...(isLoggedIn ? {} : { name: 'Website visitor', email: replyTo }),
+      });
+      setFeedbackDone(true);
+      setFeedback('');
+      setFeedbackEmail('');
+    } catch (err) {
+      setFeedbackError(err.response?.data?.error || 'Your feedback couldn’t be sent. Try again.');
+    } finally {
+      setSendingFeedback(false);
+    }
   };
 
   // Footer links jump to the top of the new page
@@ -173,8 +194,25 @@ const Footer = () => {
                   aria-describedby={feedbackError ? 'footer-feedback-error' : undefined}
                   className={styles.textarea}
                 />
+                {!isLoggedIn && (
+                  <>
+                    <label htmlFor="footer-feedback-email" className={styles.srOnly}>Your email</label>
+                    <input
+                      id="footer-feedback-email"
+                      type="email"
+                      placeholder="Your email (so we can reply)"
+                      value={feedbackEmail}
+                      onChange={(e) => { setFeedbackEmail(e.target.value); if (feedbackError) setFeedbackError(''); }}
+                      maxLength={EMAIL_MAX}
+                      autoComplete="email"
+                      className={styles.stackInput}
+                    />
+                  </>
+                )}
                 {feedbackError && <p id="footer-feedback-error" className={styles.formError} role="alert">{feedbackError}</p>}
-                <button type="submit" className={styles.pillButton}>Send feedback</button>
+                <button type="submit" className={styles.pillButton} disabled={sendingFeedback}>
+                  {sendingFeedback ? 'Sending…' : 'Send feedback'}
+                </button>
               </form>
             )}
           </div>
@@ -183,6 +221,13 @@ const Footer = () => {
         {/* Bottom bar: copyright + Follow us */}
         <div className={styles.bottom}>
           <p className={styles.copyright}>&copy; {new Date().getFullYear()} Virsaa. All rights reserved.</p>
+          <nav aria-label="Policies">
+            <ul className={styles.policyList}>
+              {POLICY_LINKS.map((p) => (
+                <li key={p.slug}><Link to={p.to} onClick={scrollTop} className={styles.policyLink}>{p.label}</Link></li>
+              ))}
+            </ul>
+          </nav>
           <div className={styles.follow}>
             <span className={styles.followLabel}>Follow us</span>
             <ul className={styles.socialList}>

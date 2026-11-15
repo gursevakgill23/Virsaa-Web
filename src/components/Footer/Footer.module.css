@@ -386,3 +386,49 @@
     transform: none;
   }
 }
+
+/* Policies in the bottom bar */
+.policyList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.policyLink {
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+  text-decoration: none;
+}
+
+.policyLink:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.policyLink:focus-visible {
+  outline: 2px solid #c9a24a;
+  outline-offset: 2px;
+}
+
+/* The email box under the feedback text, for signed-out visitors */
+.stackInput {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--input-border-color);
+  background: var(--input-bg-color);
+  color: var(--text-color);
+  font-family: var(--font-body);
+  font-size: 0.97rem;
+}
+
+.stackInput:focus {
+  outline: none;
+  border-color: var(--input-focus-border-color);
+  box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.14);
+}

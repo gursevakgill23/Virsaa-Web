@@ -2,12 +2,16 @@
  * pages/About/About.jsx
  * -----------------------------------------------------------------------------
  * The About page (/about): Virsaa's story and timeline, mission and community,
- * values, team, digitisation work and a call to action. Static content only,
- * no API calls.
+ * values, team, digitisation work and a call to action.
+ *
+ * The words come from the database (Django admin > Site pages > About, served
+ * by /api/site/pages/about/); each section's key says where it goes: story,
+ * mission, community, values, team, digitization, join. Timeline, values and
+ * team are bullet points written "**Title**: text". The design stays here.
  * -----------------------------------------------------------------------------
  */
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
  FaRocket, FaCode, FaBook, FaGlobeAmericas, FaHeart, FaSearch, FaHandshake,
   FaLightbulb, FaBookOpen, FaSeedling, FaPalette, FaLock,
@@ -15,6 +19,10 @@ import {
 import PageHero from '../../components/PageHero/PageHero';
 import { SitePicture } from '../../components/SitePicture/SitePicture';
 import Avatar from '../../components/Avatar/Avatar';
+import RichText, { parseBlocks, renderInline, titledItem } from '../../components/RichText/RichText';
+import Loader from '../../components/VirsaaLoader/Loader';
+import siteApi from '../../api/siteApi';
+import { devError } from '../../utils/devLog';
 import styles from './About.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -33,39 +41,22 @@ const useProductionImagePath = () => {
 };
 
 
-const TIMELINE = [
-  {
-    icon: <FaLightbulb />,
-    year: '2024',
-    text: 'The idea for Virsaa was born with a vision to digitize Punjabi literature and history, preserving our rich cultural heritage and making it accessible to future generations.',
-  },
-  {
-    icon: <FaCode />,
-    year: '2025',
-    text: 'Completed the design and development of the Virsaa platform as a solo developer, while organizing ebooks and audiobooks to create a rich digital library of Punjabi literature.',
-  },
-  {
-    icon: <FaRocket />,
-    year: '2026',
-    text: 'Deployed Virsaa for testing, bringing the vision closer to reality and taking the next step toward making Punjabi literature and cultural knowledge accessible to a wider audience.',
-  },
+// Icons for the timeline and the values, in order (they repeat if more are added in the admin)
+const TIMELINE_ICONS = [<FaLightbulb />, <FaCode />, <FaRocket />];
+const VALUE_ICONS = [
+  <FaBook />, <FaGlobeAmericas />, <FaHeart />, <FaSearch />, <FaHandshake />,
+  <FaLightbulb />, <FaBookOpen />, <FaSeedling />, <FaPalette />, <FaLock />,
 ];
 
-// Cards in the values grid
-const VALUES = [
-  { icon: <FaBook />, title: 'Preservation', description: 'We are committed to preserving Punjabi and Sikh heritage through digitization and archiving.' },
-  { icon: <FaGlobeAmericas />, title: 'Accessibility', description: 'Making heritage accessible to everyone, everywhere, regardless of language or location.' },
-  { icon: <FaHeart />, title: 'Community', description: 'Building a global community of heritage enthusiasts who share our passion for cultural preservation.' },
-  { icon: <FaSearch />, title: 'Research', description: 'Conducting in-depth research to uncover and document rare and forgotten aspects of Punjabi history.' },
-  { icon: <FaHandshake />, title: 'Collaboration', description: 'Partnering with institutions, scholars, and communities to achieve our goals.' },
-  { icon: <FaLightbulb />, title: 'Innovation', description: 'Using cutting-edge technology to enhance the accessibility and preservation of heritage.' },
-  { icon: <FaBookOpen />, title: 'Education', description: 'Promoting education and awareness about Punjabi and Sikh heritage through workshops and resources.' },
-  { icon: <FaSeedling />, title: 'Sustainability', description: 'Ensuring our efforts are sustainable and benefit future generations.' },
-  { icon: <FaPalette />, title: 'Creativity', description: 'Encouraging creative expression to celebrate and share our cultural heritage.' },
-  { icon: <FaLock />, title: 'Integrity', description: 'Maintaining the highest standards of integrity in all our work.' },
-];
+/** A section's opening paragraph (its lede) and its bullet points as {title, text}. */
+const splitSection = (section) => {
+  const blocks = parseBlocks(section?.body);
+  const lede = blocks.find((b) => b.type === 'p')?.text || '';
+  const items = blocks.filter((b) => b.type === 'ul').flatMap((b) => b.items).map(titledItem);
+  return { lede, items };
+};
 
-const About = ({ isDarkMode }) => {
+const About = ({ isDarkMode, apiString }) => {
   // The header picture is in public/images; the others are real photos from S3 (SitePicture)
   const getImagePath = useProductionImagePath();
   const headerDark = '/images/header-image-dark.png';
@@ -74,123 +65,164 @@ const About = ({ isDarkMode }) => {
   const navigate = useNavigate();
   const headerImage = isDarkMode ? headerDark : headerLight;
 
-  // Team cards (replace with the real team when ready). Add `photo: 'https://…'` to show a
-  // photo; without one, the person's initials are shown.
-  const team = [
-    { name: 'Gursevak Singh', role: 'Developer' },
-  ];
+  // The words, from the database
+  const [page, setPage] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    setFailed(false);
+    siteApi.page(apiString, 'about')
+      .then((data) => { if (!cancelled) setPage(data); })
+      .catch((err) => {
+        devError('About page failed to load:', err.response?.status || err.message);
+        if (!cancelled) setFailed(true);
+      });
+    return () => { cancelled = true; };
+  }, [apiString, reloadKey]);
+
+  const section = useMemo(() => {
+    const byKey = {};
+    (page?.sections || []).forEach((s) => { byKey[s.key] = s; });
+    return byKey;
+  }, [page]);
+  const story = splitSection(section.story);
+  const values = splitSection(section.values);
+  const team = splitSection(section.team);
 
   return (
     <div className={styles.page}>
       <PageHero
         image={getImagePath(headerImage)}
-        title="Preserving Heritage, Inspiring Futures"
-        subtitle="Discover the story behind our mission to preserve and share the rich heritage of Sikhism and Punjab."
+        title={page?.title || 'About Virsaa'}
+        subtitle={page?.summary || ''}
         crumbs={[{ label: 'Home', to: '/' }, { label: 'About' }]}
       />
 
-      {/* ---------- Story ---------- */}
-      <section className={styles.section} aria-labelledby="story-title">
-        <div className={styles.storyLayout}>
-          <div className={styles.storyIntro}>
-            <h2 id="story-title" className={styles.sectionTitle}>Our story</h2>
-            <p className={styles.lede}>
-              From a small team with a big idea to a library read around the world.
-            </p>
-          </div>
-          <ol className={styles.timeline}>
-            {TIMELINE.map((item) => (
-              <li key={item.year} className={styles.timelineItem}>
-                <span className={styles.timelineIcon} aria-hidden="true">{item.icon}</span>
-                <div className={styles.timelineCard}>
-                  <h3 className={styles.timelineYear}>{item.year}</h3>
-                  <p>{item.text}</p>
+      {failed && (
+        <section className={styles.section} role="alert">
+          <p className={styles.lede}>This page couldn’t be loaded. Check your connection and try again.</p>
+          <button type="button" className={styles.ctaButton} onClick={() => setReloadKey((k) => k + 1)}>Try again</button>
+        </section>
+      )}
+      {!page && !failed && <Loader />}
+
+      {page && (
+        <>
+          {/* ---------- Story ---------- */}
+          {section.story && (
+            <section className={styles.section} aria-labelledby="story-title">
+              <div className={styles.storyLayout}>
+                <div className={styles.storyIntro}>
+                  <h2 id="story-title" className={styles.sectionTitle}>{section.story.title}</h2>
+                  {story.lede && <p className={styles.lede}>{renderInline(story.lede, 'story')}</p>}
                 </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+                <ol className={styles.timeline}>
+                  {story.items.map((item, index) => (
+                    <li key={`${item.title}-${index}`} className={styles.timelineItem}>
+                      <span className={styles.timelineIcon} aria-hidden="true">{TIMELINE_ICONS[index % TIMELINE_ICONS.length]}</span>
+                      <div className={styles.timelineCard}>
+                        {item.title && <h3 className={styles.timelineYear}>{item.title}</h3>}
+                        <p>{renderInline(item.text, `t${index}`)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </section>
+          )}
 
-      {/* ---------- Mission + Community ---------- */}
-      <section className={styles.section} aria-label="Mission and community">
-        <div className={styles.pillars}>
-          <article className={styles.pillar}>
-            <SitePicture name="about-mission" alt="" className={styles.pillarImage} />
-            <div className={styles.pillarGlass}>
-              <h2 className={styles.pillarTitle}>Our mission</h2>
-              <p>
-                Our mission is to preserve the rich cultural and historical heritage of Sikhism and Punjab by digitizing rare texts, manuscripts, and artifacts. We aim to make these resources accessible to everyone, ensuring that future generations can learn from and appreciate this invaluable legacy.
-              </p>
+          {/* ---------- Mission + Community ---------- */}
+          {(section.mission || section.community) && (
+            <section className={styles.section} aria-label={[section.mission?.title, section.community?.title].filter(Boolean).join(' and ')}>
+              <div className={styles.pillars}>
+                {['mission', 'community'].filter((key) => section[key]).map((key) => (
+                  <article key={key} className={styles.pillar}>
+                    <SitePicture name={`about-${key}`} alt="" className={styles.pillarImage} />
+                    <div className={styles.pillarGlass}>
+                      <h2 className={styles.pillarTitle}>{section[key].title}</h2>
+                      <RichText text={section[key].body} />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ---------- Values ---------- */}
+          {section.values && (
+            <section className={styles.section} aria-labelledby="values-title">
+              <h2 id="values-title" className={styles.sectionTitle}>{section.values.title}</h2>
+              {values.lede && <p className={styles.lede}>{renderInline(values.lede, 'values')}</p>}
+              <ul className={styles.valuesGrid}>
+                {values.items.map((value, index) => (
+                  <li key={`${value.title}-${index}`} className={styles.valueItem}>
+                    <span className={styles.valueIcon} aria-hidden="true">{VALUE_ICONS[index % VALUE_ICONS.length]}</span>
+                    {value.title && <h3 className={styles.valueTitle}>{value.title}</h3>}
+                    <p className={styles.valueDescription}>{renderInline(value.text, `v${index}`)}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* ---------- Team ---------- */}
+          {section.team && (
+            <section className={styles.section} aria-labelledby="team-title">
+              <h2 id="team-title" className={styles.sectionTitle}>{section.team.title}</h2>
+              {team.lede && <p className={styles.lede}>{renderInline(team.lede, 'team')}</p>}
+              <ul className={styles.teamGrid}>
+                {team.items.map((member, index) => {
+                  // "Founder and developer. Designed and built…": the first sentence is the role
+                  const match = member.text.match(/^([^.]+)\.\s+(.+)$/);
+                  const role = match ? match[1] : member.text.replace(/\.$/, '');
+                  const bio = match ? match[2] : '';
+                  return (
+                    <li key={`${member.title}-${index}`} className={styles.teamMember}>
+                      <span className={styles.memberFrame}>
+                        <Avatar name={member.title} className={styles.memberImage} loading="lazy" />
+                      </span>
+                      <h3 className={styles.memberName}>{member.title}</h3>
+                      <p className={styles.memberRole}>{role}</p>
+                      {bio && <p className={styles.memberBio}>{renderInline(bio, `m${index}`)}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          {/* ---------- Digitization ---------- */}
+          {section.digitization && (
+            <section className={styles.section} aria-labelledby="digit-title">
+              <div className={styles.digitization}>
+                <div className={styles.digitImageWrap}>
+                  <SitePicture name="about-digitization" className={styles.digitImage} />
+                </div>
+                <div className={styles.digitText}>
+                  <h2 id="digit-title" className={styles.sectionTitle}>{section.digitization.title}</h2>
+                  <RichText text={section.digitization.body} />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ---------- CTA ---------- */}
+          <section className={styles.section}>
+            <div className={styles.cta}>
+              <div>
+                <h2 className={styles.ctaTitle}>{section.join?.title || 'Join us in preserving heritage'}</h2>
+                {section.join?.body && <RichText text={section.join.body} className={styles.ctaText} />}
+              </div>
+              <button type="button" className={styles.ctaButton} onClick={() => navigate('/collections/ebooks')}>
+                Explore collections
+              </button>
             </div>
-          </article>
-          <article className={styles.pillar}>
-            <SitePicture name="about-community" alt="" className={styles.pillarImage} />
-            <div className={styles.pillarGlass}>
-              <h2 className={styles.pillarTitle}>Our community</h2>
-              <p>
-                Our community is at the heart of everything we do. From scholars and researchers to casual readers and history enthusiasts, we bring together people from all walks of life who share a common love for Punjabi and Sikh heritage. Join us in our mission to preserve and celebrate this rich cultural legacy.
-              </p>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      {/* ---------- Values ---------- */}
-      <section className={styles.section} aria-labelledby="values-title">
-        <h2 id="values-title" className={styles.sectionTitle}>Our values</h2>
-        <p className={styles.lede}>The principles behind every book we digitize and every feature we build.</p>
-        <ul className={styles.valuesGrid}>
-          {VALUES.map((value) => (
-            <li key={value.title} className={styles.valueItem}>
-              <span className={styles.valueIcon} aria-hidden="true">{value.icon}</span>
-              <h3 className={styles.valueTitle}>{value.title}</h3>
-              <p className={styles.valueDescription}>{value.description}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* ---------- Team ---------- */}
-      <section className={styles.section} aria-labelledby="team-title">
-        <h2 id="team-title" className={styles.sectionTitle}>Meet the team</h2>
-        <ul className={styles.teamGrid}>
-          {team.map((member) => (
-            <li key={member.name} className={styles.teamMember}>
-              <span className={styles.memberFrame}>
-                <Avatar src={member.photo} name={member.name} className={styles.memberImage} loading="lazy" />
-              </span>
-              <h3 className={styles.memberName}>{member.name}</h3>
-              <p className={styles.memberRole}>{member.role}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* ---------- Digitization ---------- */}
-      <section className={styles.section} aria-labelledby="digit-title">
-        <div className={styles.digitization}>
-          <div className={styles.digitImageWrap}>
-            <SitePicture name="about-digitization" className={styles.digitImage} />
-          </div>
-          <div className={styles.digitText}>
-            <h2 id="digit-title" className={styles.sectionTitle}>Our digitization process</h2>
-            <p>
-              Our digitization process involves scanning, transcribing, and archiving rare manuscripts, books, and documents. We use state-of-the-art technology to ensure that these resources are preserved in high quality and made accessible to the public. Our team works tirelessly to ensure that every detail is captured accurately.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- CTA ---------- */}
-      <section className={styles.section}>
-        <div className={styles.cta}>
-          <h2 className={styles.ctaTitle}>Join us in preserving heritage</h2>
-          <button type="button" className={styles.ctaButton} onClick={() => navigate('/collections/ebooks')}>
-            Explore collections
-          </button>
-        </div>
-      </section>
+            {/* The photos' licences ask for credit */}
+            <p className={styles.credits}><Link to="/picture-credits">Picture credits</Link></p>
+          </section>
+        </>
+      )}
     </div>
   );
 };

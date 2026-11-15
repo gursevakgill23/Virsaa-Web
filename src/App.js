@@ -18,7 +18,7 @@
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import Cookies from 'js-cookie';
 import Navbar from './components/Navbar/Navbar';
@@ -53,6 +53,8 @@ const Learning = lazy(() => import('./pages/Learning/Learning'));
 const News = lazy(() => import('./pages/News/News'));
 const About = lazy(() => import('./pages/About/About'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy/PrivacyPolicy'));
+const LegalPage = lazy(() => import('./pages/Legal/LegalPage'));
+const Help = lazy(() => import('./pages/Help/Help'));
 const Quizzes = lazy(() => import('./pages/Learning/Quizzes/Quizzes'));
 const EbookDetail = lazy(() => import('./pages/Collections/EbookDetail/EbookDetail'));
 const AuthorDetail = lazy(() => import('./pages/Collections/AuthorDetail/AuthorDetail'));
@@ -359,6 +361,13 @@ const App = () => {
                 <Route path="/news" element={<News {...pageProps} />} />
                 <Route path="/about" element={<About {...pageProps} />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy {...pageProps} />} />
+                <Route path="/terms" element={<LegalPage slug="terms" {...pageProps} />} />
+                <Route path="/subscription-policy" element={<LegalPage slug="subscription-policy" {...pageProps} />} />
+                <Route path="/refund-policy" element={<LegalPage slug="refund-policy" {...pageProps} />} />
+                <Route path="/copyright" element={<LegalPage slug="copyright" {...pageProps} />} />
+                <Route path="/cookie-policy" element={<LegalPage slug="cookie-policy" {...pageProps} />} />
+                <Route path="/help" element={<Help {...pageProps} />} />
+                <Route path="/faqs" element={<Navigate to="/help" replace />} />
                 <Route path="/picture-credits" element={<PictureCredits {...pageProps} />} />
 
                 {/* Any other address: "page not found" instead of an empty screen */}

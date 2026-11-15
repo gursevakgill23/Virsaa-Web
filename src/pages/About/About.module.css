@@ -478,3 +478,35 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Words from the admin: a short bio under the role, the CTA's line, the credits link */
+.memberBio {
+  margin: 6px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+}
+
+.ctaText p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.ctaText a {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.credits {
+  margin: 14px 0 0;
+  text-align: right;
+  font-size: 0.88rem;
+}
+
+.credits a {
+  color: var(--secondary-text-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
