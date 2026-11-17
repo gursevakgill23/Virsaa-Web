@@ -4,8 +4,9 @@
  * The site footer (hidden on the full-screen game pages, see App.js):
  *   - brand blurb with the logo
  *   - "Useful links" to the main pages, including About and FAQs (the Help Center)
- *   - newsletter sign-up (checked here; not connected to the backend yet) and
- *     a feedback box, sent to the team through the Help Center (/api/site/)
+ *   - newsletter sign-up (/api/site/newsletter/: saved, and a welcome email goes
+ *     out straight away) and a feedback box (saved as a Help Center message;
+ *     the team gets an email at support@virsaa.org)
  *   - bottom bar with the copyright, the policies and "Follow us" social links
  * -----------------------------------------------------------------------------
  */
@@ -59,29 +60,41 @@ const FEEDBACK_MIN = 10;   // the Help Center's shortest message
 const FEEDBACK_MAX = 1000;
 
 const Footer = ({ apiString }) => {
-  const { isLoggedIn, accessToken } = useAuth();
+  const { isLoggedIn, accessToken, userData } = useAuth();
   const getImagePath = useProductionImagePath();
   const logo = '/images/logo.png';
 
   // Form values, "done" states and validation messages for the two small forms
   const [email, setEmail] = useState('');
   const [feedback, setFeedback] = useState('');
-  const [newsletterDone, setNewsletterDone] = useState(false);
+  const [newsletterDone, setNewsletterDone] = useState('');   // the server's "you're subscribed" message
+  const [subscribing, setSubscribing] = useState(false);
   const [feedbackDone, setFeedbackDone] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [feedbackError, setFeedbackError] = useState('');
   const [feedbackEmail, setFeedbackEmail] = useState('');
   const [sendingFeedback, setSendingFeedback] = useState(false);
 
-  // TODO: connect the newsletter to a mailing list when there is one
-  const handleSubscribe = (e) => {
+  // Newsletter: saved on the server, which sends the welcome email. Signed-in people may leave the box empty.
+  const handleSubscribe = async (e) => {
     e.preventDefault();
-    const value = email.trim();
+    const value = email.trim() || (isLoggedIn ? userData?.email || '' : '');
     if (!value) { setEmailError('Enter your email address.'); return; }
     if (!EMAIL_PATTERN.test(value)) { setEmailError('Enter an email address like name@example.com.'); return; }
     setEmailError('');
-    setNewsletterDone(true);
-    setEmail('');
+    setSubscribing(true);
+    try {
+      const answer = await siteApi.subscribe(apiString, isLoggedIn ? accessToken : null, value);
+      setNewsletterDone(answer?.message || 'You’re subscribed. Check your inbox for a welcome email.');
+      setEmail('');
+    } catch (err) {
+      const data = err.response?.data;
+      setEmailError(data?.error || data?.email?.[0]
+        || (err.response?.status === 429 ? 'Too many tries. Please wait a while and try again.'
+          : 'You couldn’t be subscribed just now. Try again.'));
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   // Feedback goes to the team as a Help Center message (signed-out visitors add their email)
@@ -145,9 +158,9 @@ const Footer = ({ apiString }) => {
           {/* Newsletter */}
           <div className={styles.column}>
             <h2 className={styles.heading}>Join our newsletter</h2>
-            <p className={styles.hint}>New books, history articles and learning games, once a month.</p>
+            <p className={styles.hint}>New books, history articles, learning games and every Virsaa update.</p>
             {newsletterDone ? (
-              <p className={styles.thanks} role="status">Thanks for subscribing.</p>
+              <p className={styles.thanks} role="status">{newsletterDone}</p>
             ) : (
               <>
                 <form className={styles.inlineForm} onSubmit={handleSubscribe} noValidate>
@@ -155,7 +168,7 @@ const Footer = ({ apiString }) => {
                   <input
                     id="footer-email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder={isLoggedIn && userData?.email ? userData.email : 'Enter your email'}
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(''); }}
                     required
@@ -165,7 +178,7 @@ const Footer = ({ apiString }) => {
                     aria-describedby={emailError ? 'footer-email-error' : undefined}
                     className={styles.input}
                   />
-                  <button type="submit" className={styles.roundButton} aria-label="Subscribe">
+                  <button type="submit" className={styles.roundButton} aria-label="Subscribe" disabled={subscribing}>
                     <FaPaperPlane aria-hidden="true" />
                   </button>
                 </form>

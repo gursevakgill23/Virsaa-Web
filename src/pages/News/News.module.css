@@ -481,3 +481,44 @@
   outline: 3px solid #c9a24a;
   outline-offset: 2px;
 }
+
+/* ---------- What's new in Virsaa (app updates): the news cards, plus a version note ---------- */
+.updateCard {
+  scroll-margin-top: 96px;   /* the newsletter links straight to a card */
+}
+
+.newsBody .updateTag {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--secondary-text-color);
+}
+
+.updateNotes {
+  margin-top: 8px;
+  line-height: 1.55;
+}
+
+.updateNotes h3 {
+  margin: 12px 0 4px !important;
+  font-size: 1rem !important;
+}
+
+.updateNotes ul {
+  margin: 8px 0 0;
+  padding-left: 1.2em;
+}
+
+.updateNotes li + li {
+  margin-top: 4px;
+}
+
+.updateNotes a {
+  color: var(--link-color);
+  font-weight: 600;
+}

@@ -194,6 +194,12 @@
   transform: translateX(2px);
 }
 
+.roundButton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+  transform: none;
+}
+
 .stackForm {
   display: grid;
   gap: 10px;

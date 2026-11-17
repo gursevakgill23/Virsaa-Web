@@ -3,22 +3,29 @@
  * -----------------------------------------------------------------------------
  * The News & Events page (/news):
  *   - Featured: stories marked "featured" in Django admin (else the two newest)
+ *   - What's new in Virsaa: the latest app updates (added in Django admin as
+ *     "App updates"; each one is also emailed to newsletter subscribers)
  *   - Upcoming events: a swipeable row, refreshed every minute so events added
  *     from the side panel appear without reloading
  *   - Latest news: newest first, with a link to the source or a "Read more"
- * Data: /collections/news/ and /collections/events/ (api/newsApi.js).
+ * Data: /collections/news/ and /collections/events/ (api/newsApi.js),
+ * /api/site/updates/ (api/siteApi.js).
  * -----------------------------------------------------------------------------
  */
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
-import { FaMapMarkerAlt, FaClock, FaCalendarAlt, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaClock, FaCalendarAlt, FaExternalLinkAlt, FaArrowRight } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import PageHero from '../../components/PageHero/PageHero';
 import newsApi from '../../api/newsApi';
-import { safeExternalUrl } from '../../utils/safeUrl';
+import siteApi from '../../api/siteApi';
+import RichText from '../../components/RichText/RichText';
+import { safeExternalUrl, isInternalPath } from '../../utils/safeUrl';
 import { CoverPicture } from '../../components/SitePicture/SitePicture';
+import { useAuth } from '../../context/AuthContext';
 import styles from './News.module.css';
 
 // Converts image paths for the production build (same helper used across pages)
@@ -63,8 +70,10 @@ const News = ({ isDarkMode, apiString }) => {
   const headerImage = useMemo(() => getImagePath(isDarkMode ? headerDark : headerLight), [isDarkMode]);
   // Loaded items and the loading state of each list
   const [news, setNews] = useState([]);
+  const { isLoggedIn } = useAuth();
   const [events, setEvents] = useState([]);
-  const [status, setStatus] = useState({ news: 'loading', events: 'loading' });
+  const [updates, setUpdates] = useState([]);
+  const [status, setStatus] = useState({ news: 'loading', events: 'loading', updates: 'loading' });
 
   // Load upcoming events. `quiet` (background refresh) keeps the list if it fails.
   const loadEvents = useCallback(async (quiet = false) => {
@@ -86,12 +95,29 @@ const News = ({ isDarkMode, apiString }) => {
     }
   }, [apiString]);
 
+  // Load the app updates (What's new in Virsaa)
+  const loadUpdates = useCallback(async () => {
+    try {
+      setUpdates(await siteApi.updates(apiString));
+      setStatus((s) => ({ ...s, updates: 'ready' }));
+    } catch {
+      setStatus((s) => ({ ...s, updates: 'error' }));
+    }
+  }, [apiString]);
+
   useEffect(() => {
     loadNews();
     loadEvents();
+    loadUpdates();
     const timer = setInterval(() => { if (document.visibilityState === 'visible') loadEvents(true); }, REFRESH_MS);
     return () => clearInterval(timer);
-  }, [loadNews, loadEvents]);
+  }, [loadNews, loadEvents, loadUpdates]);
+
+  // The newsletter's "See what's new" button links to /news#update-<id>: scroll there once it has loaded
+  useEffect(() => {
+    if (!updates.length || !window.location.hash.startsWith('#update-')) return;
+    document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [updates]);
 
   // Featured: stories marked featured in admin, otherwise the two newest
   const featured = useMemo(() => {
@@ -142,11 +168,53 @@ const News = ({ isDarkMode, apiString }) => {
         )}
       </section>
 
+      {/* ---------- What's new in Virsaa (app updates) ---------- */}
+      {!(status.updates === 'ready' && updates.length === 0) && (
+        <section className={styles.section} aria-labelledby="updates-title" id="app-updates">
+          <h2 id="updates-title" className={styles.sectionTitle}>What’s new in Virsaa</h2>
+          <p className={styles.lede}>The latest updates to the website and the iPhone app.</p>
+          {updates.length === 0 ? stateNote(status.updates, '', loadUpdates) : (
+            <div className={styles.newsGrid}>
+              {updates.map((item) => (
+                <article key={item.id} id={`update-${item.id}`} className={`${styles.newsCard} ${styles.updateCard}`}>
+                  <div className={styles.newsMedia}>
+                    <CoverPicture src={item.image || item.picture} fallback={LATEST_PICTURE} alt="" className={styles.newsImage} />
+                  </div>
+                  <div className={styles.newsBody}>
+                    <time className={styles.newsDate} dateTime={item.published_at}>{longDate(item.published_at)}</time>
+                    <p className={styles.updateTag}>
+                      {item.version ? `Version ${item.version} · ${item.platform_label}` : item.platform_label}
+                    </p>
+                    <h3>{item.title}</h3>
+                    <p>{item.summary}</p>
+                    {item.body && (
+                      <details className={styles.newsMore}>
+                        <summary>Read more</summary>
+                        <RichText text={item.body} className={styles.updateNotes} />
+                      </details>
+                    )}
+                    {isInternalPath(item.link) && item.link !== '/news' ? (
+                      <Link to={item.link} className={styles.readMore}>Take a look <FaArrowRight aria-hidden="true" /></Link>
+                    ) : safeExternalUrl(item.link) && (
+                      <a href={safeExternalUrl(item.link)} target="_blank" rel="noopener noreferrer" className={styles.readMore}>
+                        Take a look <FaExternalLinkAlt aria-hidden="true" />
+                      </a>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* ---------- Upcoming events ---------- */}
       <section className={styles.section} aria-labelledby="events-title">
         <h2 id="events-title" className={styles.sectionTitle}>Upcoming events</h2>
         <p className={styles.lede}>Gatherings, kirtan and exhibitions. Add your own from the side panel.</p>
-        {events.length === 0 ? stateNote(status.events, 'No upcoming events yet. Add one from the side panel.', () => loadEvents()) : (
+        {events.length === 0 ? stateNote(status.events, isLoggedIn
+          ? 'No events yet. Add one from the side panel to invite people to attend your event.'
+          : 'No events yet. Sign in to add one and invite people to attend your event.', () => loadEvents()) : (
           <Swiper
             modules={[Navigation]}
             spaceBetween={22}

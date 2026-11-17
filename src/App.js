@@ -55,6 +55,7 @@ const About = lazy(() => import('./pages/About/About'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy/PrivacyPolicy'));
 const LegalPage = lazy(() => import('./pages/Legal/LegalPage'));
 const Help = lazy(() => import('./pages/Help/Help'));
+const NewsletterUnsubscribe = lazy(() => import('./pages/Newsletter/Unsubscribe'));
 const Quizzes = lazy(() => import('./pages/Learning/Quizzes/Quizzes'));
 const EbookDetail = lazy(() => import('./pages/Collections/EbookDetail/EbookDetail'));
 const AuthorDetail = lazy(() => import('./pages/Collections/AuthorDetail/AuthorDetail'));
@@ -367,6 +368,7 @@ const App = () => {
                 <Route path="/copyright" element={<LegalPage slug="copyright" {...pageProps} />} />
                 <Route path="/cookie-policy" element={<LegalPage slug="cookie-policy" {...pageProps} />} />
                 <Route path="/help" element={<Help {...pageProps} />} />
+                <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribe {...pageProps} />} />
                 <Route path="/faqs" element={<Navigate to="/help" replace />} />
                 <Route path="/picture-credits" element={<PictureCredits {...pageProps} />} />
 
