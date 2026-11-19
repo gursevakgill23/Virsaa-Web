@@ -14,12 +14,13 @@
  *     now and then, so it keeps going while it's used
  *   - adds the Bearer token to /api/auth/ requests and, when any request comes
  *     back 401, renews the token once and retries it
- *   - sends signed-out visitors to /login, except on the public pages below
- *   - "Explore as guest" (Login page): guests may browse the main sections
- *     (GUEST_ROUTES) but opening anything (a book, lesson, game, account page…)
- *     asks them to sign in
- *   - login(), logout(), continueAsGuest(), updateUserData() and
- *     replaceTokens() (after a password change) for the pages
+ *   - every page is public (so people and search engines can read them), except
+ *     the account pages below (ACCOUNT_ROUTES): signed-out visitors there go to
+ *     /login?next=<that page>, and come back to it after signing in. Things
+ *     that need an account (reading a book, saving progress, reviews…) ask on
+ *     the page itself.
+ *   - login(), logout(), updateUserData() and replaceTokens() (after a
+ *     password change) for the pages
  *
  * Security notes:
  *   - tokens are never written to the console
@@ -35,55 +36,26 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { toast } from '../utils/notify';
 
 const AuthContext = createContext(null);
 
 // ---------------------------------------------------------------- settings
 
-// Pages signed-out visitors may open; every other page sends them to /login
-const PUBLIC_ROUTES = [
-  '/login',
-  '/signup',
-  '/forgot-password',
-  '/forgot-password/:email/:token',
-  '/verify-email/:token',
-  '/verify-email/:email/:token',
-  '/about',
-  '/news',
-  '/privacy-policy',
-  '/picture-credits',
+// Account pages: signed-out visitors here go to /login?next=<page>. Every other page is public.
+const ACCOUNT_ROUTES = [
+  '/my-profile',
+  '/account-settings',
+  '/my-favorites',
+  '/history',
+  '/notifications',
+  '/my-rewards',
+  '/share-a-book',
+  '/checkout',
+  '/payment/:reference',
 ];
 
-// Extra pages a guest ("Explore as guest") may browse. These are the overview pages;
-// anything opened from them (book, audiobook, author, lesson, quiz, game, Gurdwara
-// details, checkout, account) needs an account.
-const GUEST_ROUTES = [
-  '/',
-  '/home',
-  '/collections',
-  '/collections/ebooks',
-  '/collections/audiobooks',
-  '/collections/authors',
-  '/sikh-history',
-  '/sakhis',
-  '/gurbani',
-  '/learning',
-  '/gurdwara-access',
-  '/premium',
-];
-
-// The guest choice is remembered on this device until the person signs in
-const GUEST_KEY = 'virsaa:guest';
-const readGuest = () => {
-  try { return localStorage.getItem(GUEST_KEY) === '1'; } catch { return false; }
-};
-const writeGuest = (on) => {
-  try {
-    if (on) localStorage.setItem(GUEST_KEY, '1');
-    else localStorage.removeItem(GUEST_KEY);
-  } catch { /* storage blocked: guest mode lasts until the page reloads */ }
-};
+// Older versions remembered "Explore as guest" on the device: clear it
+try { localStorage.removeItem('virsaa:guest'); } catch { /* storage blocked */ }
 
 // Auth endpoints that must never get a token or trigger a token renewal
 const AUTH_FREE_PATHS = [
@@ -125,10 +97,10 @@ const SIGNED_OUT = {
 /** "//verify-email/x/" -> "/verify-email/x" (doubled and trailing slashes don't change the page) */
 const tidyPath = (pathname) => String(pathname || '/').replace(/\/{2,}/g, '/').replace(/(.)\/$/, '$1');
 
-/** Does this path belong to a public page? (":email/:token" match any segment) */
-const isPublicPath = (pathname) => {
+/** Does this path need an account? (":reference" matches any segment) */
+const isAccountPath = (pathname) => {
   const path = tidyPath(pathname);
-  return PUBLIC_ROUTES.some((route) => (route.includes(':')
+  return ACCOUNT_ROUTES.some((route) => (route.includes(':')
     ? new RegExp(`^${route.replace(/:[^/]+/g, '[^/]+')}$`).test(path)
     : path === route));
 };
@@ -207,7 +179,6 @@ const forgetUser = () => {
 
 export const AuthProvider = ({ children, apiString }) => {
   const [authState, setAuthState] = useState({ ...SIGNED_OUT, isLoading: true });
-  const [isGuest, setIsGuest] = useState(readGuest); // exploring without an account
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -329,17 +300,12 @@ export const AuthProvider = ({ children, apiString }) => {
   }, [apiUrl, applyUser, handleCleanup, refreshAccessToken]);
 
   // ---------------------------------------------------------------- sign-in guard
-  // Signed-out visitors on a non-public page go to /login (checked on every page change,
-  // without another network request). Guests may also browse GUEST_ROUTES; anything
-  // else they try to open asks them to sign in.
+  // Signed-out visitors on an account page go to /login, and back to that page after signing in
+  // (checked on every page change, without another network request). Every other page is public.
   useEffect(() => {
-    if (authState.isLoading || authState.isLoggedIn || isPublicPath(pathname)) return;
-    if (isGuest && GUEST_ROUTES.includes(tidyPath(pathname))) return;
-    if (isGuest) {
-      toast.info('Sign in or create a free account to open this. As a guest you can explore, but not open content.', { toastId: 'guest-locked' });
-    }
-    navigateRef.current('/login');
-  }, [authState.isLoading, authState.isLoggedIn, isGuest, pathname]);
+    if (authState.isLoading || authState.isLoggedIn || !isAccountPath(pathname)) return;
+    navigateRef.current(`/login?next=${encodeURIComponent(tidyPath(pathname))}`, { replace: true });
+  }, [authState.isLoading, authState.isLoggedIn, pathname]);
 
   // ---------------------------------------------------------------- axios interceptors (set up once)
   useEffect(() => {
@@ -358,7 +324,8 @@ export const AuthProvider = ({ children, apiString }) => {
     );
 
     // A 401 means the access token expired: renew it once and retry the request.
-    // If that isn't possible, sign out and go to the login page.
+    // If that isn't possible, sign out and go to the login page. Visitors who aren't
+    // signed in just get the error (the page explains what needs an account).
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,
       async (error) => {
@@ -387,7 +354,10 @@ export const AuthProvider = ({ children, apiString }) => {
           }
         }
 
-        // No refresh token, or the retry was also refused
+        // Never signed in: the page shows its own "Sign in to…" (public pages must not jump to /login)
+        if (!refreshToken) return Promise.reject(error);
+
+        // The retry was also refused: the session has ended
         handleCleanup();
         navigateRef.current('/login');
         return Promise.reject(error);
@@ -404,8 +374,6 @@ export const AuthProvider = ({ children, apiString }) => {
 
   /** Save a new session after a successful login (Login.jsx). */
   const login = useCallback((accessToken, refreshToken, user, rememberMe = false) => {
-    writeGuest(false); // a real account replaces guest mode
-    setIsGuest(false);
     writeRemember(rememberMe);
     saveTokenCookies(accessToken, refreshToken);
     applyUser(user, accessToken, refreshToken);
@@ -420,14 +388,6 @@ export const AuthProvider = ({ children, apiString }) => {
     saveTokenCookies(accessToken, refreshToken);
     tokensRef.current = { accessToken, refreshToken };
     setAuthState((prev) => (prev.isLoggedIn ? { ...prev, accessToken, refreshToken } : prev));
-  }, []);
-
-  /** "Explore as guest" on the Login page: browse the main sections without an account. */
-  const continueAsGuest = useCallback(() => {
-    writeGuest(true);
-    setIsGuest(true);
-    toast.info('You’re exploring as a guest. Sign in any time to open books, lessons and games.', { toastId: 'guest-on' });
-    navigateRef.current('/');
   }, []);
 
   /** Tell the server to retire the refresh token, then forget the session locally. */
@@ -496,13 +456,11 @@ export const AuthProvider = ({ children, apiString }) => {
     isLoading: authState.isLoading,
     isPremium: authState.isPremium,
     isProfileComplete: authState.isProfileComplete,
-    isGuest: isGuest && !authState.isLoggedIn,
     login,
     logout,
-    continueAsGuest,
     updateUserData,
     replaceTokens,
-  }), [authState, isGuest, login, logout, continueAsGuest, updateUserData, replaceTokens]);
+  }), [authState, login, logout, updateUserData, replaceTokens]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

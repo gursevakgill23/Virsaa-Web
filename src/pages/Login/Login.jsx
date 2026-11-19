@@ -20,7 +20,7 @@ import ReCAPTCHA from 'react-google-recaptcha';
 import styles from './Login.module.css';
 import {
   FaEye, FaEyeSlash, FaBook, FaRegFileAudio,
-  FaHeart, FaHistory, FaGamepad, FaCompass,
+  FaHeart, FaHistory, FaGamepad,
 } from 'react-icons/fa';
 import { FaHandsPraying } from 'react-icons/fa6';
 import { useAuth } from '../../context/AuthContext';
@@ -76,7 +76,7 @@ const FAQS = [
 ];
 
 const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
-  const { login, continueAsGuest } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   // The reCAPTCHA widget (its token is sent with the form)
   const recaptchaRef = useRef(null);
@@ -394,13 +394,6 @@ const Login = ({ isDarkMode, apiString = process.env.REACT_APP_API_URL }) => {
                   New to Virsaa? <Link to="/signup" className={styles.inlineLink}>Create an account</Link>
                 </p>
 
-                {/* Explore as guest: browse the main sections without an account (see AuthContext) */}
-                <div className={styles.guestBox}>
-                  <button type="button" className={styles.guestButton} onClick={continueAsGuest}>
-                    <FaCompass aria-hidden="true" /> Explore as guest
-                  </button>
-                  <p className={styles.guestHint}>Look around the library, Gurbani and learning. Sign in when you want to open something.</p>
-                </div>
               </>
             )}
           </div>

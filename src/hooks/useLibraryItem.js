@@ -43,7 +43,7 @@ const useLibraryItem = (apiString, type, id) => {
   const requireLogin = useCallback((action) => {
     if (isLoggedIn) return true;
     toast.info(`Log in to ${action}.`, { position: 'top-center', autoClose: 2500, toastId: 'library-login' });
-    navigate('/login');
+    navigate(`/login?next=${encodeURIComponent(window.location.pathname)}`); // back here after signing in
     return false;
   }, [isLoggedIn, navigate]);
 

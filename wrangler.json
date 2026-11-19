@@ -1,8 +1,16 @@
-   {
-     "name": "virsaa-web",
-     "compatibility_date": "2025-11-01",
-     "assets": {
-       "directory": "./build",
-       "not_found_handling": "single-page-application"
-     }
-   }
+{
+  "name": "virsaa-web",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-11-01",
+  "assets": {
+    "directory": "./build",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/*", "!/static/*", "!/images/*"]
+  },
+  "vars": {
+    "API_URL": "https://api.virsaa.org",
+    "SITE_URL": "https://virsaa.org"
+  },
+  "observability": { "enabled": true }
+}

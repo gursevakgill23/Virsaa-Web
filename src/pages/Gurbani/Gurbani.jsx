@@ -236,8 +236,8 @@ const Gurbani = ({ isDarkMode, apiString }) => {
       toast.info(message, { toastId: 'gurbani-premium' });
       navigate('/premium');
     } else {
-      toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'guest-locked' });
-      navigate('/login');
+      toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'sign-in-needed' });
+      navigate('/login?next=/gurbani');
     }
   }, [navigate]);
 
@@ -394,8 +394,8 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   // Row/tile action. Guests sign in first; items above the visitor's plan go to /premium.
   const openItem = (item) => {
     if (!isLoggedIn) {
-      toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'guest-locked' });
-      navigate('/login');
+      toast.info('Sign in or create a free account to listen, watch or read.', { toastId: 'sign-in-needed' });
+      navigate('/login?next=/gurbani');
       return;
     }
     if (isLocked(item)) {
