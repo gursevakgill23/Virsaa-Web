@@ -29,6 +29,7 @@ import ChatButton from '../../elements/ChatWithUs/ChatButton/ChatButton';
 import { CoverPicture, SitePicture } from '../../components/SitePicture/SitePicture';
 import Avatar from '../../components/Avatar/Avatar';
 import { gurbaniApi } from '../../api/sikhismApi';
+import ShareHukamnama from '../../components/ShareHukamnama/ShareHukamnama';
 import { devError } from '../../utils/devLog';
 
 // Utility function to handle public/static images
@@ -139,6 +140,11 @@ const Home = ({ isDarkMode, apiString }) => {
   const hukamReady = hukam.status === 'ready';
   useEffect(() => {
     if (!hukamReady) return undefined;
+    // A shared link (virsaa.org/#hukamnama) opens the Hukamnama straight away
+    if (window.location.hash === '#hukamnama') {
+      setShowHukamnamaModal(true);
+      return undefined;
+    }
     const timer = setTimeout(() => {
       setShowHukamnamaToast(true);
       toastTimer.current = setTimeout(() => {
@@ -167,6 +173,9 @@ const Home = ({ isDarkMode, apiString }) => {
 
   const closeModal = () => {
     setShowHukamnamaModal(false);
+    if (window.location.hash === '#hukamnama') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
   };
 
   // Today's Hukamnama: its shabads, lines (Gurmukhi, English, Punjabi meaning) and where it is from
@@ -363,6 +372,7 @@ const Home = ({ isDarkMode, apiString }) => {
             {hukam.data?.attribution && <p className={styles.hukamCredit}>{hukam.data.attribution}, from SGPC, Sri Harmandir Sahib.</p>}
 
             <div className={styles.modalFooter}>
+              <ShareHukamnama shabads={shabads} dateLabel={hukamDate} reference={hukamReference} />
               <Link to={isLoggedIn ? '/gurbani' : '/login'} className={styles.modalActionButton}>
                 {isLoggedIn ? 'Read More Gurbani' : 'Sign In to View Full Translation'}
               </Link>
