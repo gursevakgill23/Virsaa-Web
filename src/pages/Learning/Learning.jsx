@@ -20,6 +20,7 @@ import { CoverPicture } from '../../components/SitePicture/SitePicture';
 import PlanBadge from '../../components/PlanBadge/PlanBadge';
 import usePlanAccess, { PLAN_LABELS } from '../../hooks/usePlanAccess';
 import { devError } from '../../utils/devLog';
+import AdSlot from '../../components/AdSlot/AdSlot';
 
 // Every card's picture comes from the API (a real photo in S3, chosen for its topic);
 // a card without one, or whose picture fails, shows this website picture instead
@@ -467,6 +468,7 @@ const Learning = ({ isDarkMode, apiString }) => {
           </div>
         </section>
       )}
+      <AdSlot />
     </div>
   );
 };

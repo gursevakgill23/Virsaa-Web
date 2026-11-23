@@ -22,6 +22,7 @@ import { describeApiError } from '../../utils/apiError';
 import { safeExternalUrl } from '../../utils/safeUrl';
 import HistoryCard from './HistoryCard';
 import styles from './SikhHistory.module.css';
+import AdSlot from '../../components/AdSlot/AdSlot';
 
 const header_image_light = '/images/header-image.png';
 const header_image_dark = '/images/header-image-dark.png';
@@ -153,6 +154,7 @@ const SikhHistoryArticle = ({ isDarkMode, apiString }) => {
         </article>
       </div>
 
+      <AdSlot />
       {related.length > 0 && (
         <section className={styles.section} aria-labelledby="related-title">
           <h2 id="related-title" className={styles.sectionTitle}>Read next</h2>

@@ -47,6 +47,7 @@ import { CoverPicture } from '../../../components/SitePicture/SitePicture';
 import PlanBadge from '../../../components/PlanBadge/PlanBadge';
 import usePlanAccess, { isPlanRequired } from '../../../hooks/usePlanAccess';
 import { devError } from '../../../utils/devLog';
+import AdSlot from '../../../components/AdSlot/AdSlot';
 
 // Fisher-Yates shuffle
 // Random order for the recommendations
@@ -673,6 +674,7 @@ const EbookDetail = ({ isDarkMode, apiString }) => {
         </div>
 
         <aside className={styles.aside}>
+          <AdSlot />
           {renderRelated(related, relatedRef, 'Related books')}
           {renderRelated(recommended, recommendedRef, 'You might also like')}
         </aside>

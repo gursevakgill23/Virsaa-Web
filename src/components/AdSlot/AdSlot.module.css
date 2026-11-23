@@ -1,0 +1,14 @@
+/* components/AdSlot/AdSlot.module.css: one ad, clearly labelled, in the page's flow */
+.wrap {
+  max-width: 970px;
+  margin: 32px auto;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  color: var(--secondary-text-color);
+}

@@ -27,6 +27,7 @@ import { safeExternalUrl, isInternalPath } from '../../utils/safeUrl';
 import { CoverPicture } from '../../components/SitePicture/SitePicture';
 import { useAuth } from '../../context/AuthContext';
 import styles from './News.module.css';
+import AdSlot from '../../components/AdSlot/AdSlot';
 
 // Converts image paths for the production build (same helper used across pages)
 const getImagePath = (imagePath) => {
@@ -295,6 +296,7 @@ const News = ({ isDarkMode, apiString }) => {
           </div>
         )}
       </section>
+      <AdSlot />
     </div>
   );
 };

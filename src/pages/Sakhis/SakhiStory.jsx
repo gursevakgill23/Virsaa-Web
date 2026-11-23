@@ -30,6 +30,7 @@ import StoryCard, { StoryArch } from './StoryCard';
 import useReadAloud from './useReadAloud';
 import useStoryVoice from './useStoryVoice';
 import styles from './Sakhis.module.css';
+import AdSlot from '../../components/AdSlot/AdSlot';
 
 const NO_PARTS = [];
 
@@ -349,6 +350,7 @@ const SakhiStory = ({ isDarkMode, apiString }) => {
           </ul>
         </section>
       )}
+      <AdSlot />
     </div>
   );
 };

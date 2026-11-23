@@ -29,6 +29,7 @@ import Avatar from '../../components/Avatar/Avatar';
 import RewardCoin from '../../components/RewardCoin/RewardCoin';
 import PlanBadge from '../../components/PlanBadge/PlanBadge';
 import styles from './Collections.module.css';
+import AdSlot from '../../components/AdSlot/AdSlot';
 
 // Public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -537,6 +538,7 @@ const Collections = ({ isDarkMode, apiString }) => {
           </div>
         </section>
       )}
+      <AdSlot />
     </div>
   );
 };

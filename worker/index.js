@@ -21,6 +21,7 @@
  * Also here:
  *   /sitemap.xml   every public page, book, author, article, story and lesson
  *   /robots.txt    allows everything public, points to the sitemap
+ *   /ads.txt       Google AdSense's seller line (when ADSENSE_CLIENT is set)
  * Files (/static/..., pictures, manifest.json...) are served as they are.
  *
  * Rendered pages are kept in Cloudflare's cache for a few minutes (the sitemap
@@ -29,6 +30,8 @@
  * Settings (wrangler.jsonc "vars"):
  *   API_URL    the API's address            (default https://api.virsaa.org)
  *   SITE_URL   the website's main address   (default https://virsaa.org)
+ *   ADSENSE_CLIENT  the AdSense publisher id, "ca-pub-…" (adds the site-check tag and /ads.txt)
+ *   SOCIAL_LINKS    Virsaa's profiles, comma-separated (Instagram, YouTube…), for Google's "about" panel
  * -----------------------------------------------------------------------------
  */
 
@@ -77,6 +80,7 @@ export default {
     const method = request.method.toUpperCase();
     if (method !== 'GET' && method !== 'HEAD') return env.ASSETS.fetch(request);
     if (url.pathname === '/robots.txt') return robots(env);
+    if (url.pathname === '/ads.txt') return adsTxt(env);
     if (url.pathname === '/sitemap.xml') return cached(request, ctx, SITEMAP_CACHE_SECONDS, () => sitemap(env));
     if (isFile(url.pathname)) return env.ASSETS.fetch(request);
 
@@ -247,6 +251,16 @@ const lessonCard = (i, kind) => ({
   text: i.description,
 });
 
+/** Virsaa as an organisation, for Google's site name, logo and "about" panel. */
+function organization(env) {
+  const sameAs = String(env.SOCIAL_LINKS || '').split(',').map((s) => s.trim()).filter((s) => /^https:\/\//.test(s));
+  return {
+    '@context': 'https://schema.org', '@type': 'Organization', name: SITE_NAME, url: `${siteBase(env)}/`,
+    logo: `${siteBase(env)}/VirsaaLogo.png`, description: DEFAULT_DESCRIPTION,
+    email: 'support@virsaa.org', ...(sameAs.length ? { sameAs } : {}),
+  };
+}
+
 // ============================================================================ the pages
 // Each returns {title, description, body, status?, image?, type?, jsonld?, noindex?}
 
@@ -268,10 +282,14 @@ async function homePage(env) {
       ${section('Learn', cards([...listOf(learning.learning), ...listOf(learning.quiz).map((q) => ({ ...q, _quiz: true }))]
         .slice(0, 6).map((i) => lessonCard(i, i._quiz ? 'quiz' : 'learning'))), ['/learning', 'All lessons, quizzes and games'])}
       ${section('Explore', `<ul>${NAV.slice(1).map(([href, label]) => `<li>${link(href, label)}</li>`).join('')}</ul>`)}`,
-    jsonld: {
-      '@context': 'https://schema.org', '@type': 'WebSite', name: SITE_NAME, url: siteBase(env),
-      potentialAction: { '@type': 'SearchAction', target: `${siteBase(env)}/collections/ebooks?search={query}`, 'query-input': 'required name=query' },
-    },
+    jsonld: [
+      {
+        '@context': 'https://schema.org', '@type': 'WebSite', name: SITE_NAME, alternateName: ['Virsaa.org', 'ਵਿਰਸਾ'],
+        url: `${siteBase(env)}/`,
+        potentialAction: { '@type': 'SearchAction', target: `${siteBase(env)}/collections/ebooks?search={query}`, 'query-input': 'required name=query' },
+      },
+      organization(env),
+    ],
   };
 }
 
@@ -687,6 +705,7 @@ async function renderPage(request, env, url) {
     `<meta property="og:url" content="${esc(canonical)}">`,
     `<meta property="og:image" content="${esc(image)}">`,
     '<meta name="twitter:card" content="summary_large_image">',
+    /^ca-pub-\d+$/.test(String(env.ADSENSE_CLIENT || '')) ? `<meta name="google-adsense-account" content="${esc(env.ADSENSE_CLIENT)}">` : '',
     page.jsonld ? `<script type="application/ld+json">${JSON.stringify(page.jsonld).replace(/</g, '\\u003c')}</script>` : '',
     `<style>${STYLES}</style>`,
   ].filter(Boolean).join('');
@@ -729,6 +748,14 @@ const STYLES = `.ssr-page{max-width:980px;margin:0 auto;padding:16px;font:16px/1
 @media (prefers-color-scheme:dark){.ssr-page{color:#f3e6e9}.ssr-page a,.ssr-page h1,.ssr-page h2,.ssr-page h3{color:#f2b3c2}}`;
 
 // ============================================================================ robots.txt and sitemap.xml
+/** AdSense's authorized-seller line: "google.com, pub-…, DIRECT, f08c47fec0942fa0". */
+function adsTxt(env) {
+  const client = String(env.ADSENSE_CLIENT || '');
+  if (!/^ca-pub-\d+$/.test(client)) return new Response('', { status: 404 });
+  return new Response(`google.com, ${client.replace(/^ca-/, '')}, DIRECT, f08c47fec0942fa0\n`,
+    { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
+}
+
 function robots(env) {
   const lines = ['User-agent: *', 'Allow: /', ...ACCOUNT_PAGES.map((p) => `Disallow: ${p}`), 'Disallow: /payment/',
     'Disallow: /newsletter/', 'Disallow: /forgot-password', 'Disallow: /verify-email', '', `Sitemap: ${siteBase(env)}/sitemap.xml`, ''];
