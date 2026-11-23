@@ -10,7 +10,9 @@
   },
   "vars": {
     "API_URL": "https://api.virsaa.org",
-    "SITE_URL": "https://virsaa.org"
+    "SITE_URL": "https://virsaa.org",
+    "ADSENSE_CLIENT": "ca-pub-9637923540006292",
+    "SOCIAL_LINKS": ""
   },
   "observability": { "enabled": true }
 }
