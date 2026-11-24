@@ -10,6 +10,7 @@ import React, { forwardRef } from 'react';
 import { FaCoins, FaEdit, FaSignOutAlt, FaShoppingCart, FaCamera, FaTimes } from 'react-icons/fa';
 import styles from './GameProfileCard.module.css';
 import Avatar from '../../../components/Avatar/Avatar';
+import { IN_APP } from '../../../utils/inApp';
 
 // Text in English and Punjabi
 const T = {
@@ -143,9 +144,12 @@ const GameProfileCard = forwardRef(({
 
       {/* Buy coins / Log out */}
       <div className={styles.actions}>
-        <button type="button" className={styles.primaryButton} onClick={onBuyCoins}>
-          <FaShoppingCart aria-hidden="true" /> {t.buy}
-        </button>
+        {/* Nothing is sold inside the iPhone app (App Store rules) */}
+        {onBuyCoins && !IN_APP && (
+          <button type="button" className={styles.primaryButton} onClick={onBuyCoins}>
+            <FaShoppingCart aria-hidden="true" /> {t.buy}
+          </button>
+        )}
         <button type="button" className={styles.dangerButton} onClick={onLogout}>
           <FaSignOutAlt aria-hidden="true" /> {t.logout}
         </button>

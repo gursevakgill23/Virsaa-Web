@@ -34,6 +34,7 @@ import { SOUND_URLS, themeBackground } from '../gameAssets';
 import { backgroundOf, useSiteImages } from '../../../../hooks/useSiteImages';
 import Avatar from '../../../../components/Avatar/Avatar';
 import { devError, devWarn } from '../../../../utils/devLog';
+import { IN_APP } from '../../../../utils/inApp';
 
 // Pictures are real photos from S3, by name (hooks/useSiteImages.js); players without
 // a picture of their own show their initials (components/Avatar)
@@ -1490,6 +1491,26 @@ const WordSearchGamePlay = ({ apiString }) => {
 
   // Render the buy coins modal
   const renderBuyCoinsModal = () => {
+    // Inside the iPhone app nothing is sold (App Store rules): just how to earn coins
+    if (IN_APP) {
+      return (
+        <div className={styles.modalOverlay}>
+          <div className={styles.buyCoinsModal}>
+            <h2>
+              <FaCoins /> {settings.language === 'punjabi' ? 'ਸਿੱਕੇ ਘੱਟ ਹਨ' : 'Not enough coins'}
+            </h2>
+            <p>
+              {settings.language === 'punjabi'
+                ? 'ਇਸ ਮੈਪ ਲਈ ਹੋਰ ਸਿੱਕਿਆਂ ਦੀ ਲੋੜ ਹੈ। ਮੁਫ਼ਤ ਮੈਪ ਖੇਡ ਕੇ ਸਿੱਕੇ ਜਿੱਤੋ।'
+                : 'You need more coins for this map. Win coins by playing the free maps.'}
+            </p>
+            <button className={styles.closeButton} onClick={() => setShowBuyCoins(false)}>
+              {settings.language === 'punjabi' ? 'ਠੀਕ ਹੈ' : 'OK'}
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className={styles.modalOverlay}>
         <div className={styles.buyCoinsModal}>

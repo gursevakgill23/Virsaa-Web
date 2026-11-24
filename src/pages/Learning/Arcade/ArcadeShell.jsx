@@ -44,6 +44,7 @@ import { TEXT, gameLanguage } from './arcadeText';
 import { setSoundEnabled, sfx, soundEnabled } from './arcadeSound';
 import { THEMES } from './themes';
 import useArcade from './useArcade';
+import { IN_APP } from '../../../utils/inApp';
 
 const COIN_PACKS = [100, 250, 500, 1000];
 
@@ -401,9 +402,11 @@ export default function ArcadeShell({ gameKey, Game, apiString, isDarkMode = fal
             <input type="checkbox" checked={sound} onChange={toggleSound} />
             <span>{t.sound}</span>
           </label>
-          <button type="button" className={styles.settingsAction} onClick={openShop}>
-            <FaCoins aria-hidden="true" /> {t.coinShop}
-          </button>
+          {!IN_APP && (
+            <button type="button" className={styles.settingsAction} onClick={openShop}>
+              <FaCoins aria-hidden="true" /> {t.coinShop}
+            </button>
+          )}
           {screen === 'play' && (
             <button type="button" className={styles.settingsAction} onClick={() => { setSettingsOpen(false); backToMap(); }}>
               <FaMap aria-hidden="true" /> {t.backToMap}
@@ -579,7 +582,7 @@ export default function ArcadeShell({ gameKey, Game, apiString, isDarkMode = fal
         </ResultsModal>
       )}
 
-      {shopOpen && (
+      {shopOpen && !IN_APP && (
         <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="arcade-shop-title" onClick={() => setShopOpen(false)}>
           <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
             <button type="button" className={styles.sheetClose} onClick={() => setShopOpen(false)} aria-label="Close"><FaTimes /></button>
