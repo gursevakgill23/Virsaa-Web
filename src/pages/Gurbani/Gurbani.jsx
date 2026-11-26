@@ -44,6 +44,7 @@ import { useAuth } from '../../context/AuthContext';
 import GurbaniReader from './GurbaniReader';
 import { CoverPicture, SitePicture } from '../../components/SitePicture/SitePicture';
 import styles from './Gurbani.module.css';
+import { hukamnamaDate } from '../../utils/hukamnamaDay';
 
 // Converts image paths for the production build (same helper used across pages)
 const useProductionImagePath = () => {
@@ -217,7 +218,7 @@ const Gurbani = ({ isDarkMode, apiString }) => {
   // Today's Hukamnama. Not essential, so a failure just hides the card.
   useEffect(() => {
     let alive = true;
-    gurbaniApi.hukamnama(apiString)
+    gurbaniApi.hukamnama(apiString, hukamnamaDate())
       .then((data) => { if (alive && data?.shabads?.[0]?.lines?.length) setHukamnama(data); })
       .catch(() => {});
     return () => { alive = false; };

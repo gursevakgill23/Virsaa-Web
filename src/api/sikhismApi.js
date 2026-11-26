@@ -102,7 +102,11 @@ export const gurbaniApi = {
       .then((r) => cleanMedia(r.data)),
 
   // Today's Hukamnama from Sri Darbar Sahib (public)
-  hukamnama: (api) => axios.get(`${root(api)}/gurbani/hukamnama/`, { timeout: TIMEOUT_MS }).then((r) => r.data),
+  // `date` (YYYY-MM-DD): the reader's Hukamnama day (utils/hukamnamaDay.js); yesterday's until the new one is due
+  hukamnama: (api, date) =>
+    axios
+      .get(`${root(api)}/gurbani/hukamnama/`, { params: date ? { date } : undefined, timeout: TIMEOUT_MS })
+      .then((r) => r.data),
 };
 
 // ---------------------------------------------------------------- Sikh History

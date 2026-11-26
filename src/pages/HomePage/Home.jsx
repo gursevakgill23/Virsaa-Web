@@ -31,6 +31,7 @@ import Avatar from '../../components/Avatar/Avatar';
 import { gurbaniApi } from '../../api/sikhismApi';
 import ShareHukamnama from '../../components/ShareHukamnama/ShareHukamnama';
 import { devError } from '../../utils/devLog';
+import { hukamnamaDate } from '../../utils/hukamnamaDay';
 
 // Utility function to handle public/static images
 // Converts image paths for the production build (same helper used across pages)
@@ -126,7 +127,7 @@ const Home = ({ isDarkMode, apiString }) => {
   useEffect(() => {
     let cancelled = false;
     setHukam((current) => ({ ...current, status: 'loading' }));
-    gurbaniApi.hukamnama(apiString)
+    gurbaniApi.hukamnama(apiString, hukamnamaDate())
       .then((data) => {
         if (cancelled) return;
         const ready = Array.isArray(data?.shabads) && data.shabads.some((s) => s?.lines?.length);
