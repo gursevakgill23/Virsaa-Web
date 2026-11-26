@@ -5,23 +5,67 @@
  * a Gurdwara across the border...). Tap the map where you think it is and
  * press Guess. The closer the pin, the more points: full points within a
  * tenth of the stage's distance scale, nothing beyond the scale.
- * The map (Leaflet, like Gurdwara Access) has no place names on it, so the
- * answer isn't written there; rivers and borders help find the way.
+ * The map is a Google map (api/googleMaps.js, like Gurdwara Access) with its
+ * place names and road numbers hidden, so the answer isn't written there;
+ * rivers and borders help find the way. It follows the site's dark mode.
  * Content: { places: [{name, name_pa, lat, lng, fact}], bounds, scale_km }
  * -----------------------------------------------------------------------------
  */
-import React, { useEffect, useMemo, useState } from 'react';
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FaArrowRight, FaCrosshairs, FaMapMarkerAlt } from 'react-icons/fa';
+import { loadGoogleMaps, onKeyRejected } from '../../../../api/googleMaps';
 import arcade from '../Arcade.module.css';
 import { sfx } from '../arcadeSound';
 import styles from './MapQuest.module.css';
 
-// A map without place names (© OpenStreetMap contributors, © CARTO), light or dark
-const TILES = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png';
-const DARK_TILES = 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+// No names on the map (only works on a map without a map ID, so none is set here)
+const NO_LABELS = [
+  { elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+];
+const NIGHT = [
+  { elementType: 'geometry', stylers: [{ color: '#2a1a1f' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#14263a' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#4a3036' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#a5707d' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#33222a' }] },
+];
+
+// A round pin (and an optional name above it) drawn on the map
+const makeDot = (maps, { position, fill, size, label }) => {
+  class Dot extends maps.OverlayView {
+    onAdd() {
+      this.el = document.createElement('div');
+      this.el.className = styles.dot;
+      this.el.style.setProperty('--fill', fill);
+      this.el.style.setProperty('--size', `${size}px`);
+      if (label) {
+        const tag = document.createElement('span');
+        tag.className = styles.dotLabel;
+        tag.textContent = label;
+        this.el.appendChild(tag);
+      }
+      this.getPanes().overlayMouseTarget.appendChild(this.el);
+    }
+
+    draw() {
+      const point = this.getProjection()?.fromLatLngToDivPixel(new maps.LatLng(position[0], position[1]));
+      if (!point || !this.el) return;
+      this.el.style.left = `${point.x}px`;
+      this.el.style.top = `${point.y}px`;
+    }
+
+    onRemove() {
+      this.el?.remove();
+      this.el = null;
+    }
+  }
+  return new Dot();
+};
+
+const toBounds = (maps, [[s, w], [n, e]]) => new maps.LatLngBounds({ lat: s, lng: w }, { lat: n, lng: e });
 
 const WORDS = {
   english: {
@@ -47,26 +91,6 @@ const haversine = (a, b) => {
 
 // 1 within a tenth of the scale, falling to 0 at the scale
 const closeness = (km, scale) => (km <= scale * 0.1 ? 1 : Math.max(0, 1 - (km - scale * 0.1) / (scale * 0.9)));
-
-function ClickToGuess({ enabled, onPick }) {
-  useMapEvents({
-    click(e) {
-      if (enabled) onPick([e.latlng.lat, e.latlng.lng]);
-    },
-  });
-  return null;
-}
-
-// Back to the whole region for each new place, and show both pins after a guess
-function FitView({ bounds, focus, round }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!map?.fitBounds) return;
-    if (focus) map.fitBounds(focus, { padding: [60, 60], maxZoom: 9 });
-    else map.fitBounds(bounds, { padding: [10, 10] });
-  }, [map, bounds, focus, round]);
-  return null;
-}
 
 export default function MapQuest({ content, language, onFinish, dark = false }) {
   const w = WORDS[language];
@@ -116,6 +140,101 @@ export default function MapQuest({ content, language, onFinish, dark = false }) 
 
   const answer = useMemo(() => (place ? [place.lat, place.lng] : null), [place]);
   const focus = useMemo(() => (result && pin && answer ? [pin, answer] : null), [result, pin, answer]);
+
+  // ---------------------------------------------------------------- the Google map
+  const boxRef = useRef(null);
+  const mapRef = useRef(null);
+  const mapsRef = useRef(null);
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
+  const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'failed'
+
+  // Made once, and again when the theme changes
+  useEffect(() => {
+    let cancelled = false;
+    let clicks = null;
+    setStatus('loading');
+    const stopListening = onKeyRejected(() => { if (!cancelled) setStatus('failed'); });
+    loadGoogleMaps()
+      .then((maps) => Promise.all([maps.importLibrary('maps'), maps.importLibrary('core')]).then(() => maps))
+      .then((maps) => {
+        if (cancelled || !boxRef.current) return;
+        const [[s, wst], [n, e]] = maxBounds;
+        const map = new maps.Map(boxRef.current, {
+          center: { lat: (bounds[0][0] + bounds[1][0]) / 2, lng: (bounds[0][1] + bounds[1][1]) / 2 },
+          zoom: 7,
+          minZoom: 4,
+          maxZoom: 12,
+          styles: dark ? [...NIGHT, ...NO_LABELS] : NO_LABELS,
+          backgroundColor: dark ? '#2a1a1f' : '#f6edd6',
+          gestureHandling: 'greedy',
+          draggableCursor: 'crosshair',
+          clickableIcons: false,
+          disableDefaultUI: true,
+          zoomControl: true,
+          restriction: { latLngBounds: { south: s, west: wst, north: n, east: e }, strictBounds: false },
+        });
+        map.fitBounds(toBounds(maps, bounds), 10);
+        clicks = map.addListener('click', (event) => {
+          if (event.latLng) pickRef.current([event.latLng.lat(), event.latLng.lng()]);
+        });
+        mapsRef.current = maps;
+        mapRef.current = map;
+        setStatus('ready');
+      })
+      .catch(() => { if (!cancelled) setStatus('failed'); });
+    return () => {
+      cancelled = true;
+      stopListening();
+      clicks?.remove();
+      mapRef.current = null;
+    };
+    // a new map only for a new theme or region
+  }, [dark, bounds, maxBounds]);
+
+  // The pins and the line between them
+  useEffect(() => {
+    const map = mapRef.current;
+    const maps = mapsRef.current;
+    if (status !== 'ready' || !map || !maps) return undefined;
+    const shown = [];
+    if (pin) shown.push(makeDot(maps, { position: pin, fill: '#E2483D', size: 22 }));
+    if (result && answer) {
+      shown.push(makeDot(maps, { position: answer, fill: '#2FA36B', size: 26, label: pa ? place.name_pa : place.name }));
+      shown.push(new maps.Polyline({
+        path: [{ lat: pin[0], lng: pin[1] }, { lat: answer[0], lng: answer[1] }],
+        geodesic: true,
+        clickable: false,
+        strokeOpacity: 0,
+        icons: [{
+          icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: dark ? '#F3E6E9' : '#1D3B2A', strokeWeight: 3, scale: 3 },
+          offset: '0',
+          repeat: '14px',
+        }],
+      }));
+    }
+    shown.forEach((thing) => thing.setMap(map));
+    return () => shown.forEach((thing) => thing.setMap(null));
+  }, [status, pin, result, answer, pa, place, dark]);
+
+  // Back to the whole region for each new place, and show both pins after a guess
+  useEffect(() => {
+    const map = mapRef.current;
+    const maps = mapsRef.current;
+    if (status !== 'ready' || !map || !maps) return undefined;
+    if (!focus) {
+      map.fitBounds(toBounds(maps, bounds), 10);
+      return undefined;
+    }
+    const both = new maps.LatLngBounds();
+    focus.forEach(([lat, lng]) => both.extend({ lat, lng }));
+    map.fitBounds(both, 60);
+    const listener = map.addListener('idle', () => {
+      listener.remove();
+      if (map.getZoom() > 9) map.setZoom(9);
+    });
+    return () => listener.remove();
+  }, [status, focus, bounds, index]);
   if (!place) return null;
   const verdict = result && (result.value >= 0.95 ? w.bullseye : result.value >= 0.7 ? w.close : result.value >= 0.3 ? w.good : w.far);
   const total = Math.round(values.reduce((a, b) => a + b, 0) * perPlace);
@@ -135,31 +254,10 @@ export default function MapQuest({ content, language, onFinish, dark = false }) 
       </div>
 
       <div className={styles.mapFrame}>
-        <MapContainer
-          className={styles.map}
-          bounds={bounds}
-          maxBounds={maxBounds}
-          maxBoundsViscosity={0.9}
-          minZoom={4}
-          maxZoom={12}
-          scrollWheelZoom
-          style={{ height: '100%', width: '100%' }}
-        >
-          <TileLayer key={dark ? 'dark' : 'light'} url={dark ? DARK_TILES : TILES} attribution={ATTRIBUTION} subdomains="abcd" />
-          <ClickToGuess enabled={!result} onPick={pick} />
-          <FitView bounds={bounds} round={index} focus={focus} />
-          {pin && (
-            <CircleMarker center={pin} radius={11} pathOptions={{ color: '#ffffff', weight: 3, fillColor: '#E2483D', fillOpacity: 1 }} />
-          )}
-          {result && (
-            <>
-              <Polyline positions={[pin, answer]} pathOptions={{ color: dark ? '#F3E6E9' : '#1D3B2A', weight: 3, dashArray: '6 8' }} />
-              <CircleMarker center={answer} radius={13} pathOptions={{ color: '#ffffff', weight: 3, fillColor: '#2FA36B', fillOpacity: 1 }}>
-                <Tooltip permanent direction="top" offset={[0, -12]}>{pa ? place.name_pa : place.name}</Tooltip>
-              </CircleMarker>
-            </>
-          )}
-        </MapContainer>
+        <div ref={boxRef} key={dark ? 'dark' : 'light'} className={styles.map} role="application" aria-label={w.tapMap} />
+        {status === 'failed' && (
+          <div className={styles.failed} role="status">The map isn’t available right now. Please try again later.</div>
+        )}
         <span className={styles.compass} aria-hidden="true">N</span>
       </div>
 
